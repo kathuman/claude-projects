@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cube Studio</title>
+  <meta name="description" content="View a Rubik's Cube in 3D and as a 2D schematic, scramble it, and watch a near-optimal solution play out move by move." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧩</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* -------------------------------------------------------------------
+       "Engineering plate" identity: blueprint paper, graphite ink, thin
+       rules and monospace annotationsframing one vividly coloured object.
+       The six cube colours are the only loud thing on the page.
+       ---------------------------------------------------------------- */
+    :root {
+      --paper: #eeeae0;
+      --surface: #f7f5ef;
+      --surface-2: #fbfaf5;
+      --ink: #212320;
+      --ink-2: #6c6a60;
+      --ink-3: #9b9789;
+      --rule: #d9d4c4;
+      --rule-strong: #c4bda9;
+      --accent: #1c6d68;
+      --accent-ink: #ecf4f2;
+      --shadow: 0 1px 2px rgba(30, 28, 20, 0.05), 0 12px 36px -14px rgba(30, 28, 20, 0.2);
+
+      --cube-W: #f6f6f3;
+      --cube-Y: #f3c200;
+      --cube-R: #c62436;
+      --cube-O: #e7750f;
+      --cube-G: #1f9d4d;
+      --cube-B: #1a63c0;
+      --plastic: #171719;
+
+      --sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      color-scheme: light;
+    }
+    :root[data-theme="dark"] {
+      --paper: #141519;
+      --surface: #1b1c21;
+      --surface-2: #21232a;
+      --ink: #e9e7dd;
+      --ink-2: #9d9a8e;
+      --ink-3: #6f6d64;
+      --rule: #32333c;
+      --rule-strong: #40414b;
+      --accent: #49b4ab;
+      --accent-ink: #08201e;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 44px -16px rgba(0, 0, 0, 0.6);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #141519;
+        --surface: #1b1c21;
+        --surface-2: #21232a;
+        --ink: #e9e7dd;
+        --ink-2: #9d9a8e;
+        --ink-3: #6f6d64;
+        --rule: #32333c;
+        --rule-strong: #40414b;
+        --accent: #49b4ab;
+        --accent-ink: #08201e;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 44px -16px rgba(0, 0, 0, 0.6);
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+    body {
+      font-family: var(--sans);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 28px 18px 44px;
+      background-image:
+        linear-gradient(var(--rule) 1px, transparent 1px),
+        linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+      background-size: 28px 28px;
+      background-position: -1px -1px;
+    }
+    :root[data-theme="dark"] body,
+    :root:not([data-theme="light"]) body { background-blend-mode: soft-light; }
+
+    .frame {
+      width: 100%;
+      max-width: 1120px;
+      background: var(--surface);
+      border: 1px solid var(--rule-strong);
+      box-shadow: var(--shadow);
+      position: relative;
+      padding: clamp(16px, 3vw, 30px);
+    }
+    /* drawing-plate corner ticks */
+    .frame::before, .frame::after {
+      content: "";
+      position: absolute;
+      width: 14px; height: 14px;
+      border: 1px solid var(--accent);
+      pointer-events: none;
+    }
+    .frame::before { top: 7px; left: 7px; border-right: 0; border-bottom: 0; }
+    .frame::after { bottom: 7px; right: 7px; border-left: 0; border-top: 0; }
+
+    /* ---- header ---- */
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .wordmark { display: flex; align-items: baseline; gap: 10px; }
+    .wordmark b {
+      font-size: clamp(20px, 3vw, 27px);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .wordmark span {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .plate-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-2);
+      text-align: right;
+      line-height: 1.7;
+    }
+    .plate-meta b { color: var(--ink); font-weight: 600; }
+
+    /* ---- main grid ---- */
+    .plate {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 304px;
+      gap: 22px;
+      align-items: start;
+    }
+    @media (max-width: 880px) {
+      .plate { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .panel {
+      border: 1px solid var(--rule);
+      background: var(--surface-2);
+    }
+    .panel > .panel-label,
+    .panel-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ---- stage ---- */
+    .stage-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--rule-strong);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+    .seg button {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      color: var(--ink-2);
+      padding: 6px 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+    .toolbtn {
+      appearance: none;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+      background: transparent;
+      border: 1px solid var(--rule-strong);
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .toolbtn:hover { color: var(--ink); border-color: var(--ink-2); }
+    .toolbtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+    #stageSlot {
+      border: 1px solid var(--rule);
+      background:
+        radial-gradient(120% 90% at 50% 12%, color-mix(in srgb, var(--surface) 92%, var(--accent)) 0%, var(--surface-2) 62%);
+      position: relative;
+      aspect-ratio: 4 / 3;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    #stageSlot::before, #stageSlot::after,
+    #railSlot .slot-ticks::before, #railSlot .slot-ticks::after { content: ""; position: absolute; pointer-events: none; }
+    #stageSlot::before { top: 8px; left: 8px; width: 18px; height: 18px; border-left: 1px solid var(--rule-strong); border-top: 1px solid var(--rule-strong); }
+    #stageSlot::after { bottom: 8px; right: 8px; width: 18px; height: 18px; border-right: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+
+    /* ---- 3d scene ---- */
+    .scene {
+      perspective: 1500px;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      cursor: grab;
+      touch-action: none;
+    }
+    .scene:active { cursor: grabbing; }
+    .cube {
+      position: relative;
+      width: 0; height: 0;
+      transform-style: preserve-3d;
+      transform: scale(var(--fit, 1)) rotateX(var(--rx, -26deg)) rotateY(var(--ry, -32deg));
+    }
+    .cube.spin { transition: transform 0.12s linear; }
+    .cubie {
+      position: absolute;
+      width: 60px; height: 60px;
+      margin: -30px;
+      transform-style: preserve-3d;
+      transform: translate3d(var(--tx), var(--ty), var(--tz));
+    }
+    .cubie.move { transition: transform var(--dur, 260ms) cubic-bezier(0.4, 0.9, 0.25, 1); }
+    .cubie.assemble { transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 400ms ease; }
+    .face {
+      position: absolute;
+      inset: 0;
+      background: var(--plastic);
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      backface-visibility: hidden;
+    }
+    .face .sticker {
+      width: 82%;
+      height: 82%;
+      border-radius: 5px;
+      background: var(--stickerColor, #333);
+      box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.28), inset 0 -3px 7px rgba(0, 0, 0, 0.32);
+    }
+    .face .sticker[data-label]::after {
+      content: attr(data-label);
+      font-family: var(--mono);
+      font-weight: 600;
+      font-size: 15px;
+      color: rgba(0, 0, 0, 0.5);
+    }
+    .face.px { transform: rotateY(90deg) translateZ(30px); }
+    .face.nx { transform: rotateY(-90deg) translateZ(30px); }
+    .face.py { transform: rotateX(90deg) translateZ(30px); }
+    .face.ny { transform: rotateX(-90deg) translateZ(30px); }
+    .face.pz { transform: translateZ(30px); }
+    .face.nz { transform: rotateY(180deg) translateZ(30px); }
+
+    /* ---- 2d net ---- */
+    .net {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 6px;
+      width: min(94%, 460px);
+      aspect-ratio: 4 / 3;
+    }
+    #railSlot .net { width: 100%; }
+    .net .face-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 3px;
+      padding: 4px;
+      background: var(--plastic);
+      border-radius: 4px;
+      aspect-ratio: 1;
+    }
+    .net .face-grid.slot-U { grid-column: 2; grid-row: 1; }
+    .net .face-grid.slot-L { grid-column: 1; grid-row: 2; }
+    .net .face-grid.slot-F { grid-column: 2; grid-row: 2; }
+    .net .face-grid.slot-R { grid-column: 3; grid-row: 2; }
+    .net .face-grid.slot-B { grid-column: 4; grid-row: 2; }
+    .net .face-grid.slot-D { grid-column: 2; grid-row: 3; }
+    .net .cell {
+      border-radius: 3px;
+      background: var(--cellColor, #333);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16), inset 0 2px 4px rgba(255, 255, 255, 0.22);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.45);
+    }
+
+    /* ---- rail ---- */
+    .rail { display: flex; flex-direction: column; gap: 16px; }
+    @media (max-width: 880px) { .rail { display: grid; grid-template-columns: 1fr 1fr; } .rail .full { grid-column: 1 / -1; } }
+    @media (max-width: 560px) { .rail { grid-template-columns: 1fr; } }
+
+    #railSlot {
+      border: 1px solid var(--rule);
+      background: var(--surface-2);
+      padding: 12px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+    }
+
+    .controls { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+    .btn-row { display: flex; gap: 8px; }
+    .btn {
+      appearance: none;
+      flex: 1;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 9px 10px;
+      border: 1px solid var(--rule-strong);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .btn:hover:not(:disabled) { border-color: var(--ink-2); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn.primary:hover:not(:disabled) { filter: brightness(1.06); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .field { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); }
+    .field label { text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+    .field input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+    .readout { padding: 12px; font-family: var(--mono); font-size: 11.5px; }
+    .readout dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+    .readout dt { color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; align-self: center; }
+    .readout dd { margin: 0; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .readout .seq-line { margin-top: 10px; border-top: 1px dashed var(--rule); padding-top: 8px; word-break: break-word; color: var(--ink-2); line-height: 1.9; }
+    .readout .seq-line b { color: var(--ink); }
+
+    .status-pill {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border: 1px solid var(--rule-strong);
+      color: var(--ink-2);
+      white-space: nowrap;
+    }
+    .status-pill.ready { color: var(--accent); border-color: var(--accent); }
+    .status-pill.busy { color: var(--cube-O); border-color: var(--cube-O); }
+
+    /* ---- timeline ---- */
+    .timeline { margin-top: 22px; border: 1px solid var(--rule); background: var(--surface-2); }
+    .timeline .panel-label { border-bottom: 1px solid var(--rule); }
+    .tl-body { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .moves {
+      display: flex;
+      gap: 5px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+      min-height: 40px;
+      align-items: center;
+    }
+    .moves:empty::after {
+      content: "no sequence loaded — scramble, then solve";
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--ink-3);
+    }
+    .move-token {
+      appearance: none;
+      flex: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 34px;
+      padding: 7px 4px;
+      text-align: center;
+      border: 1px solid var(--rule-strong);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
+    }
+    .move-token.done { color: var(--ink-3); border-color: var(--rule); }
+    .move-token.current { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .move-token.scramble { border-style: dashed; }
+
+    .transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .transport button {
+      appearance: none;
+      width: 38px; height: 34px;
+      border: 1px solid var(--rule-strong);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 13px;
+      display: grid;
+      place-items: center;
+    }
+    .transport button:hover:not(:disabled) { border-color: var(--ink-2); }
+    .transport button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .transport button.play { width: 46px; background: var(--ink); color: var(--surface); border-color: var(--ink); }
+    .transport .scrub { flex: 1; min-width: 120px; accent-color: var(--accent); }
+    .transport .count { font-family: var(--mono); font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    :where(button, input, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    footer {
+      margin-top: 22px;
+      border-top: 1px solid var(--rule);
+      padding-top: 14px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--ink-3);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    footer a { color: var(--ink-2); }
+    footer a:hover { color: var(--ink); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cubie.move, .cubie.assemble, .cube.spin { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <header>
+      <div class="wordmark">
+        <b>Cube&nbsp;Studio</b>
+        <span>plate 03 &middot; 3&times;3&times;3</span>
+      </div>
+      <div class="plate-meta">
+        <div>scheme &nbsp;<b>W&middot;Y / G&middot;B / R&middot;O</b></div>
+        <div>god's number &nbsp;<b>&le; 20</b> &nbsp;quarter&#8209;turns</div>
+      </div>
+    </header>
+
+    <div class="plate">
+      <section class="stage">
+        <div class="stage-head">
+          <div class="seg" role="group" aria-label="View mode">
+            <button id="view3d" type="button" aria-pressed="true">3D</button>
+            <button id="view2d" type="button" aria-pressed="false">2D net</button>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="toolbtn" id="labelsToggle" type="button" aria-pressed="false">Labels</button>
+            <button class="toolbtn" id="spinToggle" type="button" aria-pressed="true">Auto&#8209;spin</button>
+          </div>
+        </div>
+
+        <div id="stageSlot">
+          <div class="scene" id="scene" aria-label="Interactive 3D cube — drag to rotate">
+            <div class="cube" id="cube"></div>
+          </div>
+          <div class="net" id="net" aria-label="2D unfolded cube schematic"></div>
+        </div>
+      </section>
+
+      <aside class="rail">
+        <div id="railSlot"><span class="slot-ticks"></span></div>
+
+        <div class="panel full">
+          <div class="panel-label">Controls</div>
+          <div class="controls">
+            <div class="btn-row">
+              <button class="btn" id="btnScramble" type="button">Scramble</button>
+              <button class="btn" id="btnReset" type="button">Reset</button>
+            </div>
+            <button class="btn primary" id="btnSolve" type="button" disabled>Solve</button>
+            <div class="field">
+              <label for="speed">Speed</label>
+              <input type="range" id="speed" min="0" max="100" value="55" />
+            </div>
+          </div>
+        </div>
+
+        <div class="panel full">
+          <div class="panel-label">
+            <span>Readout</span>
+            <span class="status-pill" id="statusPill">solver: loading</span>
+          </div>
+          <div class="readout">
+            <dl>
+              <dt>State</dt><dd id="rState">solved</dd>
+              <dt>Solution</dt><dd id="rLen">&mdash;</dd>
+              <dt>Search</dt><dd id="rTime">&mdash;</dd>
+              <dt>Method</dt><dd>Kociemba 2&#8209;phase</dd>
+            </dl>
+            <div class="seq-line"><b>scramble</b> &nbsp;<span id="rScramble">&mdash;</span></div>
+            <div class="seq-line"><b>solution</b> &nbsp;<span id="rSolution">&mdash;</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="timeline">
+      <div class="panel-label">
+        <span>Move sequence</span>
+        <span id="tlPhase" style="color:var(--ink-3)">idle</span>
+      </div>
+      <div class="tl-body">
+        <div class="moves" id="moves"></div>
+        <div class="transport">
+          <button id="tpStart" type="button" title="To start" disabled>&#124;&#9664;</button>
+          <button id="tpBack" type="button" title="Step back" disabled>&#9664;</button>
+          <button id="tpPlay" class="play" type="button" title="Play / pause" disabled>&#9654;</button>
+          <button id="tpFwd" type="button" title="Step forward" disabled>&#9654;</button>
+          <button id="tpEnd" type="button" title="To end" disabled>&#9654;&#124;</button>
+          <input type="range" class="scrub" id="scrub" min="0" max="0" value="0" disabled />
+          <span class="count" id="tpCount">0 / 0</span>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <span>Part of <a href="../">Claude Projects</a> &middot; built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></span>
+      <span>Solver: <a href="https://github.com/ldez/cubejs" target="_blank" rel="noopener">cubejs</a> (Kociemba two&#8209;phase) &middot; MIT</span>
+    </footer>
+  </div>
+
+  <script src="vendor/cube.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    // =================================================================
+    // Colour + geometry constants
+    // =================================================================
+    var COLOR = { U: "--cube-W", D: "--cube-Y", F: "--cube-G", B: "--cube-B", L: "--cube-O", R: "--cube-R" };
+    var STEP = 64; // px between cubie centres (60 face + 4 gap)
+
+    // CSS-space (x right, y DOWN, z toward viewer) position + outward
+    // normal  ->  index into the 54-char facelet string (U,R,F,D,L,B).
+    var FACELET = (function () {
+      var map = {};
+      function k(p, n) { return p.join(",") + "|" + n.join(","); }
+      function add(face, base) {
+        for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) {
+          var p, n;
+          if (face === "U") { n = [0, -1, 0]; p = [c - 1, -1, r - 1]; }
+          if (face === "F") { n = [0, 0, 1];  p = [c - 1, r - 1, 1]; }
+          if (face === "R") { n = [1, 0, 0];  p = [1, r - 1, 1 - c]; }
+          if (face === "D") { n = [0, 1, 0];  p = [c - 1, 1, 1 - r]; }
+          if (face === "L") { n = [-1, 0, 0]; p = [-1, r - 1, c - 1]; }
+          if (face === "B") { n = [0, 0, -1]; p = [1 - c, r - 1, -1]; }
+          map[k(p, n)] = base + r * 3 + c;
+        }
+      }
+      add("U", 0); add("R", 9); add("F", 18); add("D", 27); add("L", 36); add("B", 45);
+      return { map: map, key: k };
+    })();
+
+    // css outward normal -> which face element renders it.
+    // note: CSS +Y points DOWN, and rotateX(90deg) (".py") ends up facing UP,
+    // so the up-facing sticker lives on ".py" with normal [0,-1,0].
+    var DIRS = [
+      { css: [1, 0, 0], cls: "px" }, { css: [-1, 0, 0], cls: "nx" },
+      { css: [0, 1, 0], cls: "ny" }, { css: [0, -1, 0], cls: "py" },
+      { css: [0, 0, 1], cls: "pz" }, { css: [0, 0, -1], cls: "nz" },
+    ];
+
+    // face turn -> rotation axis + degrees (matches cubejs move semantics),
+    // and which CSS coordinate selects the turning layer.
+    var TURN = {
+      U: { axis: "Y", deg: -90, sel: function (p) { return p[1] === -1; } },
+      D: { axis: "Y", deg: 90,  sel: function (p) { return p[1] === 1; } },
+      R: { axis: "X", deg: 90,  sel: function (p) { return p[0] === 1; } },
+      L: { axis: "X", deg: -90, sel: function (p) { return p[0] === -1; } },
+      F: { axis: "Z", deg: 90,  sel: function (p) { return p[2] === 1; } },
+      B: { axis: "Z", deg: -90, sel: function (p) { return p[2] === -1; } },
+    };
+
+    // =================================================================
+    // Move helpers
+    // =================================================================
+    function amount(m) { return m.length === 1 ? 1 : m[1] === "2" ? 2 : 3; }
+    function withAmount(face, a) {
+      a = ((a % 4) + 4) % 4;
+      return a === 0 ? null : a === 1 ? face : a === 2 ? face + "2" : face + "'";
+    }
+    function invert(m) { return withAmount(m[0], 4 - amount(m)); }
+    function parseAlg(s) { return s.split(/\s+/).filter(Boolean); }
+    function tidy(moves) {
+      var out = [];
+      for (var i = 0; i < moves.length; i++) {
+        var m = moves[i];
+        if (out.length && out[out.length - 1][0] === m[0]) {
+          var merged = withAmount(m[0], amount(out.pop()) + amount(m));
+          if (merged) out.push(merged);
+        } else out.push(m);
+      }
+      return out;
+    }
+    function randomScramble(n) {
+      var faces = "URFDLB", suf = ["", "'", "2"], out = [], prev = -1, prev2 = -1;
+      while (out.length < n) {
+        var f = (Math.random() * 6) | 0;
+        if (f === prev) continue;
+        if (f === prev2 && (prev >> 1) === (f >> 1)) continue; // avoid R L R type
+        prev2 = prev; prev = f;
+        out.push(faces[f] + suf[(Math.random() * 3) | 0]);
+      }
+      return out;
+    }
+
+    // =================================================================
+    // Build the 26 cubies
+    // =================================================================
+    var cubeEl = document.getElementById("cube");
+    var cubies = [];
+    for (var x = -1; x <= 1; x++) for (var y = -1; y <= 1; y++) for (var z = -1; z <= 1; z++) {
+      if (x === 0 && y === 0 && z === 0) continue;
+      var el = document.createElement("div");
+      el.className = "cubie";
+      el.style.setProperty("--tx", x * STEP + "px");
+      el.style.setProperty("--ty", y * STEP + "px");
+      el.style.setProperty("--tz", z * STEP + "px");
+      var faces = {};
+      DIRS.forEach(function (d) {
+        var fe = document.createElement("div");
+        fe.className = "face " + d.cls;
+        var st = document.createElement("div");
+        st.className = "sticker";
+        fe.appendChild(st);
+        el.appendChild(fe);
+        faces[d.cls] = st;
+      });
+      cubies.push({ el: el, pos: [x, y, z], faces: faces });
+      cubeEl.appendChild(el);
+    }
+
+    // =================================================================
+    // 2D net
+    // =================================================================
+    var netEl = document.getElementById("net");
+    var netCells = {}; // faceLetter -> [9 cells]
+    ["U", "L", "F", "R", "B", "D"].forEach(function (f) {
+      var g = document.createElement("div");
+      g.className = "face-grid slot-" + f;
+      netCells[f] = [];
+      for (var i = 0; i < 9; i++) {
+        var cell = document.createElement("div");
+        cell.className = "cell";
+        g.appendChild(cell);
+        netCells[f].push(cell);
+      }
+      netEl.appendChild(g);
+    });
+
+    // =================================================================
+    // Rendering from a facelet string
+    // =================================================================
+    var showLabels = false;
+    function render() {
+      var s = state.cube.asString();
+      // 3D
+      cubies.forEach(function (cb) {
+        DIRS.forEach(function (d) {
+          var idx = FACELET.map[FACELET.key(cb.pos, d.css)];
+          var st = cb.faces[d.cls];
+          if (idx === undefined) {
+            st.style.setProperty("--stickerColor", "var(--plastic)");
+            st.removeAttribute("data-label");
+            st.style.opacity = "0";
+          } else {
+            var ch = s[idx];
+            st.style.opacity = "1";
+            st.style.setProperty("--stickerColor", "var(" + COLOR[ch] + ")");
+            if (showLabels) st.setAttribute("data-label", ch); else st.removeAttribute("data-label");
+          }
+        });
+      });
+      // 2D
+      for (var f in netCells) {
+        var base = { U: 0, R: 9, F: 18, D: 27, L: 36, B: 45 }[f];
+        for (var i = 0; i < 9; i++) {
+          var c2 = s[base + i];
+          netCells[f][i].style.setProperty("--cellColor", "var(" + COLOR[c2] + ")");
+          netCells[f][i].textContent = showLabels ? c2 : "";
+        }
+      }
+      var solved = state.cube.isSolved();
+      rState.textContent = solved ? "solved" : "scrambled";
+      updateTransport();
+    }
+
+    // =================================================================
+    // Animated single move
+    // =================================================================
+    var animating = false;
+    function speedToDuration() {
+      var v = +speedInput.value; // 0..100
+      if (v <= 2) return 0;
+      return Math.round(520 - v * 4.4); // ~520ms .. ~80ms
+    }
+    function doMove(move, opts) {
+      opts = opts || {};
+      var face = move[0];
+      var turn = TURN[face];
+      var a = amount(move);
+      var deg = a === 2 ? 180 : turn.deg * (a === 3 ? -1 : 1);
+      var dur = opts.instant ? 0 : speedToDuration();
+
+      return new Promise(function (resolve) {
+        var layer = cubies.filter(function (cb) { return turn.sel(cb.pos); });
+        function finish() {
+          state.cube.move(move);
+          layer.forEach(function (cb) {
+            cb.el.classList.remove("move");
+            cb.el.style.transform = "";
+          });
+          // force reflow so the transform reset is not animated
+          void cubeEl.offsetWidth;
+          render();
+          resolve();
+        }
+        if (dur === 0) { finish(); return; }
+
+        var rot = "rotate" + turn.axis + "(" + deg + "deg)";
+        layer.forEach(function (cb) {
+          cb.el.style.setProperty("--dur", dur + "ms");
+          cb.el.classList.add("move");
+          cb.el.style.transform =
+            rot + " translate3d(var(--tx), var(--ty), var(--tz))";
+        });
+        var done = false;
+        var onEnd = function () { if (done) return; done = true; cleanup(); finish(); };
+        function cleanup() { layer[0].el.removeEventListener("transitionend", onEnd); }
+        layer[0].el.addEventListener("transitionend", onEnd);
+        setTimeout(onEnd, dur + 120); // safety net
+      });
+    }
+
+    // =================================================================
+    // State + sequence playback
+    // =================================================================
+    var state = {
+      cube: new Cube(),
+      baseString: new Cube().asString(), // cube state before the loaded sequence
+      seq: [],            // [{move, kind:'scramble'|'solution'}]
+      pos: 0,             // moves applied from baseString
+      playing: false,
+      scrambleAlg: [],
+      solutionAlg: [],
+    };
+
+    var speedInput = document.getElementById("speed");
+    var rState = document.getElementById("rState");
+    var rLen = document.getElementById("rLen");
+    var rTime = document.getElementById("rTime");
+    var rScramble = document.getElementById("rScramble");
+    var rSolution = document.getElementById("rSolution");
+    var movesEl = document.getElementById("moves");
+    var scrub = document.getElementById("scrub");
+    var tpCount = document.getElementById("tpCount");
+    var tlPhase = document.getElementById("tlPhase");
+    var statusPill = document.getElementById("statusPill");
+    var btnSolve = document.getElementById("btnSolve");
+    var btnScramble = document.getElementById("btnScramble");
+    var btnReset = document.getElementById("btnReset");
+
+    var tp = {
+      start: document.getElementById("tpStart"),
+      back: document.getElementById("tpBack"),
+      play: document.getElementById("tpPlay"),
+      fwd: document.getElementById("tpFwd"),
+      end: document.getElementById("tpEnd"),
+    };
+
+    function renderMoveTokens() {
+      movesEl.innerHTML = "";
+      state.seq.forEach(function (item, i) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "move-token" + (item.kind === "scramble" ? " scramble" : "");
+        b.textContent = item.move;
+        b.title = (i + 1) + " · " + (item.kind);
+        b.addEventListener("click", function () { seekTo(i + 1); });
+        movesEl.appendChild(b);
+      });
+      scrub.max = String(state.seq.length);
+      updateTransport();
+    }
+
+    function updateTransport() {
+      var n = state.seq.length;
+      var has = n > 0;
+      [tp.start, tp.back, tp.play, tp.fwd, tp.end].forEach(function (el) { el.disabled = !has || animating; });
+      scrub.disabled = !has;
+      if (has) {
+        tp.start.disabled = tp.back.disabled = animating || state.pos === 0;
+        tp.fwd.disabled = tp.end.disabled = animating || state.pos === n;
+      }
+      tp.play.innerHTML = state.playing ? "&#10073;&#10073;" : "&#9654;";
+      tp.play.classList.toggle("play", true);
+      scrub.value = String(state.pos);
+      tpCount.textContent = state.pos + " / " + n;
+      Array.prototype.forEach.call(movesEl.children, function (el, i) {
+        el.classList.toggle("done", i < state.pos);
+        el.classList.toggle("current", i === state.pos && state.playing);
+      });
+      btnSolve.disabled = !solverReady || animating || state.playing || state.cube.isSolved();
+      btnScramble.disabled = animating || state.playing;
+      btnReset.disabled = animating || state.playing;
+    }
+
+    function restoreBase() {
+      state.cube = Cube.fromString(state.baseString);
+      state.pos = 0;
+      render();
+    }
+
+    // Jump (instantly) to an absolute position in the sequence.
+    function seekTo(target) {
+      if (animating) return;
+      target = Math.max(0, Math.min(state.seq.length, target));
+      if (target === state.pos) return;
+      if (target < state.pos) restoreBase();
+      while (state.pos < target) {
+        state.cube.move(state.seq[state.pos].move);
+        state.pos++;
+      }
+      render();
+      updatePhase();
+    }
+
+    function updatePhase() {
+      if (!state.seq.length) { tlPhase.textContent = "idle"; return; }
+      var cur = state.seq[Math.min(state.pos, state.seq.length - 1)];
+      if (state.pos >= state.seq.length) tlPhase.textContent = state.cube.isSolved() ? "solved" : "sequence complete";
+      else tlPhase.textContent = cur.kind === "scramble" ? "scrambling" : "solving";
+    }
+
+    async function stepForward() {
+      if (animating || state.pos >= state.seq.length) return;
+      animating = true; updateTransport();
+      await doMove(state.seq[state.pos].move);
+      state.pos++;
+      animating = false;
+      updatePhase(); updateTransport();
+    }
+    async function stepBack() {
+      if (animating || state.pos === 0) return;
+      animating = true; updateTransport();
+      var prev = state.seq[state.pos - 1].move;
+      await doMove(invert(prev));
+      // doMove applied invert(prev) to the model; fix bookkeeping
+      state.pos--;
+      animating = false;
+      updatePhase(); updateTransport();
+    }
+
+    async function play() {
+      if (animating) return;
+      if (state.pos >= state.seq.length) return;
+      state.playing = true; updateTransport();
+      while (state.playing && state.pos < state.seq.length) {
+        animating = true; updateTransport();
+        await doMove(state.seq[state.pos].move);
+        state.pos++;
+        animating = false;
+        updatePhase(); updateTransport();
+        if (state.playing) await wait(90);
+      }
+      state.playing = false;
+      updatePhase(); updateTransport();
+    }
+    function pause() { state.playing = false; updateTransport(); }
+    function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    // =================================================================
+    // High-level actions
+    // =================================================================
+    function loadSequence(items, baseString) {
+      state.baseString = baseString;
+      state.seq = items;
+      restoreBase();
+      renderMoveTokens();
+      updatePhase();
+    }
+
+    function scramble() {
+      if (animating) return;
+      pause();
+      var alg = tidy(randomScramble(25));
+      state.scrambleAlg = alg;
+      state.solutionAlg = [];
+      var solved = new Cube();
+      var baseString = solved.asString();
+      loadSequence(alg.map(function (m) { return { move: m, kind: "scramble" }; }), baseString);
+      rScramble.textContent = alg.join(" ");
+      rSolution.textContent = "—";
+      rLen.textContent = "—";
+      rTime.textContent = "—";
+      // fast-forward through the scramble so the user sees a mixed cube
+      seekTo(alg.length);
+      updateTransport();
+    }
+
+    function requestSolve() {
+      if (!solverReady || animating || state.cube.isSolved()) return;
+      statusPill.textContent = "solving…";
+      statusPill.className = "status-pill busy";
+      btnSolve.disabled = true;
+      worker.postMessage({ cmd: "solve", facelets: state.cube.asString() });
+    }
+
+    function onSolved(alg, ms) {
+      statusPill.textContent = "solver: ready";
+      statusPill.className = "status-pill ready";
+      var moves = tidy(parseAlg(alg));
+      state.solutionAlg = moves;
+      // base = current (scrambled) state; sequence = the solution
+      var baseString = state.cube.asString();
+      loadSequence(moves.map(function (m) { return { move: m, kind: "solution" }; }), baseString);
+      rSolution.textContent = moves.length ? moves.join(" ") : "(already solved)";
+      rLen.textContent = moves.length + " moves";
+      rTime.textContent = ms + " ms";
+      updatePhase();
+      if (moves.length && !prefersReducedMotion()) play();
+    }
+
+    function reset() {
+      if (animating) return;
+      pause();
+      state.scrambleAlg = []; state.solutionAlg = [];
+      loadSequence([], new Cube().asString());
+      rScramble.textContent = "—"; rSolution.textContent = "—";
+      rLen.textContent = "—"; rTime.textContent = "—";
+    }
+
+    // =================================================================
+    // Solver worker
+    // =================================================================
+    var solverReady = false;
+    var worker = new Worker("vendor/solver-worker.js");
+    worker.onmessage = function (e) {
+      var m = e.data;
+      if (m.cmd === "ready") {
+        solverReady = true;
+        statusPill.textContent = "solver: ready";
+        statusPill.className = "status-pill ready";
+        updateTransport();
+        if (/^#(demo|solve)$/.test(location.hash)) {
+          scramble();
+          setTimeout(requestSolve, 400);
+        } else if (location.hash === "#scramble") {
+          scramble();
+        }
+      } else if (m.cmd === "solved") {
+        onSolved(m.algorithm, m.ms);
+      } else if (m.cmd === "error") {
+        statusPill.textContent = "solver error";
+        statusPill.className = "status-pill busy";
+        rSolution.textContent = m.message;
+        updateTransport();
+      }
+    };
+    worker.onerror = function () {
+      statusPill.textContent = "solver unavailable";
+      statusPill.className = "status-pill busy";
+    };
+    worker.postMessage({ cmd: "init" });
+
+    // =================================================================
+    // View: 3D <-> 2D swap, orbit, labels, auto-spin
+    // =================================================================
+    var stageSlot = document.getElementById("stageSlot");
+    var railSlot = document.getElementById("railSlot");
+    var sceneEl = document.getElementById("scene");
+    var stageView = "3d";
+
+    function applyView() {
+      if (stageView === "3d") {
+        stageSlot.appendChild(sceneEl);
+        railSlot.appendChild(netEl);
+      } else {
+        stageSlot.appendChild(netEl);
+        railSlot.appendChild(sceneEl);
+      }
+      document.getElementById("view3d").setAttribute("aria-pressed", String(stageView === "3d"));
+      document.getElementById("view2d").setAttribute("aria-pressed", String(stageView === "2d"));
+      fitCube();
+    }
+    document.getElementById("view3d").addEventListener("click", function () { stageView = "3d"; applyView(); });
+    document.getElementById("view2d").addEventListener("click", function () { stageView = "2d"; applyView(); });
+
+    var labelsBtn = document.getElementById("labelsToggle");
+    labelsBtn.addEventListener("click", function () {
+      showLabels = !showLabels;
+      labelsBtn.setAttribute("aria-pressed", String(showLabels));
+      render();
+    });
+
+    // fit the 3D cube to whichever container holds it
+    function fitCube() {
+      var host = sceneEl.parentElement;
+      var box = Math.min(host.clientWidth, host.clientHeight) || 320;
+      cubeEl.style.setProperty("--fit", Math.max(0.28, box / 430).toFixed(3));
+    }
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(fitCube);
+      ro.observe(stageSlot); ro.observe(railSlot);
+    }
+    window.addEventListener("resize", fitCube);
+
+    // orbit
+    var rx = -26, ry = -32, dragging = false, lastX = 0, lastY = 0;
+    function applyOrbit() {
+      cubeEl.style.setProperty("--rx", rx.toFixed(1) + "deg");
+      cubeEl.style.setProperty("--ry", ry.toFixed(1) + "deg");
+    }
+    applyOrbit();
+    sceneEl.addEventListener("pointerdown", function (e) {
+      dragging = true; autoSpin = false; lastX = e.clientX; lastY = e.clientY;
+      sceneEl.setPointerCapture(e.pointerId);
+    });
+    sceneEl.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      ry += (e.clientX - lastX) * 0.5;
+      rx -= (e.clientY - lastY) * 0.5;
+      rx = Math.max(-88, Math.min(88, rx));
+      lastX = e.clientX; lastY = e.clientY;
+      cubeEl.classList.remove("spin");
+      applyOrbit();
+    });
+    sceneEl.addEventListener("pointerup", function (e) { dragging = false; try { sceneEl.releasePointerCapture(e.pointerId); } catch (x) {} });
+    sceneEl.addEventListener("pointercancel", function () { dragging = false; });
+
+    var spinBtn = document.getElementById("spinToggle");
+    var autoSpin = true;
+    function prefersReducedMotion() {
+      return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+    if (prefersReducedMotion()) { autoSpin = false; spinBtn.setAttribute("aria-pressed", "false"); }
+    spinBtn.addEventListener("click", function () {
+      autoSpin = !autoSpin;
+      spinBtn.setAttribute("aria-pressed", String(autoSpin));
+    });
+    (function loop() {
+      if (autoSpin && !dragging && !state.playing && !animating) {
+        cubeEl.classList.add("spin");
+        ry += 0.18;
+        applyOrbit();
+      } else {
+        cubeEl.classList.remove("spin");
+      }
+      requestAnimationFrame(loop);
+    })();
+
+    // =================================================================
+    // Wire controls
+    // =================================================================
+    btnScramble.addEventListener("click", scramble);
+    btnSolve.addEventListener("click", requestSolve);
+    btnReset.addEventListener("click", reset);
+    tp.play.addEventListener("click", function () { state.playing ? pause() : play(); });
+    tp.fwd.addEventListener("click", stepForward);
+    tp.back.addEventListener("click", stepBack);
+    tp.start.addEventListener("click", function () { pause(); seekTo(0); });
+    tp.end.addEventListener("click", function () { pause(); seekTo(state.seq.length); });
+    scrub.addEventListener("input", function () { pause(); seekTo(+scrub.value); });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.target.tagName === "INPUT") return;
+      if (e.code === "Space") { e.preventDefault(); if (state.seq.length) (state.playing ? pause() : play()); }
+      else if (e.key === "ArrowRight") stepForward();
+      else if (e.key === "ArrowLeft") stepBack();
+      else if (e.key.toLowerCase() === "s" && !e.metaKey && !e.ctrlKey) scramble();
+    });
+
+    // =================================================================
+    // Boot
+    // =================================================================
+    (function selfCheck() {
+      // a solved cube must render each face uniformly in its own colour
+      var s = new Cube().asString();
+      var faces = { U: 0, R: 9, F: 18, D: 27, L: 36, B: 45 };
+      for (var f in faces) for (var i = 0; i < 9; i++) {
+        if (s[faces[f] + i] !== f) { console.warn("cube self-check unexpected", f, i); return; }
+      }
+    })();
+
+    applyView();
+    render();
+    fitCube();
+    updateTransport();
+
+    // assemble-on-load flourish
+    if (!prefersReducedMotion()) {
+      cubies.forEach(function (cb, i) {
+        var dx = cb.pos[0] * STEP * 3, dy = cb.pos[1] * STEP * 3, dz = cb.pos[2] * STEP * 3;
+        cb.el.style.transition = "none";
+        cb.el.style.opacity = "0";
+        cb.el.style.transform = "translate3d(" + dx + "px," + dy + "px," + dz + "px) scale(0.2)";
+        void cb.el.offsetWidth;
+        cb.el.classList.add("assemble");
+        cb.el.style.transitionDelay = (i * 11) + "ms";
+        cb.el.style.opacity = "1";
+        cb.el.style.transform = "";
+      });
+      setTimeout(function () {
+        cubies.forEach(function (cb) {
+          cb.el.classList.remove("assemble");
+          cb.el.style.transitionDelay = "";
+          cb.el.style.transition = "";
+        });
+      }, 620 + cubies.length * 11 + 60);
+    }
+  })();
+  </script>
+</body>
+</html>

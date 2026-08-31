@@ -74,7 +74,11 @@ are served straight from GitHub Pages:
 
 ```
 scientific-calculator/index.html   — https://kathuman.github.io/claude-projects/scientific-calculator/
+rubiks-cube/index.html             — https://kathuman.github.io/claude-projects/rubiks-cube/
 ```
+
+Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
+app has no runtime CDN dependency); the licence sits beside it.
 
 To add one, drop a folder with an `index.html` at the repo root and point the
 project's `demoUrl` at `https://kathuman.github.io/claude-projects/<folder>/`.

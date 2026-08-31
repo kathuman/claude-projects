@@ -1,5 +1,13 @@
 [
   {
+    "title": "Cube Studio",
+    "description": "View a Rubik's Cube in 3D (drag to orbit) and as a 2D unfolded schematic, scramble it, then watch a near-optimal Kociemba two-phase solution play out move by move with full transport controls.",
+    "date": "2026-08-31",
+    "tags": ["javascript", "web", "3d", "puzzle"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/rubiks-cube",
+    "demoUrl": "https://kathuman.github.io/claude-projects/rubiks-cube/"
+  },
+  {
     "title": "Scientific Calculator",
     "description": "A keyboard-friendly scientific calculator with a real recursive-descent expression parser (no eval), DEG/RAD/GRAD modes, memory, inverse trig via a 2nd key, and a running calculation tape. Single file, no dependencies.",
     "date": "2026-08-31",
