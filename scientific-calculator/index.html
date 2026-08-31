@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scientific Calculator</title>
+  <meta name="description" content="A keyboard-friendly scientific calculator with a real expression parser, angle modes, memory, and a running tape." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    /* ---------------------------------------------------------------------
+       Palette — an olive-graphite lab instrument on a desk that follows
+       the viewer's theme. The device keeps its identity in both; only the
+       desk, page text and ambient shadow shift.
+       ------------------------------------------------------------------ */
+    :root {
+      --desk: #e8e3d6;
+      --desk-2: #ded8c7;
+      --desk-text: #35342c;
+      --desk-muted: #7a7768;
+      --desk-line: #cdc6b3;
+      --ambient: 0 40px 90px -30px rgba(40, 38, 25, 0.45);
+
+      --case: #34372f;
+      --case-2: #3f443a;
+      --case-rim: #23251e;
+      --case-etch: #b7bca8;
+
+      --screen-bg: #9aa885;
+      --screen-bg-2: #90a07a;
+      --screen-ink: #1b2513;
+      --screen-dim: rgba(27, 37, 19, 0.5);
+
+      --key-num: #eeebe1;
+      --key-num-d: #d9d5c6;
+      --key-num-text: #2b2b26;
+      --key-fn: #474c42;
+      --key-fn-d: #383c33;
+      --key-fn-text: #e9e7dd;
+      --key-op: #3c6f9f;
+      --key-op-d: #2f5a83;
+      --key-op-text: #f4f8fb;
+      --accent: #e29130;
+      --accent-d: #c9781c;
+      --accent-text: #241905;
+      --danger: #c15a3e;
+      --danger-d: #a5462c;
+
+      --radius: 14px;
+      --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+      --lcd: "Share Tech Mono", var(--mono);
+      color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+      --desk: #131418;
+      --desk-2: #191a1f;
+      --desk-text: #d6d3c8;
+      --desk-muted: #86837a;
+      --desk-line: #2b2c33;
+      --ambient: 0 40px 100px -28px rgba(0, 0, 0, 0.75);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --desk: #131418;
+        --desk-2: #191a1f;
+        --desk-text: #d6d3c8;
+        --desk-muted: #86837a;
+        --desk-line: #2b2c33;
+        --ambient: 0 40px 100px -28px rgba(0, 0, 0, 0.75);
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--desk);
+      color: var(--desk-text);
+    }
+
+    body {
+      font-family: var(--sans);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      background:
+        radial-gradient(900px circle at 12% 0%, var(--desk-2), transparent 55%),
+        radial-gradient(700px circle at 100% 100%, var(--desk-2), transparent 50%),
+        var(--desk);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 780px;
+      padding: 40px 20px 56px;
+    }
+
+    header.masthead {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: var(--case);
+      color: var(--case-etch);
+      font-family: var(--lcd);
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      flex: none;
+    }
+    header.masthead h1 {
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+    .tagline {
+      margin: 6px 2px 26px;
+      color: var(--desk-muted);
+      font-size: 13.5px;
+      max-width: 62ch;
+    }
+
+    /* --- The instrument ------------------------------------------------- */
+    .shell {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 22px;
+      align-items: flex-start;
+    }
+
+    .calc {
+      flex: 1 1 340px;
+      max-width: 400px;
+      background: linear-gradient(180deg, var(--case-2), var(--case));
+      border: 1px solid var(--case-rim);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow:
+        var(--ambient),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -2px 6px rgba(0, 0, 0, 0.35);
+    }
+
+    .brandline {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0 4px 12px;
+      color: var(--case-etch);
+    }
+    .brandline .model { font-family: var(--lcd); font-size: 12px; letter-spacing: 1px; }
+    .brandline .series { font-size: 10px; letter-spacing: 2px; opacity: 0.6; text-transform: uppercase; }
+
+    .lcd {
+      background: linear-gradient(175deg, var(--screen-bg-2), var(--screen-bg));
+      border-radius: 10px;
+      padding: 12px 14px 14px;
+      border: 1px solid var(--case-rim);
+      box-shadow:
+        inset 0 2px 10px rgba(0, 0, 0, 0.4),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+      color: var(--screen-ink);
+      margin-bottom: 16px;
+    }
+    .lcd-chips {
+      display: flex;
+      gap: 6px;
+      font-family: var(--lcd);
+      font-size: 10.5px;
+      letter-spacing: 1px;
+      min-height: 14px;
+    }
+    .chip { opacity: 0.28; transition: opacity 0.12s; }
+    .chip.on { opacity: 1; }
+    .lcd-expr {
+      font-family: var(--lcd);
+      font-size: 13px;
+      text-align: right;
+      color: var(--screen-dim);
+      min-height: 18px;
+      margin-top: 6px;
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .lcd-expr::-webkit-scrollbar { display: none; }
+    .lcd-main {
+      font-family: var(--lcd);
+      font-size: 2.1rem;
+      line-height: 1.15;
+      text-align: right;
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      margin-top: 2px;
+    }
+    .lcd-main::-webkit-scrollbar { display: none; }
+    .lcd.err .lcd-main { color: var(--danger-d); }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+    button.key {
+      appearance: none;
+      border: 1px solid var(--case-rim);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--key-num), var(--key-num-d));
+      color: var(--key-num-text);
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      min-height: 46px;
+      padding: 4px 2px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      transition: transform 0.05s ease, filter 0.12s ease;
+      user-select: none;
+    }
+    button.key .sub {
+      font-family: var(--lcd);
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      color: var(--accent-d);
+      opacity: 0.85;
+      min-height: 10px;
+    }
+    button.key.fn { background: linear-gradient(180deg, var(--key-fn), var(--key-fn-d)); color: var(--key-fn-text); font-weight: 500; }
+    button.key.fn .sub { color: var(--accent); }
+    button.key.op { background: linear-gradient(180deg, var(--key-op), var(--key-op-d)); color: var(--key-op-text); font-size: 17px; }
+    button.key.op .sub { color: rgba(255, 255, 255, 0.7); }
+    button.key.eq { background: linear-gradient(180deg, var(--accent), var(--accent-d)); color: var(--accent-text); font-size: 18px; }
+    button.key.danger { background: linear-gradient(180deg, var(--danger), var(--danger-d)); color: #fff; }
+    button.key.toggle.active { background: linear-gradient(180deg, var(--accent), var(--accent-d)); color: var(--accent-text); }
+
+    button.key:hover { filter: brightness(1.04); }
+    button.key:active { transform: translateY(2px); box-shadow: 0 0 0 rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+    button.key:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+    /* When 2nd is armed, surface the alternate legends */
+    .keys.second button.key.has-sub .sub { color: var(--accent); font-size: 11px; opacity: 1; }
+    .keys.second button.key.has-sub .main { opacity: 0.4; font-size: 13px; }
+
+    /* --- Tape -------------------------------------------------------- */
+    .tape {
+      flex: 1 1 220px;
+      min-width: 0;
+      align-self: stretch;
+      background: var(--desk-2);
+      border: 1px solid var(--desk-line);
+      border-radius: 12px;
+      padding: 14px 4px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      max-height: 520px;
+    }
+    .tape-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-right: 10px;
+      margin-bottom: 10px;
+    }
+    .tape-head span { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--desk-muted); }
+    .tape-head button {
+      appearance: none;
+      background: none;
+      border: none;
+      color: var(--desk-muted);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .tape-head button:hover { color: var(--desk-text); }
+    .tape-list {
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .tape-list .empty { color: var(--desk-muted); font-family: var(--mono); font-size: 12px; padding: 4px 2px; }
+    .tape-row {
+      appearance: none;
+      background: none;
+      border: none;
+      border-top: 1px dashed var(--desk-line);
+      text-align: right;
+      font-family: var(--mono);
+      padding: 7px 2px;
+      cursor: pointer;
+      color: inherit;
+      width: 100%;
+    }
+    .tape-row:first-child { border-top: none; }
+    .tape-row:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .tape-row .r-expr { display: block; font-size: 11px; color: var(--desk-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tape-row .r-val { display: block; font-size: 14px; font-weight: 600; }
+
+    footer.foot {
+      margin-top: 34px;
+      font-size: 12.5px;
+      color: var(--desk-muted);
+    }
+    footer.foot a { color: var(--desk-muted); text-underline-offset: 2px; }
+    footer.foot a:hover { color: var(--desk-text); }
+
+    .hint {
+      margin-top: 16px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--desk-muted);
+      line-height: 1.8;
+    }
+    .hint kbd {
+      font-family: var(--mono);
+      background: var(--desk-2);
+      border: 1px solid var(--desk-line);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      button.key { transition: none; }
+      button.key:active { transform: none; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 28px 14px 44px; }
+      .calc { max-width: none; }
+      .tape { max-height: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <span class="logo">f(x)</span>
+      <h1>Scientific Calculator</h1>
+    </header>
+    <p class="tagline">
+      Type an expression or tap the keys. Results are parsed with real operator
+      precedence &mdash; no <code>eval</code> &mdash; and every calculation drops onto the tape.
+    </p>
+
+    <div class="shell">
+      <div class="calc">
+        <div class="brandline">
+          <span class="model">SC&mdash;115</span>
+          <span class="series">dual power &middot; 40 keys</span>
+        </div>
+
+        <div class="lcd" id="lcd">
+          <div class="lcd-chips">
+            <span class="chip on" id="chipAngle">DEG</span>
+            <span class="chip" id="chip2nd">2ND</span>
+            <span class="chip" id="chipMem">M</span>
+          </div>
+          <div class="lcd-expr" id="lcdExpr"></div>
+          <div class="lcd-main" id="lcdMain" aria-live="polite">0</div>
+        </div>
+
+        <div class="keys" id="keys"></div>
+      </div>
+
+      <aside class="tape">
+        <div class="tape-head">
+          <span>Tape</span>
+          <button type="button" id="clearTape">clear</button>
+        </div>
+        <div class="tape-list" id="tapeList"></div>
+      </aside>
+    </div>
+
+    <p class="hint">
+      <kbd>0-9</kbd> <kbd>. ( )</kbd> <kbd>+ &minus; * / ^</kbd> <kbd>!</kbd> <kbd>%</kbd> &nbsp;·&nbsp;
+      <kbd>Enter</kbd> evaluate &nbsp;·&nbsp; <kbd>Backspace</kbd> delete &nbsp;·&nbsp; <kbd>Esc</kbd> all-clear
+    </p>
+
+    <footer class="foot">
+      Part of <a href="../">Claude Projects</a> &middot; built with
+      <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
+    </footer>
+  </div>
+
+  <script>
+  // =====================================================================
+  // Expression engine — tokenizer + recursive-descent parser.
+  // Precedence (low → high): + −  <  * / mod  <  unary ±  <  ^ (right)  <  postfix ! %
+  // =====================================================================
+  function CalcError(msg) { this.message = msg; }
+  CalcError.prototype.toString = function () { return this.message; };
+
+  const CONSTS = { pi: Math.PI, e: Math.E, ans: 0 };
+  const FUNCS = new Set([
+    "sin", "cos", "tan", "asin", "acos", "atan",
+    "sinh", "cosh", "tanh", "ln", "log",
+    "sqrt", "cbrt", "exp", "abs",
+  ]);
+
+  let angleMode = "DEG"; // DEG | RAD | GRAD
+
+  function toRad(x) {
+    if (angleMode === "DEG") return (x * Math.PI) / 180;
+    if (angleMode === "GRAD") return (x * Math.PI) / 200;
+    return x;
+  }
+  function fromRad(x) {
+    if (angleMode === "DEG") return (x * 180) / Math.PI;
+    if (angleMode === "GRAD") return (x * 200) / Math.PI;
+    return x;
+  }
+  function factorial(n) {
+    if (n < 0 || !Number.isInteger(n)) throw new CalcError("n! needs a whole n ≥ 0");
+    if (n > 170) return Infinity;
+    let r = 1;
+    for (let k = 2; k <= n; k++) r *= k;
+    return r;
+  }
+  function applyFunc(name, x) {
+    switch (name) {
+      case "sin": return Math.sin(toRad(x));
+      case "cos": return Math.cos(toRad(x));
+      case "tan": return Math.tan(toRad(x));
+      case "asin": return fromRad(Math.asin(x));
+      case "acos": return fromRad(Math.acos(x));
+      case "atan": return fromRad(Math.atan(x));
+      case "sinh": return Math.sinh(x);
+      case "cosh": return Math.cosh(x);
+      case "tanh": return Math.tanh(x);
+      case "ln": return Math.log(x);
+      case "log": return Math.log10(x);
+      case "sqrt": return Math.sqrt(x);
+      case "cbrt": return Math.cbrt(x);
+      case "exp": return Math.exp(x);
+      case "abs": return Math.abs(x);
+    }
+    throw new CalcError('Unknown function "' + name + '"');
+  }
+
+  function normalize(s) {
+    return s
+      .replace(/×/g, "*")
+      .replace(/÷/g, "/")
+      .replace(/−/g, "-")
+      .replace(/π/g, "pi")
+      .replace(/√/g, "sqrt")
+      .replace(/Ans/g, "ans")
+      .replace(/mod/gi, " mod ");
+  }
+
+  function tokenize(str) {
+    const s = normalize(str);
+    const out = [];
+    let i = 0;
+    while (i < s.length) {
+      const c = s[i];
+      if (c === " ") { i++; continue; }
+      if ((c >= "0" && c <= "9") || c === ".") {
+        let j = i + 1;
+        while (j < s.length && ((s[j] >= "0" && s[j] <= "9") || s[j] === ".")) j++;
+        const num = parseFloat(s.slice(i, j));
+        if (Number.isNaN(num)) throw new CalcError("Bad number");
+        out.push({ t: "num", v: num });
+        i = j;
+        continue;
+      }
+      if (/[a-z]/i.test(c)) {
+        let j = i + 1;
+        while (j < s.length && /[a-z]/i.test(s[j])) j++;
+        out.push({ t: "name", v: s.slice(i, j).toLowerCase() });
+        i = j;
+        continue;
+      }
+      if ("+-*/^!%()".includes(c)) { out.push({ t: "op", v: c }); i++; continue; }
+      throw new CalcError('Unexpected "' + c + '"');
+    }
+    return out;
+  }
+
+  // Insert implicit multiplication: 2π, 2(3), )(, 2sin(3)
+  function withImplicitMul(tokens) {
+    const res = [];
+    const endsValue = (tk) =>
+      tk && (tk.t === "num" ||
+        (tk.t === "op" && (tk.v === ")" || tk.v === "!" || tk.v === "%")) ||
+        (tk.t === "name" && tk.v in CONSTS));
+    const startsValue = (tk) =>
+      tk && ((tk.t === "num") ||
+        (tk.t === "name" && tk.v !== "mod") ||
+        (tk.t === "op" && tk.v === "("));
+    for (const cur of tokens) {
+      if (endsValue(res[res.length - 1]) && startsValue(cur)) res.push({ t: "op", v: "*" });
+      res.push(cur);
+    }
+    return res;
+  }
+
+  function parse(tokens) {
+    let p = 0;
+    const peek = () => tokens[p];
+    const next = () => tokens[p++];
+    const eat = (v) => {
+      const tk = next();
+      if (!tk || tk.v !== v) throw new CalcError('Expected "' + v + '"');
+    };
+
+    function expr() {
+      let left = term();
+      while (peek() && peek().t === "op" && (peek().v === "+" || peek().v === "-")) {
+        const op = next().v;
+        const right = term();
+        left = op === "+" ? left + right : left - right;
+      }
+      return left;
+    }
+    function term() {
+      let left = unary();
+      while (peek() && ((peek().t === "op" && (peek().v === "*" || peek().v === "/")) ||
+        (peek().t === "name" && peek().v === "mod"))) {
+        const op = next().v;
+        const right = unary();
+        if (op === "*") left = left * right;
+        else if (op === "/") left = left / right;
+        else left = left % right;
+      }
+      return left;
+    }
+    function unary() {
+      if (peek() && peek().t === "op" && (peek().v === "+" || peek().v === "-")) {
+        const op = next().v;
+        const val = unary();
+        return op === "-" ? -val : val;
+      }
+      return power();
+    }
+    function power() {
+      const base = postfix();
+      if (peek() && peek().t === "op" && peek().v === "^") {
+        next();
+        return Math.pow(base, unary()); // right-associative, allows 2^-3
+      }
+      return base;
+    }
+    function postfix() {
+      let val = primary();
+      while (peek() && peek().t === "op" && (peek().v === "!" || peek().v === "%")) {
+        const op = next().v;
+        val = op === "!" ? factorial(val) : val / 100;
+      }
+      return val;
+    }
+    function primary() {
+      const tk = next();
+      if (!tk) throw new CalcError("Expression is incomplete");
+      if (tk.t === "num") return tk.v;
+      if (tk.t === "op" && tk.v === "(") {
+        const v = expr();
+        eat(")");
+        return v;
+      }
+      if (tk.t === "name") {
+        if (tk.v in CONSTS) return CONSTS[tk.v];
+        if (tk.v === "mod") throw new CalcError("Misplaced mod");
+        if (FUNCS.has(tk.v)) {
+          eat("(");
+          const arg = expr();
+          eat(")");
+          return applyFunc(tk.v, arg);
+        }
+        throw new CalcError('Unknown name "' + tk.v + '"');
+      }
+      throw new CalcError('Unexpected "' + tk.v + '"');
+    }
+
+    const result = expr();
+    if (p < tokens.length) throw new CalcError('Unexpected "' + tokens[p].v + '"');
+    return result;
+  }
+
+  function evaluate(raw) {
+    if (!raw || !raw.trim()) throw new CalcError("Nothing to evaluate");
+    CONSTS.ans = state.lastAns;
+    const value = parse(withImplicitMul(tokenize(raw)));
+    if (Number.isNaN(value)) throw new CalcError("Result is undefined");
+    return value;
+  }
+
+  function fmt(n) {
+    if (n === Infinity) return "∞";
+    if (n === -Infinity) return "-∞";
+    if (Number.isNaN(n)) return "Error";
+    if (n === 0) return "0";
+    const abs = Math.abs(n);
+    if (abs >= 1e12 || abs < 1e-9) {
+      return n.toExponential(8).replace(/(\.\d*?)0+e/, "$1e").replace(/\.e/, "e");
+    }
+    return String(parseFloat(n.toPrecision(12)));
+  }
+
+  // =====================================================================
+  // App state + persistence
+  // =====================================================================
+  const STORE_KEY = "sci-calc-v1";
+  const state = {
+    entry: "",
+    justEvaluated: false,
+    errored: false,
+    lastExpr: "",
+    lastAns: 0,
+    lastResultStr: "0",
+    memory: 0,
+    second: false,
+    history: [],
+  };
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        angleMode, memory: state.memory, history: state.history.slice(-40),
+      }));
+    } catch (e) { /* storage unavailable — nothing to persist */ }
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (["DEG", "RAD", "GRAD"].includes(d.angleMode)) angleMode = d.angleMode;
+      if (typeof d.memory === "number") state.memory = d.memory;
+      if (Array.isArray(d.history)) state.history = d.history;
+    } catch (e) { /* ignore corrupt state */ }
+  }
+
+  // =====================================================================
+  // Keypad definition — row-major, 5 columns
+  // =====================================================================
+  const KEYS = [
+    { main: "2nd", cls: "fn toggle", cmd: "second" },
+    { main: "mode", cmd: "ang", cls: "fn" },
+    { main: "⌫", cmd: "back", cls: "fn", aria: "Delete" },
+    { main: "(", cmd: "app:(", cls: "fn" },
+    { main: ")", cmd: "app:)", cls: "fn" },
+
+    { main: "sin", sub: "sin⁻¹", cmd: "app:sin(", scmd: "app:asin(", cls: "fn" },
+    { main: "cos", sub: "cos⁻¹", cmd: "app:cos(", scmd: "app:acos(", cls: "fn" },
+    { main: "tan", sub: "tan⁻¹", cmd: "app:tan(", scmd: "app:atan(", cls: "fn" },
+    { main: "π", cmd: "app:π", cls: "fn" },
+    { main: "e", cmd: "app:e", cls: "fn" },
+
+    { main: "ln", sub: "eˣ", cmd: "app:ln(", scmd: "app:exp(", cls: "fn" },
+    { main: "log", sub: "10ˣ", cmd: "app:log(", scmd: "app:10^(", cls: "fn" },
+    { main: "√", sub: "∛", cmd: "app:√(", scmd: "app:cbrt(", cls: "fn", aria: "Square root" },
+    { main: "x²", sub: "x³", cmd: "app:^2", scmd: "app:^3", cls: "fn" },
+    { main: "xʸ", cmd: "app:^", cls: "fn", aria: "Power" },
+
+    { main: "7", cmd: "app:7", cls: "num" },
+    { main: "8", cmd: "app:8", cls: "num" },
+    { main: "9", cmd: "app:9", cls: "num" },
+    { main: "÷", cmd: "app:÷", cls: "op", aria: "Divide" },
+    { main: "mod", cmd: "app: mod ", cls: "op" },
+
+    { main: "4", cmd: "app:4", cls: "num" },
+    { main: "5", cmd: "app:5", cls: "num" },
+    { main: "6", cmd: "app:6", cls: "num" },
+    { main: "×", cmd: "app:×", cls: "op", aria: "Multiply" },
+    { main: "n!", cmd: "app:!", cls: "op", aria: "Factorial" },
+
+    { main: "1", cmd: "app:1", cls: "num" },
+    { main: "2", cmd: "app:2", cls: "num" },
+    { main: "3", cmd: "app:3", cls: "num" },
+    { main: "−", cmd: "app:−", cls: "op", aria: "Subtract" },
+    { main: "%", cmd: "app:%", cls: "op", aria: "Percent" },
+
+    { main: "0", cmd: "app:0", cls: "num" },
+    { main: ".", cmd: "app:.", cls: "num" },
+    { main: "Ans", cmd: "app:Ans", cls: "num" },
+    { main: "+", cmd: "app:+", cls: "op", aria: "Add" },
+    { main: "=", cmd: "eq", cls: "eq" },
+
+    { main: "MC", cmd: "mc", cls: "fn", aria: "Memory clear" },
+    { main: "MR", cmd: "mr", cls: "fn", aria: "Memory recall" },
+    { main: "M+", cmd: "madd", cls: "fn", aria: "Memory add" },
+    { main: "M−", cmd: "msub", cls: "fn", aria: "Memory subtract" },
+    { main: "AC", cmd: "ac", cls: "danger", aria: "All clear" },
+  ];
+
+  const el = {
+    keys: document.getElementById("keys"),
+    lcd: document.getElementById("lcd"),
+    main: document.getElementById("lcdMain"),
+    expr: document.getElementById("lcdExpr"),
+    chipAngle: document.getElementById("chipAngle"),
+    chip2nd: document.getElementById("chip2nd"),
+    chipMem: document.getElementById("chipMem"),
+    tapeList: document.getElementById("tapeList"),
+    clearTape: document.getElementById("clearTape"),
+  };
+
+  function buildKeys() {
+    const frag = document.createDocumentFragment();
+    for (const k of KEYS) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "key " + (k.cls || "");
+      if (k.sub) btn.classList.add("has-sub");
+      if (k.aria) btn.setAttribute("aria-label", k.aria);
+      btn.dataset.cmd = k.cmd;
+      if (k.scmd) btn.dataset.scmd = k.scmd;
+      const sub = document.createElement("span");
+      sub.className = "sub";
+      sub.textContent = k.sub || "";
+      const main = document.createElement("span");
+      main.className = "main";
+      main.textContent = k.main;
+      btn.append(sub, main);
+      btn.addEventListener("click", () => {
+        const useSecond = state.second && btn.dataset.scmd;
+        dispatch(useSecond ? btn.dataset.scmd : btn.dataset.cmd);
+        if (k.cmd !== "second" && state.second) setSecond(false);
+      });
+      frag.appendChild(btn);
+    }
+    el.keys.appendChild(frag);
+  }
+
+  // ---- command dispatch ----------------------------------------------
+  function dispatch(cmd) {
+    if (state.errored && !["ac", "back"].includes(cmd)) {
+      state.errored = false;
+      state.entry = "";
+    }
+    if (cmd.startsWith("app:")) return appendText(cmd.slice(4));
+    switch (cmd) {
+      case "eq": return runEquals();
+      case "back": return backspace();
+      case "ac": return allClear();
+      case "ang": return cycleAngle();
+      case "second": return setSecond(!state.second);
+      case "mr": return appendText(fmt(state.memory));
+      case "mc": state.memory = 0; save(); return render();
+      case "madd": return memoryAdd(1);
+      case "msub": return memoryAdd(-1);
+    }
+  }
+
+  function appendText(t) {
+    const continues = /^[+\-×÷^]/.test(t) || t === " mod " || t === "!" || t === "%" || t === ")";
+    if (state.justEvaluated) {
+      state.entry = continues ? state.lastResultStr + t : t;
+      state.justEvaluated = false;
+    } else {
+      state.entry += t;
+    }
+    render();
+  }
+
+  function backspace() {
+    if (state.justEvaluated || state.errored) {
+      state.entry = "";
+      state.justEvaluated = false;
+      state.errored = false;
+    } else {
+      state.entry = state.entry.replace(/( mod |Ans|[a-z]+\(|.)$/i, "");
+    }
+    render();
+  }
+
+  function allClear() {
+    state.entry = "";
+    state.justEvaluated = false;
+    state.errored = false;
+    state.lastExpr = "";
+    render();
+  }
+
+  function cycleAngle() {
+    const modes = ["DEG", "RAD", "GRAD"];
+    angleMode = modes[(modes.indexOf(angleMode) + 1) % modes.length];
+    save();
+    render();
+  }
+
+  function setSecond(on) {
+    state.second = on;
+    el.keys.classList.toggle("second", on);
+    render();
+  }
+
+  function memoryAdd(sign) {
+    let v;
+    try {
+      v = state.entry.trim() ? evaluate(state.entry) : state.lastAns;
+    } catch (e) {
+      return showError(e.message);
+    }
+    if (!Number.isFinite(v)) return showError("Can't store that in memory");
+    state.memory += sign * v;
+    save();
+    render();
+  }
+
+  function runEquals() {
+    let v;
+    try {
+      v = evaluate(state.entry);
+    } catch (e) {
+      return showError(e.message);
+    }
+    state.lastExpr = state.entry;
+    state.lastAns = Number.isFinite(v) ? v : state.lastAns;
+    state.lastResultStr = fmt(v);
+    state.entry = state.lastResultStr;
+    state.justEvaluated = true;
+    state.history.push({ expr: prettyExpr(state.lastExpr), val: state.lastResultStr });
+    if (state.history.length > 40) state.history.shift();
+    save();
+    render();
+    renderTape();
+  }
+
+  function showError(msg) {
+    state.errored = true;
+    state.entry = "Error";
+    state.lastExpr = msg;
+    render();
+  }
+
+  // ---- rendering ----------------------------------------------------
+  function prettyExpr(s) {
+    return s.replace(/\*/g, "×").replace(/\//g, "÷");
+  }
+
+  function fitFont(node, text) {
+    const len = text.length;
+    let size = 2.1;
+    if (len > 12) size = 1.7;
+    if (len > 18) size = 1.4;
+    if (len > 26) size = 1.15;
+    if (len > 36) size = 0.95;
+    node.style.fontSize = size + "rem";
+  }
+
+  function render() {
+    const shown = state.entry === "" ? "0" : state.entry;
+    el.main.textContent = shown;
+    fitFont(el.main, shown);
+    el.lcd.classList.toggle("err", state.errored);
+
+    el.chipAngle.textContent = angleMode;
+    el.chip2nd.classList.toggle("on", state.second);
+    el.chipMem.classList.toggle("on", state.memory !== 0);
+
+    if (state.errored) {
+      el.expr.textContent = state.lastExpr;
+    } else if (state.justEvaluated) {
+      el.expr.textContent = prettyExpr(state.lastExpr) + " =";
+    } else if (state.entry.trim()) {
+      try {
+        el.expr.textContent = "= " + fmt(evaluate(state.entry));
+      } catch (e) {
+        el.expr.textContent = "";
+      }
+    } else {
+      el.expr.textContent = "";
+    }
+  }
+
+  function renderTape() {
+    el.tapeList.innerHTML = "";
+    if (!state.history.length) {
+      const p = document.createElement("p");
+      p.className = "empty";
+      p.textContent = "No calculations yet.";
+      el.tapeList.appendChild(p);
+      return;
+    }
+    for (const item of state.history) {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "tape-row";
+      row.title = "Insert " + item.val;
+      row.innerHTML =
+        '<span class="r-expr"></span><span class="r-val"></span>';
+      row.querySelector(".r-expr").textContent = item.expr;
+      row.querySelector(".r-val").textContent = item.val;
+      row.addEventListener("click", () => {
+        if (state.entry.trim() && !state.justEvaluated && !state.errored) {
+          appendText(item.val);
+        } else {
+          state.entry = item.val;
+          state.justEvaluated = true;
+          state.errored = false;
+          render();
+        }
+      });
+      el.tapeList.appendChild(row);
+    }
+    el.tapeList.scrollTop = el.tapeList.scrollHeight;
+  }
+
+  // ---- keyboard ----------------------------------------------------
+  const KEYMAP = {
+    "*": "app:×", "/": "app:÷", "-": "app:−", "+": "app:+", "^": "app:^",
+    "(": "app:(", ")": "app:)", ".": "app:.", "!": "app:!", "%": "app:%",
+    "=": "eq", "Enter": "eq", "Backspace": "back", "Escape": "ac",
+  };
+  window.addEventListener("keydown", (ev) => {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    let cmd = null;
+    if (ev.key >= "0" && ev.key <= "9") cmd = "app:" + ev.key;
+    else if (KEYMAP[ev.key]) cmd = KEYMAP[ev.key];
+    if (!cmd) return;
+    ev.preventDefault();
+    dispatch(cmd);
+    if (state.second) setSecond(false);
+  });
+
+  el.clearTape.addEventListener("click", () => {
+    state.history = [];
+    save();
+    renderTape();
+  });
+
+  // ---- boot ------------------------------------------------------
+  load();
+  buildKeys();
+  render();
+  renderTape();
+  </script>
+</body>
+</html>

@@ -66,3 +66,15 @@ assets/style.css  — styling (light + dark themes)
 assets/app.js     — loads projects.json, search/filter/theme logic
 projects.json     — the actual project data — edit this to add projects
 ```
+
+## Sub-apps
+
+Some projects are self-contained web apps that live in their own folder here and
+are served straight from GitHub Pages:
+
+```
+scientific-calculator/index.html   — https://kathuman.github.io/claude-projects/scientific-calculator/
+```
+
+To add one, drop a folder with an `index.html` at the repo root and point the
+project's `demoUrl` at `https://kathuman.github.io/claude-projects/<folder>/`.

@@ -1,5 +1,13 @@
 [
   {
+    "title": "Scientific Calculator",
+    "description": "A keyboard-friendly scientific calculator with a real recursive-descent expression parser (no eval), DEG/RAD/GRAD modes, memory, inverse trig via a 2nd key, and a running calculation tape. Single file, no dependencies.",
+    "date": "2026-08-31",
+    "tags": ["javascript", "web", "tool", "math"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/scientific-calculator",
+    "demoUrl": "https://kathuman.github.io/claude-projects/scientific-calculator/"
+  },
+  {
     "title": "Snake",
     "description": "A classic grid-based Snake game built with Python's Tkinter — pause/resume, increasing speed, and a game-over overlay. No external dependencies.",
     "date": "2026-08-31",
