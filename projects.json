@@ -1,0 +1,10 @@
+[
+  {
+    "title": "Snake",
+    "description": "A classic grid-based Snake game built with Python's Tkinter — pause/resume, increasing speed, and a game-over overlay. No external dependencies.",
+    "date": "2026-08-31",
+    "tags": ["python", "tkinter", "game"],
+    "repoUrl": null,
+    "demoUrl": null
+  }
+]
