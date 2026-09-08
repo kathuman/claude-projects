@@ -76,6 +76,7 @@ are served straight from GitHub Pages:
 scientific-calculator/index.html   — https://kathuman.github.io/claude-projects/scientific-calculator/
 rubiks-cube/index.html             — https://kathuman.github.io/claude-projects/rubiks-cube/
 supply-chain-viz/index.html        — https://kathuman.github.io/claude-projects/supply-chain-viz/
+real-options/index.html            — https://kathuman.github.io/claude-projects/real-options/
 ```
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the

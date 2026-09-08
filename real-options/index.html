@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Real Options for Network Design</title>
+  <meta name="description" content="An interactive explainer for real options applied to supply chain network design — compare committing now, waiting, and staged expansion under demand uncertainty, and see why flexibility is worth paying for. Play with volatility, growth, cost and footprint assumptions." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127922;</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ------------------------------------------------------------------
+       Palette: the Claude data-viz reference instance (shared with the
+       Network Design Visuals sub-app). Chrome uses the parent site's
+       warm neutrals; chart roles (s1..s8 / seq ramp / status) are the
+       documented palette, stepped per theme.
+       ------------------------------------------------------------------ */
+    :root {
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --panel-2: #faf9f7;
+      --border: #e6e4de;
+      --ink: #1b1b18;
+      --ink-2: #5c5b54;
+      --muted: #8a8880;
+      --accent: #c15f3c;
+      --accent-soft: #f3e3da;
+      --accent-ink: #ffffff;
+
+      --surface: #fcfcfb;
+      --grid: #e6e4de;
+      --axis: #cbc9c0;
+
+      --s1: #2a78d6;
+      --s2: #eb6834;
+      --s3: #1baf7a;
+      --s4: #eda100;
+      --s5: #e87ba4;
+      --s6: #008300;
+      --s7: #4a3aa7;
+      --s8: #e34948;
+
+      --seq-1: #cde2fb;
+      --seq-2: #9ec5f4;
+      --seq-3: #6da7ec;
+      --seq-4: #3987e5;
+      --seq-5: #256abf;
+      --seq-6: #184f95;
+      --seq-7: #0d366b;
+
+      --good: #0ca30c;
+      --warn: #e0932a;
+      --serious: #ec835a;
+      --critical: #d03b3b;
+
+      --shadow: 0 1px 2px rgba(20,20,15,.04), 0 10px 30px -8px rgba(20,20,15,.10);
+      --radius: 14px;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+      color-scheme: light;
+    }
+    :root[data-theme="dark"] {
+      --bg: #16151a; --panel: #1e1d24; --panel-2: #191820; --border: #302e38;
+      --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
+      --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
+      --surface: #1a1a19; --grid: #2c2c2a; --axis: #3c3c39;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+      --s5: #d55181; --s6: #14a014; --s7: #9085e9; --s8: #e66767;
+      --seq-1: #16324f; --seq-2: #1c4a7a; --seq-3: #256abf; --seq-4: #3987e5;
+      --seq-5: #6da7ec; --seq-6: #9ec5f4; --seq-7: #cde2fb;
+      --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --critical: #e05555;
+      --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16151a; --panel: #1e1d24; --panel-2: #191820; --border: #302e38;
+        --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
+        --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
+        --surface: #1a1a19; --grid: #2c2c2a; --axis: #3c3c39;
+        --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+        --s5: #d55181; --s6: #14a014; --s7: #9085e9; --s8: #e66767;
+        --seq-1: #16324f; --seq-2: #1c4a7a; --seq-3: #256abf; --seq-4: #3987e5;
+        --seq-5: #6da7ec; --seq-6: #9ec5f4; --seq-7: #cde2fb;
+        --good: #0ca30c; --warn: #fab219; --serious: #ec835a; --critical: #e05555;
+        --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+    body { font-family: var(--font-sans); line-height: 1.55; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { color: var(--accent); }
+
+    header.bar {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand .mk { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 15px; }
+    .brand h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -.01em; white-space: nowrap; }
+    .brand .sub { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .hactions { display: flex; align-items: center; gap: 8px; flex: none; }
+    .lnk { font-size: 12.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
+    .lnk:hover { border-color: var(--accent); color: var(--ink); }
+    .icon-btn { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+    .icon-btn:hover { border-color: var(--accent); color: var(--ink); }
+    .icon-moon { display: none; }
+    :root[data-theme="dark"] .icon-sun { display: none; }
+    :root[data-theme="dark"] .icon-moon { display: block; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .icon-sun { display: none; }
+      :root:not([data-theme="light"]) .icon-moon { display: block; }
+    }
+
+    main { max-width: 1280px; margin: 0 auto; padding: 30px 26px 40px; }
+
+    .intro { max-width: 820px; }
+    .intro h2 { font-size: clamp(23px, 3.2vw, 32px); font-weight: 800; letter-spacing: -.02em; margin: 0 0 12px; }
+    .intro p { color: var(--ink-2); font-size: 15px; margin: 0 0 12px; }
+    .intro strong { color: var(--ink); }
+
+    .optcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 22px 0 6px; }
+    .optcard { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--panel-2); }
+    .optcard h4 { margin: 0 0 4px; font-size: 13.5px; }
+    .optcard .tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+    .optcard p { margin: 8px 0 10px; font-size: 12.5px; color: var(--ink-2); }
+    .optcard svg { display: block; width: 100%; height: 62px; }
+
+    details.map { margin: 20px 0 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel-2); overflow: hidden; }
+    details.map > summary { cursor: pointer; padding: 12px 15px; font-weight: 600; font-size: 13.5px; list-style: none; }
+    details.map > summary::-webkit-details-marker { display: none; }
+    details.map > summary::before { content: "▸ "; color: var(--muted); }
+    details.map[open] > summary::before { content: "▾ "; }
+    details.map .mapbody { padding: 4px 15px 16px; overflow-x: auto; }
+    table.rox { border-collapse: collapse; width: 100%; font-size: 12.5px; min-width: 640px; }
+    table.rox th, table.rox td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.rox th { color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; }
+    table.rox td:first-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+
+    .layout { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 26px; margin-top: 30px; }
+
+    .controls { position: sticky; top: 74px; align-self: start; max-height: calc(100vh - 96px); overflow-y: auto;
+      border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); padding: 16px; }
+    .controls h3 { margin: 2px 0 4px; font-size: 13px; }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+    .presets button { border: 1px solid var(--border); background: var(--panel-2); color: var(--ink-2); font: inherit; font-size: 11.5px; padding: 5px 9px; border-radius: 999px; cursor: pointer; }
+    .presets button:hover { border-color: var(--accent); color: var(--ink); }
+    .presets button.reset { color: var(--accent); }
+
+    .cgrp { margin-bottom: 14px; }
+    .cgrp > .glabel { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 8px; }
+    .ctl { margin-bottom: 11px; }
+    .ctl .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+    .ctl label { font-size: 12px; color: var(--ink-2); }
+    .ctl .val { font-size: 12px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+    .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
+
+    .derived { margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
+    .derived div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+    .derived b { color: var(--ink-2); font-weight: 500; }
+
+    .stage { min-width: 0; }
+
+    .vof {
+      border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 12px;
+      background: var(--panel); box-shadow: var(--shadow); padding: 16px 18px; margin-bottom: 22px;
+    }
+    .vof .big { font-size: clamp(22px, 3.4vw, 30px); font-weight: 800; letter-spacing: -.02em; }
+    .vof .big.pos { color: var(--good); }
+    .vof .big.neg { color: var(--critical); }
+    .vof p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
+
+    .scorecards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 26px; }
+    .sc { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); padding: 14px; position: relative; }
+    .sc.best { border-color: var(--good); }
+    .sc .sc-h { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    .sc .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+    .sc h4 { margin: 0; font-size: 13.5px; }
+    .sc .tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 10px; display: block; }
+    .sc .npv { font-size: 22px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .sc .delta { font-size: 11.5px; font-weight: 600; margin-bottom: 10px; }
+    .sc .delta.pos { color: var(--good); } .sc .delta.neg { color: var(--critical); } .sc .delta.mut { color: var(--muted); }
+    .sc .metric { display: flex; justify-content: space-between; font-size: 11.5px; padding: 3px 0; border-top: 1px dashed var(--border); font-variant-numeric: tabular-nums; }
+    .sc .metric span:first-child { color: var(--ink-2); }
+    .sc .metric span:last-child { font-weight: 600; }
+    .sc .flag { position: absolute; top: 10px; right: 10px; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--good); }
+
+    .panel { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 16px; margin-bottom: 22px; }
+    .panel > h3 { margin: 0 0 3px; font-size: 16px; letter-spacing: -.01em; }
+    .panel > .blurb { margin: 0 0 12px; font-size: 12.5px; color: var(--ink-2); max-width: 720px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .toolbar .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .toolbar .seg button { border: 0; background: var(--panel); color: var(--ink-2); font: inherit; font-size: 12px; padding: 5px 11px; cursor: pointer; }
+    .toolbar .seg button + button { border-left: 1px solid var(--border); }
+    .toolbar .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+    svg.chart { display: block; width: 100%; height: auto; font-family: var(--font-sans); }
+    svg.chart text { fill: var(--ink-2); }
+    .axl { stroke: var(--axis); } .gl { stroke: var(--grid); }
+    .tick { fill: var(--muted); font-size: 10.5px; }
+    .caption { font-size: 11.5px; color: var(--muted); margin: 9px 2px 0; font-variant-numeric: tabular-nums; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+    .legend .k { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+    .legend .k .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+    .legend .k .sw.line { height: 3px; border-radius: 2px; width: 16px; }
+
+    .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 8px; }
+    .how .n { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--panel-2); }
+    .how .n h4 { margin: 0 0 5px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .how .n p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+    .how .n code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+
+    #tt {
+      position: fixed; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .1s;
+      background: var(--ink); color: var(--bg); font-size: 11.5px; line-height: 1.5;
+      padding: 8px 10px; border-radius: 7px; max-width: 250px;
+      box-shadow: 0 6px 24px -6px rgba(0,0,0,.4); font-variant-numeric: tabular-nums;
+    }
+    #tt b { color: var(--bg); } #tt .mut { opacity: .7; }
+
+    footer.foot { max-width: 1280px; margin: 0 auto; padding: 22px 26px 50px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+    footer.foot a { color: var(--muted); }
+    footer.foot .consult { display: block; margin-bottom: 6px; font-weight: 600; color: var(--ink); }
+    footer.foot .consult a { color: var(--accent); }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .controls { position: static; max-height: none; }
+      .optcards { grid-template-columns: 1fr; }
+      .scorecards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="mk">🎲</span>
+      <div>
+        <h1>Real Options for Network Design</h1>
+        <div class="sub">flexibility under uncertainty</div>
+      </div>
+    </div>
+    <div class="hactions">
+      <a class="lnk" href="../index.html">← All projects</a>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h2>What is a real option in supply chain network design?</h2>
+      <p>
+        A classic network study runs a big optimisation, picks the least-cost design for the
+        <em>expected</em> forecast, and commits. That treats the forecast as if it were certain.
+        It never is — demand grows, stalls or collapses, input costs swing, a region opens or closes.
+      </p>
+      <p>
+        A <strong>real option</strong> is the right, but not the obligation, to take a future action —
+        expand a site, defer a build, exit a lease, switch a source — for a price agreed today.
+        Designing the network so those rights <em>exist</em> costs money now (a premium: land you don't
+        yet use, modular kit, a second qualified supplier, a shorter lease). In exchange you get to
+        <strong>wait for uncertainty to resolve</strong> and then act only in the states of the world where acting pays.
+      </p>
+      <p>
+        The core result — the same one that makes financial options valuable — is that this flexibility
+        is worth <em>more</em> when the future is <em>more</em> uncertain. A rigid least-cost design
+        captures the full downside and a capped upside; a flexible design truncates the downside and
+        keeps the upside. This page lets you price that difference and watch it move.
+      </p>
+
+      <div class="optcards">
+        <div class="optcard">
+          <span class="tag">Deferral option</span>
+          <h4>Wait &amp; see</h4>
+          <p>Use a 3PL or short lease now; hold site permits. Build owned capacity only once demand is confirmed.</p>
+          <svg viewBox="0 0 200 62" aria-hidden="true">
+            <line x1="8" y1="50" x2="192" y2="50" class="axl"/>
+            <path d="M8 50 L100 50 L192 12" fill="none" stroke="var(--s1)" stroke-width="2.5"/>
+            <circle cx="100" cy="50" r="3" fill="var(--s1)"/>
+            <text x="100" y="61" class="tick" text-anchor="middle">build trigger</text>
+          </svg>
+        </div>
+        <div class="optcard">
+          <span class="tag">Growth option</span>
+          <h4>Stage &amp; expand</h4>
+          <p>Build a small facility on a big footprint, with modular racking and utilities sized for phase 2. Add capacity in steps.</p>
+          <svg viewBox="0 0 200 62" aria-hidden="true">
+            <line x1="8" y1="50" x2="192" y2="50" class="axl"/>
+            <path d="M8 44 L90 44 L90 30 L140 30 L140 14 L192 14" fill="none" stroke="var(--s3)" stroke-width="2.5"/>
+            <text x="100" y="61" class="tick" text-anchor="middle">capacity added in steps</text>
+          </svg>
+        </div>
+        <div class="optcard">
+          <span class="tag">Exit / switch option</span>
+          <h4>Contract &amp; switch</h4>
+          <p>Lease not buy, negotiate break clauses, dual-source, keep multi-product lines. Shed or redirect capacity if demand falls.</p>
+          <svg viewBox="0 0 200 62" aria-hidden="true">
+            <line x1="8" y1="50" x2="192" y2="50" class="axl"/>
+            <path d="M8 20 L100 20 L100 40 L192 40" fill="none" stroke="var(--s5)" stroke-width="2.5"/>
+            <text x="100" y="61" class="tick" text-anchor="middle">exit if demand falls</text>
+          </svg>
+        </div>
+      </div>
+
+      <details class="map">
+        <summary>How financial options map onto network decisions</summary>
+        <div class="mapbody">
+          <table class="rox">
+            <thead><tr><th>Financial analogue</th><th>Real option in network design</th><th>How you build it in</th></tr></thead>
+            <tbody>
+              <tr><td>Call option</td><td>Option to expand</td><td>Oversized land / utilities / permits; modular buildings; scalable automation; framework contracts with 3PLs</td></tr>
+              <tr><td>Option to wait</td><td>Deferral of investment</td><td>Interim 3PL or leased space; phased capital release; keep the incumbent site running one more year</td></tr>
+              <tr><td>Put option</td><td>Option to contract or abandon</td><td>Leases over ownership; break clauses; shared / multi-tenant facilities; shorter asset lives</td></tr>
+              <tr><td>Switching option</td><td>Source / product / mode flexibility</td><td>Dual-qualified suppliers; multi-product lines; plants that can serve several regions; air-vs-ocean toggle</td></tr>
+              <tr><td>Compound option</td><td>Staged multi-region rollout</td><td>Hub-by-hub expansion where each opening creates the option to open the next</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <div class="layout">
+      <aside class="controls" id="controls">
+        <h3>Scenario</h3>
+        <div class="presets" id="presets"></div>
+        <div id="ctlHost"></div>
+        <div class="derived" id="derived"></div>
+      </aside>
+
+      <section class="stage">
+        <div class="vof" id="vof"></div>
+        <div class="scorecards" id="scorecards"></div>
+
+        <div class="panel">
+          <h3>The demand lattice &amp; the decision policy</h3>
+          <p class="blurb">
+            Demand evolves as a recombining binomial tree: each year it multiplies by <b>u</b> (up) or
+            <b>d</b> (down). Node colour is the demand level; a badge marks where the chosen strategy
+            <em>exercises</em> its option. Hover any node for its numbers.
+          </p>
+          <div class="toolbar">
+            <div class="seg" id="latSeg">
+              <button data-k="rig" class="on">Commit now</button>
+              <button data-k="def">Wait &amp; see</button>
+              <button data-k="stg">Stage &amp; expand</button>
+            </div>
+          </div>
+          <svg class="chart" id="latChart" viewBox="0 0 720 400" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend" id="latLegend"></div>
+          <p class="caption" id="latCaption"></p>
+        </div>
+
+        <div class="panel">
+          <h3>Payoff shape — NPV vs how demand actually turns out</h3>
+          <p class="blurb">
+            Every path through the lattice is one dot: horizontal is that path's realised demand growth,
+            vertical is the strategy's NPV on that path. <b>Commit now</b> is a straight line with a capped
+            top (you can't serve above capacity) and a full downside. The flexible strategies bend —
+            downside truncated, upside kept. That convex kink <em>is</em> the option.
+          </p>
+          <svg class="chart" id="payChart" viewBox="0 0 720 400" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend" id="payLegend"></div>
+          <p class="caption" id="payCaption"></p>
+        </div>
+
+        <div class="panel">
+          <h3>Why uncertainty makes flexibility valuable</h3>
+          <p class="blurb">
+            Value of each option = its expected NPV minus <b>Commit now</b>'s. Sweeping demand volatility
+            shows the signature real-options result: as the forecast becomes less trustworthy, the option
+            value climbs — flexibility is worth most exactly when you know least. The dashed line is your current setting.
+          </p>
+          <svg class="chart" id="volChart" viewBox="0 0 720 380" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend" id="volLegend"></div>
+          <p class="caption" id="volCaption"></p>
+        </div>
+
+        <div class="panel">
+          <h3>Distribution of outcomes</h3>
+          <p class="blurb">
+            Probability-weighted NPV across all demand paths, for <b>Commit now</b> vs <b>Stage &amp; expand</b>.
+            Staging shifts probability out of the left tail (the overbuild / stranded-capacity losses) at the
+            cost of shaving a little off the best cases.
+          </p>
+          <svg class="chart" id="distChart" viewBox="0 0 720 340" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend" id="distLegend"></div>
+          <p class="caption" id="distCaption"></p>
+        </div>
+
+        <div class="panel">
+          <h3>What moves the growth-option value</h3>
+          <p class="blurb">
+            Each bar swings one assumption low↔high and shows the effect on the <b>Stage &amp; expand</b>
+            option value (vs Commit now). Longest bars are the assumptions worth nailing down before
+            you design the network.
+          </p>
+          <svg class="chart" id="torChart" viewBox="0 0 720 360" preserveAspectRatio="xMidYMid meet"></svg>
+          <p class="caption" id="torCaption"></p>
+        </div>
+
+        <div class="panel">
+          <h3>How the model works</h3>
+          <div class="how">
+            <div class="n"><h4>Demand</h4><p>Recombining binomial tree. <code>u = e^σ</code>, <code>d = 1/u</code>. The up-probability <code>p</code> is set so expected growth equals your drift <code>g</code>: <code>p = (e^g − d)/(u − d)</code>.</p></div>
+            <div class="n"><h4>Yearly cash flow</h4><p><code>margin·min(D,K) − stockout·max(D−K,0) − opcost·K</code>. Overbuilding is punished by <code>opcost·K</code>; undersupply by lost margin plus a stockout penalty.</p></div>
+            <div class="n"><h4>Strategies</h4><p><b>Commit now</b>: build the full footprint at year 0. <b>Wait &amp; see</b>: build nothing until a node where building beats waiting; later builds cost more (escalation). <b>Stage &amp; expand</b>: build the small footprint now, then add capacity step by step where it pays — each step carries the staging premium.</p></div>
+            <div class="n"><h4>Valuation</h4><p>Backward induction over the lattice. Each strategy's optimal policy is solved, then applied forward along every path. NPV discounts expected cash flow at the WACC; a terminal node is capitalised as a level perpetuity.</p></div>
+            <div class="n"><h4>Deliberate simplifications</h4><p>One facility, one product. Expected cash flows are discounted at a fixed WACC rather than by formal risk-neutral valuation. The staging premium lumps every diseconomy of building twice into one number. Competition, correlated risks and managerial constraints are out of scope.</p></div>
+            <div class="n"><h4>Read it as</h4><p>A teaching model, not a project appraisal. The point is the <em>direction and rough size</em> of the flexibility premium, and which assumptions it hinges on.</p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    Synthetic, illustrative model — not investment advice. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    Colours follow the Claude data-viz reference palette.
+  </footer>
+
+  <div id="tt"></div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ============================================================ THEME
+    (function initTheme() {
+      var s = null;
+      try { s = localStorage.getItem("roc-theme"); } catch (e) {}
+      if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s);
+    })();
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      var root = document.documentElement;
+      var pd = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var cur = root.getAttribute("data-theme") || (pd ? "dark" : "light");
+      var next = cur === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("roc-theme", next); } catch (e) {}
+      recompute();
+    });
+
+    // ============================================================ HELPERS
+    var SVGNS = "http://www.w3.org/2000/svg";
+    function E(tag, attrs, parent) {
+      var e = document.createElementNS(SVGNS, tag);
+      if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+      if (parent) parent.appendChild(e);
+      return e;
+    }
+    function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+    function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888"; }
+    function fmtM(v) { var s = v < 0 ? "−" : ""; return s + "$" + Math.abs(v).toFixed(1) + "M"; }
+    function fmtMsigned(v) { var s = v < 0 ? "−" : "+"; return s + "$" + Math.abs(v).toFixed(1) + "M"; }
+    function pct(v, d) { return (v * 100).toFixed(d == null ? 0 : d) + "%"; }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    var tt = document.getElementById("tt");
+    function showTip(html, ev) {
+      tt.innerHTML = html;
+      tt.style.opacity = "1";
+      var pad = 14, w = tt.offsetWidth, h = tt.offsetHeight;
+      var x = ev.clientX + pad, y = ev.clientY + pad;
+      if (x + w > window.innerWidth - 8) x = ev.clientX - w - pad;
+      if (y + h > window.innerHeight - 8) y = ev.clientY - h - pad;
+      tt.style.left = x + "px"; tt.style.top = y + "px";
+    }
+    function hideTip() { tt.style.opacity = "0"; }
+
+    // ============================================================ PARAMS
+    var SPECS = [
+      { grp: "Demand &amp; uncertainty" },
+      { id: "D0",       label: "Demand today",              min: 200, max: 1200, step: 20, def: 500,  unit: "k units/yr", scale: 1 },
+      { id: "sigma",    label: "Demand volatility",         min: 5,   max: 60,   step: 1,  def: 25,   unit: "% / yr",     scale: 0.01 },
+      { id: "drift",    label: "Expected demand growth",    min: -10, max: 12,   step: 1,  def: 4,    unit: "% / yr",     scale: 0.01 },
+      { id: "N",        label: "Planning horizon",          min: 2,   max: 5,    step: 1,  def: 4,    unit: "yrs",        scale: 1 },
+      { grp: "Economics" },
+      { id: "margin",   label: "Contribution margin",       min: 8,   max: 40,   step: 1,  def: 20,   unit: "$ / unit",   scale: 0.001 },
+      { id: "opcost",   label: "Capacity holding cost",     min: 2,   max: 20,   step: 1,  def: 6,    unit: "$ / unit-yr",scale: 0.001 },
+      { id: "penalty",  label: "Stockout penalty",          min: 0,   max: 30,   step: 1,  def: 10,   unit: "$ / unit short", scale: 0.001 },
+      { id: "wacc",     label: "Discount rate (WACC)",      min: 5,   max: 20,   step: 1,  def: 10,   unit: "%",          scale: 0.01 },
+      { grp: "Network options" },
+      { id: "smallPct", label: "Initial footprint",         min: 50,  max: 110,  step: 5,  def: 80,   unit: "% of today's demand", scale: 0.01 },
+      { id: "bigPct",   label: "Full footprint",            min: 100, max: 190,  step: 5,  def: 140,  unit: "% of today's demand", scale: 0.01 },
+      { id: "stepPct",  label: "Expansion step size",       min: 5,   max: 40,   step: 5,  def: 15,   unit: "% of today's demand", scale: 0.01 },
+      { id: "premium",  label: "Staging cost premium",      min: 0,   max: 80,   step: 5,  def: 25,   unit: "% extra",    scale: 0.01 },
+      { id: "escal",    label: "Deferral cost escalation",  min: 0,   max: 15,   step: 1,  def: 6,    unit: "% / yr",     scale: 0.01 },
+      { id: "fFixed",   label: "Fixed build cost",          min: 2,   max: 20,   step: 1,  def: 8,    unit: "$M",         scale: 1 },
+      { id: "fVar",     label: "Capacity capex",            min: 10,  max: 60,   step: 2,  def: 30,   unit: "$ / unit cap", scale: 0.001 }
+    ];
+
+    var PRESETS = {
+      "Mature &amp; stable":     { sigma: 12, drift: 1, penalty: 8, premium: 25, bigPct: 125 },
+      "High-growth, uncertain":  { sigma: 35, drift: 9, smallPct: 75, bigPct: 175, penalty: 14, stepPct: 20 },
+      "Volatile &amp; flat":     { sigma: 45, drift: 0, premium: 20, penalty: 12 },
+      "Structural decline":      { sigma: 20, drift: -6, smallPct: 60, bigPct: 110, penalty: 6 },
+      "Capacity-crunch risk":    { sigma: 30, drift: 6, penalty: 26, margin: 28, premium: 30, smallPct: 75 }
+    };
+
+    var state = {};
+    SPECS.forEach(function (s) { if (s.id) state[s.id] = s.def; });
+    var latOverlay = "rig";
+
+    // ---- build controls
+    var ctlHost = document.getElementById("ctlHost");
+    (function buildControls() {
+      var grp = null;
+      SPECS.forEach(function (s) {
+        if (s.grp) {
+          grp = document.createElement("div");
+          grp.className = "cgrp";
+          var gl = document.createElement("div");
+          gl.className = "glabel"; gl.innerHTML = s.grp;
+          grp.appendChild(gl);
+          ctlHost.appendChild(grp);
+          return;
+        }
+        var wrap = document.createElement("div");
+        wrap.className = "ctl";
+        var row = document.createElement("div"); row.className = "row";
+        var lab = document.createElement("label"); lab.textContent = s.label; lab.setAttribute("for", "c_" + s.id);
+        var val = document.createElement("span"); val.className = "val"; val.id = "v_" + s.id;
+        row.appendChild(lab); row.appendChild(val);
+        var inp = document.createElement("input");
+        inp.type = "range"; inp.id = "c_" + s.id;
+        inp.min = s.min; inp.max = s.max; inp.step = s.step; inp.value = s.def;
+        inp.addEventListener("input", function () {
+          state[s.id] = parseFloat(inp.value);
+          val.textContent = readout(s, state[s.id]);
+          recompute();
+        });
+        wrap.appendChild(row); wrap.appendChild(inp);
+        grp.appendChild(wrap);
+        val.textContent = readout(s, s.def);
+      });
+    })();
+
+    function readout(s, raw) {
+      var u = s.unit.replace(/&amp;/g, "&");
+      if (s.id === "N") return raw + " " + u;
+      if (s.id === "D0") return raw + " " + u;
+      if (s.id === "fFixed") return "$" + raw + "M";
+      return raw + " " + (u.indexOf("%") === 0 ? u : u);
+    }
+
+    // ---- presets
+    var presetHost = document.getElementById("presets");
+    Object.keys(PRESETS).forEach(function (name) {
+      var b = document.createElement("button");
+      b.innerHTML = name;
+      b.addEventListener("click", function () { applyPreset(PRESETS[name]); });
+      presetHost.appendChild(b);
+    });
+    (function () {
+      var b = document.createElement("button");
+      b.className = "reset"; b.textContent = "Reset";
+      b.addEventListener("click", function () { applyPreset({}); });
+      presetHost.appendChild(b);
+    })();
+
+    function applyPreset(over) {
+      SPECS.forEach(function (s) {
+        if (!s.id) return;
+        var v = (over[s.id] != null) ? over[s.id] : s.def;
+        state[s.id] = v;
+        var inp = document.getElementById("c_" + s.id);
+        inp.value = v;
+        document.getElementById("v_" + s.id).textContent = readout(s, v);
+      });
+      recompute();
+    }
+
+    // ============================================================ MODEL
+    function P() {
+      var o = {};
+      SPECS.forEach(function (s) { if (s.id) o[s.id] = state[s.id] * s.scale; });
+      // scaled fields
+      return {
+        D0: o.D0, sigma: o.sigma, g: o.drift, N: Math.round(state.N),
+        m: o.margin, op: o.opcost, pen: o.penalty, k: o.wacc,
+        smallF: o.smallPct, bigF: o.bigPct, stepF: o.stepPct,
+        prem: o.premium, escal: o.escal, fFix: o.fFixed, fVar: o.fVar
+      };
+    }
+
+    function derive(p, sigmaOverride) {
+      var sig = sigmaOverride == null ? p.sigma : sigmaOverride;
+      var u = Math.exp(sig), d = 1 / u;
+      var disc = Math.exp(-p.k), perp = 1 / (1 - Math.exp(-p.k));
+      var prob = (Math.exp(p.g) - d) / (u - d);
+      prob = clamp(prob, 0.02, 0.98);
+      var K0 = p.D0 * p.smallF;
+      var Kbig = Math.max(K0, p.D0 * p.bigF);
+      var step = Math.max(p.D0 * p.stepF, 1e-6);
+      var levels = [K0];
+      while (levels[levels.length - 1] + step < Kbig - 1e-6 && levels.length < 7)
+        levels.push(levels[levels.length - 1] + step);
+      if (Kbig - levels[levels.length - 1] > 1e-6 && levels.length < 8) levels.push(Kbig);
+      return { u: u, d: d, disc: disc, perp: perp, p: prob, N: p.N, K0: K0, Kbig: Kbig, step: step, levels: levels };
+    }
+
+    function demand(p, der, t, i) { return p.D0 * Math.pow(der.u, i) * Math.pow(der.d, t - i); }
+    function periodCF(D, K, p) {
+      if (K <= 0) return 0;
+      var served = Math.min(D, K), short = Math.max(D - K, 0);
+      return p.m * served - p.pen * short - p.op * K;
+    }
+    function buildCost(K, t, p, der) { return (p.fFix + p.fVar * K) * Math.pow(1 + p.escal, t); }
+    function expandCost(dK, p) { return dK <= 0 ? 0 : 0.25 * p.fFix + p.fVar * dK * (1 + p.prem); }
+
+    // ---- Commit now (rigid) : capacity K fixed for all years
+    function valueRigid(K, p, der) {
+      var N = der.N, V = [];
+      for (var t = N; t >= 0; t--) {
+        V[t] = [];
+        for (var i = 0; i <= t; i++) {
+          var cf = periodCF(demand(p, der, t, i), K, p);
+          V[t][i] = (t === N) ? cf * der.perp
+            : cf + der.disc * (der.p * V[t + 1][i + 1] + (1 - der.p) * V[t + 1][i]);
+        }
+      }
+      return { npv: V[0][0] - buildCost(K, 0, p, der), V: V };
+    }
+
+    // ---- Wait & see (deferral) : build full Kbig at the first node where it beats waiting
+    function valueDefer(p, der) {
+      var N = der.N, K = der.Kbig;
+      var rig = valueRigid(K, p, der).V; // operating value once built (excludes capex)
+      var W = [], build = [];
+      for (var t = N; t >= 0; t--) {
+        W[t] = []; build[t] = [];
+        for (var i = 0; i <= t; i++) {
+          var buildNow = -buildCost(K, t, p, der) + rig[t][i];
+          var wait = (t === N) ? 0
+            : der.disc * (der.p * W[t + 1][i + 1] + (1 - der.p) * W[t + 1][i]);
+          if (buildNow >= wait) { W[t][i] = buildNow; build[t][i] = true; }
+          else { W[t][i] = wait; build[t][i] = false; }
+        }
+      }
+      return { npv: W[0][0], build: build };
+    }
+
+    // ---- Stage & expand (growth) : start at levels[0], step up where it pays
+    function valueStage(p, der) {
+      var N = der.N, L = der.levels, nL = L.length;
+      var V = [], pol = [];
+      for (var t = N; t >= 0; t--) {
+        V[t] = []; pol[t] = [];
+        for (var i = 0; i <= t; i++) {
+          V[t][i] = []; pol[t][i] = [];
+          var D = demand(p, der, t, i);
+          for (var k = 0; k < nL; k++) {
+            var best = -Infinity, bk = k;
+            for (var k2 = k; k2 < nL; k2++) {
+              var ex = expandCost(L[k2] - L[k], p);
+              var cf = periodCF(D, L[k2], p);
+              var val = (t === N) ? -ex + cf * der.perp
+                : -ex + cf + der.disc * (der.p * V[t + 1][i + 1][k2] + (1 - der.p) * V[t + 1][i][k2]);
+              if (val > best) { best = val; bk = k2; }
+            }
+            V[t][i][k] = best; pol[t][i][k] = bk;
+          }
+        }
+      }
+      return { npv: V[0][0][0] - buildCost(L[0], 0, p, der), pol: pol };
+    }
+
+    // ---- forward pass over the whole tree -> per-node aggregates + summary
+    function forward(kind, p, der, sol) {
+      var N = der.N, L = der.levels;
+      var nodes = [];
+      for (var t = 0; t <= N; t++) { nodes[t] = []; for (var i = 0; i <= t; i++) nodes[t][i] = null; }
+      // probability mass carrying a small state
+      // rig: mass number ; def: {u:unbuilt, b:built} ; stg: array over levels
+      var mass = [];
+      for (var t2 = 0; t2 <= N; t2++) { mass[t2] = []; for (var i2 = 0; i2 <= t2; i2++) mass[t2][i2] = init(); }
+      function init() {
+        if (kind === "rig") return 0;
+        if (kind === "def") return { u: 0, b: 0 };
+        return L.map(function () { return 0; });
+      }
+      if (kind === "rig") mass[0][0] = 1;
+      else if (kind === "def") mass[0][0] = { u: 1, b: 0 };
+      else { mass[0][0] = L.map(function () { return 0; }); mass[0][0][0] = 1; }
+
+      var sPShort = 0, sIdle = 0, sLost = 0, sExer = 0, sExtra = 0, sNever = 0;
+
+      for (var t = 0; t <= N; t++) {
+        for (var i = 0; i <= t; i++) {
+          var D = demand(p, der, t, i);
+          var m = mass[t][i];
+          var reach, eK, actProb = 0, note = "";
+          if (kind === "rig") {
+            reach = m; eK = der.Kbig;
+            var sh = Math.max(D - eK, 0);
+            sPShort += reach * (sh > 1e-6 ? 1 : 0);
+            sIdle += reach * Math.max(eK - Math.min(D, eK), 0) / eK;
+            sLost += reach * sh;
+          } else if (kind === "def") {
+            reach = m.u + m.b;
+            var builtHere = 0;
+            if (m.u > 1e-12 && sol.build[t][i]) { builtHere = m.u; }
+            var bMass = m.b + builtHere;
+            actProb = reach > 1e-12 ? builtHere / reach : 0;
+            eK = reach > 1e-12 ? (bMass / reach) * der.Kbig : 0;
+            if (builtHere > 1e-9) note = "build the full footprint here";
+            var sh2 = Math.max(D - der.Kbig, 0);
+            sPShort += bMass * (sh2 > 1e-6 ? 1 : 0);
+            if (bMass > 1e-12) sIdle += bMass * Math.max(der.Kbig - Math.min(D, der.Kbig), 0) / der.Kbig;
+            sLost += bMass * sh2;
+            sExer += builtHere;
+            if (t === N) sNever += m.u - builtHere;
+            // propagate
+            if (t < N) {
+              var up = mass[t + 1][i + 1], dn = mass[t + 1][i];
+              var stillU = m.u - builtHere;
+              up.u += stillU * der.p; dn.u += stillU * (1 - der.p);
+              up.b += bMass * der.p; dn.b += bMass * (1 - der.p);
+            }
+            nodes[t][i] = { t: t, i: i, D: D, reach: reach, eK: eK, actProb: actProb, note: note, kind: kind };
+            continue;
+          } else { // stg
+            reach = m.reduce(function (a, b) { return a + b; }, 0);
+            var newM = L.map(function () { return 0; });
+            var eKa = 0, expM = 0, extra = 0, shM = 0, idleM = 0, lostM = 0;
+            for (var k = 0; k < L.length; k++) {
+              var mk = m[k]; if (mk <= 1e-12) continue;
+              var k2 = sol.pol[t][i][k];
+              if (k2 > k) { expM += mk; extra += mk * expandCost(L[k2] - L[k], p); }
+              var Kk = L[k2];
+              eKa += mk * Kk;
+              var sh3 = Math.max(D - Kk, 0);
+              shM += mk * (sh3 > 1e-6 ? 1 : 0);
+              idleM += mk * Math.max(Kk - Math.min(D, Kk), 0) / Kk;
+              lostM += mk * sh3;
+              if (t < N) { newM[k2] += mk; }
+            }
+            eK = reach > 1e-12 ? eKa / reach : L[0];
+            actProb = reach > 1e-12 ? expM / reach : 0;
+            sPShort += shM; sIdle += idleM; sLost += lostM; sExer += expM; sExtra += extra;
+            if (actProb > 0.005) note = "expand a step (E[capacity] → " + eK.toFixed(0) + "k)";
+            if (t < N) {
+              for (var kk = 0; kk < L.length; kk++) {
+                if (newM[kk] <= 1e-12) continue;
+                mass[t + 1][i + 1][kk] += newM[kk] * der.p;
+                mass[t + 1][i][kk] += newM[kk] * (1 - der.p);
+              }
+            }
+            nodes[t][i] = { t: t, i: i, D: D, reach: reach, eK: eK, actProb: actProb, note: note, kind: kind };
+            continue;
+          }
+          // rig propagate + node
+          if (t < N) { mass[t + 1][i + 1] += reach * der.p; mass[t + 1][i] += reach * (1 - der.p); }
+          nodes[t][i] = { t: t, i: i, D: D, reach: reach, eK: eK, actProb: 0, note: "", kind: kind };
+        }
+      }
+      var yrs = N + 1;
+      return {
+        nodes: nodes,
+        pShort: sPShort / yrs, idle: sIdle / yrs, lost: sLost,
+        exer: sExer, extra: sExtra, never: sNever
+      };
+    }
+
+    // ---- enumerate every path : realised NPV + probability (for payoff + histogram)
+    function paths(kind, p, der, sol) {
+      var N = der.N, L = der.levels, out = [];
+      var total = 1 << N;
+      for (var mm = 0; mm < total; mm++) {
+        var i = 0, npv = 0, df = 1, ups = 0;
+        var built = false, klev = 0;
+        if (kind === "stg") npv -= buildCost(L[0], 0, p, der);
+        for (var t = 0; t <= N; t++) {
+          var D = demand(p, der, t, i);
+          if (kind === "rig") {
+            var cf = periodCF(D, der.Kbig, p);
+            npv += df * (t === N ? cf * der.perp : cf);
+            if (t === 0) npv -= buildCost(der.Kbig, 0, p, der);
+          } else if (kind === "def") {
+            if (!built && sol.build[t][i]) { npv -= df * buildCost(der.Kbig, t, p, der); built = true; }
+            var cf2 = periodCF(D, built ? der.Kbig : 0, p);
+            npv += df * (t === N ? cf2 * der.perp : cf2);
+          } else {
+            var k2 = sol.pol[t][i][klev];
+            if (k2 > klev) npv -= df * expandCost(L[k2] - L[klev], p);
+            klev = k2;
+            var cf3 = periodCF(D, L[klev], p);
+            npv += df * (t === N ? cf3 * der.perp : cf3);
+          }
+          if (t < N) {
+            var bit = (mm >> t) & 1;
+            if (bit) { i += 1; ups += 1; }
+            df *= der.disc;
+          }
+        }
+        var prob = Math.pow(der.p, ups) * Math.pow(1 - der.p, N - ups);
+        var iN = i;
+        var growth = Math.pow(demand(p, der, N, iN) / p.D0, 1 / N) - 1;
+        out.push({ npv: npv, prob: prob, growth: growth });
+      }
+      return out;
+    }
+
+    function solveAll(p, der) {
+      var rig = valueRigid(der.Kbig, p, der);
+      var def = valueDefer(p, der);
+      var stg = valueStage(p, der);
+      return { rig: rig, def: def, stg: stg };
+    }
+
+    // ============================================================ RENDER
+    var COL = { rig: "--s2", def: "--s1", stg: "--s3" };
+    var NAME = { rig: "Commit now", def: "Wait & see", stg: "Stage & expand" };
+    var TAG = { rig: "no option · NPV baseline", def: "deferral option", stg: "growth option" };
+
+    function recompute() {
+      var p = P(), der = derive(p);
+      var sol = solveAll(p, der);
+      var fwd = {
+        rig: forward("rig", p, der, sol.rig),
+        def: forward("def", p, der, sol.def),
+        stg: forward("stg", p, der, sol.stg)
+      };
+      renderDerived(p, der);
+      renderVof(sol);
+      renderScorecards(p, der, sol, fwd);
+      renderLattice(p, der, fwd);
+      renderPayoff(p, der, sol);
+      renderVol(p, der);
+      renderDist(p, der, sol);
+      renderTornado(p, der);
+    }
+
+    function renderDerived(p, der) {
+      var h = document.getElementById("derived");
+      var expG = der.p * der.u + (1 - der.p) * der.d - 1;
+      h.innerHTML =
+        rowD("up factor u", der.u.toFixed(3)) +
+        rowD("down factor d", der.d.toFixed(3)) +
+        rowD("up probability p", der.p.toFixed(3)) +
+        rowD("initial footprint", der.K0.toFixed(0) + "k") +
+        rowD("full footprint", der.Kbig.toFixed(0) + "k") +
+        rowD("expansion steps", (der.levels.length - 1) + " × " + der.step.toFixed(0) + "k") +
+        rowD("full-build capex", fmtM(buildCost(der.Kbig, 0, p, der)));
+      function rowD(a, b) { return "<div><b>" + a + "</b><span>" + b + "</span></div>"; }
+    }
+
+    function renderVof(sol) {
+      var host = document.getElementById("vof");
+      var base = sol.rig.npv;
+      var vDef = sol.def.npv - base, vStg = sol.stg.npv - base;
+      var best = Math.max(vDef, vStg);
+      var which = vStg >= vDef ? "staged expansion (a growth option)" : "waiting to build (a deferral option)";
+      var cls = best > 0.05 ? "pos" : (best < -0.05 ? "neg" : "");
+      var msg;
+      if (best > 0.05) {
+        msg = "In this scenario, keeping flexibility is worth about " + fmtM(best) +
+          " more than committing now to the full network — captured best by <b>" + which +
+          "</b>. That is the most you should be willing to pay in design premium (extra land, modular kit, a second source) to hold the option.";
+      } else if (best < -0.05) {
+        msg = "Here the forecast is confident enough that <b>committing now</b> wins: the option strategies give up " +
+          fmtM(-best) + " in scale economies and delayed revenue for flexibility that rarely gets used.";
+      } else {
+        msg = "Flexibility and commitment are roughly a wash in this scenario — the option is close to free but also barely needed.";
+      }
+      host.innerHTML =
+        "<div class='big " + cls + "'>" + fmtMsigned(best) + "</div>" +
+        "<p>Value of flexibility vs. Commit&nbsp;now &nbsp;·&nbsp; Commit&nbsp;now NPV " + fmtM(base) +
+        " &nbsp;·&nbsp; Wait&amp;see " + fmtMsigned(vDef) + " &nbsp;·&nbsp; Stage&amp;expand " + fmtMsigned(vStg) + "</p>" +
+        "<p>" + msg + "</p>";
+    }
+
+    function renderScorecards(p, der, sol, fwd) {
+      var host = document.getElementById("scorecards");
+      clear(host);
+      var npvs = { rig: sol.rig.npv, def: sol.def.npv, stg: sol.stg.npv };
+      var bestKey = Object.keys(npvs).reduce(function (a, b) { return npvs[b] > npvs[a] ? b : a; });
+      ["rig", "def", "stg"].forEach(function (key) {
+        var f = fwd[key], npv = npvs[key];
+        var card = document.createElement("div");
+        card.className = "sc" + (key === bestKey ? " best" : "");
+        var d = npv - sol.rig.npv;
+        var deltaHtml = key === "rig"
+          ? "<div class='delta mut'>NPV baseline</div>"
+          : "<div class='delta " + (d >= 0 ? "pos" : "neg") + "'>" + fmtMsigned(d) + " vs Commit now</div>";
+        var capex = key === "rig" ? buildCost(der.Kbig, 0, p, der) : buildCost(der.K0, 0, p, der);
+        if (key === "def") capex = 0;
+        var rows = "";
+        rows += metric("Upfront capex", key === "def" ? "$0.0M (deferred)" : fmtM(capex));
+        rows += metric("Years capacity is short", pct(f.pShort));
+        rows += metric("Avg idle capacity", pct(f.idle));
+        rows += metric("E[cumulative lost sales]", (f.lost).toFixed(0) + "k units");
+        if (key === "def") rows += metric("Prob. never build", pct(f.never));
+        if (key === "def") rows += metric("Prob. option exercised", pct(f.exer));
+        if (key === "stg") rows += metric("E[expansion steps taken]", f.exer.toFixed(2));
+        if (key === "stg") rows += metric("E[spend on expansions]", fmtM(f.extra));
+        card.innerHTML =
+          (key === bestKey ? "<span class='flag'>best NPV</span>" : "") +
+          "<div class='sc-h'><span class='sw' style='background:" + css(COL[key]) + "'></span><h4>" + NAME[key] + "</h4></div>" +
+          "<span class='tag'>" + TAG[key] + "</span>" +
+          "<div class='npv' style='color:" + (npv >= 0 ? css("--ink") : css("--critical")) + "'>" + fmtM(npv) + "</div>" +
+          deltaHtml + rows;
+        host.appendChild(card);
+      });
+      function metric(a, b) { return "<div class='metric'><span>" + a + "</span><span>" + b + "</span></div>"; }
+    }
+
+    // ---- lattice
+    document.getElementById("latSeg").addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      latOverlay = b.dataset.k;
+      Array.prototype.forEach.call(this.children, function (c) { c.classList.toggle("on", c === b); });
+      recompute();
+    });
+
+    function renderLattice(p, der, fwd) {
+      var svg = document.getElementById("latChart");
+      clear(svg);
+      var W = 720, H = 400, padL = 54, padR = 20, padT = 26, padB = 34;
+      var N = der.N;
+      var plotW = W - padL - padR, plotH = H - padT - padB;
+      var dx = plotW / N;
+      var midY = padT + plotH / 2;
+      var dy = Math.min(46, plotH / (N + 1));
+      var f = fwd[latOverlay];
+
+      // demand range for colour
+      var dmin = Infinity, dmax = -Infinity;
+      for (var t = 0; t <= N; t++) for (var i = 0; i <= t; i++) {
+        var D = demand(p, der, t, i); if (D < dmin) dmin = D; if (D > dmax) dmax = D;
+      }
+      function seqCol(D) {
+        var fr = (D - dmin) / Math.max(dmax - dmin, 1e-6);
+        var idx = clamp(Math.round(fr * 6) + 1, 1, 7);
+        return css("--seq-" + idx);
+      }
+      function nodeXY(t, i) { return [padL + t * dx, midY + (t / 2 - i) * dy]; }
+
+      // edges
+      for (var t = 0; t < N; t++) for (var i = 0; i <= t; i++) {
+        var a = nodeXY(t, i);
+        [nodeXY(t + 1, i + 1), nodeXY(t + 1, i)].forEach(function (b) {
+          E("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: "gl", "stroke-width": 1 }, svg);
+        });
+      }
+      // year labels
+      for (var tt2 = 0; tt2 <= N; tt2++) {
+        var xy = nodeXY(tt2, 0);
+        E("text", { x: xy[0], y: H - 12, "text-anchor": "middle", class: "tick" }, svg).textContent = "year " + tt2;
+      }
+      E("text", { x: 14, y: midY, "text-anchor": "middle", class: "tick", transform: "rotate(-90 14 " + midY + ")" }, svg).textContent = "demand →";
+
+      var r = Math.min(20, dy * 0.42);
+      for (var t3 = 0; t3 <= N; t3++) for (var i3 = 0; i3 <= t3; i3++) {
+        var nd = f.nodes[t3][i3];
+        var xy2 = nodeXY(t3, i3);
+        var D2 = nd.D;
+        var short = D2 - nd.eK;
+        var g = E("g", {}, svg);
+        var circ = E("circle", {
+          cx: xy2[0], cy: xy2[1], r: r, fill: seqCol(D2),
+          stroke: short > 1e-6 ? css("--critical") : css("--border"),
+          "stroke-width": short > 1e-6 ? 2.4 : 1
+        }, g);
+        var fr = (D2 - dmin) / Math.max(dmax - dmin, 1e-6);
+        E("text", {
+          x: xy2[0], y: xy2[1] + 3.5, "text-anchor": "middle",
+          "font-size": D2 >= 1000 ? 8.5 : 10.5, "font-weight": 600,
+          fill: fr > 0.55 ? "#fff" : css("--ink")
+        }, g).textContent = D2.toFixed(0);
+
+        if (nd.actProb > 0.02) {
+          E("circle", { cx: xy2[0] + r * 0.8, cy: xy2[1] - r * 0.8, r: 7, fill: css("--accent") }, g);
+          E("text", { x: xy2[0] + r * 0.8, y: xy2[1] - r * 0.8 + 3.2, "text-anchor": "middle", "font-size": 10, "font-weight": 800, fill: css("--accent-ink") }, g).textContent = latOverlay === "def" ? "▲" : "+";
+        }
+
+        (function (nd) {
+          g.style.cursor = "default";
+          g.addEventListener("mousemove", function (ev) {
+            var lines = [
+              "<b>Year " + nd.t + "</b> &nbsp;<span class='mut'>" + nd.i + " up / " + (nd.t - nd.i) + " down</span>",
+              "demand <b>" + nd.D.toFixed(0) + "k</b>/yr",
+              "reach probability <b>" + pct(nd.reach, 1) + "</b>"
+            ];
+            if (latOverlay === "rig") {
+              lines.push("capacity <b>" + nd.eK.toFixed(0) + "k</b> (fixed)");
+              lines.push(nd.D > nd.eK ? "<span class='mut'>short " + (nd.D - nd.eK).toFixed(0) + "k — lost sales</span>"
+                : "<span class='mut'>idle " + (nd.eK - nd.D).toFixed(0) + "k capacity</span>");
+            } else {
+              lines.push("E[capacity here] <b>" + nd.eK.toFixed(0) + "k</b>");
+              if (nd.note) lines.push("<span class='mut'>policy: " + nd.note + "</span>");
+              else lines.push("<span class='mut'>policy: hold</span>");
+            }
+            showTip(lines.join("<br>"), ev);
+          });
+          g.addEventListener("mouseleave", hideTip);
+        })(nd);
+      }
+
+      // legend
+      var lg = document.getElementById("latLegend");
+      lg.innerHTML =
+        "<span class='k'><span class='sw' style='background:" + css("--seq-1") + "'></span>lower demand</span>" +
+        "<span class='k'><span class='sw' style='background:" + css("--seq-6") + "'></span>higher demand</span>" +
+        "<span class='k'><span class='sw' style='background:" + css("--accent") + ";border-radius:999px'></span>" +
+        (latOverlay === "def" ? "build the network here" : latOverlay === "stg" ? "expand a step here" : "—") + "</span>" +
+        "<span class='k'><span class='sw' style='border:2px solid " + css("--critical") + ";background:transparent'></span>capacity short</span>";
+
+      var cap = document.getElementById("latCaption");
+      if (latOverlay === "rig") cap.textContent = "Commit now: one capacity of " + der.Kbig.toFixed(0) + "k held in every state. Red rings = demand paths that outgrow it (lost sales); pale nodes = paths where it sits idle.";
+      else if (latOverlay === "def") cap.textContent = "Wait & see: no capacity until a badged node, where the full " + der.Kbig.toFixed(0) + "k is built (cost escalating " + pct(p.escal) + "/yr). On weak paths it may never build.";
+      else cap.textContent = "Stage & expand: start at " + der.K0.toFixed(0) + "k, add " + der.step.toFixed(0) + "k steps at badged nodes (each +" + pct(p.prem) + " staging premium). Capacity is path-dependent, so nodes show the expected level.";
+    }
+
+    // ---- generic axis frame
+    function frame(svg, W, H, m) {
+      clear(svg);
+      return { x0: m.l, x1: W - m.r, y0: H - m.b, y1: m.t, W: W, H: H };
+    }
+    function xTick(svg, fr, px, label) {
+      E("line", { x1: px, y1: fr.y0, x2: px, y2: fr.y0 + 5, class: "axl" }, svg);
+      E("text", { x: px, y: fr.y0 + 17, "text-anchor": "middle", class: "tick" }, svg).textContent = label;
+    }
+    function yTick(svg, fr, py, label) {
+      E("line", { x1: fr.x0 - 5, y1: py, x2: fr.x1, y2: py, class: "gl" }, svg);
+      E("text", { x: fr.x0 - 9, y: py + 3.5, "text-anchor": "end", class: "tick" }, svg).textContent = label;
+    }
+
+    // ---- payoff scatter
+    function renderPayoff(p, der, sol) {
+      var svg = document.getElementById("payChart");
+      var W = 720, H = 400, fr = frame(svg, W, H, { l: 62, r: 16, t: 18, b: 40 });
+      var series = { rig: paths("rig", p, der, sol.rig), def: paths("def", p, der, sol.def), stg: paths("stg", p, der, sol.stg) };
+      var all = series.rig.concat(series.def, series.stg);
+      var gx = all.map(function (d) { return d.growth; });
+      var ny = all.map(function (d) { return d.npv; });
+      var xmin = Math.min.apply(null, gx), xmax = Math.max.apply(null, gx);
+      var ymin = Math.min.apply(null, ny), ymax = Math.max.apply(null, ny);
+      if (xmax - xmin < 1e-6) { xmin -= 0.01; xmax += 0.01; }
+      var yPad = (ymax - ymin) * 0.08 || 1; ymin -= yPad; ymax += yPad;
+      function X(v) { return fr.x0 + (v - xmin) / (xmax - xmin) * (fr.x1 - fr.x0); }
+      function Y(v) { return fr.y0 + (v - ymin) / (ymax - ymin) * (fr.y1 - fr.y0); }
+
+      for (var g = Math.ceil(xmin * 20) / 20; g <= xmax; g += 0.05) xTick(svg, fr, X(g), (g * 100).toFixed(0) + "%");
+      var ystep = niceStep((ymax - ymin) / 5);
+      for (var yv = Math.ceil(ymin / ystep) * ystep; yv <= ymax; yv += ystep) yTick(svg, fr, Y(yv), fmtM(yv));
+      if (ymin < 0 && ymax > 0) E("line", { x1: fr.x0, y1: Y(0), x2: fr.x1, y2: Y(0), class: "axl", "stroke-dasharray": "3 3" }, svg);
+      E("line", { x1: fr.x0, y1: fr.y0, x2: fr.x1, y2: fr.y0, class: "axl" }, svg);
+      E("text", { x: (fr.x0 + fr.x1) / 2, y: H - 6, "text-anchor": "middle", class: "tick" }, svg).textContent = "realised demand growth (CAGR over the horizon)";
+      E("text", { x: 14, y: (fr.y0 + fr.y1) / 2, "text-anchor": "middle", class: "tick", transform: "rotate(-90 14 " + (fr.y0 + fr.y1) / 2 + ")" }, svg).textContent = "NPV on that path";
+
+      ["rig", "def", "stg"].forEach(function (key) {
+        var pts = series[key].slice().sort(function (a, b) { return a.growth - b.growth; });
+        var path = pts.map(function (d, i) { return (i ? "L" : "M") + X(d.growth) + " " + Y(d.npv); }).join(" ");
+        E("path", { d: path, fill: "none", stroke: css(COL[key]), "stroke-width": 1.5, "stroke-opacity": 0.5 }, svg);
+        pts.forEach(function (d) {
+          var c = E("circle", { cx: X(d.growth), cy: Y(d.npv), r: 3.6 + d.prob * 10, fill: css(COL[key]), "fill-opacity": 0.8 }, svg);
+          c.addEventListener("mousemove", function (ev) {
+            showTip("<b>" + NAME[key] + "</b><br>demand CAGR <b>" + (d.growth * 100).toFixed(1) + "%</b><br>path NPV <b>" + fmtM(d.npv) + "</b><br><span class='mut'>path probability " + pct(d.prob, 1) + "</span>", ev);
+          });
+          c.addEventListener("mouseleave", hideTip);
+        });
+      });
+
+      document.getElementById("payLegend").innerHTML = legendHtml();
+      document.getElementById("payCaption").textContent =
+        "Dot size ∝ path probability. Commit now: a near-straight line, flat once demand exceeds the " +
+        der.Kbig.toFixed(0) + "k footprint. Stage & expand bends up on strong paths and is cushioned on weak ones.";
+    }
+
+    function legendHtml() {
+      return ["rig", "def", "stg"].map(function (k) {
+        return "<span class='k'><span class='sw line' style='background:" + css(COL[k]) + "'></span>" + NAME[k] + "</span>";
+      }).join("");
+    }
+
+    function niceStep(x) {
+      var e = Math.pow(10, Math.floor(Math.log10(x)));
+      var f = x / e;
+      return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * e;
+    }
+
+    // ---- value vs volatility
+    function renderVol(p, der) {
+      var svg = document.getElementById("volChart");
+      var W = 720, H = 380, fr = frame(svg, W, H, { l: 64, r: 16, t: 18, b: 40 });
+      var xs = [], defv = [], stgv = [];
+      for (var s = 0.03; s <= 0.601; s += 0.02) {
+        var d2 = derive(p, s);
+        var base = valueRigid(d2.Kbig, p, d2).npv;
+        defv.push(valueDefer(p, d2).npv - base);
+        stgv.push(valueStage(p, d2).npv - base);
+        xs.push(s);
+      }
+      var ally = defv.concat(stgv, [0]);
+      var ymin = Math.min.apply(null, ally), ymax = Math.max.apply(null, ally);
+      var yPad = (ymax - ymin) * 0.1 || 1; ymin -= yPad; ymax += yPad;
+      function X(v) { return fr.x0 + (v - 0.03) / (0.60 - 0.03) * (fr.x1 - fr.x0); }
+      function Y(v) { return fr.y0 + (v - ymin) / (ymax - ymin) * (fr.y1 - fr.y0); }
+      for (var g = 0.1; g <= 0.6; g += 0.1) xTick(svg, fr, X(g), (g * 100).toFixed(0) + "%");
+      var ystep = niceStep((ymax - ymin) / 5);
+      for (var yv = Math.ceil(ymin / ystep) * ystep; yv <= ymax; yv += ystep) yTick(svg, fr, Y(yv), fmtM(yv));
+      if (ymin < 0 && ymax > 0) E("line", { x1: fr.x0, y1: Y(0), x2: fr.x1, y2: Y(0), class: "axl", "stroke-dasharray": "3 3" }, svg);
+      E("line", { x1: fr.x0, y1: fr.y0, x2: fr.x1, y2: fr.y0, class: "axl" }, svg);
+      E("text", { x: (fr.x0 + fr.x1) / 2, y: H - 6, "text-anchor": "middle", class: "tick" }, svg).textContent = "demand volatility (σ per year)";
+      E("text", { x: 14, y: (fr.y0 + fr.y1) / 2, "text-anchor": "middle", class: "tick", transform: "rotate(-90 14 " + (fr.y0 + fr.y1) / 2 + ")" }, svg).textContent = "value of the option vs Commit now";
+
+      [["def", defv], ["stg", stgv]].forEach(function (pair) {
+        var d = xs.map(function (x, i) { return (i ? "L" : "M") + X(x) + " " + Y(pair[1][i]); }).join(" ");
+        E("path", { d: d, fill: "none", stroke: css(COL[pair[0]]), "stroke-width": 2.4 }, svg);
+      });
+      // current sigma marker
+      var cx = X(clamp(p.sigma, 0.03, 0.60));
+      E("line", { x1: cx, y1: fr.y1, x2: cx, y2: fr.y0, stroke: css("--ink-2"), "stroke-width": 1.2, "stroke-dasharray": "4 3" }, svg);
+      E("text", { x: cx, y: fr.y1 - 4, "text-anchor": "middle", class: "tick" }, svg).textContent = "now σ=" + (p.sigma * 100).toFixed(0) + "%";
+
+      document.getElementById("volLegend").innerHTML =
+        "<span class='k'><span class='sw line' style='background:" + css(COL.def) + "'></span>Wait & see</span>" +
+        "<span class='k'><span class='sw line' style='background:" + css(COL.stg) + "'></span>Stage & expand</span>";
+      document.getElementById("volCaption").textContent =
+        "Everything else held at your current settings. Where a curve dips below zero, that option costs more (premium, lost scale, delayed revenue) than the flexibility is worth at that volatility.";
+    }
+
+    // ---- distribution
+    function renderDist(p, der, sol) {
+      var svg = document.getElementById("distChart");
+      var W = 720, H = 340, fr = frame(svg, W, H, { l: 58, r: 16, t: 16, b: 38 });
+      var R = paths("rig", p, der, sol.rig), S = paths("stg", p, der, sol.stg);
+      var all = R.concat(S).map(function (d) { return d.npv; });
+      var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+      var pad = (hi - lo) * 0.05 || 1; lo -= pad; hi += pad;
+      var BINS = 22, bw = (hi - lo) / BINS;
+      var hr = new Array(BINS).fill(0), hs = new Array(BINS).fill(0);
+      R.forEach(function (d) { hr[clamp(Math.floor((d.npv - lo) / bw), 0, BINS - 1)] += d.prob; });
+      S.forEach(function (d) { hs[clamp(Math.floor((d.npv - lo) / bw), 0, BINS - 1)] += d.prob; });
+      var ymax = Math.max(Math.max.apply(null, hr), Math.max.apply(null, hs)) * 1.15 || 1;
+      function X(v) { return fr.x0 + (v - lo) / (hi - lo) * (fr.x1 - fr.x0); }
+      function Y(v) { return fr.y0 - v / ymax * (fr.y0 - fr.y1); }
+      E("line", { x1: fr.x0, y1: fr.y0, x2: fr.x1, y2: fr.y0, class: "axl" }, svg);
+      var xstep = niceStep((hi - lo) / 6);
+      for (var xv = Math.ceil(lo / xstep) * xstep; xv <= hi; xv += xstep) xTick(svg, fr, X(xv), fmtM(xv));
+      if (lo < 0 && hi > 0) E("line", { x1: X(0), y1: fr.y0, x2: X(0), y2: fr.y1, class: "axl", "stroke-dasharray": "3 3" }, svg);
+      for (var b = 0; b < BINS; b++) {
+        var x = X(lo + b * bw), xr = X(lo + (b + 1) * bw), w = xr - x;
+        if (hr[b] > 0) E("rect", { x: x + 1, y: Y(hr[b]), width: Math.max(w - 2, 1), height: fr.y0 - Y(hr[b]), fill: css(COL.rig), "fill-opacity": 0.55 }, svg);
+        if (hs[b] > 0) E("rect", { x: x + 1, y: Y(hs[b]), width: Math.max(w - 2, 1), height: fr.y0 - Y(hs[b]), fill: css(COL.stg), "fill-opacity": 0.55 }, svg);
+      }
+      var eR = R.reduce(function (a, d) { return a + d.npv * d.prob; }, 0);
+      var eS = S.reduce(function (a, d) { return a + d.npv * d.prob; }, 0);
+      [[eR, COL.rig], [eS, COL.stg]].forEach(function (m) {
+        E("line", { x1: X(m[0]), y1: fr.y0, x2: X(m[0]), y2: fr.y1, stroke: css(m[1]), "stroke-width": 2, "stroke-dasharray": "5 3" }, svg);
+      });
+      E("text", { x: (fr.x0 + fr.x1) / 2, y: H - 6, "text-anchor": "middle", class: "tick" }, svg).textContent = "NPV outcome";
+      E("text", { x: 13, y: (fr.y0 + fr.y1) / 2, "text-anchor": "middle", class: "tick", transform: "rotate(-90 13 " + (fr.y0 + fr.y1) / 2 + ")" }, svg).textContent = "probability";
+      document.getElementById("distLegend").innerHTML =
+        "<span class='k'><span class='sw' style='background:" + css(COL.rig) + ";opacity:.6'></span>Commit now</span>" +
+        "<span class='k'><span class='sw' style='background:" + css(COL.stg) + ";opacity:.6'></span>Stage & expand</span>" +
+        "<span class='k'><span class='sw line' style='background:" + css("--ink-2") + "'></span>dashed = expected NPV</span>";
+      var wR = Math.min.apply(null, R.map(function (d) { return d.npv; }));
+      var wS = Math.min.apply(null, S.map(function (d) { return d.npv; }));
+      document.getElementById("distCaption").textContent =
+        "Worst-case path: Commit now " + fmtM(wR) + " vs Stage & expand " + fmtM(wS) +
+        ".  Expected NPV " + fmtM(eR) + " vs " + fmtM(eS) + ".";
+    }
+
+    // ---- tornado
+    function renderTornado(p, der) {
+      var svg = document.getElementById("torChart");
+      clear(svg);
+      var W = 720, H = 360;
+      var base = valueStage(p, der).npv - valueRigid(der.Kbig, p, der).npv;
+      var tests = [
+        { name: "Demand volatility σ", lo: mut("sigma", 0.6), hi: mut("sigma", 1.5) },
+        { name: "Expected growth g", lo: shift("g", -0.04), hi: shift("g", 0.04) },
+        { name: "Discount rate (WACC)", lo: shift("k", -0.03), hi: shift("k", 0.03) },
+        { name: "Contribution margin", lo: mut("m", 0.7), hi: mut("m", 1.3) },
+        { name: "Stockout penalty", lo: mut("pen", 0.3), hi: mut("pen", 1.7) },
+        { name: "Capacity holding cost", lo: mut("op", 0.6), hi: mut("op", 1.4) },
+        { name: "Staging cost premium", lo: shift("prem", -0.15), hi: shift("prem", 0.20) },
+        { name: "Initial footprint", lo: shift("smallF", -0.15), hi: shift("smallF", 0.15) }
+      ];
+      function evalP(np) { var nd = derive(np); return valueStage(np, nd).npv - valueRigid(nd.Kbig, np, nd).npv; }
+      function mut(field, mfac) { var np = Object.assign({}, p); np[field] = p[field] * mfac; return evalP(np); }
+      function shift(field, add) { var np = Object.assign({}, p); np[field] = p[field] + add; return evalP(np); }
+
+      tests.forEach(function (t) { t.swing = Math.abs(t.hi - t.lo); });
+      tests.sort(function (a, b) { return b.swing - a.swing; });
+
+      var allv = [base];
+      tests.forEach(function (t) { allv.push(t.lo, t.hi); });
+      var vmin = Math.min.apply(null, allv), vmax = Math.max.apply(null, allv);
+      var pad = (vmax - vmin) * 0.12 || 1; vmin -= pad; vmax += pad;
+      var padL = 150, padR = 20, padT = 16, padB = 34;
+      function X(v) { return padL + (v - vmin) / (vmax - vmin) * (W - padL - padR); }
+      var rowH = (H - padT - padB) / tests.length;
+
+      // axis
+      E("line", { x1: X(base), y1: padT, x2: X(base), y2: H - padB, stroke: css("--ink-2"), "stroke-width": 1.4 }, svg);
+      E("text", { x: X(base), y: H - padB + 22, "text-anchor": "middle", class: "tick" }, svg).textContent = "base " + fmtM(base);
+      if (vmin < 0 && vmax > 0 && Math.abs(base) > 1e-6) {
+        E("line", { x1: X(0), y1: padT, x2: X(0), y2: H - padB, class: "axl", "stroke-dasharray": "3 3" }, svg);
+        E("text", { x: X(0), y: padT - 3, "text-anchor": "middle", class: "tick" }, svg).textContent = "$0";
+      }
+      var vstep = niceStep((vmax - vmin) / 5);
+      for (var vv = Math.ceil(vmin / vstep) * vstep; vv <= vmax; vv += vstep) {
+        E("text", { x: X(vv), y: H - padB + 10, "text-anchor": "middle", class: "tick" }, svg).textContent = fmtM(vv);
+      }
+
+      tests.forEach(function (t, idx) {
+        var y = padT + idx * rowH + rowH * 0.16, h = rowH * 0.68;
+        var xa = X(Math.min(t.lo, t.hi)), xb = X(Math.max(t.lo, t.hi));
+        var loLow = t.lo <= t.hi;
+        E("rect", { x: xa, y: y, width: X(base) - xa, height: h, fill: css(loLow ? "--s8" : "--s3"), "fill-opacity": 0.75 }, svg);
+        E("rect", { x: X(base), y: y, width: xb - X(base), height: h, fill: css(loLow ? "--s3" : "--s8"), "fill-opacity": 0.75 }, svg);
+        E("text", { x: padL - 10, y: y + h / 2 + 3.5, "text-anchor": "end", class: "tick", "font-size": 11 }, svg).textContent = t.name;
+        E("text", { x: xa - 4, y: y + h / 2 + 3.5, "text-anchor": "end", class: "tick" }, svg).textContent = fmtM(Math.min(t.lo, t.hi));
+        E("text", { x: xb + 4, y: y + h / 2 + 3.5, "text-anchor": "start", class: "tick" }, svg).textContent = fmtM(Math.max(t.lo, t.hi));
+      });
+      document.getElementById("torCaption").textContent =
+        "Green = staging option worth more, red = worth less. Base staging-option value " + fmtM(base) +
+        ". Volatility and the staging premium are usually the swing factors.";
+    }
+
+    // ============================================================ GO
+    recompute();
+  })();
+  </script>
+</body>
+</html>
