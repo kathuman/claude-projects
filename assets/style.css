@@ -396,3 +396,11 @@ body {
 }
 
 .site-footer a:hover { color: var(--accent); }
+
+.site-footer p { margin: 0; }
+.site-footer .consult {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+.site-footer .consult a { color: var(--accent); }
