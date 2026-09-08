@@ -1,5 +1,13 @@
 [
   {
+    "title": "Network Design Visuals",
+    "description": "A browsable library of 17 supply-chain network-design visualizations, ordered simple → advanced: demand bars, cost-to-serve stacks, O–D flow maps, an echelon Sankey, lane-cost matrices, Pareto and tornado charts, a capacitated network graph, service-coverage rings, a cost–service efficient frontier, and strategic views — center-of-gravity / greenfield k-means, capacity-constrained catchment maps, animated throughput, phased network evolution, and a disruption-impact matrix. Every example runs on one shared synthetic network. Single file, no dependencies.",
+    "date": "2026-09-08",
+    "tags": ["javascript", "web", "dataviz", "supply-chain"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/supply-chain-viz",
+    "demoUrl": "https://kathuman.github.io/claude-projects/supply-chain-viz/"
+  },
+  {
     "title": "Cube Studio",
     "description": "View a Rubik's Cube in 3D (drag to orbit) and as a 2D unfolded schematic, scramble it, then watch a near-optimal Kociemba two-phase solution play out move by move with full transport controls.",
     "date": "2026-08-31",
