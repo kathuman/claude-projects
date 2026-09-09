@@ -229,6 +229,22 @@
     details.rules[open] summary { color: var(--ink); }
     details.rules p { font-size: 13px; color: var(--ink-2); margin: 8px 0 14px; }
 
+    .codedoc { padding-bottom: 6px; }
+    .codedoc h4 { margin: 18px 0 4px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+    .codedoc ul { margin: 8px 0 14px; padding-left: 20px; }
+    .codedoc li { font-size: 13px; color: var(--ink-2); margin: 5px 0; }
+    .codedoc code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface); border: 1px solid var(--border); padding: 1px 4px; border-radius: 4px; color: var(--ink); }
+    .viewsrc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+    .viewsrc .btn { width: auto; flex: 1; min-width: 150px; text-align: center; text-decoration: none; display: inline-block; }
+    .srcnote { font-size: 12px !important; color: var(--muted) !important; }
+    pre#srcPre {
+      max-height: 460px; overflow: auto; margin: 6px 0 12px;
+      font-family: var(--font-mono); font-size: 11px; line-height: 1.6;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; color: var(--ink-2); white-space: pre; tab-size: 2;
+    }
+    pre#srcPre .bnr { color: var(--accent); font-weight: 500; }
+
     footer.foot { max-width: 1080px; margin: 0 auto; padding: 22px 22px 50px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
     footer.foot a { color: var(--muted); }
     footer.foot .consult { display: block; margin-bottom: 6px; font-weight: 600; color: var(--ink); }
@@ -380,6 +396,109 @@
         map and adjusts its search depth for each. Disc and board styles under <b>Look</b> are
         cosmetic and are remembered between visits.
       </p>
+    </details>
+
+    <details class="rules" id="codeInfo">
+      <summary>How the code is built</summary>
+      <div class="codedoc">
+        <p>
+          The whole game is this one HTML file — no build step, no libraries. All the
+          JavaScript lives in a single function (an <em>IIFE</em>) at the bottom, split into
+          labelled sections with <code>// ===</code> banners. Those sections form three layers
+          that deliberately never reach across each other:
+        </p>
+        <ul>
+          <li>
+            <b>The rules</b> (<code>BOARD LOGIC</code>) — pure functions over a 2-D array of
+            numbers. No DOM, no shared state. <code>flipsFor</code>, <code>legalMoves</code>,
+            <code>applyMove</code>, <code>counts</code>. This layer would run unchanged in Node.
+          </li>
+          <li>
+            <b>The brain</b> (<code>AI</code>) — also pure. <code>evaluate</code> scores a
+            board, <code>negamax</code> searches moves ahead, <code>chooseAImove</code> picks
+            one. "Difficulty" is just how deep the search goes.
+          </li>
+          <li>
+            <b>The screen &amp; the glue</b> (<code>RENDER</code>, <code>FLOW</code>,
+            <code>CONTROLS</code>) — the only code allowed to touch the DOM. <code>render()</code>
+            paints <code>state</code> onto the board; <code>FLOW</code> changes <code>state</code>
+            in response to clicks and timers.
+          </li>
+        </ul>
+
+        <h4>The board is just numbers</h4>
+        <p>
+          <code>1</code> = black, <code>-1</code> = white, <code>0</code> = empty. Storing the
+          two colours as <code>+1 / -1</code> is the central trick: the opponent of
+          <code>color</code> is always <code>-color</code>. <code>flipsFor</code> walks all eight
+          compass directions (<code>DIRS</code>) from a candidate square, collects a run of
+          <code>-color</code> discs, and keeps that run <em>only</em> if it ends on one of your
+          own discs. That single function is the entire rulebook of Othello.
+        </p>
+
+        <h4>One source of truth</h4>
+        <p>
+          Everything that changes lives on one object, <code>state</code> — the board, whose
+          turn it is, the move list, the undo history, the chosen size / difficulty / looks.
+          After <em>any</em> change, exactly one function — <code>render()</code> — rebuilds
+          what you see from <code>state</code>. It is idempotent: calling it twice gives the
+          same screen. So the flow code never has to remember to poke a particular label; it
+          edits <code>state</code> and calls <code>render()</code>.
+        </p>
+
+        <h4>A move is a tiny state machine</h4>
+        <p>
+          <code>doMove</code> → save a history snapshot → <code>applyMove</code> (place and
+          flip) → swap <code>turn</code> → <code>resolveTurnState</code>: if the side to move
+          has no legal reply, log a pass and swap back; if <em>neither</em> side can move, the
+          game is over. <code>maybeAIMove</code> then fires if it's the computer's turn — on a
+          short timer, so the flip animation paints first.
+        </p>
+
+        <h4>Undo is snapshots, not reverse moves</h4>
+        <p>
+          <code>pushHistory</code> clones the whole board onto a stack before each move; undo
+          pops it back. Cloning a small integer array is cheap and avoids ever having to
+          "un-flip" discs.
+        </p>
+
+        <h4>The AI in three steps</h4>
+        <p>
+          <b>(1)</b> <code>evaluate(board, color)</code> returns a single number: weighted
+          square values (<code>WEIGHTS</code>) + mobility (how many moves each side has) + a
+          large bonus for owned corners, blended differently in the opening, midgame and
+          endgame. <b>(2)</b> <code>negamax</code> is minimax in its compact form — the
+          opponent's best reply is just <code>-negamax(…)</code> — with <b>alpha-beta
+          pruning</b> to skip branches that cannot change the result, and move ordering (try
+          high-value squares first) to make the pruning bite. <b>(3)</b>
+          <code>chooseAImove</code> sets the depth from the difficulty button (Easy is mostly
+          random; Expert looks ~6 plies ahead) and switches to a full solve once few squares
+          remain.
+        </p>
+
+        <h4>Any board size from one generator</h4>
+        <p>
+          <code>buildWeights(n)</code> builds the positional map for a 6, 8 or 10 board from
+          the <em>shape</em> of each square — its distance to the nearest edge and corner —
+          instead of a hard-coded 8×8 grid. Corners score 120, the squares hugging them
+          −20 / −40, edges +20 / +5, the centre +3.
+        </p>
+
+        <h4>Look = CSS variables + a data attribute</h4>
+        <p>
+          Disc and board colours are CSS custom properties. Choosing "Walnut" just sets
+          <code>data-board="walnut"</code> on <code>&lt;html&gt;</code>; a CSS rule redefines
+          the variables; the browser repaints. The only JavaScript involved is saving the
+          choice to <code>localStorage</code>.
+        </p>
+
+        <div class="viewsrc">
+          <button class="btn" id="srcBtn" type="button">Show the full source ↓</button>
+          <a class="btn" id="srcGh" href="https://github.com/kathuman/claude-projects/blob/main/othello/index.html" target="_blank" rel="noopener">View on GitHub ↗</a>
+        </div>
+        <p class="srcnote" id="srcNote" hidden></p>
+        <pre id="srcPre" hidden></pre>
+      </div>
     </details>
   </main>
 
@@ -970,6 +1089,43 @@
         b.classList.toggle("on", b.dataset[attr] === String(value));
       });
     }
+
+    // ---- source viewer: the page reads and shows its own code ----
+    (function wireSource() {
+      var btn = document.getElementById("srcBtn");
+      var pre = document.getElementById("srcPre");
+      var note = document.getElementById("srcNote");
+      var loaded = false, shown = false;
+      function esc(s) {
+        return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; });
+      }
+      btn.addEventListener("click", function () {
+        if (loaded) {
+          shown = !shown;
+          pre.hidden = !shown;
+          btn.textContent = shown ? "Hide the source ↑" : "Show the full source ↓";
+          return;
+        }
+        btn.textContent = "Loading…";
+        fetch(window.location.href, { cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+          .then(function (txt) {
+            var lines = txt.split("\n").length;
+            // escape first, then let the // === section banners stand out
+            pre.innerHTML = esc(txt).replace(/^(\s*\/\/ =+.*)$/gm, '<span class="bnr">$1</span>');
+            pre.hidden = false;
+            note.textContent = "othello/index.html — " + lines + " lines, HTML + CSS + JS in one file. This is the exact text running the page right now.";
+            note.hidden = false;
+            loaded = true; shown = true;
+            btn.textContent = "Hide the source ↑";
+          })
+          .catch(function () {
+            note.textContent = "A browser won't let a local file read itself — open the GitHub link instead, or serve the folder over http.";
+            note.hidden = false;
+            btn.textContent = "Show the full source ↓";
+          });
+      });
+    })();
 
     // ========================================================== GO
     setSegActive("diffSeg", "d", state.difficulty);
