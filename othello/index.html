@@ -27,15 +27,11 @@
       --accent-ink: #ffffff;
       --surface: #fcfcfb;
 
-      --felt: #1f7a4d;
-      --felt-2: #1a6b43;
-      --felt-line: rgba(0,0,0,.28);
-      --cell-hi: rgba(255,255,255,.16);
-
-      --disc-black: #1b1b1b;
-      --disc-black-edge: #000;
-      --disc-white: #f4f2ec;
-      --disc-white-edge: #cbc7bb;
+      /* board surface + discs are user-picked (data-board / data-discs on
+         :root) and stay the same in light and dark theme */
+      --board-a: #1f7a4d; --board-b: #17693f; --board-line: rgba(0,0,0,.30); --cell-hi: rgba(255,255,255,.16);
+      --da-hi: #5a5a5a; --da-lo: #1b1b1b; --da-edge: #000;
+      --db-hi: #ffffff; --db-lo: #f2efe6; --db-edge: #c9c4b6;
 
       --shadow: 0 1px 2px rgba(20,20,15,.04), 0 10px 30px -8px rgba(20,20,15,.10);
       --radius: 14px;
@@ -48,7 +44,6 @@
       --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
       --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
       --surface: #1a1a19;
-      --felt: #1c6f47; --felt-2: #175d3c;
       --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
       color-scheme: dark;
     }
@@ -58,11 +53,24 @@
         --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
         --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
         --surface: #1a1a19;
-        --felt: #1c6f47; --felt-2: #175d3c;
         --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
         color-scheme: dark;
       }
     }
+
+    /* ---- board surfaces ---- */
+    :root[data-board="walnut"]   { --board-a: #7a4a26; --board-b: #5d3719; --board-line: rgba(0,0,0,.40); --cell-hi: rgba(255,240,220,.12); }
+    :root[data-board="slate"]    { --board-a: #44525f; --board-b: #333f4a; --board-line: rgba(0,0,0,.36); --cell-hi: rgba(255,255,255,.12); }
+    :root[data-board="ocean"]    { --board-a: #1a6e77; --board-b: #14555d; --board-line: rgba(0,0,0,.32); --cell-hi: rgba(255,255,255,.15); }
+    :root[data-board="sand"]     { --board-a: #d0b177; --board-b: #c09c5c; --board-line: rgba(80,55,20,.42); --cell-hi: rgba(0,0,0,.06); }
+    :root[data-board="charcoal"] { --board-a: #2d2d33; --board-b: #212126; --board-line: rgba(0,0,0,.55); --cell-hi: rgba(255,255,255,.10); }
+
+    /* ---- disc colourways: --da is the first player, --db the second ---- */
+    :root[data-discs="jade"]   { --da-hi: #34a37d; --da-lo: #0c5c43; --da-edge: #063b2b; --db-hi: #ffffff; --db-lo: #efe7d2; --db-edge: #c7bb98; }
+    :root[data-discs="sunset"] { --da-hi: #e0574a; --da-lo: #b12f24; --da-edge: #7c1c15; --db-hi: #ffe1a6; --db-lo: #e6a93a; --db-edge: #b9822a; }
+    :root[data-discs="ocean"]  { --da-hi: #3f6fae; --da-lo: #1c3f6e; --da-edge: #122a4c; --db-hi: #eaf6f2; --db-lo: #bfe0d7; --db-edge: #8fbaad; }
+    :root[data-discs="neon"]   { --da-hi: #ff5cc8; --da-lo: #d0219a; --da-edge: #8a1268; --db-hi: #7cf7f7; --db-lo: #1fd0d0; --db-edge: #12908f; }
+    :root[data-discs="royal"]  { --da-hi: #7d4bb0; --da-lo: #4a2183; --da-edge: #2f1557; --db-hi: #ffe9a8; --db-lo: #e8c057; --db-edge: #b8942f; }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
@@ -109,31 +117,31 @@
     }
     .side-score.active { border-color: var(--accent); background: var(--accent-soft); }
     .side-score .chip { width: 18px; height: 18px; border-radius: 50%; flex: none; }
-    .chip.black { background: radial-gradient(circle at 34% 30%, #4a4a4a, var(--disc-black) 62%); border: 1px solid var(--disc-black-edge); }
-    .chip.white { background: radial-gradient(circle at 34% 30%, #ffffff, var(--disc-white) 62%); border: 1px solid var(--disc-white-edge); }
+    .chip.black { background: radial-gradient(circle at 34% 30%, var(--da-hi), var(--da-lo) 62%); border: 1px solid var(--da-edge); }
+    .chip.white { background: radial-gradient(circle at 34% 30%, var(--db-hi), var(--db-lo) 62%); border: 1px solid var(--db-edge); }
     .side-score .lbl { font-size: 11px; font-weight: 600; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
 
     .board {
       --n: 8;
       position: relative;
-      width: min(78vw, 560px); aspect-ratio: 1 / 1;
+      width: min(82vw, 600px); aspect-ratio: 1 / 1;
       display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr);
       gap: 2px;
-      background: var(--felt-line);
-      border: 3px solid var(--felt-line);
+      background: var(--board-line);
+      border: 3px solid var(--board-line);
       border-radius: 8px;
       padding: 2px;
       touch-action: manipulation;
     }
     .cell {
       position: relative;
-      background: var(--felt);
-      background-image: linear-gradient(145deg, var(--felt) 0%, var(--felt-2) 100%);
+      background: var(--board-a);
+      background-image: linear-gradient(145deg, var(--board-a) 0%, var(--board-b) 100%);
       display: grid; place-items: center;
       cursor: default;
     }
     .cell.playable { cursor: pointer; }
-    .cell.playable:hover { background-image: linear-gradient(145deg, var(--cell-hi), var(--cell-hi)), linear-gradient(145deg, var(--felt) 0%, var(--felt-2) 100%); }
+    .cell.playable:hover { background-image: linear-gradient(145deg, var(--cell-hi), var(--cell-hi)), linear-gradient(145deg, var(--board-a) 0%, var(--board-b) 100%); }
 
     .hint {
       width: 26%; height: 26%; border-radius: 50%;
@@ -152,8 +160,8 @@
     .disc .face {
       position: absolute; inset: 0; border-radius: 50%; backface-visibility: hidden;
     }
-    .disc .face.b { background: radial-gradient(circle at 34% 30%, #565656, var(--disc-black) 60%); border: 1px solid var(--disc-black-edge); }
-    .disc .face.w { background: radial-gradient(circle at 34% 30%, #ffffff, var(--disc-white) 60%); border: 1px solid var(--disc-white-edge); transform: rotateY(180deg); }
+    .disc .face.b { background: radial-gradient(circle at 34% 30%, var(--da-hi), var(--da-lo) 60%); border: 1px solid var(--da-edge); }
+    .disc .face.w { background: radial-gradient(circle at 34% 30%, var(--db-hi), var(--db-lo) 60%); border: 1px solid var(--db-edge); transform: rotateY(180deg); }
     .disc.show-black { transform: rotateY(0deg); }
     .disc.show-white { transform: rotateY(180deg); }
     .disc.place { animation: pop .28s ease; }
@@ -196,6 +204,17 @@
     .btn.primary:hover { filter: brightness(1.05); }
     .btn + .btn { margin-top: 8px; }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .sel {
+      width: 100%; padding: 7px 10px; font: inherit; font-size: 12.5px; font-weight: 600;
+      color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; cursor: pointer;
+    }
+    .sel:hover { border-color: var(--accent); }
+    .swatches { display: flex; gap: 8px; margin-top: 9px; }
+    .swatch { flex: 1; height: 30px; border-radius: 8px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .swatch .pv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .swatch .pv i { width: 13px; height: 13px; border-radius: 50%; }
 
     .stats { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
     .stats div { display: flex; justify-content: space-between; padding: 3px 0; }
@@ -286,9 +305,44 @@
               <button data-d="4">Expert</button>
             </div>
           </div>
+          <div class="field">
+            <label>Board size</label>
+            <div class="seg" id="sizeSeg">
+              <button data-s="6">6 × 6</button>
+              <button data-s="8" class="on">8 × 8</button>
+              <button data-s="10">10 × 10</button>
+            </div>
+          </div>
           <button class="btn primary" id="newBtn">New game</button>
           <button class="btn" id="undoBtn">Undo</button>
           <button class="btn" id="hintBtn">Hints: on</button>
+        </div>
+
+        <div class="panel">
+          <h3>Look</h3>
+          <div class="field">
+            <label for="discSel">Discs</label>
+            <select class="sel" id="discSel">
+              <option value="classic">Classic — black &amp; ivory</option>
+              <option value="jade">Jade &amp; ivory</option>
+              <option value="sunset">Sunset — red &amp; gold</option>
+              <option value="ocean">Ocean — blue &amp; seafoam</option>
+              <option value="neon">Neon — magenta &amp; cyan</option>
+              <option value="royal">Royal — purple &amp; gold</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="boardSel">Board</label>
+            <select class="sel" id="boardSel">
+              <option value="felt">Felt green</option>
+              <option value="walnut">Walnut</option>
+              <option value="slate">Slate</option>
+              <option value="ocean">Ocean teal</option>
+              <option value="sand">Sand</option>
+              <option value="charcoal">Charcoal</option>
+            </select>
+            <div class="swatches" id="lookPreview" aria-hidden="true"></div>
+          </div>
         </div>
 
         <div class="panel">
@@ -318,8 +372,13 @@
         Whoever has more discs when the board fills (or both sides are stuck) wins.
       </p>
       <p>
-        Corners can never be flipped, so they are gold; the squares diagonally next to a corner
+        Corners can never be flipped, so they are prized; the squares diagonally next to a corner
         hand it over and are usually poison. The computer knows this.
+      </p>
+      <p>
+        The board can be 6×6, 8×8 (standard) or 10×10 — the computer builds a fresh positional
+        map and adjusts its search depth for each. Disc and board styles under <b>Look</b> are
+        cosmetic and are remembered between visits.
       </p>
     </details>
   </main>
@@ -348,23 +407,40 @@
       try { localStorage.setItem("othello-theme", next); } catch (e) {}
     });
 
+    function readLS(k, def) {
+      try { var v = localStorage.getItem(k); return v == null ? def : v; } catch (e) { return def; }
+    }
+    function writeLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
     // ========================================================== CONSTANTS
-    var N = 8;
     var BLACK = 1, WHITE = -1, EMPTY = 0;
     var DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-    var COLS = "ABCDEFGH";
+    var COLS = "ABCDEFGHJKLMNOPQRS"; // skips I, Go-style
 
-    // Positional weights for the evaluator (classic Othello heuristic table).
-    var WEIGHTS = [
-      [120,-20, 20,  5,  5, 20,-20,120],
-      [-20,-40, -5, -5, -5, -5,-40,-20],
-      [ 20, -5, 15,  3,  3, 15, -5, 20],
-      [  5, -5,  3,  3,  3,  3, -5,  5],
-      [  5, -5,  3,  3,  3,  3, -5,  5],
-      [ 20, -5, 15,  3,  3, 15, -5, 20],
-      [-20,-40, -5, -5, -5, -5,-40,-20],
-      [120,-20, 20,  5,  5, 20,-20,120]
-    ];
+    var N = 8;          // current board size, set from state.size in newGame()
+    var WEIGHTS = null; // positional table for the current N, built by buildWeights()
+
+    // Generate a classic Othello positional table for any even board size:
+    // corners prized, C/X squares next to them poisoned, edges good,
+    // one-in-from-edge weak, interior flat.
+    function buildWeights(n) {
+      var W = [];
+      for (var r = 0; r < n; r++) {
+        W.push([]);
+        for (var c = 0; c < n; c++) {
+          var dr = Math.min(r, n - 1 - r), dc = Math.min(c, n - 1 - c);
+          var v;
+          if (dr === 0 && dc === 0) v = 120;                                  // corner
+          else if ((dr === 0 && dc === 1) || (dr === 1 && dc === 0)) v = -20; // C square
+          else if (dr === 1 && dc === 1) v = -40;                             // X square
+          else if (dr === 0 || dc === 0) v = ((dr === 0 ? dc : dr) === 2) ? 20 : 5; // edge
+          else if (dr === 1 || dc === 1) v = -5;                              // one in from edge
+          else v = 3;                                                          // interior
+          W[r].push(v);
+        }
+      }
+      return W;
+    }
 
     // ========================================================== STATE
     var state = {
@@ -376,17 +452,31 @@
       mode: "ai",         // "ai" | "pvp"
       humanColor: BLACK,  // which colour the human plays in ai mode
       difficulty: 2,
+      size: 8,            // board is size × size (even: 6, 8 or 10)
       hints: true,
       over: false,
       thinking: false,
       lastMove: null      // [r,c]
     };
+    (function loadSettings() {
+      var sz = parseInt(readLS("othello-size", "8"), 10);
+      if (sz === 6 || sz === 8 || sz === 10) state.size = sz;
+      var d = parseInt(readLS("othello-diff", "2"), 10);
+      if (d >= 1 && d <= 4) state.difficulty = d;
+      var discs = readLS("othello-discs", "classic");
+      var board = readLS("othello-board", "felt");
+      if (discs && discs !== "classic") document.documentElement.setAttribute("data-discs", discs);
+      if (board && board !== "felt") document.documentElement.setAttribute("data-board", board);
+      state._discs = discs || "classic";
+      state._board = board || "felt";
+    })();
 
     // ========================================================== BOARD LOGIC
     function newBoard() {
       var b = [];
       for (var r = 0; r < N; r++) { b.push([]); for (var c = 0; c < N; c++) b[r].push(EMPTY); }
-      b[3][3] = WHITE; b[3][4] = BLACK; b[4][3] = BLACK; b[4][4] = WHITE;
+      var m = N / 2;
+      b[m - 1][m - 1] = WHITE; b[m - 1][m] = BLACK; b[m][m - 1] = BLACK; b[m][m] = WHITE;
       return b;
     }
     function cloneBoard(b) { return b.map(function (row) { return row.slice(); }); }
@@ -447,7 +537,8 @@
         if (v === EMPTY) continue;
         if (v === color) { pos += WEIGHTS[r][c]; myDisc++; } else { pos -= WEIGHTS[r][c]; opDisc++; }
       }
-      var corners = [[0,0],[0,7],[7,0],[7,7]];
+      var lo = 0, hi = N - 1;
+      var corners = [[lo,lo],[lo,hi],[hi,lo],[hi,hi]];
       for (var k = 0; k < 4; k++) {
         var cv = b[corners[k][0]][corners[k][1]];
         if (cv === color) myCorner++; else if (cv === -color) opCorner++;
@@ -456,11 +547,12 @@
       var mobility = (myMoves - opMoves);
       var cornerScore = 800 * (myCorner - opCorner);
       var discScore = (myDisc - opDisc);
+      var total = N * N;
 
-      if (empties > 16) {
+      if (empties > total * 0.28) {
         // opening / midgame: mobility + position + corners dominate, disc count barely matters
         return pos + 12 * mobility + cornerScore - 3 * discScore;
-      } else if (empties > 6) {
+      } else if (empties > total * 0.10) {
         return pos + 6 * mobility + cornerScore + 4 * discScore;
       } else {
         // endgame: maximise discs
@@ -505,13 +597,20 @@
       }
 
       var cnt = counts(b);
+      var big = N >= 10, small = N <= 6;
       var depth;
       if (d === 2) depth = 3;
       else if (d === 3) depth = 4;
       else depth = 6;
-      // Dig deeper when the branching factor collapses near the end.
-      if (d >= 3 && cnt.empty <= 10) depth = cnt.empty;
-      else if (cnt.empty <= 8) depth = cnt.empty;
+      // Larger boards branch wider — pull the search in a ply or two so the
+      // computer still answers quickly; smaller boards can afford one more.
+      if (big) depth -= (d === 4 ? 2 : 1);
+      else if (small && d >= 2) depth += 1;
+      // Dig deep — up to a full solve — once the branching factor collapses.
+      var solveThresh = big ? 8 : 10;
+      if ((d >= 3 && cnt.empty <= solveThresh) || cnt.empty <= (big ? 6 : 8)) {
+        depth = Math.max(depth, cnt.empty);
+      }
 
       moves.sort(function (m1, m2) { return WEIGHTS[m2.r][m2.c] - WEIGHTS[m1.r][m1.c]; });
       var best = null, bestScore = -Infinity;
@@ -528,17 +627,19 @@
       return best;
     }
     function isXorC(r, c) {
-      // squares adjacent (incl. diagonally) to a corner
-      var near = [0, 1, 6, 7];
-      if (near.indexOf(r) === -1 || near.indexOf(c) === -1) return false;
-      var isCorner = (r === 0 || r === 7) && (c === 0 || c === 7);
-      return !isCorner;
+      // the C and X squares hugging a corner (but not the corner itself)
+      var dr = Math.min(r, N - 1 - r), dc = Math.min(c, N - 1 - c);
+      if (dr === 0 && dc === 0) return false;
+      return dr <= 1 && dc <= 1;
     }
 
     // ========================================================== RENDER
     var boardEl = document.getElementById("board");
     var cells = [];
-    (function buildGrid() {
+    function buildGrid() {
+      boardEl.innerHTML = "";
+      boardEl.style.setProperty("--n", N);
+      cells = [];
       for (var r = 0; r < N; r++) {
         cells.push([]);
         for (var c = 0; c < N; c++) {
@@ -551,7 +652,7 @@
           cells[r].push(cell);
         }
       }
-    })();
+    }
 
     function discEl(color, isNew) {
       var d = document.createElement("div");
@@ -765,6 +866,9 @@
     }
 
     function newGame() {
+      N = state.size;
+      WEIGHTS = buildWeights(N);
+      buildGrid();
       state.board = newBoard();
       state.turn = BLACK;
       state.history = [];
@@ -801,7 +905,46 @@
       updateSideLabels();
       newGame();
     });
-    wireSeg("diffSeg", "d", function (v) { state.difficulty = +v; });
+    wireSeg("diffSeg", "d", function (v) { state.difficulty = +v; writeLS("othello-diff", v); });
+    wireSeg("sizeSeg", "s", function (v) {
+      state.size = +v;
+      writeLS("othello-size", v);
+      newGame();
+    });
+
+    // ---- appearance ----
+    var DISC_PREVIEW = {
+      classic: ["#5a5a5a", "#f2efe6"], jade: ["#2f9c76", "#efe7d2"],
+      sunset: ["#d64435", "#e6a93a"], ocean: ["#3f6fae", "#bfe0d7"],
+      neon: ["#e0219a", "#1fd0d0"], royal: ["#5b2a86", "#e8c057"]
+    };
+    var BOARD_PREVIEW = {
+      felt: "#1f7a4d", walnut: "#7a4a26", slate: "#44525f",
+      ocean: "#1a6e77", sand: "#d0b177", charcoal: "#2d2d33"
+    };
+    function applyLook() {
+      var root = document.documentElement;
+      if (state._discs === "classic") root.removeAttribute("data-discs");
+      else root.setAttribute("data-discs", state._discs);
+      if (state._board === "felt") root.removeAttribute("data-board");
+      else root.setAttribute("data-board", state._board);
+      var host = document.getElementById("lookPreview");
+      var dc = DISC_PREVIEW[state._discs] || DISC_PREVIEW.classic;
+      var bc = BOARD_PREVIEW[state._board] || BOARD_PREVIEW.felt;
+      host.innerHTML =
+        '<div class="swatch" style="background:' + bc + '">' +
+        '<div class="pv"><i style="background:' + dc[0] + '"></i><i style="background:' + dc[1] + '"></i></div></div>';
+    }
+    var discSel = document.getElementById("discSel");
+    var boardSel = document.getElementById("boardSel");
+    discSel.value = state._discs;
+    boardSel.value = state._board;
+    discSel.addEventListener("change", function () {
+      state._discs = this.value; writeLS("othello-discs", this.value); applyLook();
+    });
+    boardSel.addEventListener("change", function () {
+      state._board = this.value; writeLS("othello-board", this.value); applyLook();
+    });
 
     function updateSideLabels() {
       var lb = document.getElementById("lblBlack"), lw = document.getElementById("lblWhite");
@@ -821,7 +964,17 @@
       render();
     });
 
+    function setSegActive(id, attr, value) {
+      var seg = document.getElementById(id);
+      seg.querySelectorAll("button").forEach(function (b) {
+        b.classList.toggle("on", b.dataset[attr] === String(value));
+      });
+    }
+
     // ========================================================== GO
+    setSegActive("diffSeg", "d", state.difficulty);
+    setSegActive("sizeSeg", "s", state.size);
+    applyLook();
     updateSideLabels();
     newGame();
   })();
