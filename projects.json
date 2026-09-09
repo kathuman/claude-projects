@@ -1,5 +1,13 @@
 [
   {
+    "title": "Othello",
+    "description": "Play Othello (Reversi) against the computer or a friend on one screen. Legal moves are dotted in, captures flip with a 3D animation, and the last move is ringed. Four computer strengths run a negamax search with alpha-beta pruning, a positional weight table, mobility and corner heuristics, and a full endgame solve in the last ten squares. Undo, move log, passes and game-over detection all handled. Single file, no dependencies.",
+    "date": "2026-09-09",
+    "tags": ["javascript", "web", "game", "ai"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/othello",
+    "demoUrl": "https://kathuman.github.io/claude-projects/othello/"
+  },
+  {
     "title": "Real Options for Network Design",
     "description": "An interactive explainer for real options applied to supply chain network design. Compare committing to a full network now, waiting to build, and staged expansion under demand uncertainty — a binomial demand lattice with backward-induction policy, payoff-shape scatter, an option-value-vs-volatility curve, an outcome distribution, and a tornado sensitivity. Drag sliders for volatility, growth, costs and footprint sizing, or load scenario presets. Single file, no dependencies.",
     "date": "2026-09-08",

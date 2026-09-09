@@ -77,6 +77,7 @@ scientific-calculator/index.html   — https://kathuman.github.io/claude-project
 rubiks-cube/index.html             — https://kathuman.github.io/claude-projects/rubiks-cube/
 supply-chain-viz/index.html        — https://kathuman.github.io/claude-projects/supply-chain-viz/
 real-options/index.html            — https://kathuman.github.io/claude-projects/real-options/
+othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
 ```
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
