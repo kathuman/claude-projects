@@ -1,5 +1,13 @@
 [
   {
+    "title": "Go",
+    "description": "Play Go (Baduk / Weiqi) against the computer or a friend on one screen. Full rules — group capture, liberties, suicide prevention and the ko rule — with a ghost stone on hover and a ring on the last move. Choose a 9×9, 13×13 or 19×19 board with proper star points, set the komi, and pick from five goban woods. Two passes open a scoring phase: click any group to mark it dead, then the game is settled by area — stones plus surrounded territory plus komi. Undo, move log, capture counts and a heuristic computer opponent at three strengths. Single file, no dependencies.",
+    "date": "2026-09-09",
+    "tags": ["javascript", "web", "game", "ai"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/go",
+    "demoUrl": "https://kathuman.github.io/claude-projects/go/"
+  },
+  {
     "title": "Othello",
     "description": "Play Othello (Reversi) against the computer or a friend on one screen. Legal moves are dotted in, captures flip with a 3D animation, and the last move is ringed. Four computer strengths run a negamax search with alpha-beta pruning, a positional weight table, mobility and corner heuristics, and a full endgame solve. Choose a 6×6, 8×8 or 10×10 board — the AI rebuilds its positional map and search depth to match — plus six disc colourways and six board surfaces, remembered between visits. Undo, move log, passes and game-over detection all handled. A \"How the code is built\" section walks through the architecture and shows the page's own source. Single file, no dependencies.",
     "date": "2026-09-09",

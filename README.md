@@ -78,6 +78,7 @@ rubiks-cube/index.html             — https://kathuman.github.io/claude-project
 supply-chain-viz/index.html        — https://kathuman.github.io/claude-projects/supply-chain-viz/
 real-options/index.html            — https://kathuman.github.io/claude-projects/real-options/
 othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
+go/index.html                      — https://kathuman.github.io/claude-projects/go/
 ```
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the

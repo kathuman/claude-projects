@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Go</title>
+  <meta name="description" content="Play Go (Baduk / Weiqi) against the computer or a friend — 9×9, 13×13 or 19×19, legal-move rules with captures, ko, suicide, pass, dead-stone marking and area scoring. Single file, no dependencies." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9899;</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ------------------------------------------------------------------
+       Chrome follows the parent site's warm neutrals + accent, stepped
+       per theme. The goban keeps a wood tone regardless of theme; the
+       exact wood is user-picked (data-board on :root).
+       ------------------------------------------------------------------ */
+    :root {
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --panel-2: #faf9f7;
+      --border: #e6e4de;
+      --ink: #1b1b18;
+      --ink-2: #5c5b54;
+      --muted: #8a8880;
+      --accent: #c15f3c;
+      --accent-soft: #f3e3da;
+      --accent-ink: #ffffff;
+      --surface: #fcfcfb;
+
+      --board-bg: #e3b063;
+      --board-edge: #b07d34;
+      --board-line: rgba(60, 38, 12, .62);
+      --star: rgba(50, 30, 8, .8);
+
+      --shadow: 0 1px 2px rgba(20,20,15,.04), 0 10px 30px -8px rgba(20,20,15,.10);
+      --radius: 14px;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+      color-scheme: light;
+    }
+    :root[data-theme="dark"] {
+      --bg: #16151a; --panel: #1e1d24; --panel-2: #191820; --border: #302e38;
+      --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
+      --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
+      --surface: #1a1a19;
+      --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16151a; --panel: #1e1d24; --panel-2: #191820; --border: #302e38;
+        --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
+        --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
+        --surface: #1a1a19;
+        --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
+        color-scheme: dark;
+      }
+    }
+
+    /* ---- goban wood surfaces (same in light + dark) ---- */
+    :root[data-board="maple"]  { --board-bg: #e9c27f; --board-edge: #bd9143; --board-line: rgba(60,38,12,.60); --star: rgba(50,30,8,.8); }
+    :root[data-board="kaya"]   { --board-bg: #e3b063; --board-edge: #b07d34; --board-line: rgba(60,38,12,.62); --star: rgba(50,30,8,.8); }
+    :root[data-board="cherry"] { --board-bg: #d99a6c; --board-edge: #b06f42; --board-line: rgba(58,28,10,.60); --star: rgba(45,20,6,.8); }
+    :root[data-board="walnut"] { --board-bg: #b07f52; --board-edge: #7f552f; --board-line: rgba(30,16,4,.55); --star: rgba(24,12,3,.85); }
+    :root[data-board="slate"]  { --board-bg: #8a8d90; --board-edge: #5f6265; --board-line: rgba(15,18,20,.55); --star: rgba(10,12,14,.8); }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+    body { font-family: var(--font-sans); line-height: 1.55; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { color: var(--accent); }
+
+    header.bar {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand .mk { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 15px; }
+    .brand h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -.01em; white-space: nowrap; }
+    .brand .sub { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .hactions { display: flex; align-items: center; gap: 8px; flex: none; }
+    .lnk { font-size: 12.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
+    .lnk:hover { border-color: var(--accent); color: var(--ink); }
+    .icon-btn { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+    .icon-btn:hover { border-color: var(--accent); color: var(--ink); }
+    .icon-moon { display: none; }
+    :root[data-theme="dark"] .icon-sun { display: none; }
+    :root[data-theme="dark"] .icon-moon { display: block; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .icon-sun { display: none; }
+      :root:not([data-theme="light"]) .icon-moon { display: block; }
+    }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 26px 22px 10px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 26px; align-items: start; }
+
+    /* -------------------------------------------------------- board */
+    .board-wrap {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+    .turn-row { display: flex; align-items: center; gap: 14px; width: 100%; justify-content: center; flex-wrap: wrap; }
+    .side-score {
+      display: flex; align-items: center; gap: 9px; padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--border); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px;
+      transition: border-color .15s, background .15s;
+    }
+    .side-score.active { border-color: var(--accent); background: var(--accent-soft); }
+    .side-score .chip { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+    .chip.black { background: radial-gradient(circle at 34% 30%, #6a6a6a, #101010 62%); border: 1px solid #000; }
+    .chip.white { background: radial-gradient(circle at 34% 30%, #ffffff, #d9d4c7 62%); border: 1px solid #b6ad97; }
+    .side-score .lbl { font-size: 11px; font-weight: 600; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+    .side-score .cap { font-size: 11px; color: var(--muted); font-family: var(--font-mono); font-weight: 500; }
+
+    .goban {
+      width: min(84vw, 600px); aspect-ratio: 1 / 1;
+      background: var(--board-bg);
+      border: 3px solid var(--board-edge);
+      border-radius: 6px;
+      box-shadow: inset 0 0 40px rgba(90,55,15,.28), 0 3px 8px rgba(0,0,0,.25);
+      touch-action: manipulation;
+    }
+    .goban svg { display: block; width: 100%; height: 100%; }
+    .goban .grid line { stroke: var(--board-line); stroke-width: .045; stroke-linecap: round; }
+    .goban .star { fill: var(--star); }
+    .goban .coord { fill: color-mix(in srgb, var(--board-line) 80%, transparent); font-family: var(--font-mono); font-weight: 500; }
+    .goban .hit { fill: transparent; cursor: pointer; }
+    .goban .hit.dead-hit { cursor: pointer; }
+    .goban .stone-b { fill: #111; }
+    .goban .stone-w { fill: #f4f0e4; stroke: #b8ae96; stroke-width: .03; }
+    .goban .stone-shadow { fill: rgba(0,0,0,.28); }
+    .ghost { opacity: .42; pointer-events: none; }
+    .goban .last-ring { fill: none; stroke: var(--accent); stroke-width: .07; }
+    .goban .last-ring.on-black { stroke: #f4f0e4; }
+    .goban .terr-b { fill: #111; opacity: .55; }
+    .goban .terr-w { fill: #f4f0e4; opacity: .8; }
+    .goban .dead-x { stroke: var(--accent); stroke-width: .09; stroke-linecap: round; }
+
+    .banner { min-height: 22px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); text-align: center; }
+    .banner.win { color: var(--accent); font-size: 15px; }
+
+    /* -------------------------------------------------------- side panel */
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 16px 18px; }
+    .panel + .panel { margin-top: 18px; }
+    .panel h3 { margin: 0 0 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field > label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+    .seg { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .seg button {
+      flex: 1; padding: 7px 6px; font: inherit; font-size: 12.5px; font-weight: 600;
+      background: var(--surface); color: var(--ink-2); border: none; cursor: pointer; border-left: 1px solid var(--border);
+    }
+    .seg button:first-child { border-left: none; }
+    .seg button.on { background: var(--accent); color: var(--accent-ink); }
+    .seg button:not(.on):hover { color: var(--ink); }
+    .seg[disabled] { opacity: .45; pointer-events: none; }
+
+    .btn {
+      width: 100%; padding: 9px 12px; font: inherit; font-size: 13px; font-weight: 600;
+      border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .btn.primary:hover { filter: brightness(1.05); }
+    .btn + .btn { margin-top: 8px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-row { display: flex; gap: 8px; }
+    .btn-row .btn { margin-top: 0; }
+
+    .sel {
+      width: 100%; padding: 7px 10px; font: inherit; font-size: 12.5px; font-weight: 600;
+      color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+    }
+    .sel:hover { border-color: var(--accent); }
+
+    .stats { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+    .stats div { display: flex; justify-content: space-between; padding: 3px 0; }
+    .stats b { color: var(--ink); font-weight: 600; }
+
+    .movelog { max-height: 190px; overflow-y: auto; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
+    .movelog .mv { display: inline-block; min-width: 62px; }
+    .movelog .n { color: var(--muted); }
+
+    .scorebox { display: none; }
+    .scorebox.show { display: block; }
+    .scorebox .row { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 12px; padding: 3px 0; color: var(--ink-2); }
+    .scorebox .row b { color: var(--ink); }
+    .scorebox .tot { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; font-weight: 700; font-size: 13px; color: var(--ink); }
+
+    details.rules { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 16px; box-shadow: var(--shadow); }
+    details.rules summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 12px 0; color: var(--ink-2); }
+    details.rules[open] summary { color: var(--ink); }
+    details.rules p { font-size: 13px; color: var(--ink-2); margin: 8px 0 14px; }
+    details.rules code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface); border: 1px solid var(--border); padding: 1px 4px; border-radius: 4px; color: var(--ink); }
+
+    footer.foot { max-width: 1080px; margin: 0 auto; padding: 22px 22px 50px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+    footer.foot a { color: var(--muted); }
+    footer.foot .consult { display: block; margin-bottom: 6px; font-weight: 600; color: var(--ink); }
+    footer.foot .consult a { color: var(--accent); }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .goban { width: min(92vw, 560px); }
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="mk">⚫</span>
+      <div>
+        <h1>Go</h1>
+        <div class="sub">baduk · weiqi · surround to win</div>
+      </div>
+    </div>
+    <div class="hactions">
+      <a class="lnk" href="../index.html">← All projects</a>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <section class="board-wrap">
+        <div class="turn-row">
+          <div class="side-score" id="scoreBlack">
+            <span class="chip black"></span>
+            <span id="numBlack">0</span>
+            <span class="lbl">Black</span>
+            <span class="cap" id="capBlack">+0</span>
+          </div>
+          <div class="side-score" id="scoreWhite">
+            <span class="chip white"></span>
+            <span id="numWhite">0</span>
+            <span class="lbl">White</span>
+            <span class="cap" id="capWhite">+0</span>
+          </div>
+        </div>
+
+        <div class="goban" id="goban"></div>
+
+        <div class="banner" id="banner">Black to move</div>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <h3>Game</h3>
+          <div class="field">
+            <label>Opponent</label>
+            <div class="seg" id="modeSeg">
+              <button data-mode="ai" class="on">vs Computer</button>
+              <button data-mode="pvp">2 Players</button>
+            </div>
+          </div>
+          <div class="field" id="colorField">
+            <label>You play</label>
+            <div class="seg" id="colorSeg">
+              <button data-color="1" class="on">Black (first)</button>
+              <button data-color="-1">White</button>
+            </div>
+          </div>
+          <div class="field" id="diffField">
+            <label>Computer strength</label>
+            <div class="seg" id="diffSeg">
+              <button data-d="1">Gentle</button>
+              <button data-d="2" class="on">Casual</button>
+              <button data-d="3">Sharp</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Board size</label>
+            <div class="seg" id="sizeSeg">
+              <button data-s="9" class="on">9 × 9</button>
+              <button data-s="13">13 × 13</button>
+              <button data-s="19">19 × 19</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Komi (compensation to White)</label>
+            <select class="sel" id="komiSel">
+              <option value="0.5">0.5</option>
+              <option value="5.5">5.5</option>
+              <option value="6.5" selected>6.5</option>
+              <option value="7.5">7.5</option>
+            </select>
+          </div>
+          <button class="btn primary" id="newBtn">New game</button>
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn" id="passBtn">Pass</button>
+            <button class="btn" id="undoBtn">Undo</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Look</h3>
+          <div class="field">
+            <label for="boardSel">Goban wood</label>
+            <select class="sel" id="boardSel">
+              <option value="kaya">Kaya — golden</option>
+              <option value="maple">Maple — pale</option>
+              <option value="cherry">Cherry — warm</option>
+              <option value="walnut">Walnut — dark</option>
+              <option value="slate">Slate — grey</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Show</label>
+            <div class="seg" id="coordSeg">
+              <button data-c="1" class="on">Coordinates</button>
+              <button data-c="0">Hide</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Status</h3>
+          <div class="stats" id="stats">
+            <div><span>Move</span><b id="stMove">1</b></div>
+            <div><span>To play</span><b id="stTurn">Black</b></div>
+            <div><span>Last move</span><b id="stLast">—</b></div>
+            <div><span>Komi</span><b id="stKomi">6.5</b></div>
+          </div>
+          <div class="scorebox" id="scorebox">
+            <div class="row"><span>Black — stones + territory</span><b id="sbBlack">0</b></div>
+            <div class="row"><span>White — stones + territory + komi</span><b id="sbWhite">0</b></div>
+            <div class="row tot" id="sbResult">—</div>
+            <p style="font-size:11.5px;color:var(--muted);margin:8px 0 0">
+              Click a stone group to mark it dead (or alive again). Then <b>Finish</b>.
+            </p>
+            <div class="btn-row" style="margin-top:10px">
+              <button class="btn" id="resumeBtn">Resume play</button>
+              <button class="btn primary" id="finishBtn">Finish</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Moves</h3>
+          <div class="movelog" id="movelog"><span class="n">—</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <details class="rules">
+      <summary>How to play</summary>
+      <p>
+        Players alternate placing a stone of their colour on a line intersection; Black first.
+        A stone or solidly-connected group is captured and removed the moment it has no
+        <em>liberties</em> — empty points directly adjacent to it. You may not play a move
+        that leaves your own stone with no liberties (<b>suicide</b>) unless it captures.
+        The <b>ko</b> rule forbids a move that would recreate the board position from just
+        before your opponent's last move, so a single stone cannot be recaptured immediately.
+      </p>
+      <p>
+        Either player may <b>pass</b> instead of playing. Two passes in a row end the game and
+        open the scoring phase: click any group you both agree is dead to remove it, then press
+        <b>Finish</b>. Score is by <b>area</b> — your stones on the board plus the empty points
+        your stones alone surround — and White adds the <b>komi</b>. Highest total wins.
+      </p>
+      <p>
+        Choose 9×9 for a quick game, 13×13 for a medium one, or the full 19×19. The computer
+        opponent plays a fast heuristic — solid for a casual game, not a match for a strong
+        player. Wood and coordinate settings are cosmetic and remembered between visits.
+      </p>
+    </details>
+
+    <details class="rules">
+      <summary>How the code is built</summary>
+      <p>
+        The whole game is this one HTML file — no build step, no libraries. The JavaScript is a
+        single <em>IIFE</em> split into labelled sections. Three layers that never reach across
+        each other:
+      </p>
+      <p>
+        <b>The rules</b> (<code>BOARD LOGIC</code>) — pure functions over a flat
+        <code>Int8Array</code> of <code>0 / 1 / -1</code>. <code>groupAt</code> flood-fills a
+        connected group and its liberties; <code>tryMove</code> returns the resulting board and
+        captured stones, or <code>null</code> if the move is illegal (occupied, suicide, or ko).
+        Ko is enforced by comparing against a hash of the previous position.
+      </p>
+      <p>
+        <b>The brain</b> (<code>AI</code>) — also pure. <code>scoreMove</code> rates a candidate
+        by stones captured, liberties gained, self-atari avoided, and a distance-to-stones
+        influence term; <code>chooseMove</code> picks among the best with a little noise, and
+        strength just widens or narrows that window. It passes only once the opponent has
+        passed and it sees no move that helps.
+      </p>
+      <p>
+        <b>The view</b> (<code>RENDER</code>) — rebuilds one inline SVG from the board each
+        frame: grid lines, star points, stones with a soft shadow, a ring on the last move,
+        and, in the scoring phase, territory dots and dead-stone marks. Undo is whole-board
+        snapshots pushed to a stack, not reversed moves.
+      </p>
+      <p>
+        <a href="https://github.com/kathuman/claude-projects/blob/main/go/index.html" target="_blank" rel="noopener">View the full source on GitHub ↗</a>
+      </p>
+    </details>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    Go / Baduk / Weiqi. Single file, no dependencies. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ========================================================== THEME
+    (function initTheme() {
+      var s = null;
+      try { s = localStorage.getItem("go-theme"); } catch (e) {}
+      if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s);
+    })();
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      var root = document.documentElement;
+      var pd = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var cur = root.getAttribute("data-theme") || (pd ? "dark" : "light");
+      var next = cur === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("go-theme", next); } catch (e) {}
+    });
+
+    function readLS(k, def) { try { var v = localStorage.getItem(k); return v == null ? def : v; } catch (e) { return def; } }
+    function writeLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+    // ========================================================== STATE
+    var BLACK = 1, WHITE = -1, EMPTY = 0;
+
+    var cfg = {
+      mode: "ai",
+      human: BLACK,
+      diff: 2,
+      size: 9,
+      komi: 6.5
+    };
+
+    var G = null; // active game object
+
+    function freshGame() {
+      var n = cfg.size;
+      return {
+        n: n,
+        board: new Int8Array(n * n),
+        turn: BLACK,
+        captures: { 1: 0, "-1": 0 },   // stones each colour has captured
+        prevHash: "",                  // board hash before last move (for ko)
+        koHash: "",                    // position forbidden to the player to move
+        lastMove: -1,                  // index of last placed stone, -1 none
+        passes: 0,
+        moveNo: 1,
+        log: [],
+        history: [],                   // snapshots for undo
+        phase: "play",                 // play | scoring | done
+        dead: null,                    // Set of indices marked dead (scoring)
+        result: ""
+      };
+    }
+
+    function idx(g, r, c) { return r * g.n + c; }
+    function inb(g, r, c) { return r >= 0 && c >= 0 && r < g.n && c < g.n; }
+    function neighbors(g, i) {
+      var n = g.n, r = (i / n) | 0, c = i % n, out = [];
+      if (r > 0) out.push(i - n);
+      if (r < n - 1) out.push(i + n);
+      if (c > 0) out.push(i - 1);
+      if (c < n - 1) out.push(i + 1);
+      return out;
+    }
+    function hashBoard(b) {
+      // compact string hash; board values are -1/0/1 -> 0/1/2
+      var s = "";
+      for (var i = 0; i < b.length; i++) s += (b[i] + 1);
+      return s;
+    }
+
+    // ========================================================== BOARD LOGIC
+    // Flood-fill the group containing i; return {stones:[], libs:Set}.
+    function groupAt(board, n, i) {
+      var color = board[i];
+      var stones = [], seen = {}, stack = [i], libs = {};
+      seen[i] = 1;
+      while (stack.length) {
+        var cur = stack.pop();
+        stones.push(cur);
+        var r = (cur / n) | 0, c = cur % n;
+        var nb = [];
+        if (r > 0) nb.push(cur - n);
+        if (r < n - 1) nb.push(cur + n);
+        if (c > 0) nb.push(cur - 1);
+        if (c < n - 1) nb.push(cur + 1);
+        for (var k = 0; k < nb.length; k++) {
+          var j = nb[k];
+          if (board[j] === EMPTY) { libs[j] = 1; }
+          else if (board[j] === color && !seen[j]) { seen[j] = 1; stack.push(j); }
+        }
+      }
+      return { stones: stones, libCount: Object.keys(libs).length, libs: libs };
+    }
+
+    // Attempt `color` playing at index i on `board` (Int8Array, size n).
+    // koHash = board hash forbidden by ko (position before opponent's last move).
+    // Returns { board:Int8Array, captured:number } or null if illegal.
+    function tryMove(board, n, i, color, koHash) {
+      if (board[i] !== EMPTY) return null;
+      var nb = new Int8Array(board);
+      nb[i] = color;
+      var opp = -color;
+      var r = (i / n) | 0, c = i % n;
+      var around = [];
+      if (r > 0) around.push(i - n);
+      if (r < n - 1) around.push(i + n);
+      if (c > 0) around.push(i - 1);
+      if (c < n - 1) around.push(i + 1);
+
+      var captured = 0, done = {};
+      for (var k = 0; k < around.length; k++) {
+        var j = around[k];
+        if (nb[j] === opp && !done[j]) {
+          var grp = groupAt(nb, n, j);
+          if (grp.libCount === 0) {
+            for (var s = 0; s < grp.stones.length; s++) { nb[grp.stones[s]] = EMPTY; done[grp.stones[s]] = 1; captured++; }
+          }
+        }
+      }
+
+      // suicide check
+      var own = groupAt(nb, n, i);
+      if (own.libCount === 0) return null;
+
+      // ko / positional repetition check
+      if (koHash && hashBoard(nb) === koHash) return null;
+
+      return { board: nb, captured: captured };
+    }
+
+    function legalMoves(g, color) {
+      var out = [];
+      for (var i = 0; i < g.board.length; i++) {
+        if (g.board[i] !== EMPTY) continue;
+        var res = tryMove(g.board, g.n, i, color, g.koHash);
+        if (res) out.push(i);
+      }
+      return out;
+    }
+
+    // ========================================================== SCORING
+    // Area scoring. deadSet = indices of stones treated as removed.
+    function computeScore(g, deadSet) {
+      var n = g.n, b = new Int8Array(g.board);
+      deadSet = deadSet || {};
+      for (var d in deadSet) {
+        if (!deadSet.hasOwnProperty(d)) continue;
+        b[+d] = EMPTY;
+      }
+
+      var areaB = 0, areaW = 0, dame = 0;
+      var terr = {}; // index -> owner, for rendering
+      var seen = new Int8Array(n * n);
+      for (var i = 0; i < b.length; i++) {
+        if (b[i] === BLACK) { areaB++; continue; }
+        if (b[i] === WHITE) { areaW++; continue; }
+        if (seen[i]) continue;
+        // flood empty region, note which colours border it
+        var stack = [i], region = [], touchB = false, touchW = false;
+        seen[i] = 1;
+        while (stack.length) {
+          var cur = stack.pop(); region.push(cur);
+          var r = (cur / n) | 0, c = cur % n, nb = [];
+          if (r > 0) nb.push(cur - n);
+          if (r < n - 1) nb.push(cur + n);
+          if (c > 0) nb.push(cur - 1);
+          if (c < n - 1) nb.push(cur + 1);
+          for (var k = 0; k < nb.length; k++) {
+            var j = nb[k];
+            if (b[j] === EMPTY) { if (!seen[j]) { seen[j] = 1; stack.push(j); } }
+            else if (b[j] === BLACK) touchB = true;
+            else if (b[j] === WHITE) touchW = true;
+          }
+        }
+        var owner = (touchB && !touchW) ? BLACK : (touchW && !touchB) ? WHITE : EMPTY;
+        if (owner === BLACK) areaB += region.length;
+        else if (owner === WHITE) areaW += region.length;
+        else dame += region.length;
+        for (var t = 0; t < region.length; t++) terr[region[t]] = owner;
+      }
+
+      var blackTotal = areaB;
+      var whiteTotal = areaW + g.komi;
+      var margin = blackTotal - whiteTotal;
+      var result;
+      if (margin > 0) result = "Black wins by " + fmt(margin);
+      else if (margin < 0) result = "White wins by " + fmt(-margin);
+      else result = "Jigo — a draw";
+
+      return {
+        areaB: areaB, areaW: areaW, dame: dame,
+        blackTotal: blackTotal, whiteTotal: whiteTotal,
+        result: result, terr: terr
+      };
+    }
+    function fmt(x) { return (Math.round(x * 10) / 10).toString(); }
+
+    // ========================================================== AI
+    function scoreMove(g, i, color) {
+      var res = tryMove(g.board, g.n, i, color, g.koHash);
+      if (!res) return -Infinity;
+      var n = g.n;
+      var s = 0;
+
+      // captures are very good
+      s += res.captured * 14;
+
+      // resulting liberties of our group at i
+      var own = groupAt(res.board, n, i);
+      s += Math.min(own.libCount, 6) * 1.4;
+      if (own.libCount === 1) s -= 12;        // self-atari, bad
+      if (own.libCount === 2) s -= 2;
+
+      // does it put an enemy group into atari?
+      var nb = neighbors(g, i);
+      var checked = {};
+      for (var k = 0; k < nb.length; k++) {
+        var j = nb[k];
+        if (res.board[j] === -color && !checked[j]) {
+          var eg = groupAt(res.board, n, j);
+          for (var q = 0; q < eg.stones.length; q++) checked[eg.stones[q]] = 1;
+          if (eg.libCount === 1) s += 6 + eg.stones.length * 2;
+          else if (eg.libCount === 2) s += 1.5;
+        }
+      }
+
+      var r = (i / n) | 0, c = i % n;
+      var edge = Math.min(r, c, n - 1 - r, n - 1 - c);
+
+      // opening: prefer the 3rd/4th line, avoid the very edge and dead centre contact
+      var openingLeft = countStones(g.board) < n * n * 0.35;
+      if (openingLeft) {
+        if (edge === 0) s -= 4;
+        else if (edge === 1) s -= 0.5;
+        else if (edge === 2 || edge === 3) s += 2.2;
+        // spread out from friendly stones a touch
+        s += nearestStoneDist(g, i, color) * 0.4;
+        s -= nearestStoneDist(g, i, -color) * 0.15;
+      } else {
+        // later: play near the action
+        var dm = nearestStoneDist(g, i, -color);
+        var df = nearestStoneDist(g, i, color);
+        s += (dm <= 2 ? 2.5 : 0);
+        s += (df <= 2 ? 1.0 : 0);
+        if (edge === 0) s -= 1.5;
+      }
+
+      s += Math.random() * 1.5;
+      return s;
+    }
+
+    function countStones(b) { var t = 0; for (var i = 0; i < b.length; i++) if (b[i] !== EMPTY) t++; return t; }
+
+    function nearestStoneDist(g, i, color) {
+      var n = g.n, ri = (i / n) | 0, ci = i % n, best = n * 2;
+      for (var j = 0; j < g.board.length; j++) {
+        if (g.board[j] !== color) continue;
+        var d = Math.abs(((j / n) | 0) - ri) + Math.abs((j % n) - ci);
+        if (d < best) best = d;
+      }
+      return best === n * 2 ? n : best;
+    }
+
+    function chooseMove(g, color) {
+      var moves = legalMoves(g, color);
+      if (!moves.length) return "pass";
+
+      var scored = [];
+      for (var k = 0; k < moves.length; k++) {
+        var sc = scoreMove(g, moves[k], color);
+        if (sc > -Infinity) scored.push([moves[k], sc]);
+      }
+      if (!scored.length) return "pass";
+      scored.sort(function (a, b) { return b[1] - a[1]; });
+
+      var best = scored[0][1];
+
+      // if the opponent has passed and nothing meaningfully helps, pass too
+      if (g.passes >= 1 && best < 1.5) return "pass";
+      // very late and only tiny dame-ish moves left: pass
+      if (countStones(g.board) > g.n * g.n * 0.78 && best < 2.5 && g.passes >= 1) return "pass";
+
+      // difficulty widens the candidate window
+      var windowByDiff = { 1: 9, 2: 4, 3: 1.5 }[cfg.diff];
+      var pool = scored.filter(function (x) { return best - x[1] <= windowByDiff; });
+      if (cfg.diff === 1 && Math.random() < 0.18 && scored.length > 3) {
+        // gentle: sometimes a random-ish legal move
+        pool = scored.slice(0, Math.min(scored.length, 12));
+      }
+      var pick = pool[(Math.random() * pool.length) | 0];
+      return pick[0];
+    }
+
+    // ========================================================== MOVES
+    function pushHistory(g) {
+      g.history.push({
+        board: new Int8Array(g.board),
+        turn: g.turn,
+        capB: g.captures[1], capW: g.captures[-1],
+        prevHash: g.prevHash, koHash: g.koHash,
+        lastMove: g.lastMove, passes: g.passes, moveNo: g.moveNo,
+        log: g.log.slice()
+      });
+      if (g.history.length > 400) g.history.shift();
+    }
+
+    function coordName(g, i) {
+      var n = g.n, r = (i / n) | 0, c = i % n;
+      var letters = "ABCDEFGHJKLMNOPQRST"; // no I
+      return letters[c] + (n - r);
+    }
+
+    function doPlay(g, i) {
+      if (g.phase !== "play") return false;
+      var res = tryMove(g.board, g.n, i, g.turn, g.koHash);
+      if (!res) return false;
+      pushHistory(g);
+
+      var beforeHash = hashBoard(g.board);
+      g.board = res.board;
+      g.captures[g.turn] += res.captured;
+      g.lastMove = i;
+      g.passes = 0;
+      // ko: forbid recreating the position that existed before THIS move,
+      // but only when exactly one stone was captured (the classic ko shape)
+      g.koHash = (res.captured === 1) ? beforeHash : "";
+      g.log.push({ color: g.turn, text: coordName(g, i) });
+      g.turn = -g.turn;
+      g.moveNo++;
+      return true;
+    }
+
+    function doPass(g) {
+      if (g.phase !== "play") return;
+      pushHistory(g);
+      g.log.push({ color: g.turn, text: "pass" });
+      g.passes++;
+      g.lastMove = -1;
+      g.koHash = "";
+      g.turn = -g.turn;
+      g.moveNo++;
+      if (g.passes >= 2) enterScoring(g);
+    }
+
+    function undo(g) {
+      if (g.phase === "scoring") { g.phase = "play"; g.dead = null; g.passes = 0; render(); return; }
+      if (!g.history.length) return;
+      var h = g.history.pop();
+      g.board = h.board; g.turn = h.turn;
+      g.captures[1] = h.capB; g.captures[-1] = h.capW;
+      g.prevHash = h.prevHash; g.koHash = h.koHash;
+      g.lastMove = h.lastMove; g.passes = h.passes; g.moveNo = h.moveNo;
+      g.log = h.log; g.phase = "play"; g.dead = null; g.result = "";
+      render();
+      // if it's now the AI's turn, let the human take it back one more
+      if (cfg.mode === "ai" && g.turn !== cfg.human && g.history.length) {
+        var h2 = g.history.pop();
+        g.board = h2.board; g.turn = h2.turn;
+        g.captures[1] = h2.capB; g.captures[-1] = h2.capW;
+        g.prevHash = h2.prevHash; g.koHash = h2.koHash;
+        g.lastMove = h2.lastMove; g.passes = h2.passes; g.moveNo = h2.moveNo;
+        g.log = h2.log;
+        render();
+      }
+    }
+
+    // ========================================================== SCORING PHASE
+    function enterScoring(g) {
+      g.phase = "scoring";
+      g.dead = {};
+      autoMarkDead(g);
+      render();
+    }
+
+    // crude auto-detection: a group with few liberties fully surrounded by the
+    // other colour's living area is likely dead. Keeps it conservative.
+    function autoMarkDead(g) {
+      var n = g.n, seen = {};
+      for (var i = 0; i < g.board.length; i++) {
+        if (g.board[i] === EMPTY || seen[i]) continue;
+        var grp = groupAt(g.board, n, i);
+        for (var s = 0; s < grp.stones.length; s++) seen[grp.stones[s]] = 1;
+        var color = g.board[i];
+        // borders: which colours sit across this group's liberties' regions
+        var oppBorder = 0, ownBorder = 0;
+        for (var lib in grp.libs) {
+          var reg = emptyRegionBorders(g.board, n, +lib);
+          if (reg.b && color === WHITE) oppBorder++;
+          if (reg.w && color === BLACK) oppBorder++;
+          if (reg.b && color === BLACK) ownBorder++;
+          if (reg.w && color === WHITE) ownBorder++;
+        }
+        if (grp.libCount <= 3 && oppBorder > 0 && ownBorder === 0 && grp.stones.length <= 6) {
+          for (var q = 0; q < grp.stones.length; q++) g.dead[grp.stones[q]] = 1;
+        }
+      }
+    }
+    function emptyRegionBorders(board, n, start) {
+      var stack = [start], seen = {}, b = false, w = false; seen[start] = 1;
+      while (stack.length) {
+        var cur = stack.pop();
+        var r = (cur / n) | 0, c = cur % n, nb = [];
+        if (r > 0) nb.push(cur - n);
+        if (r < n - 1) nb.push(cur + n);
+        if (c > 0) nb.push(cur - 1);
+        if (c < n - 1) nb.push(cur + 1);
+        for (var k = 0; k < nb.length; k++) {
+          var j = nb[k];
+          if (board[j] === EMPTY) { if (!seen[j]) { seen[j] = 1; stack.push(j); } }
+          else if (board[j] === BLACK) b = true;
+          else if (board[j] === WHITE) w = true;
+        }
+      }
+      return { b: b, w: w };
+    }
+
+    function toggleDead(g, i) {
+      if (g.board[i] === EMPTY) return;
+      var grp = groupAt(g.board, g.n, i);
+      var anyAlive = grp.stones.some(function (s) { return !g.dead[s]; });
+      for (var k = 0; k < grp.stones.length; k++) {
+        if (anyAlive) g.dead[grp.stones[k]] = 1;
+        else delete g.dead[grp.stones[k]];
+      }
+      render();
+    }
+
+    // ========================================================== RENDER
+    var goban = document.getElementById("goban");
+    var SVGNS = "http://www.w3.org/2000/svg";
+
+    function starPoints(n) {
+      var mid = (n - 1) / 2;
+      var lines;
+      if (n >= 19) lines = [3, mid, n - 4];          // full 3×3
+      else if (n >= 13) lines = [3, n - 4];          // 4 corners
+      else if (n >= 9) lines = [2, n - 3];           // 4 corners
+      else return Number.isInteger(mid) ? [[mid, mid]] : [];
+      var pts = [];
+      for (var a = 0; a < lines.length; a++)
+        for (var b = 0; b < lines.length; b++)
+          if (Number.isInteger(lines[a]) && Number.isInteger(lines[b])) pts.push([lines[a], lines[b]]);
+      if (n % 2 === 1) pts.push([mid, mid]);          // tengen on odd boards
+      var key = {}, out = [];
+      pts.forEach(function (p) { var k = p[0] + "," + p[1]; if (!key[k]) { key[k] = 1; out.push(p); } });
+      return out;
+    }
+
+    function render() {
+      var g = G, n = g.n;
+      var showCoord = readLS("go-coord", "1") === "1";
+      var pad = showCoord ? 1.5 : 0.8;
+      var span = (n - 1) + pad * 2;
+      var svg = document.createElementNS(SVGNS, "svg");
+      svg.setAttribute("viewBox", (-pad) + " " + (-pad) + " " + span + " " + span);
+
+      // grid
+      var grid = document.createElementNS(SVGNS, "g");
+      grid.setAttribute("class", "grid");
+      for (var k = 0; k < n; k++) {
+        var l1 = document.createElementNS(SVGNS, "line");
+        l1.setAttribute("x1", 0); l1.setAttribute("y1", k); l1.setAttribute("x2", n - 1); l1.setAttribute("y2", k);
+        grid.appendChild(l1);
+        var l2 = document.createElementNS(SVGNS, "line");
+        l2.setAttribute("x1", k); l2.setAttribute("y1", 0); l2.setAttribute("x2", k); l2.setAttribute("y2", n - 1);
+        grid.appendChild(l2);
+      }
+      svg.appendChild(grid);
+
+      // star points
+      starPoints(n).forEach(function (p) {
+        var d = document.createElementNS(SVGNS, "circle");
+        d.setAttribute("class", "star");
+        d.setAttribute("cx", p[1]); d.setAttribute("cy", p[0]); d.setAttribute("r", 0.09);
+        svg.appendChild(d);
+      });
+
+      // coordinates
+      if (showCoord) {
+        var letters = "ABCDEFGHJKLMNOPQRST";
+        for (var c = 0; c < n; c++) {
+          addText(svg, c, -pad + 0.55, letters[c], 0.42, "middle");
+          addText(svg, c, (n - 1) + pad - 0.35, letters[c], 0.42, "middle");
+        }
+        for (var r = 0; r < n; r++) {
+          addText(svg, -pad + 0.5, r + 0.14, String(n - r), 0.42, "middle");
+          addText(svg, (n - 1) + pad - 0.4, r + 0.14, String(n - r), 0.42, "middle");
+        }
+      }
+
+      // scoring territory
+      var scoreData = null;
+      if (g.phase === "scoring" || g.phase === "done") {
+        scoreData = computeScore(g, g.dead || {});
+        for (var ti in scoreData.terr) {
+          if (!scoreData.terr.hasOwnProperty(ti)) continue;
+          var owner = scoreData.terr[ti];
+          if (owner === EMPTY) continue;
+          ti = +ti;
+          var td = document.createElementNS(SVGNS, "rect");
+          td.setAttribute("class", owner === BLACK ? "terr-b" : "terr-w");
+          td.setAttribute("x", (ti % n) - 0.16); td.setAttribute("y", ((ti / n) | 0) - 0.16);
+          td.setAttribute("width", 0.32); td.setAttribute("height", 0.32); td.setAttribute("rx", 0.05);
+          svg.appendChild(td);
+        }
+      }
+
+      // stones
+      for (var i = 0; i < g.board.length; i++) {
+        var v = g.board[i];
+        if (v === EMPTY) continue;
+        var x = i % n, y = (i / n) | 0;
+        var isDead = g.dead && g.dead[i];
+
+        var sh = document.createElementNS(SVGNS, "circle");
+        sh.setAttribute("class", "stone-shadow");
+        sh.setAttribute("cx", x + 0.03); sh.setAttribute("cy", y + 0.04); sh.setAttribute("r", 0.46);
+        if (isDead) sh.setAttribute("opacity", 0.12);
+        svg.appendChild(sh);
+
+        var st = document.createElementNS(SVGNS, "circle");
+        st.setAttribute("class", v === BLACK ? "stone-b" : "stone-w");
+        st.setAttribute("cx", x); st.setAttribute("cy", y); st.setAttribute("r", 0.46);
+        if (isDead) st.setAttribute("opacity", 0.32);
+        svg.appendChild(st);
+
+        if (isDead) {
+          [[-1, -1, 1, 1], [-1, 1, 1, -1]].forEach(function (d) {
+            var xl = document.createElementNS(SVGNS, "line");
+            xl.setAttribute("class", "dead-x");
+            xl.setAttribute("x1", x + d[0] * 0.2); xl.setAttribute("y1", y + d[1] * 0.2);
+            xl.setAttribute("x2", x + d[2] * 0.2); xl.setAttribute("y2", y + d[3] * 0.2);
+            svg.appendChild(xl);
+          });
+        }
+
+        if (i === g.lastMove && !isDead && g.phase === "play") {
+          var ring = document.createElementNS(SVGNS, "circle");
+          ring.setAttribute("class", "last-ring" + (v === BLACK ? " on-black" : ""));
+          ring.setAttribute("cx", x); ring.setAttribute("cy", y); ring.setAttribute("r", 0.24);
+          svg.appendChild(ring);
+        }
+      }
+
+      // ghost stone on hover (play phase, human turn)
+      var humanTurn = g.phase === "play" && (cfg.mode === "pvp" || g.turn === cfg.human);
+
+      // hit targets
+      for (var h = 0; h < g.board.length; h++) {
+        var hx = h % n, hy = (h / n) | 0;
+        var hit = document.createElementNS(SVGNS, "rect");
+        hit.setAttribute("class", "hit");
+        hit.setAttribute("x", hx - 0.5); hit.setAttribute("y", hy - 0.5);
+        hit.setAttribute("width", 1); hit.setAttribute("height", 1);
+        hit.dataset.i = h;
+        if (g.phase === "play" && humanTurn && g.board[h] === EMPTY) {
+          (function (index, gx, gy) {
+            hit.addEventListener("mouseenter", function () {
+              var res = tryMove(g.board, g.n, index, g.turn, g.koHash);
+              if (!res) return;
+              var gh = document.createElementNS(SVGNS, "circle");
+              gh.setAttribute("class", "ghost " + (g.turn === BLACK ? "stone-b" : "stone-w"));
+              gh.setAttribute("cx", gx); gh.setAttribute("cy", gy); gh.setAttribute("r", 0.46);
+              gh.setAttribute("id", "ghost");
+              svg.appendChild(gh);
+            });
+            hit.addEventListener("mouseleave", function () {
+              var e = svg.querySelector("#ghost"); if (e) e.remove();
+            });
+          })(h, hx, hy);
+          hit.addEventListener("click", function (ev) { onIntersection(+ev.currentTarget.dataset.i); });
+        } else if (g.phase === "scoring" && g.board[h] !== EMPTY) {
+          hit.classList.add("dead-hit");
+          hit.addEventListener("click", function (ev) { toggleDead(G, +ev.currentTarget.dataset.i); });
+        }
+        svg.appendChild(hit);
+      }
+
+      goban.innerHTML = "";
+      goban.appendChild(svg);
+      updateSidebar(scoreData);
+    }
+
+    function addText(svg, x, y, str, size, anchor) {
+      var t = document.createElementNS(SVGNS, "text");
+      t.setAttribute("class", "coord");
+      t.setAttribute("x", x); t.setAttribute("y", y);
+      t.setAttribute("font-size", size);
+      t.setAttribute("text-anchor", anchor || "middle");
+      t.textContent = str;
+      svg.appendChild(t);
+    }
+
+    // ========================================================== SIDEBAR
+    function updateSidebar(scoreData) {
+      var g = G;
+      // on-board stone counts (excluding dead in scoring)
+      var bStones = 0, wStones = 0;
+      for (var i = 0; i < g.board.length; i++) {
+        if (g.dead && g.dead[i]) continue;
+        if (g.board[i] === BLACK) bStones++;
+        else if (g.board[i] === WHITE) wStones++;
+      }
+      document.getElementById("numBlack").textContent = bStones;
+      document.getElementById("numWhite").textContent = wStones;
+      document.getElementById("capBlack").textContent = "+" + g.captures[1];
+      document.getElementById("capWhite").textContent = "+" + g.captures[-1];
+
+      document.getElementById("scoreBlack").classList.toggle("active", g.phase === "play" && g.turn === BLACK);
+      document.getElementById("scoreWhite").classList.toggle("active", g.phase === "play" && g.turn === WHITE);
+
+      document.getElementById("stMove").textContent = g.moveNo;
+      document.getElementById("stTurn").textContent = g.phase === "play" ? (g.turn === BLACK ? "Black" : "White") : "—";
+      var last = g.log.length ? g.log[g.log.length - 1] : null;
+      document.getElementById("stLast").textContent = last ? ((last.color === BLACK ? "B " : "W ") + last.text) : "—";
+      document.getElementById("stKomi").textContent = fmt(g.komi);
+
+      // move log
+      var ml = document.getElementById("movelog");
+      if (!g.log.length) ml.innerHTML = '<span class="n">—</span>';
+      else {
+        var html = "";
+        for (var m = 0; m < g.log.length; m++) {
+          var e = g.log[m];
+          html += '<span class="mv"><span class="n">' + (m + 1) + '.</span> ' + (e.color === BLACK ? "B" : "W") + "-" + e.text + "</span> ";
+        }
+        ml.innerHTML = html;
+        ml.scrollTop = ml.scrollHeight;
+      }
+
+      // banner
+      var banner = document.getElementById("banner");
+      banner.className = "banner";
+      if (g.phase === "play") {
+        var who = g.turn === BLACK ? "Black" : "White";
+        if (cfg.mode === "ai" && g.turn !== cfg.human) banner.textContent = "Computer (" + who + ") is thinking…";
+        else banner.textContent = who + " to move" + (g.passes === 1 ? " — opponent passed" : "");
+      } else if (g.phase === "scoring") {
+        banner.textContent = "Scoring — mark dead groups, then Finish";
+      } else {
+        banner.textContent = g.result;
+        banner.className = "banner win";
+      }
+
+      // scorebox
+      var sb = document.getElementById("scorebox");
+      if (g.phase === "scoring" || g.phase === "done") {
+        sb.classList.add("show");
+        var sd = scoreData || computeScore(g, g.dead || {});
+        document.getElementById("sbBlack").textContent = fmt(sd.blackTotal);
+        document.getElementById("sbWhite").textContent = fmt(sd.whiteTotal) + "  (incl. komi " + fmt(g.komi) + ")";
+        document.getElementById("sbResult").textContent = sd.result;
+        document.getElementById("finishBtn").disabled = g.phase === "done";
+        document.getElementById("resumeBtn").disabled = g.phase === "done";
+      } else {
+        sb.classList.remove("show");
+      }
+
+      document.getElementById("undoBtn").disabled = g.phase === "play" && !g.history.length;
+      document.getElementById("passBtn").disabled = g.phase !== "play" || (cfg.mode === "ai" && g.turn !== cfg.human);
+    }
+
+    // ========================================================== FLOW
+    function onIntersection(i) {
+      var g = G;
+      if (g.phase !== "play") return;
+      if (cfg.mode === "ai" && g.turn !== cfg.human) return;
+      if (doPlay(g, i)) {
+        render();
+        maybeAI();
+      }
+    }
+
+    function maybeAI() {
+      var g = G;
+      if (cfg.mode !== "ai" || g.phase !== "play" || g.turn === cfg.human) return;
+      render();
+      setTimeout(function () {
+        if (G !== g || g.phase !== "play" || g.turn === cfg.human) return;
+        var mv = chooseMove(g, g.turn);
+        if (mv === "pass") doPass(g);
+        else doPlay(g, mv);
+        render();
+        // AI might need to move again (e.g. human passed then AI, or AI vs AI n/a)
+        if (g.phase === "play" && cfg.mode === "ai" && g.turn !== cfg.human) maybeAI();
+      }, 380 + Math.random() * 320);
+    }
+
+    // ========================================================== CONTROLS
+    function segSetup(id, key, apply) {
+      var seg = document.getElementById(id);
+      seg.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("button");
+        if (!btn) return;
+        seg.querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b === btn); });
+        apply(btn.dataset[key]);
+      });
+    }
+
+    segSetup("modeSeg", "mode", function (v) {
+      cfg.mode = v;
+      document.getElementById("colorField").style.display = v === "ai" ? "" : "none";
+      document.getElementById("diffField").style.display = v === "ai" ? "" : "none";
+      newGame();
+    });
+    segSetup("colorSeg", "color", function (v) { cfg.human = +v; newGame(); });
+    segSetup("diffSeg", "d", function (v) { cfg.diff = +v; });
+    segSetup("sizeSeg", "s", function (v) { cfg.size = +v; writeLS("go-size", v); newGame(); });
+    segSetup("coordSeg", "c", function (v) { writeLS("go-coord", v); render(); });
+
+    document.getElementById("komiSel").addEventListener("change", function () {
+      cfg.komi = parseFloat(this.value); writeLS("go-komi", this.value);
+      if (G) { G.komi = cfg.komi; render(); }
+    });
+
+    document.getElementById("boardSel").addEventListener("change", function () {
+      document.documentElement.setAttribute("data-board", this.value);
+      writeLS("go-wood", this.value);
+    });
+
+    document.getElementById("newBtn").addEventListener("click", newGame);
+    document.getElementById("passBtn").addEventListener("click", function () {
+      if (G.phase === "play" && !(cfg.mode === "ai" && G.turn !== cfg.human)) { doPass(G); render(); maybeAI(); }
+    });
+    document.getElementById("undoBtn").addEventListener("click", function () { undo(G); });
+    document.getElementById("resumeBtn").addEventListener("click", function () {
+      G.phase = "play"; G.dead = null; G.passes = 0; G.result = ""; render();
+    });
+    document.getElementById("finishBtn").addEventListener("click", function () {
+      var sd = computeScore(G, G.dead || {});
+      // dead stones count as captures for display flavour
+      for (var d in G.dead) { if (G.dead.hasOwnProperty(d)) { var v = G.board[d]; if (v === BLACK) G.captures[-1]++; else if (v === WHITE) G.captures[1]++; } }
+      G.result = sd.result;
+      G.phase = "done";
+      render();
+    });
+
+    function newGame() {
+      cfg.komi = parseFloat(document.getElementById("komiSel").value);
+      G = freshGame();
+      G.komi = cfg.komi;
+      render();
+      maybeAI();
+    }
+
+    // ========================================================== INIT
+    (function init() {
+      var wood = readLS("go-wood", "kaya");
+      document.documentElement.setAttribute("data-board", wood);
+      document.getElementById("boardSel").value = wood;
+
+      var size = readLS("go-size", "9");
+      cfg.size = +size;
+      document.querySelectorAll("#sizeSeg button").forEach(function (b) { b.classList.toggle("on", b.dataset.s === size); });
+
+      var komi = readLS("go-komi", "6.5");
+      document.getElementById("komiSel").value = komi;
+      cfg.komi = parseFloat(komi);
+
+      var coord = readLS("go-coord", "1");
+      document.querySelectorAll("#coordSeg button").forEach(function (b) { b.classList.toggle("on", b.dataset.c === coord); });
+
+      newGame();
+    })();
+  })();
+  </script>
+</body>
+</html>
