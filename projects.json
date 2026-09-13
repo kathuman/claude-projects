@@ -1,5 +1,13 @@
 [
   {
+    "title": "Chess",
+    "description": "Play chess against a friend on one screen — full rules including castling (both sides), en passant, pawn promotion with a piece-choice picker, and check / checkmate / stalemate detection. Click a piece to see its legal destinations dotted in (rings mark captures), watch moves slide into place, flip the board to face the other player, undo, and follow the algebraic move log with a live captured-material count. Five board colourways, remembered between visits. Ported from a Python/Tkinter original (included in the folder). Single file, no dependencies.",
+    "date": "2026-09-13",
+    "tags": ["javascript", "web", "game"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/chess",
+    "demoUrl": "https://kathuman.github.io/claude-projects/chess/"
+  },
+  {
     "title": "Go",
     "description": "Play Go (Baduk / Weiqi) against the computer or a friend on one screen. Full rules — group capture, liberties, suicide prevention and the ko rule — with a ghost stone on hover and a ring on the last move. Choose a 9×9, 13×13 or 19×19 board with proper star points, set the komi, and pick from five goban woods. Two passes open a scoring phase: click any group to mark it dead, then the game is settled by area — stones plus surrounded territory plus komi. Undo, move log, capture counts and a heuristic computer opponent at three strengths. Single file, no dependencies.",
     "date": "2026-09-09",
