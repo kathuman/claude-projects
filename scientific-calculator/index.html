@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scientific Calculator</title>
-  <meta name="description" content="A keyboard-friendly scientific calculator with a real expression parser, angle modes, memory, and a running tape." />
+  <meta name="description" content="A keyboard-friendly scientific calculator with a real expression parser, angle modes, memory, financial functions (PV, FV, PMT, NPV, IRR and more), and a running tape. By kathuman." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -161,13 +161,14 @@
 
     .brandline {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: baseline;
       padding: 0 4px 12px;
       color: var(--case-etch);
     }
-    .brandline .model { font-family: var(--lcd); font-size: 12px; letter-spacing: 1px; }
-    .brandline .series { font-size: 10px; letter-spacing: 2px; opacity: 0.6; text-transform: uppercase; }
+    .brandline .model { font-family: var(--lcd); font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+    .brandline .series { font-size: 10px; letter-spacing: 2px; opacity: 0.6; text-transform: uppercase; text-align: right; }
 
     .lcd {
       background: linear-gradient(175deg, var(--screen-bg-2), var(--screen-bg));
@@ -264,6 +265,41 @@
     /* When 2nd is armed, surface the alternate legends */
     .keys.second button.key.has-sub .sub { color: var(--accent); font-size: 11px; opacity: 1; }
     .keys.second button.key.has-sub .main { opacity: 0.4; font-size: 13px; }
+
+    /* --- Financial functions module — a slide-out strip below the keys --- */
+    .fin-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--case-rim);
+    }
+    .fin-tag {
+      font-family: var(--lcd);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      color: var(--case-etch);
+      opacity: 0.65;
+      flex: none;
+    }
+    .fin-keys { display: flex; flex-wrap: wrap; gap: 6px; }
+    .fin-keys button {
+      appearance: none;
+      border: 1px solid var(--case-rim);
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--key-fn), var(--key-fn-d));
+      color: var(--key-fn-text);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 9px;
+      cursor: pointer;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+    }
+    .fin-keys button:hover { filter: brightness(1.1); }
+    .fin-keys button:active { transform: translateY(1px); box-shadow: none; }
+    .fin-keys button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
     /* --- Tape -------------------------------------------------------- */
     .tape {
@@ -371,13 +407,15 @@
     <p class="tagline">
       Type an expression or tap the keys. Results are parsed with real operator
       precedence &mdash; no <code>eval</code> &mdash; and every calculation drops onto the tape.
+      The <b>FIN</b> strip adds time-value-of-money and cash-flow functions:
+      present/future value, payments, NPV, IRR and more.
     </p>
 
     <div class="shell">
       <div class="calc">
         <div class="brandline">
           <span class="model">SC&mdash;115</span>
-          <span class="series">dual power &middot; 40 keys</span>
+          <span class="series">dual power &middot; 40 keys &middot; design: kathuman</span>
         </div>
 
         <div class="lcd" id="lcd">
@@ -391,6 +429,11 @@
         </div>
 
         <div class="keys" id="keys"></div>
+
+        <div class="fin-strip">
+          <span class="fin-tag">FIN</span>
+          <div class="fin-keys" id="finKeys"></div>
+        </div>
       </div>
 
       <aside class="tape">
@@ -405,6 +448,14 @@
     <p class="hint">
       <kbd>0-9</kbd> <kbd>. ( )</kbd> <kbd>+ &minus; * / ^</kbd> <kbd>!</kbd> <kbd>%</kbd> &nbsp;·&nbsp;
       <kbd>Enter</kbd> evaluate &nbsp;·&nbsp; <kbd>Backspace</kbd> delete &nbsp;·&nbsp; <kbd>Esc</kbd> all-clear
+    </p>
+    <p class="hint">
+      Financial: <kbd>pv(rate,nper,pmt[,fv])</kbd> <kbd>fv(rate,nper,pmt[,pv])</kbd>
+      <kbd>pmt(rate,nper,pv[,fv])</kbd> <kbd>nper(rate,pmt,pv[,fv])</kbd>
+      <kbd>rate(nper,pmt,pv[,fv[,guess]])</kbd> <kbd>npv(rate,cf1,cf2,&hellip;)</kbd>
+      <kbd>irr(cf0,cf1,&hellip;)</kbd> <kbd>sl(cost,salvage,life)</kbd>
+      <kbd>ci(principal,rate,nper[,n])</kbd> <kbd>si(principal,rate,time)</kbd>
+      &mdash; rates are per-period fractions (6% = <kbd>0.06</kbd>), not percentages.
     </p>
 
     <footer class="foot">
@@ -469,6 +520,132 @@
     throw new CalcError('Unknown function "' + name + '"');
   }
 
+  // -----------------------------------------------------------------------
+  // Financial functions — time-value-of-money, cash-flow and depreciation.
+  // Unlike the trig/log FUNCS above these take several comma-separated
+  // arguments, e.g. pmt(0.06/12, 360, 300000). Every rate is a plain
+  // fraction per period (6% = 0.06), not a percentage.
+  // -----------------------------------------------------------------------
+  const FIN_FUNCS = {
+    pv:   { min: 3, max: 4, help: "pv(rate, nper, pmt[, fv])" },
+    fv:   { min: 3, max: 4, help: "fv(rate, nper, pmt[, pv])" },
+    pmt:  { min: 3, max: 4, help: "pmt(rate, nper, pv[, fv])" },
+    nper: { min: 3, max: 4, help: "nper(rate, pmt, pv[, fv])" },
+    rate: { min: 3, max: 5, help: "rate(nper, pmt, pv[, fv[, guess]])" },
+    npv:  { min: 2, max: Infinity, help: "npv(rate, cf1, cf2, …)" },
+    irr:  { min: 2, max: Infinity, help: "irr(cf0, cf1, …)" },
+    sl:   { min: 3, max: 3, help: "sl(cost, salvage, life)" },
+    ci:   { min: 3, max: 4, help: "ci(principal, rate, nper[, compoundsPerPeriod])" },
+    si:   { min: 3, max: 3, help: "si(principal, rate, time)" },
+  };
+
+  function tvmValue(rate, nper, pmt, pv) {
+    // Total value one full compounding schedule produces: what pv grows to,
+    // plus what a level payment stream of pmt accumulates to, after nper
+    // periods at the periodic rate `rate`.
+    if (rate === 0) return pv + pmt * nper;
+    const growth = Math.pow(1 + rate, nper);
+    return pv * growth + pmt * ((growth - 1) / rate);
+  }
+
+  function irrOf(cashflows) {
+    const f = (r) => cashflows.reduce((s, cf, i) => s + cf / Math.pow(1 + r, i), 0);
+    // Scan for a sign change, then bisect — more robust than Newton's
+    // method for the odd-shaped cash-flow series people actually type in.
+    let lo = -0.99, flo = f(lo);
+    let hi = null;
+    for (let r = -0.98; r <= 10; r += 0.01) {
+      const fr = f(r);
+      if (!Number.isFinite(fr)) continue;
+      if ((flo < 0 && fr >= 0) || (flo > 0 && fr <= 0)) { hi = r; break; }
+      lo = r; flo = fr;
+    }
+    if (hi === null) throw new CalcError("irr: no solution found between -99% and 1000%");
+    let a = lo, b = hi;
+    for (let i = 0; i < 100; i++) {
+      const mid = (a + b) / 2;
+      const fm = f(mid);
+      if (Math.abs(fm) < 1e-9) return mid;
+      if ((f(a) < 0) === (fm < 0)) a = mid; else b = mid;
+    }
+    return (a + b) / 2;
+  }
+
+  function applyFinFunc(name, args) {
+    const spec = FIN_FUNCS[name];
+    if (args.length < spec.min || args.length > spec.max) {
+      throw new CalcError(name + "() expects " + spec.help);
+    }
+    switch (name) {
+      case "pv": {
+        const [rate, nper, pmt, fv = 0] = args;
+        if (rate === 0) return fv - pmt * nper;
+        const growth = Math.pow(1 + rate, nper);
+        return (fv - pmt * ((growth - 1) / rate)) / growth;
+      }
+      case "fv": {
+        const [rate, nper, pmt, pv = 0] = args;
+        return tvmValue(rate, nper, pmt, pv);
+      }
+      case "pmt": {
+        const [rate, nper, pv, fv = 0] = args;
+        if (nper === 0) throw new CalcError("pmt: nper can't be 0");
+        if (rate === 0) return (fv - pv) / nper;
+        const growth = Math.pow(1 + rate, nper);
+        return ((fv - pv * growth) * rate) / (growth - 1);
+      }
+      case "nper": {
+        const [rate, pmt, pv, fv = 0] = args;
+        if (rate === 0) {
+          if (pmt === 0) throw new CalcError("nper: pmt can't be 0 when rate is 0");
+          return (fv - pv) / pmt;
+        }
+        const num = fv * rate + pmt, den = pv * rate + pmt;
+        if (den === 0 || num / den <= 0) throw new CalcError("nper: no real solution for those inputs");
+        return Math.log(num / den) / Math.log(1 + rate);
+      }
+      case "rate": {
+        const [nper, pmt, pv, fv = 0, guess = 0.1] = args;
+        let r = guess;
+        for (let i = 0; i < 100; i++) {
+          const f0 = tvmValue(r, nper, pmt, pv) - fv;
+          const h = 1e-6;
+          const f1 = tvmValue(r + h, nper, pmt, pv) - fv;
+          const d = (f1 - f0) / h;
+          if (!Number.isFinite(d) || d === 0) break;
+          const next = r - f0 / d;
+          if (!Number.isFinite(next)) break;
+          if (Math.abs(next - r) < 1e-10) { r = next; break; }
+          r = next;
+        }
+        if (!Number.isFinite(r) || Math.abs(tvmValue(r, nper, pmt, pv) - fv) > 1e-6) {
+          throw new CalcError("rate: did not converge — try a different guess (5th argument)");
+        }
+        return r;
+      }
+      case "npv": {
+        const [rate, ...cfs] = args;
+        return cfs.reduce((s, cf, i) => s + cf / Math.pow(1 + rate, i + 1), 0);
+      }
+      case "irr":
+        return irrOf(args);
+      case "sl": {
+        const [cost, salvage, life] = args;
+        if (life === 0) throw new CalcError("sl: life can't be 0");
+        return (cost - salvage) / life;
+      }
+      case "ci": {
+        const [principal, rate, nper, n = 1] = args;
+        return principal * Math.pow(1 + rate / n, n * nper);
+      }
+      case "si": {
+        const [principal, rate, time] = args;
+        return principal * rate * time;
+      }
+    }
+    throw new CalcError('Unknown financial function "' + name + '"');
+  }
+
   function normalize(s) {
     return s
       .replace(/×/g, "*")
@@ -503,7 +680,7 @@
         i = j;
         continue;
       }
-      if ("+-*/^!%()".includes(c)) { out.push({ t: "op", v: c }); i++; continue; }
+      if ("+-*/^!%(),".includes(c)) { out.push({ t: "op", v: c }); i++; continue; }
       throw new CalcError('Unexpected "' + c + '"');
     }
     return out;
@@ -598,6 +775,16 @@
           const arg = expr();
           eat(")");
           return applyFunc(tk.v, arg);
+        }
+        if (tk.v in FIN_FUNCS) {
+          eat("(");
+          const args = [expr()];
+          while (peek() && peek().t === "op" && peek().v === ",") {
+            next();
+            args.push(expr());
+          }
+          eat(")");
+          return applyFinFunc(tk.v, args);
         }
         throw new CalcError('Unknown name "' + tk.v + '"');
       }
@@ -716,8 +903,25 @@
     { main: "AC", cmd: "ac", cls: "danger", aria: "All clear" },
   ];
 
+  // Financial-function quick-inserts — a small strip below the main keypad
+  // (not counted in the "40 keys" main pad). Each drops a function call
+  // template onto the tape; arguments are typed or tapped in after.
+  const FIN_KEYS = [
+    { main: "PV", ins: "pv(", aria: "Present value" },
+    { main: "FV", ins: "fv(", aria: "Future value" },
+    { main: "PMT", ins: "pmt(", aria: "Payment" },
+    { main: "N", ins: "nper(", aria: "Number of periods" },
+    { main: "I%", ins: "rate(", aria: "Interest rate" },
+    { main: "NPV", ins: "npv(", aria: "Net present value" },
+    { main: "IRR", ins: "irr(", aria: "Internal rate of return" },
+    { main: "SL", ins: "sl(", aria: "Straight-line depreciation" },
+    { main: "CI", ins: "ci(", aria: "Compound interest" },
+    { main: "SI", ins: "si(", aria: "Simple interest" },
+  ];
+
   const el = {
     keys: document.getElementById("keys"),
+    finKeys: document.getElementById("finKeys"),
     lcd: document.getElementById("lcd"),
     main: document.getElementById("lcdMain"),
     expr: document.getElementById("lcdExpr"),
@@ -753,6 +957,23 @@
       frag.appendChild(btn);
     }
     el.keys.appendChild(frag);
+  }
+
+  function buildFinKeys() {
+    const frag = document.createDocumentFragment();
+    for (const k of FIN_KEYS) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = k.main;
+      if (k.aria) btn.setAttribute("aria-label", k.aria + " — inserts " + k.ins);
+      btn.title = k.ins;
+      btn.addEventListener("click", () => {
+        dispatch("app:" + k.ins);
+        if (state.second) setSecond(false);
+      });
+      frag.appendChild(btn);
+    }
+    el.finKeys.appendChild(frag);
   }
 
   // ---- command dispatch ----------------------------------------------
@@ -933,7 +1154,7 @@
   // ---- keyboard ----------------------------------------------------
   const KEYMAP = {
     "*": "app:×", "/": "app:÷", "-": "app:−", "+": "app:+", "^": "app:^",
-    "(": "app:(", ")": "app:)", ".": "app:.", "!": "app:!", "%": "app:%",
+    "(": "app:(", ")": "app:)", ".": "app:.", "!": "app:!", "%": "app:%", ",": "app:,",
     "=": "eq", "Enter": "eq", "Backspace": "back", "Escape": "ac",
   };
   window.addEventListener("keydown", (ev) => {
@@ -956,6 +1177,7 @@
   // ---- boot ------------------------------------------------------
   load();
   buildKeys();
+  buildFinKeys();
   render();
   renderTape();
   </script>
