@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linkage — Robotic Arm Simulator</title>
+  <meta name="description" content="A real-time 3D robotic cobot simulator: forward-kinematics joint sliders, live end-effector telemetry, a rigid-body physics floor, and animated pick-and-place / wave routines. By kathuman." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦾</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a0e13;
+  --panel:#121922;
+  --panel-2:#0d131a;
+  --line:#22303d;
+  --line-soft:#182430;
+  --ink:#e7edf3;
+  --ink-dim:#8697a6;
+  --ink-faint:#526071;
+  --accent:#ff6a1f;
+  --accent-ink:#1a0e05;
+  --tele:#4fe0ff;
+  --warn:#ffcf4a;
+  --ok:#3ddc97;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--body);
+  overflow:hidden;
+}
+.app{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+.topbar{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:14px 20px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#0d131a,#0a0e13);
+}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .mark{
+  font-family:var(--head);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:.04em;
+  color:var(--ink);
+}
+.brand .mark span{color:var(--accent);}
+.brand .sub{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-faint);
+  letter-spacing:.03em;
+}
+.header-actions{display:flex; align-items:center; gap:10px;}
+.back-link{
+  font-family:var(--head);
+  font-weight:600;
+  font-size:12px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-dim);
+  text-decoration:none;
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+.status-pill{
+  display:flex; align-items:center; gap:8px;
+  padding:6px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--panel);
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--ink-dim);
+  white-space:nowrap;
+}
+.status-pill .dot{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 8px var(--accent);
+  transition:background .2s, box-shadow .2s;
+}
+.status-pill.running .dot{background:var(--ok); box-shadow:0 0 8px var(--ok);}
+.status-pill #uptime{color:var(--ink-faint);}
+
+.layout{
+  flex:1 1 auto;
+  min-height:0;
+  display:grid;
+  grid-template-columns:296px 1fr;
+}
+.rail{
+  border-right:1px solid var(--line);
+  background:var(--panel-2);
+  overflow-y:auto;
+  padding:18px 18px 28px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+.rail::-webkit-scrollbar{width:8px;}
+.rail::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+
+.rail-section{display:flex; flex-direction:column; gap:12px;}
+.rail-section h2{
+  margin:0;
+  font-family:var(--head);
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  padding-bottom:8px;
+  border-bottom:1px solid var(--line-soft);
+}
+
+.ctrl-row{display:flex; flex-direction:column; gap:5px;}
+.ctrl-row .row-head{
+  display:flex; justify-content:space-between; align-items:baseline;
+}
+.ctrl-row .row-head .name{
+  font-family:var(--head);
+  font-weight:600;
+  font-size:13px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--ink);
+}
+.ctrl-row .row-head .val{
+  font-family:var(--mono);
+  font-size:13px;
+  font-variant-numeric:tabular-nums;
+  color:var(--tele);
+}
+.slider-track{display:flex; align-items:center; gap:8px;}
+.slider-track .bound{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--ink-faint);
+  width:32px;
+  flex:0 0 auto;
+}
+.slider-track .bound.right{text-align:right;}
+
+input[type=range]{
+  -webkit-appearance:none;
+  appearance:none;
+  flex:1 1 auto;
+  height:4px;
+  border-radius:2px;
+  background:var(--line);
+  outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:15px; height:15px;
+  border-radius:50%;
+  background:var(--accent);
+  border:2px solid #1a0e05;
+  box-shadow:0 0 0 2px var(--accent), 0 0 10px rgba(255,106,31,.6);
+  cursor:pointer;
+  margin-top:0;
+}
+input[type=range]::-moz-range-thumb{
+  width:15px; height:15px;
+  border-radius:50%;
+  background:var(--accent);
+  border:2px solid #1a0e05;
+  box-shadow:0 0 0 2px var(--accent), 0 0 10px rgba(255,106,31,.6);
+  cursor:pointer;
+}
+input[type=range]::-moz-range-track{
+  height:4px; border-radius:2px; background:var(--line);
+}
+
+.btn-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.btn{
+  font-family:var(--head);
+  font-weight:600;
+  font-size:12.5px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink);
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:10px 8px;
+  cursor:pointer;
+  transition:border-color .15s, color .15s, box-shadow .15s;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 1px rgba(255,106,31,.25) inset;}
+.btn:active{transform:translateY(1px);}
+.btn.wide{grid-column:1 / -1;}
+.btn.danger{color:#ff9d7a;}
+.btn.danger:hover{border-color:#ff5c5c; color:#ff5c5c; box-shadow:0 0 0 1px rgba(255,92,92,.25) inset;}
+.btn:disabled{opacity:.35; cursor:not-allowed; box-shadow:none;}
+.btn:disabled:hover{border-color:var(--line); color:var(--ink);}
+
+.switch-row{display:flex; align-items:center; justify-content:space-between;}
+.switch-row .name{
+  font-family:var(--head); font-weight:600; font-size:13px;
+  letter-spacing:.05em; text-transform:uppercase; color:var(--ink);
+}
+.switch{
+  position:relative; width:38px; height:21px; flex:0 0 auto;
+  border-radius:999px; background:var(--line); border:1px solid var(--line);
+  cursor:pointer; transition:background .15s;
+}
+.switch.on{background:rgba(255,106,31,.25); border-color:var(--accent);}
+.switch .knob{
+  position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%;
+  background:var(--ink-dim); transition:left .15s, background .15s;
+}
+.switch.on .knob{left:19px; background:var(--accent); box-shadow:0 0 6px rgba(255,106,31,.7);}
+
+.stage-wrap{
+  position:relative;
+  min-height:0;
+  background:
+    radial-gradient(ellipse at 50% 30%, #131b24 0%, #0a0e13 70%);
+}
+#stage{position:absolute; inset:0;}
+#stage canvas{display:block; touch-action:none;}
+
+.hud{
+  position:absolute; top:16px; left:16px;
+  padding:12px 14px;
+  background:rgba(10,14,19,.72);
+  border:1px solid var(--line);
+  border-radius:8px;
+  backdrop-filter:blur(6px);
+  font-family:var(--mono);
+  font-size:11.5px;
+  color:var(--ink-dim);
+  pointer-events:none;
+  min-width:156px;
+}
+.hud .hud-title{
+  font-family:var(--head); font-weight:700; font-size:11px;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint);
+  margin-bottom:8px;
+}
+.hud .hud-line{display:flex; justify-content:space-between; gap:14px; padding:1px 0;}
+.hud .hud-line b{color:var(--tele); font-weight:500; font-variant-numeric:tabular-nums;}
+
+.caption{
+  position:absolute; left:16px; bottom:16px; right:16px;
+  display:flex; justify-content:space-between; align-items:flex-end; gap:12px;
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-faint);
+  pointer-events:none;
+}
+.caption .reset-btn{
+  pointer-events:auto;
+  font-family:var(--head); font-weight:600; font-size:11.5px;
+  letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-dim);
+  background:rgba(10,14,19,.72);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:6px 10px;
+  cursor:pointer;
+}
+.caption .reset-btn:hover{color:var(--accent); border-color:var(--accent);}
+
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr; grid-template-rows:52vh 1fr;}
+  .rail{border-right:none; border-top:1px solid var(--line);}
+  .topbar{padding:12px 14px;}
+  .brand .sub{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">LINK<span>AGE</span></div>
+      <div class="sub">5-AXIS COBOT · KINEMATIC + PHYSICS BENCH</div>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="../">← Projects</a>
+      <div class="status-pill" id="status-pill">
+        <span class="dot"></span>
+        <span id="status-text">IDLE</span>
+        <span id="uptime">00:00</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="rail">
+      <div class="rail-section">
+        <h2>Axes</h2>
+
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Base Yaw</span><span class="val" id="base-yaw-val">0°</span></div>
+          <div class="slider-track">
+            <span class="bound">-180</span>
+            <input type="range" id="base-yaw" min="-180" max="180" value="25" step="1">
+            <span class="bound right">180</span>
+          </div>
+        </div>
+
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Shoulder</span><span class="val" id="shoulder-val">38°</span></div>
+          <div class="slider-track">
+            <span class="bound">-10</span>
+            <input type="range" id="shoulder" min="-10" max="100" value="38" step="1">
+            <span class="bound right">100</span>
+          </div>
+        </div>
+
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Elbow</span><span class="val" id="elbow-val">-58°</span></div>
+          <div class="slider-track">
+            <span class="bound">-150</span>
+            <input type="range" id="elbow" min="-150" max="0" value="-58" step="1">
+            <span class="bound right">0</span>
+          </div>
+        </div>
+
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Wrist Pitch</span><span class="val" id="wrist-pitch-val">-35°</span></div>
+          <div class="slider-track">
+            <span class="bound">-120</span>
+            <input type="range" id="wrist-pitch" min="-120" max="120" value="-35" step="1">
+            <span class="bound right">120</span>
+          </div>
+        </div>
+
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Wrist Roll</span><span class="val" id="wrist-roll-val">15°</span></div>
+          <div class="slider-track">
+            <span class="bound">-180</span>
+            <input type="range" id="wrist-roll" min="-180" max="180" value="15" step="1">
+            <span class="bound right">180</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <h2>End Effector</h2>
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Gripper</span><span class="val" id="gripper-val">55%</span></div>
+          <div class="slider-track">
+            <span class="bound">0</span>
+            <input type="range" id="gripper" min="0" max="100" value="55" step="1">
+            <span class="bound right">100</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Sequences</h2>
+        <div class="btn-grid">
+          <button class="btn" id="btn-home">Home</button>
+          <button class="btn" id="btn-wave">Wave</button>
+          <button class="btn wide" id="btn-pickplace">Pick &amp; Place</button>
+          <button class="btn danger wide" id="btn-stop" disabled>Stop</button>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Physics</h2>
+        <div class="btn-grid">
+          <button class="btn" id="btn-drop">Drop Block</button>
+          <button class="btn" id="btn-clear">Clear Blocks</button>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Display</h2>
+        <div class="switch-row">
+          <span class="name">Tip Trace</span>
+          <div class="switch" id="trace-switch"><div class="knob"></div></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div id="stage"></div>
+
+      <div class="hud">
+        <div class="hud-title">End Effector</div>
+        <div class="hud-line"><span>X</span><b id="hud-x">0.00 m</b></div>
+        <div class="hud-line"><span>Y</span><b id="hud-y">0.00 m</b></div>
+        <div class="hud-line"><span>Z</span><b id="hud-z">0.00 m</b></div>
+        <div class="hud-line"><span>Reach</span><b id="hud-reach">0.00 m</b></div>
+      </div>
+
+      <div class="caption">
+        <span>Forward kinematics · 5 revolute joints · rigid-body physics</span>
+        <button class="reset-btn" id="btn-reset-view">Reset View</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/cannon.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var stageEl = document.getElementById('stage');
+
+  var renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+  stageEl.appendChild(renderer.domElement);
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0e13);
+  scene.fog = new THREE.Fog(0x0a0e13, 9, 18);
+
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+
+  var hemi = new THREE.HemisphereLight(0x8fb7ff, 0x0a0e13, 0.55);
+  scene.add(hemi);
+  var key = new THREE.DirectionalLight(0xfff2e0, 1.05);
+  key.position.set(4, 6.5, 3.5);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.left = -6; key.shadow.camera.right = 6;
+  key.shadow.camera.top = 6; key.shadow.camera.bottom = -6;
+  key.shadow.camera.near = 1; key.shadow.camera.far = 16;
+  key.shadow.bias = -0.0015;
+  scene.add(key);
+  var rim = new THREE.DirectionalLight(0x4fe0ff, 0.25);
+  rim.position.set(-5, 3, -4);
+  scene.add(rim);
+
+  var floorMat = new THREE.MeshStandardMaterial({color:0x0d131a, roughness:0.95, metalness:0.05});
+  var floor = new THREE.Mesh(new THREE.CircleGeometry(7, 48), floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  var grid = new THREE.GridHelper(14, 28, 0x22303d, 0x172029);
+  grid.position.y = 0.005;
+  scene.add(grid);
+
+  function makeShadowBlobTexture(){
+    var size = 128;
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var ctx = c.getContext('2d');
+    var g = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    g.addColorStop(0, 'rgba(0,0,0,0.5)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(c);
+  }
+  var shadowBlob = new THREE.Mesh(
+    new THREE.CircleGeometry(0.95, 32),
+    new THREE.MeshBasicMaterial({map:makeShadowBlobTexture(), transparent:true, depthWrite:false})
+  );
+  shadowBlob.rotation.x = -Math.PI/2;
+  shadowBlob.position.y = 0.008;
+  scene.add(shadowBlob);
+
+  function ringLine(radius, color, opacity, segments){
+    segments = segments || 96;
+    var pts = [];
+    for (var i=0;i<=segments;i++){
+      var a = (i/segments) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a)*radius, 0.02, Math.sin(a)*radius));
+    }
+    var geo = new THREE.BufferGeometry().setFromPoints(pts);
+    var mat = new THREE.LineBasicMaterial({color:color, transparent:true, opacity:opacity});
+    return new THREE.LineLoop(geo, mat);
+  }
+
+  var reachRadius = 1.9 + 1.6 + 0.5 + 0.4;
+  scene.add(ringLine(reachRadius, 0x4fe0ff, 0.18));
+
+  // ---- Materials: modern cobot look — matte white/gray body, charcoal joint
+  // housings, a thin accent collar per joint, brushed-steel gripper. ----
+  var bodyParams   = {color:0xeef1f4, metalness:0.08, roughness:0.38, clearcoat:0.5, clearcoatRoughness:0.3};
+  var jointParams  = {color:0x1c2126, metalness:0.4,  roughness:0.5};
+  var steelParams  = {color:0xc7ced6, metalness:0.8,  roughness:0.22};
+  var padParams    = {color:0x2a3138, metalness:0.2,  roughness:0.6};
+
+  function physMesh(geo, params){
+    var m = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial(params));
+    m.castShadow = true;
+    m.receiveShadow = true;
+    return m;
+  }
+  function stdMesh(geo, params){
+    var m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(params));
+    m.castShadow = true;
+    m.receiveShadow = true;
+    return m;
+  }
+
+  var indicatorMats = [];
+  function indicatorDot(radius){
+    var mat = new THREE.MeshStandardMaterial({
+      color:0x1c2126, emissive:0xff6a1f, emissiveIntensity:0.45,
+      metalness:0.3, roughness:0.4
+    });
+    indicatorMats.push(mat);
+    var m = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 10), mat);
+    return m;
+  }
+  function accentCollar(radius, y){
+    var mat = new THREE.MeshStandardMaterial({
+      color:0xff6a1f, emissive:0xff6a1f, emissiveIntensity:0.15,
+      metalness:0.35, roughness:0.4
+    });
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.018, 8, 28), mat);
+    ring.rotation.x = Math.PI/2;
+    ring.position.y = y;
+    return ring;
+  }
+  function jointHub(radius, height){
+    var m = stdMesh(new THREE.CylinderGeometry(radius, radius, height, 22), jointParams);
+    m.rotation.x = Math.PI/2;
+    return m;
+  }
+
+  var PEDESTAL_H = 0.5;
+  var TURRET_H = 0.32;
+  var UPPER_LEN = 1.9;
+  var FOREARM_LEN = 1.6;
+  var WRIST_LEN = 0.5;
+  var GRIPPER_LEN = 0.4;
+
+  var rig = new THREE.Group();
+  scene.add(rig);
+
+  var pedestal = stdMesh(new THREE.CylinderGeometry(0.5, 0.58, PEDESTAL_H, 28), jointParams);
+  pedestal.position.y = PEDESTAL_H/2;
+  rig.add(pedestal);
+  rig.add(accentCollar(0.52, PEDESTAL_H - 0.03));
+
+  var cableCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.4, PEDESTAL_H*0.55, 0.3),
+    new THREE.Vector3(0.75, PEDESTAL_H*0.35, 0.65),
+    new THREE.Vector3(0.95, 0.03, 1.05)
+  ]);
+  var cable = stdMesh(new THREE.TubeGeometry(cableCurve, 20, 0.035, 8, false), jointParams);
+  rig.add(cable);
+
+  var baseYawGroup = new THREE.Group();
+  baseYawGroup.position.y = PEDESTAL_H;
+  rig.add(baseYawGroup);
+
+  var turret = physMesh(new THREE.CylinderGeometry(0.4, 0.46, TURRET_H, 24), bodyParams);
+  turret.position.y = TURRET_H/2;
+  baseYawGroup.add(turret);
+  var turretDot = indicatorDot(0.045);
+  turretDot.position.set(0, TURRET_H*0.55, 0.44);
+  baseYawGroup.add(turretDot);
+
+  var shoulderPitchGroup = new THREE.Group();
+  shoulderPitchGroup.position.y = TURRET_H;
+  baseYawGroup.add(shoulderPitchGroup);
+
+  shoulderPitchGroup.add(jointHub(0.22, 0.34));
+
+  var upperArm = physMesh(new THREE.CylinderGeometry(0.11, 0.155, UPPER_LEN, 18), bodyParams);
+  upperArm.position.y = UPPER_LEN/2;
+  shoulderPitchGroup.add(upperArm);
+  var upperCable = stdMesh(new THREE.BoxGeometry(0.035, UPPER_LEN*0.82, 0.035), jointParams);
+  upperCable.position.set(0.1, UPPER_LEN/2, 0);
+  shoulderPitchGroup.add(upperCable);
+  shoulderPitchGroup.add(accentCollar(0.17, 0.05));
+
+  var elbowPitchGroup = new THREE.Group();
+  elbowPitchGroup.position.y = UPPER_LEN;
+  shoulderPitchGroup.add(elbowPitchGroup);
+
+  elbowPitchGroup.add(jointHub(0.165, 0.26));
+
+  var forearm = physMesh(new THREE.CylinderGeometry(0.085, 0.115, FOREARM_LEN, 16), bodyParams);
+  forearm.position.y = FOREARM_LEN/2;
+  elbowPitchGroup.add(forearm);
+  var forearmCable = stdMesh(new THREE.BoxGeometry(0.03, FOREARM_LEN*0.8, 0.03), jointParams);
+  forearmCable.position.set(0.075, FOREARM_LEN/2, 0);
+  elbowPitchGroup.add(forearmCable);
+  elbowPitchGroup.add(accentCollar(0.125, 0.045));
+
+  var wristPitchGroup = new THREE.Group();
+  wristPitchGroup.position.y = FOREARM_LEN;
+  elbowPitchGroup.add(wristPitchGroup);
+
+  wristPitchGroup.add(jointHub(0.115, 0.19));
+
+  var wristRollGroup = new THREE.Group();
+  wristPitchGroup.add(wristRollGroup);
+
+  var wristBody = stdMesh(new THREE.CylinderGeometry(0.09, 0.1, WRIST_LEN, 18), padParams);
+  wristBody.position.y = WRIST_LEN/2;
+  wristRollGroup.add(wristBody);
+
+  var rollMark = stdMesh(new THREE.BoxGeometry(0.02, WRIST_LEN*0.85, 0.04), steelParams);
+  rollMark.position.set(0.1, WRIST_LEN/2, 0);
+  wristRollGroup.add(rollMark);
+  wristRollGroup.add(accentCollar(0.1, WRIST_LEN - 0.03));
+
+  var gripperGroup = new THREE.Group();
+  gripperGroup.position.y = WRIST_LEN;
+  wristRollGroup.add(gripperGroup);
+
+  var gripHousing = stdMesh(new THREE.BoxGeometry(0.24, 0.14, 0.3), jointParams);
+  gripHousing.position.y = 0.07;
+  gripperGroup.add(gripHousing);
+  var gripDot = indicatorDot(0.03);
+  gripDot.position.set(0, 0.07, 0.16);
+  gripperGroup.add(gripDot);
+
+  function makeJaw(){
+    var g = new THREE.Group();
+    var finger = stdMesh(new THREE.BoxGeometry(0.05, GRIPPER_LEN, 0.16), steelParams);
+    finger.position.y = 0.14 + GRIPPER_LEN/2;
+    g.add(finger);
+    var pad = stdMesh(new THREE.BoxGeometry(0.052, 0.08, 0.17), padParams);
+    pad.position.y = 0.14 + GRIPPER_LEN - 0.04;
+    g.add(pad);
+    return g;
+  }
+  var jawL = makeJaw();
+  var jawR = makeJaw();
+  gripperGroup.add(jawL);
+  gripperGroup.add(jawR);
+
+  var tipMarker = new THREE.Object3D();
+  tipMarker.position.y = 0.14 + GRIPPER_LEN * 0.92;
+  gripperGroup.add(tipMarker);
+
+  var target = new THREE.Vector3(0, 1.25, 0);
+  var spherical = {theta: 0.7, phi: 1.05, radius: 6.4};
+  var DEFAULT_SPHERICAL = {theta: 0.7, phi: 1.05, radius: 6.4};
+
+  function updateCamera(){
+    camera.position.set(
+      target.x + spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta),
+      target.y + spherical.radius * Math.cos(spherical.phi),
+      target.z + spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta)
+    );
+    camera.lookAt(target);
+  }
+  updateCamera();
+
+  var dom = renderer.domElement;
+  dom.style.touchAction = 'none';
+  var dragging = false, lastX = 0, lastY = 0;
+  dom.addEventListener('pointerdown', function(e){
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    dom.setPointerCapture(e.pointerId);
+  });
+  dom.addEventListener('pointerup', function(){ dragging = false; });
+  dom.addEventListener('pointercancel', function(){ dragging = false; });
+  dom.addEventListener('pointermove', function(e){
+    if (!dragging) return;
+    var dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    spherical.theta -= dx * 0.006;
+    spherical.phi -= dy * 0.006;
+    spherical.phi = Math.max(0.2, Math.min(1.45, spherical.phi));
+    updateCamera();
+  });
+  dom.addEventListener('wheel', function(e){
+    e.preventDefault();
+    spherical.radius *= (1 + e.deltaY * 0.0012);
+    spherical.radius = Math.max(3.2, Math.min(11, spherical.radius));
+    updateCamera();
+  }, {passive:false});
+
+  document.getElementById('btn-reset-view').addEventListener('click', function(){
+    spherical.theta = DEFAULT_SPHERICAL.theta;
+    spherical.phi = DEFAULT_SPHERICAL.phi;
+    spherical.radius = DEFAULT_SPHERICAL.radius;
+    updateCamera();
+  });
+
+  function resize(){
+    var w = stageEl.clientWidth, h = stageEl.clientHeight;
+    if (w === 0 || h === 0) return;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+
+  var DEFAULTS = {baseYaw:25, shoulderPitch:38, elbowPitch:-58, wristPitch:-35, wristRoll:15, gripper:55};
+  var state = {};
+  Object.assign(state, DEFAULTS);
+
+  var sliderIds = {
+    baseYaw:'base-yaw', shoulderPitch:'shoulder', elbowPitch:'elbow',
+    wristPitch:'wrist-pitch', wristRoll:'wrist-roll', gripper:'gripper'
+  };
+  var sliders = {}, valEls = {};
+  Object.keys(sliderIds).forEach(function(key){
+    sliders[key] = document.getElementById(sliderIds[key]);
+    valEls[key] = document.getElementById(sliderIds[key] + '-val');
+  });
+
+  var deg = Math.PI / 180;
+
+  function applyState(){
+    baseYawGroup.rotation.y = state.baseYaw * deg;
+    shoulderPitchGroup.rotation.z = state.shoulderPitch * deg;
+    elbowPitchGroup.rotation.z = state.elbowPitch * deg;
+    wristPitchGroup.rotation.z = state.wristPitch * deg;
+    wristRollGroup.rotation.y = state.wristRoll * deg;
+    var open = state.gripper / 100;
+    var spread = 0.03 + open * 0.16;
+    jawL.position.x = -spread;
+    jawR.position.x = spread;
+  }
+
+  function syncSlidersFromState(){
+    Object.keys(sliderIds).forEach(function(key){
+      sliders[key].value = state[key];
+      updateValLabel(key);
+    });
+  }
+
+  function updateValLabel(key){
+    var unit = key === 'gripper' ? '%' : '°';
+    valEls[key].textContent = Math.round(state[key]) + unit;
+  }
+
+  applyState();
+  syncSlidersFromState();
+
+  var activeCancel = null;
+
+  function cancelSequence(){
+    if (activeCancel) activeCancel.cancelled = true;
+  }
+
+  Object.keys(sliderIds).forEach(function(key){
+    sliders[key].addEventListener('input', function(){
+      cancelSequence();
+      state[key] = parseFloat(sliders[key].value);
+      updateValLabel(key);
+      applyState();
+    });
+  });
+
+  function easeInOutQuad(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; }
+
+  function tweenTo(targetAngles, duration){
+    return new Promise(function(resolve){
+      var token = activeCancel;
+      var start = {}; Object.keys(sliderIds).forEach(function(k){ start[k] = state[k]; });
+      var full = {}; Object.keys(sliderIds).forEach(function(k){ full[k] = (targetAngles[k] !== undefined) ? targetAngles[k] : start[k]; });
+      var t0 = performance.now();
+      function step(now){
+        if (token.cancelled){ resolve(false); return; }
+        var t = Math.min(1, (now - t0) / duration);
+        var e = easeInOutQuad(t);
+        Object.keys(sliderIds).forEach(function(k){
+          state[k] = start[k] + (full[k]-start[k]) * e;
+        });
+        applyState();
+        syncSlidersFromState();
+        if (t < 1) requestAnimationFrame(step);
+        else resolve(true);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  // ---- Physics world: dropped/released parts fall and collide for real. ----
+  var world = new CANNON.World();
+  world.gravity.set(0, -9.82, 0);
+  world.broadphase = new CANNON.NaiveBroadphase();
+  world.solver.iterations = 12;
+  world.allowSleep = true;
+
+  var groundPhysMat = new CANNON.Material('ground');
+  var blockPhysMat = new CANNON.Material('block');
+  world.addContactMaterial(new CANNON.ContactMaterial(groundPhysMat, blockPhysMat, {friction:0.45, restitution:0.3}));
+  world.addContactMaterial(new CANNON.ContactMaterial(blockPhysMat, blockPhysMat, {friction:0.4, restitution:0.2}));
+
+  var groundBody = new CANNON.Body({mass:0, material:groundPhysMat});
+  groundBody.addShape(new CANNON.Plane());
+  groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
+  world.addBody(groundBody);
+
+  var physObjects = [];
+  var MAX_BLOCKS = 10;
+  var blockPalette = [0xffcf4a, 0x4fe0ff, 0x3ddc97, 0xc7ced6];
+
+  function spawnPhysicsBlock(x, y, z, color, quat){
+    var size = 0.22;
+    var geo = new THREE.BoxGeometry(size, size, size);
+    var mat = new THREE.MeshStandardMaterial({color: color, metalness:0.15, roughness:0.5});
+    var m = new THREE.Mesh(geo, mat);
+    m.castShadow = true; m.receiveShadow = true;
+    m.position.set(x, y, z);
+    if (quat) m.quaternion.copy(quat);
+    scene.add(m);
+
+    var shape = new CANNON.Box(new CANNON.Vec3(size/2, size/2, size/2));
+    var body = new CANNON.Body({mass:0.4, material: blockPhysMat, shape: shape});
+    body.position.set(x, y, z);
+    if (quat) body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+    body.linearDamping = 0.15;
+    body.angularDamping = 0.3;
+    body.allowSleep = true;
+    body.sleepSpeedLimit = 0.15;
+    body.sleepTimeLimit = 0.5;
+    world.addBody(body);
+
+    var obj = {mesh:m, body:body};
+    physObjects.push(obj);
+    if (physObjects.length > MAX_BLOCKS){
+      var old = physObjects.shift();
+      scene.remove(old.mesh);
+      world.removeBody(old.body);
+    }
+    return obj;
+  }
+
+  function clearPhysicsBlocks(){
+    physObjects.forEach(function(o){ scene.remove(o.mesh); world.removeBody(o.body); });
+    physObjects = [];
+  }
+
+  document.getElementById('btn-drop').addEventListener('click', function(){
+    var x = (Math.random() - 0.5) * 2.6;
+    var z = (Math.random() - 0.5) * 2.6;
+    var color = blockPalette[Math.floor(Math.random() * blockPalette.length)];
+    spawnPhysicsBlock(x, 2.6 + Math.random()*0.8, z, color);
+  });
+  document.getElementById('btn-clear').addEventListener('click', clearPhysicsBlocks);
+
+  var currentPart = null;
+  var floorRings = [];
+
+  function clearProps(){
+    if (currentPart){ gripperGroup.remove(currentPart); currentPart = null; }
+    floorRings.forEach(function(r){ scene.remove(r); });
+    floorRings = [];
+    clearPhysicsBlocks();
+  }
+
+  function spawnFloorRingAtTip(color){
+    var p = new THREE.Vector3();
+    tipMarker.getWorldPosition(p);
+    var ring = ringLine(0.22, color, 0.55, 40);
+    ring.position.set(p.x, 0.02, p.z);
+    scene.add(ring);
+    floorRings.push(ring);
+  }
+
+  function spawnHeldPartAtTip(){
+    var p = new THREE.Vector3();
+    tipMarker.getWorldPosition(p);
+    var geo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
+    var mat = new THREE.MeshStandardMaterial({color:0xffcf4a, metalness:0.15, roughness:0.5});
+    var m = new THREE.Mesh(geo, mat);
+    m.castShadow = true; m.receiveShadow = true;
+    m.position.copy(p);
+    scene.add(m);
+    currentPart = m;
+  }
+
+  function attachPartToGripper(){
+    if (currentPart) gripperGroup.attach(currentPart);
+  }
+
+  function releasePartToPhysics(){
+    if (!currentPart) return;
+    var worldPos = new THREE.Vector3();
+    var worldQuat = new THREE.Quaternion();
+    currentPart.getWorldPosition(worldPos);
+    currentPart.getWorldQuaternion(worldQuat);
+    gripperGroup.remove(currentPart);
+    currentPart = null;
+    spawnPhysicsBlock(worldPos.x, worldPos.y, worldPos.z, 0xffcf4a, worldQuat);
+  }
+
+  function wait(ms, token){
+    return new Promise(function(resolve){
+      setTimeout(function(){ resolve(!token.cancelled); }, ms);
+    });
+  }
+
+  var statusPill = document.getElementById('status-pill');
+  var statusText = document.getElementById('status-text');
+  var btnHome = document.getElementById('btn-home');
+  var btnWave = document.getElementById('btn-wave');
+  var btnPickPlace = document.getElementById('btn-pickplace');
+  var btnStop = document.getElementById('btn-stop');
+  var allBtns = [btnHome, btnWave, btnPickPlace];
+
+  function setIndicators(running){
+    var col = running ? 0x3ddc97 : 0xff6a1f;
+    var intensity = running ? 0.9 : 0.45;
+    indicatorMats.forEach(function(mat){
+      mat.emissive.setHex(col);
+      mat.emissiveIntensity = intensity;
+    });
+  }
+
+  function setRunning(isRunning, label){
+    if (isRunning){
+      statusPill.classList.add('running');
+      statusText.textContent = label;
+      btnStop.disabled = false;
+      allBtns.forEach(function(b){ b.disabled = true; });
+    } else {
+      statusPill.classList.remove('running');
+      statusText.textContent = 'IDLE';
+      btnStop.disabled = true;
+      allBtns.forEach(function(b){ b.disabled = false; });
+    }
+    setIndicators(isRunning);
+  }
+
+  async function runHome(){
+    var token = {cancelled:false}; activeCancel = token;
+    setRunning(true, 'RUNNING: HOME');
+    await tweenTo(DEFAULTS, 900);
+    if (activeCancel === token) setRunning(false);
+  }
+
+  async function runWave(){
+    var token = {cancelled:false}; activeCancel = token;
+    setRunning(true, 'RUNNING: WAVE');
+    var ok = await tweenTo({baseYaw:0, shoulderPitch:72, elbowPitch:-92, wristPitch:0, wristRoll:0, gripper:65}, 700);
+    for (var i=0; ok && i<3 && !token.cancelled; i++){
+      ok = await tweenTo({wristRoll:-55}, 260);
+      if (!ok) break;
+      ok = await tweenTo({wristRoll:55}, 260);
+    }
+    if (ok) await tweenTo(DEFAULTS, 800);
+    if (activeCancel === token) setRunning(false);
+  }
+
+  async function runPickPlace(){
+    var token = {cancelled:false}; activeCancel = token;
+    setRunning(true, 'RUNNING: PICK & PLACE');
+    clearProps();
+
+    var ok = await tweenTo({baseYaw:-55, shoulderPitch:16, elbowPitch:-96, wristPitch:12, wristRoll:0, gripper:70}, 950);
+    if (ok) ok = await tweenTo({shoulderPitch:4, elbowPitch:-102}, 550);
+    if (ok){
+      spawnHeldPartAtTip();
+      spawnFloorRingAtTip(0x4fe0ff);
+      attachPartToGripper();
+      ok = await tweenTo({gripper:12}, 320);
+    }
+    if (ok) ok = await tweenTo({shoulderPitch:34, elbowPitch:-72}, 550);
+    if (ok) ok = await tweenTo({baseYaw:60, shoulderPitch:28, elbowPitch:-78, wristPitch:-8}, 1050);
+    if (ok) ok = await tweenTo({shoulderPitch:8, elbowPitch:-104, wristPitch:12}, 650);
+    if (ok){
+      spawnFloorRingAtTip(0xffcf4a);
+      releasePartToPhysics();
+      ok = await tweenTo({gripper:70}, 320);
+    }
+    if (ok) await tweenTo(DEFAULTS, 950);
+
+    if (activeCancel === token) setRunning(false);
+  }
+
+  btnHome.addEventListener('click', runHome);
+  btnWave.addEventListener('click', runWave);
+  btnPickPlace.addEventListener('click', runPickPlace);
+  btnStop.addEventListener('click', function(){
+    cancelSequence();
+    setRunning(false);
+  });
+
+  var traceOn = false;
+  var traceSwitch = document.getElementById('trace-switch');
+  var traceMax = 500;
+  var tracePositions = new Float32Array(traceMax * 3);
+  var traceCount = 0;
+  var traceGeo = new THREE.BufferGeometry();
+  traceGeo.setAttribute('position', new THREE.BufferAttribute(tracePositions, 3));
+  traceGeo.setDrawRange(0, 0);
+  var traceMat = new THREE.LineBasicMaterial({color:0x4fe0ff, transparent:true, opacity:0.85, blending:THREE.AdditiveBlending});
+  var traceLine = new THREE.Line(traceGeo, traceMat);
+  scene.add(traceLine);
+
+  traceSwitch.addEventListener('click', function(){
+    traceOn = !traceOn;
+    traceSwitch.classList.toggle('on', traceOn);
+    if (!traceOn){
+      traceCount = 0;
+      traceGeo.setDrawRange(0, 0);
+    }
+  });
+
+  var lastTracePoint = new THREE.Vector3();
+  var hasLastTracePoint = false;
+
+  function updateTrace(){
+    if (!traceOn) return;
+    var p = new THREE.Vector3();
+    tipMarker.getWorldPosition(p);
+    if (hasLastTracePoint && p.distanceTo(lastTracePoint) < 0.012) return;
+    hasLastTracePoint = true;
+    lastTracePoint.copy(p);
+    if (traceCount >= traceMax){
+      tracePositions.copyWithin(0, 3);
+      traceCount = traceMax - 1;
+    }
+    var idx = traceCount * 3;
+    tracePositions[idx] = p.x; tracePositions[idx+1] = p.y; tracePositions[idx+2] = p.z;
+    traceCount++;
+    traceGeo.setDrawRange(0, traceCount);
+    traceGeo.attributes.position.needsUpdate = true;
+  }
+
+  var hudX = document.getElementById('hud-x');
+  var hudY = document.getElementById('hud-y');
+  var hudZ = document.getElementById('hud-z');
+  var hudReach = document.getElementById('hud-reach');
+  var uptimeEl = document.getElementById('uptime');
+  var t0 = performance.now();
+
+  function updateHud(){
+    var p = new THREE.Vector3();
+    tipMarker.getWorldPosition(p);
+    hudX.textContent = p.x.toFixed(2) + ' m';
+    hudY.textContent = p.y.toFixed(2) + ' m';
+    hudZ.textContent = p.z.toFixed(2) + ' m';
+    hudReach.textContent = Math.sqrt(p.x*p.x + p.z*p.z).toFixed(2) + ' m';
+
+    var secs = Math.floor((performance.now() - t0) / 1000);
+    var mm = String(Math.floor(secs/60)).padStart(2,'0');
+    var ss = String(secs%60).padStart(2,'0');
+    uptimeEl.textContent = mm + ':' + ss;
+  }
+
+  var lastFrameTime = performance.now();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    var now = performance.now();
+    var dt = Math.min((now - lastFrameTime) / 1000, 1/30);
+    lastFrameTime = now;
+
+    world.step(1/60, dt, 6);
+    physObjects.forEach(function(o){
+      o.mesh.position.copy(o.body.position);
+      o.mesh.quaternion.copy(o.body.quaternion);
+    });
+
+    updateTrace();
+    updateHud();
+    renderer.render(scene, camera);
+  }
+
+  resize();
+  animate();
+
+  var ro = new ResizeObserver(resize);
+  ro.observe(stageEl);
+})();
+</script>
+</body>
+</html>
