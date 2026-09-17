@@ -8,6 +8,22 @@
     "demoUrl": "https://kathuman.github.io/claude-projects/chess/"
   },
   {
+    "title": "Problem Log (Android)",
+    "description": "A native Android app that turns a spoken or typed problem description into a structured record — title, summary, category, short-term mitigation, long-term solution — via a forced tool-call to Claude, with every generated field editable before you save it. Records live in an on-device SQLite database; the only network call is your phone talking straight to the Anthropic API with your own key, held in the Android Keystore. No backend, no account. Built with Flutter — bring your own API key to run it.",
+    "date": "2026-09-12",
+    "tags": ["dart", "flutter", "android", "ai", "tool"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/problemlog-android",
+    "demoUrl": null
+  },
+  {
+    "title": "Othello (Android)",
+    "description": "A native Android port of the Othello sub-app below — the same rules engine and negamax AI (four strengths, full endgame solve), rebuilt from JavaScript to Dart with a CustomPainter board renderer. Play the computer or pass-and-play on a 6×6, 8×8 or 10×10 board, with the same disc colourways and board felts as the web version, undo, move log, and a Material 3 light/dark theme. Built with Flutter.",
+    "date": "2026-09-11",
+    "tags": ["dart", "flutter", "android", "game", "ai"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/othello-android",
+    "demoUrl": null
+  },
+  {
     "title": "Go",
     "description": "Play Go (Baduk / Weiqi) against the computer or a friend on one screen. Full rules — group capture, liberties, suicide prevention and the ko rule — with a ghost stone on hover and a ring on the last move. Choose a 9×9, 13×13 or 19×19 board with proper star points, set the komi, and pick from five goban woods. Two passes open a scoring phase: click any group to mark it dead, then the game is settled by area — stones plus surrounded territory plus komi. Undo, move log, capture counts and a heuristic computer opponent at three strengths. Single file, no dependencies.",
     "date": "2026-09-09",
@@ -33,8 +49,8 @@
   },
   {
     "title": "Network Design Visuals",
-    "description": "A browsable library of 17 supply-chain network-design visualizations, ordered simple → advanced: demand bars, cost-to-serve stacks, O–D flow maps, an echelon Sankey, lane-cost matrices, Pareto and tornado charts, a capacitated network graph, service-coverage rings, a cost–service efficient frontier, and strategic views — center-of-gravity / greenfield k-means, capacity-constrained catchment maps, animated throughput, phased network evolution, and a disruption-impact matrix. Every example runs on one shared synthetic network. Single file, no dependencies.",
-    "date": "2026-09-08",
+    "description": "A browsable library of 17 supply-chain network-design visualizations, ordered simple → advanced: demand bars, cost-to-serve stacks, O–D flow maps, an echelon Sankey, lane-cost matrices, Pareto and tornado charts, a capacitated network graph, service-coverage rings, a cost–service efficient frontier, and strategic views — center-of-gravity / greenfield k-means, capacity-constrained catchment maps, animated throughput, phased network evolution, and a capacity-aware disruption-impact matrix (fails each DC in turn, re-sources its markets to whichever surviving site has room, and flags the ones that don't). Every example runs on one shared synthetic network. Single file, no dependencies.",
+    "date": "2026-09-17",
     "tags": ["javascript", "web", "dataviz", "supply-chain"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/supply-chain-viz",
     "demoUrl": "https://kathuman.github.io/claude-projects/supply-chain-viz/"

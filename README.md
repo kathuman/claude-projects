@@ -79,6 +79,7 @@ supply-chain-viz/index.html        — https://kathuman.github.io/claude-project
 real-options/index.html            — https://kathuman.github.io/claude-projects/real-options/
 othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
+chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
 ```
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
@@ -86,3 +87,14 @@ app has no runtime CDN dependency); the licence sits beside it.
 
 To add one, drop a folder with an `index.html` at the repo root and point the
 project's `demoUrl` at `https://kathuman.github.io/claude-projects/<folder>/`.
+
+## Native apps
+
+A couple of projects are native Android apps (Flutter) rather than static
+pages, so they aren't servable from GitHub Pages — their `demoUrl` is `null`
+and `repoUrl` points at the folder. Building one requires the Flutter SDK:
+
+```
+othello-android/      — flutter build apk --release  (from inside the folder)
+problemlog-android/   — same; problemlog-android also needs your own Claude API key at runtime
+```
