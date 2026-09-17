@@ -1,5 +1,13 @@
 [
   {
+    "title": "Linkage",
+    "description": "A real-time 3D robotic arm simulator. Drive a 5-axis cobot by hand with per-joint sliders, or run canned Home / Wave / Pick & Place routines with an async tween engine. Live HUD reads the end-effector's actual forward-kinematics position off the joint hierarchy, an optional tip trace draws its path through space, and a cannon.js rigid-body world means anything the gripper releases actually falls, bounces and settles on the floor instead of snapping into place. Drag to orbit, scroll to zoom. Single page, vendored three.js + cannon.js, no runtime CDN dependency.",
+    "date": "2026-09-17",
+    "tags": ["javascript", "web", "3d", "simulation", "physics", "robotics"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/robotic-arm-sim",
+    "demoUrl": "https://kathuman.github.io/claude-projects/robotic-arm-sim/"
+  },
+  {
     "title": "Chess",
     "description": "Play chess against a friend on one screen — full rules including castling (both sides), en passant, pawn promotion with a piece-choice picker, and check / checkmate / stalemate detection. Click a piece to see its legal destinations dotted in (rings mark captures), watch moves slide into place, flip the board to face the other player, undo, and follow the algebraic move log with a live captured-material count. Five board colourways, remembered between visits. Ported from a Python/Tkinter original (included in the folder). Single file, no dependencies.",
     "date": "2026-09-13",
