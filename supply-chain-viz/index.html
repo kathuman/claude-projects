@@ -1474,24 +1474,61 @@
     // ---- 17. Disruption / resilience heatmap --------------
     reg({
       id: "risk-cascade", tier: "strat", lvl: 5, title: "Disruption impact matrix",
-      blurb: "Fail each DC in turn; re-source its markets to the next-best surviving DC; record the extra transit days every market absorbs. The result is a node × market heatmap of fragility — and the rows tell you which single failure hurts the network most.",
+      blurb: "Fail each DC in turn; re-source its markets to the next-best surviving DC that still has headroom; record the extra transit days every market absorbs. The result is a node × market heatmap of fragility — and the rows tell you which single failure hurts the network most.",
       use: "Resilience scoring; siting a buffer / backup DC; prioritising dual-sourcing.",
-      watch: "Reporting only average impact — the max cell and the count of new service breaches matter more.",
-      data: "The assignment, a fallback rule, and demand — plus any capacity headroom at surviving sites.",
+      watch: "Each DC fails alone here — a regional event that takes out two nearby DCs at once (the real risk behind, say, South and Southeast) isn't modelled.",
+      data: "The assignment, a fallback rule, demand, and each surviving site's market-serving capacity headroom.",
       render: function (root) {
         var mk = MARKETS.slice().sort(function (a, b) { return a.x - b.x; });
+        // Market-serving capacity, in the same units as market demand — the
+        // same scenario the Catchment assignment view uses (D1 and D4 are
+        // deliberately tight). Node .cap/.thr are a different metric
+        // (inbound plant→DC throughput) and aren't comparable to market
+        // demand, so they can't stand in for headroom here.
+        var CAP = { D1: 620, D2: 900, D3: 520, D4: 720, D5: 560 };
+        var baseVol = {};
+        DCS.forEach(function (d) { baseVol[d.id] = 0; });
+        BASE_ASSIGN.forEach(function (a) { baseVol[a.dc.id] += a.m.d; });
         var rows = DCS.map(function (failed) {
           var survivors = DCS.filter(function (d) { return d.id !== failed.id; });
+          var headroom0 = {};
+          survivors.forEach(function (d) { headroom0[d.id] = CAP[d.id] - baseVol[d.id]; });
+          var headroom = Object.assign({}, headroom0);
+          // re-source the failed DC's markets biggest-first, nearest survivor
+          // with room; once everyone's full, pile onto whoever has the most
+          // headroom left and flag the overflow.
+          var moving = mk.filter(function (m) {
+            var cur = BASE_ASSIGN.filter(function (a) { return a.m.id === m.id; })[0];
+            return cur.dc.id === failed.id;
+          }).slice().sort(function (a, b) { return b.d - a.d; });
+          var altFor = {};
+          moving.forEach(function (m) {
+            var cand = survivors.slice().sort(function (a, b) { return dist(a, m) - dist(b, m); });
+            var pick = null;
+            for (var i = 0; i < cand.length; i++) { if (headroom[cand[i].id] >= m.d) { pick = cand[i]; break; } }
+            if (!pick) pick = survivors.slice().sort(function (a, b) { return headroom[b.id] - headroom[a.id]; })[0];
+            altFor[m.id] = { dc: pick, capOver: headroom[pick.id] < m.d };
+            headroom[pick.id] -= m.d;
+          });
           var cells = mk.map(function (m) {
             var cur = BASE_ASSIGN.filter(function (a) { return a.m.id === m.id; })[0];
-            if (cur.dc.id !== failed.id) return { m: m, delta: 0, days: cur.days, brk: false };
-            var alt = survivors.slice().sort(function (a, b) { return dist(a, m) - dist(b, m); })[0];
+            if (cur.dc.id !== failed.id) return { m: m, delta: 0, days: cur.days, brk: false, capOver: false };
+            var picked = altFor[m.id], alt = picked.dc;
             var nd = daysFor(dist(alt, m));
-            return { m: m, delta: nd - cur.days, days: nd, brk: cur.days <= 2 && nd > 2, alt: alt };
+            return { m: m, delta: nd - cur.days, days: nd, brk: cur.days <= 2 && nd > 2, alt: alt, capOver: picked.capOver };
           });
           var atRisk = cells.reduce(function (s, c) { return s + (c.delta > 0 ? c.m.d : 0); }, 0);
           var breaches = cells.filter(function (c) { return c.brk; }).length;
-          return { failed: failed, cells: cells, atRisk: atRisk, breaches: breaches };
+          var overflows = cells.filter(function (c) { return c.capOver; }).length;
+          // Only the shortfall this failure actually causes — D1 and D4 run
+          // below their own capacity even at baseline (see the Catchment
+          // assignment view), so a survivor's pre-existing shortfall doesn't
+          // count against the DC that just failed.
+          var overflowQty = survivors.reduce(function (s, d) {
+            var before = Math.max(0, -headroom0[d.id]), after = Math.max(0, -headroom[d.id]);
+            return s + Math.max(0, after - before);
+          }, 0);
+          return { failed: failed, cells: cells, atRisk: atRisk, breaches: breaches, overflows: overflows, overflowQty: overflowQty };
         }).sort(function (a, b) { return b.atRisk - a.atRisk; });
         var maxDelta = Math.max.apply(null, rows.map(function (r) { return Math.max.apply(null, r.cells.map(function (c) { return c.delta; })); }));
 
@@ -1505,24 +1542,40 @@
           svg.appendChild(E("text", { x: padL - 10, y: padT + i * ch + ch / 2 + 4, "text-anchor": "end", class: "lbl-ink", "font-size": 11 }, r.failed.n + " fails"));
           r.cells.forEach(function (c, j) {
             var t = maxDelta ? c.delta / maxDelta : 0;
+            var strokeCol = c.brk ? css("--critical") : (c.capOver ? css("--warn") : "none");
             var rc = E("rect", { x: padL + j * cw + gap / 2, y: padT + i * ch + gap / 2, width: cw - gap, height: ch - gap, rx: 2,
               fill: c.delta <= 0 ? css("--grid") : seqColor(0.2 + 0.8 * t),
-              stroke: c.brk ? css("--critical") : "none", "stroke-width": c.brk ? 2 : 0 });
+              stroke: strokeCol, "stroke-width": strokeCol === "none" ? 0 : 2 });
             hover(rc, function () {
-              return c.delta <= 0
-                ? "<b>" + r.failed.n + " fails</b><br>" + c.m.n + ": no change"
-                : "<b>" + r.failed.n + " fails</b><br>" + c.m.n + " re-sourced to " + c.alt.n + "<br>+" + c.delta.toFixed(1) + " days" + (c.brk ? " · <span class='mut'>breaches 2-day SLA</span>" : "");
+              if (c.delta <= 0) return "<b>" + r.failed.n + " fails</b><br>" + c.m.n + ": no change";
+              var notes = [];
+              if (c.brk) notes.push("breaches 2-day SLA");
+              if (c.capOver) notes.push(c.alt.n + " now over capacity");
+              return "<b>" + r.failed.n + " fails</b><br>" + c.m.n + " re-sourced to " + c.alt.n + "<br>+" + c.delta.toFixed(1) + " days" +
+                (notes.length ? " · <span class='mut'>" + notes.join(" · ") + "</span>" : "");
             });
             svg.appendChild(rc);
+            if (c.brk && c.capOver) {
+              svg.appendChild(E("circle", { cx: padL + j * cw + cw - gap - 3, cy: padT + i * ch + gap + 3, r: 2.5, fill: css("--warn") }));
+            }
           });
-          svg.appendChild(E("text", { x: padL + mk.length * cw + 10, y: padT + i * ch + ch / 2 + 4, class: "val-lbl", "font-size": 10.5 },
+          var lblY = padT + i * ch + ch / 2 + (r.overflows ? -2 : 4);
+          svg.appendChild(E("text", { x: padL + mk.length * cw + 10, y: lblY, class: "val-lbl", "font-size": 10.5 },
             fmt(r.atRisk) + "k · " + r.breaches + " SLA"));
+          if (r.overflows) {
+            svg.appendChild(E("text", { x: padL + mk.length * cw + 10, y: lblY + 13, "font-size": 9.5, fill: css("--warn"), "font-weight": 600 },
+              fmt(r.overflowQty) + "k over cap"));
+          }
         });
         var worst = rows[0];
-        var wrap = figwrap(svg, "Losing " + worst.failed.n + " re-routes " + fmt(worst.atRisk) + "k units and opens " + worst.breaches + " new SLA breach" + (worst.breaches === 1 ? "" : "es") + " — the network's single point of failure and the case for a backup / dual-source.");
+        var capNote = worst.overflows
+          ? " and overloads " + (worst.overflows === 1 ? "a survivor" : "survivors") + " by " + fmt(worst.overflowQty) + "k units of capacity"
+          : "";
+        var wrap = figwrap(svg, "Losing " + worst.failed.n + " re-routes " + fmt(worst.atRisk) + "k units and opens " + worst.breaches + " new SLA breach" + (worst.breaches === 1 ? "" : "es") + capNote + " — the network's single point of failure and the case for a backup / dual-source.");
         wrap.appendChild(legend([
           { t: "No impact", c: css("--grid") }, { t: "Small delay", c: css("--seq-3") },
-          { t: "Large delay", c: css("--seq-6") }, { t: "New SLA breach", c: css("--critical") }
+          { t: "Large delay", c: css("--seq-6") }, { t: "New SLA breach", c: css("--critical") },
+          { t: "Destination over capacity", c: css("--warn") }
         ]));
         root.appendChild(wrap);
       }
