@@ -256,6 +256,17 @@
     .note { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--panel-2); }
     .note h4 { margin: 0 0 5px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
     .note p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+    .note.how { grid-column: 1 / -1; }
+    .note.how p { line-height: 1.55; max-width: 78ch; }
+
+    .assump { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--panel-2); margin-top: 12px; }
+    .assump h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .assump table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+    .assump th, .assump td { text-align: right; padding: 3px 10px 3px 0; white-space: nowrap; }
+    .assump th:first-child, .assump td:first-child { text-align: left; padding-left: 0; }
+    .assump th { font-weight: 600; color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+    .assump td { color: var(--ink-2); }
+    .assump td.ink { color: var(--ink); font-weight: 600; }
 
     /* tooltip */
     #tt {
@@ -583,6 +594,12 @@
         d.appendChild(H("p", null, p[1]));
         n.appendChild(d);
       });
+      if (o.how) {
+        var d2 = H("div", "note how");
+        d2.appendChild(H("h4", null, "How it works"));
+        d2.appendChild(H("p", null, o.how));
+        n.appendChild(d2);
+      }
       return n;
     }
 
@@ -1478,6 +1495,7 @@
       use: "Resilience scoring; siting a buffer / backup DC; prioritising dual-sourcing.",
       watch: "Each DC fails alone here — a regional event that takes out two nearby DCs at once (the real risk behind, say, South and Southeast) isn't modelled.",
       data: "The assignment, a fallback rule, demand, and each surviving site's market-serving capacity headroom.",
+      how: "For each DC in turn: (1) gather the markets it currently serves. (2) Re-source them biggest-demand-first, each to the nearest surviving DC that still has spare capacity — so one big market doesn't get starved because small ones grabbed the room first. (3) If nobody has room, it goes to whichever survivor has the most (even though that overloads it) — that's the orange ring below. (4) A cell also gets a red ring if the re-route pushes that market's transit time past the 2-day SLA. Capacity headroom uses the same per-DC numbers as the Catchment assignment view (not the DCs' own cap/throughput fields, which measure inbound plant volume, not market-serving capacity — see the table below). The \"Xk over cap\" figure is only the extra shortfall this specific failure causes: West and East DC already run over their own headroom even with nothing failed (see Catchment assignment), so that pre-existing strain isn't re-charged to whichever DC you're testing here.",
       render: function (root) {
         var mk = MARKETS.slice().sort(function (a, b) { return a.x - b.x; });
         // Market-serving capacity, in the same units as market demand — the
@@ -1577,6 +1595,23 @@
           { t: "Large delay", c: css("--seq-6") }, { t: "New SLA breach", c: css("--critical") },
           { t: "Destination over capacity", c: css("--warn") }
         ]));
+
+        // Make the capacity assumption itself visible, not just its effects —
+        // the same numbers every row's re-routing decision above is checked
+        // against.
+        var assump = H("div", "assump");
+        assump.appendChild(H("h4", null, "Capacity assumed for this scenario (same as Catchment assignment)"));
+        var rowsHtml = DCS.map(function (d) {
+          var hr = CAP[d.id] - baseVol[d.id];
+          var hrStr = (hr < 0 ? "−" : "+") + fmt(Math.abs(hr)) + "k";
+          return "<tr><td class='ink'>" + d.n + "</td><td>" + fmt(CAP[d.id]) + "k</td><td>" +
+            fmt(baseVol[d.id]) + "k</td><td style='color:" + (hr < 0 ? css("--warn") : "inherit") + "'>" + hrStr + "</td></tr>";
+        }).join("");
+        assump.appendChild(H("table", null,
+          "<thead><tr><th>DC</th><th>Capacity</th><th>Baseline volume</th><th>Headroom</th></tr></thead>" +
+          "<tbody>" + rowsHtml + "</tbody>"));
+        wrap.appendChild(assump);
+
         root.appendChild(wrap);
       }
     });
