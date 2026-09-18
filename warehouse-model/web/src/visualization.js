@@ -29,7 +29,7 @@
     rackSelected: 0xffb27a,
     dock: 0x199e70,
     zone: 0xc98500,
-    highlight: 0x31c4ff
+    highlight: 0x7dd3fc
   };
 
   function Visualization(stageEl) {
@@ -40,17 +40,17 @@
     stageEl.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0e13);
-    this.scene.fog = new THREE.Fog(0x0a0e13, 120, 420);
+    this.scene.background = new THREE.Color(0x0a2f52);
+    this.scene.fog = new THREE.Fog(0x0a2f52, 120, 420);
 
     this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
 
-    const hemi = new THREE.HemisphereLight(0x9fc7ff, 0x0a0e13, 0.7);
+    const hemi = new THREE.HemisphereLight(0x9fc7ff, 0x0a2f52, 0.7);
     this.scene.add(hemi);
     const key = new THREE.DirectionalLight(0xfff2e0, 1.0);
     key.position.set(80, 140, 60);
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x31c4ff, 0.25);
+    const rim = new THREE.DirectionalLight(0x7dd3fc, 0.25);
     rim.position.set(-60, 40, -80);
     this.scene.add(rim);
 
@@ -147,7 +147,7 @@
     }
     if (hits.length) {
       const mesh = hits[0].object;
-      mesh.material.emissive.setHex(0x442200);
+      mesh.material.emissive.setHex(0x0e4a66);
       this.selectedMesh = mesh;
       if (this._onSelect) this._onSelect(mesh.userData.info);
     } else if (this._onSelect) {
