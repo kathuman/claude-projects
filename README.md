@@ -82,7 +82,12 @@ go/index.html                      — https://kathuman.github.io/claude-project
 chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
 robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
 tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
+warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/
 ```
+
+`warehouse-model` is a multi-file project (a FreeCAD generator script + an analytical model
+alongside the web app, not just a single HTML file) — its entry point is `web/index.html`,
+not the folder root. See `warehouse-model/README.md` for its own architecture.
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
 app has no runtime CDN dependency); the licence sits beside it.

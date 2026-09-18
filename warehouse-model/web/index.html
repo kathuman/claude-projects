@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse Model — Interactive Engineering Reasoning Environment</title>
+  <meta name="description" content="A parametric warehouse model connecting a real FreeCAD engineering model, an analytical capacity/utilization/travel/cost model, and a live interactive 3D visualization — change a parameter and see the physical, mathematical and financial consequences together. By kathuman." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">WAREHOUSE<span>MODEL</span></div>
+      <div class="sub">FREECAD · ANALYTICAL MODEL · LIVE 3D — ONE SOURCE OF TRUTH</div>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="../">← Projects</a>
+    </div>
+  </header>
+
+  <div id="warnings" class="warnings" hidden></div>
+
+  <main class="layout">
+    <aside class="rail" id="rail-params">
+      <div class="rail-header">
+        <h1 class="rail-h1">Parameters</h1>
+        <button class="btn small" id="btn-reset-params">Reset all</button>
+      </div>
+      <p class="rail-note">Every slider here is read straight from <code>data/parameters.json</code> — the same file <code>freecad/create_model.py</code> reads. Nothing in this UI is a separate, hand-typed copy of a number that lives somewhere else.</p>
+    </aside>
+
+    <section class="stage-wrap">
+      <div id="stage"></div>
+
+      <div class="stage-toolbar">
+        <div class="viewmode-group">
+          <button class="btn small active" data-viewmode="live">Live Parametric View</button>
+          <button class="btn small" data-viewmode="reference">Reference Model (FreeCAD)</button>
+        </div>
+        <button class="btn small" id="btn-reset-view">Reset View</button>
+      </div>
+
+      <p class="reference-note" id="reference-note" hidden></p>
+
+      <div class="caption">Drag to orbit · scroll to zoom · click a rack row or dock door to inspect it</div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="rail-section">
+        <h2>Key Results</h2>
+        <div class="kpi-grid" id="kpi-grid"></div>
+      </div>
+      <div class="rail-section">
+        <h2>Inspector</h2>
+        <div class="inspector" id="inspector">
+          <p class="hint">Click a rack row or dock door in the 3D view to inspect it.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="lower">
+    <div class="lower-grid">
+      <div class="panel">
+        <h2>Visual Analytics</h2>
+        <div class="charts" id="charts"></div>
+      </div>
+      <div class="panel">
+        <h2>Traceability — where every number comes from</h2>
+        <p class="panel-note">Every KPI above is derived through these exact steps. Nothing is a black box.</p>
+        <div id="trace-panel"></div>
+      </div>
+    </div>
+
+    <div class="explain-grid">
+      <details class="rules" open>
+        <summary>Why does this matter? — reading the model</summary>
+        <div>
+          <p>
+            <b>Storage capacity</b> is pure geometry: how many rack rows fit across the building's width,
+            how many bays fit along its length, times levels and positions per bay. Change <code>aisle_width</code>
+            and watch <em>fewer or more rack rows fit</em> — a physical consequence, not a tuning knob on the
+            capacity number itself.
+          </p>
+          <p>
+            <b>Utilization</b> is deliberately independent of capacity: <code>current_inventory_pallets</code> is
+            a real-world operating fact (how much is actually in the building right now), so shrinking capacity
+            without changing demand is exactly how utilization climbs past 100% — a genuine overflow condition,
+            not a clipped display.
+          </p>
+          <p>
+            <b>Travel distance</b> comes from a simplified rectilinear (Manhattan) distance model — half the
+            racking block's width, plus half a row's length, plus the cross-aisle clearance, doubled for a round
+            trip. It's the standard textbook approximation for a rectangular storage block: good for showing how
+            layout choices trade off against travel, not precise enough to schedule a fleet against.
+          </p>
+          <p>
+            <b>Cost</b> uses flat illustrative rates (see the Cost sliders) — it shows how racking, building shell
+            and dock costs shift relative to each other as the design changes, not a quotation.
+          </p>
+        </div>
+      </details>
+
+      <details class="rules">
+        <summary>Guided experiments — try these</summary>
+        <div>
+          <ol class="experiments">
+            <li><b>Geometry.</b> Double <code>warehouse_length</code>. Does storage capacity double too? (Watch <code>bays_per_row</code> in the Traceability panel — the two cross-aisles are a fixed cost, so a longer building is slightly more efficient per metre, not exactly double.)</li>
+            <li><b>Capacity without footprint.</b> Leaving <code>warehouse_length</code> and <code>warehouse_width</code> untouched, can you raise storage capacity by changing only <code>rack_height</code> and <code>levels_per_rack</code>? What has to be true of <code>clear_height</code> for that to work?</li>
+            <li><b>Utilization under fixed capacity.</b> Freeze the building and racking parameters. Raise <code>current_inventory_pallets</code> past the storage capacity shown in Key Results. What warning appears, and what does that mean operationally?</li>
+            <li><b>A trade-off.</b> Narrow <code>aisle_width</code> to fit more rack rows. Capacity rises — but does <code>Avg. Round Trip</code> rise, fall, or stay flat? Why might a real facility still avoid the narrowest legal aisle?</li>
+            <li><b>The bottleneck shifts.</b> Push <code>daily_throughput_pallets</code> up while holding dock count fixed. At what point does <b>Dock Utilization</b> — not storage — become the binding constraint?</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="rules">
+        <summary>How this is built — architecture</summary>
+        <div>
+          <p>
+            <code>freecad/create_model.py</code> is the authoritative engineering model: it reads
+            <code>data/parameters.json</code>, builds the warehouse in FreeCAD (floor/walls/roof via
+            <code>Part::Box</code>, a live <code>Spreadsheet::Sheet</code> holding every parameter as a
+            named, unit-tagged, expression-bindable cell), and exports a tessellated GLB snapshot.
+            Toggle <b>Reference Model</b> above to load that real export.
+          </p>
+          <p>
+            <code>web/src/calculations.js</code> is the analytical model — the same layout arithmetic
+            FreeCAD's script runs, reimplemented in JS so it can recompute instantly as you drag a slider,
+            with every function returning a <code>trace</code> array (see the Traceability panel).
+          </p>
+          <p>
+            <code>web/src/visualization.js</code> is the live 3D view: procedural Three.js geometry built
+            from the same parameters and the same layout numbers, rebuilt on every change. It is
+            <em>not</em> the GLB — a baked mesh can't resize itself — and the app never implies otherwise.
+          </p>
+          <p>
+            This is Phase 1 of the project: parametric model, analytical model, live 3D, KPIs, charts,
+            explanations and traceability, all connected and tested end to end. Guided lessons, saved
+            scenarios with side-by-side comparison, a sensitivity-analysis mode, a before/after view and
+            CSV/JSON export are the planned Phase 2 layer on top of this same architecture — see the
+            project README.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    A parametric warehouse model: real FreeCAD geometry, a traceable analytical model, and a live interactive 3D view sharing one parameter source of truth. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
+<script src="src/model.js"></script>
+<script src="src/calculations.js"></script>
+<script src="src/visualization.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

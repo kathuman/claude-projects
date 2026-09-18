@@ -1,5 +1,13 @@
 [
   {
+    "title": "Warehouse Model",
+    "description": "An interactive engineering reasoning environment for warehouse design — not a CAD viewer. A real parametric FreeCAD model (Spreadsheet-driven, Part workbench geometry) is the authoritative engineering source; an analytical model derives storage capacity, utilization, travel distance, dock throughput and cost from the same parameters, with every result showing its exact formula chain; a live Three.js view rebuilds instantly as you drag a slider, since a static GLB export can't. Toggle to the real FreeCAD-exported reference model to see the two agree. Warnings flag physically impossible configurations (racks too tall for the building, inventory past capacity, docks over capacity) instead of hiding them. Guided experiments included. Multi-file project (FreeCAD generator script + analytical model + Three.js app), vendored three.js, no other dependencies.",
+    "date": "2026-09-18",
+    "tags": ["javascript", "web", "3d", "simulation", "freecad", "cad", "supply-chain", "engineering"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/warehouse-model",
+    "demoUrl": "https://kathuman.github.io/claude-projects/warehouse-model/web/"
+  },
+  {
     "title": "Tube Flow",
     "description": "A real-time 3D CFD simulator: air flowing through a tube around a small sphere. The brief called for a finite-element model; what actually runs is a D3Q19 lattice-Boltzmann solver — the standard technique for interactive CFD, since literal tetrahedral FEM doesn't run at frame rate in a browser. Drag inlet speed and viscosity (or tap a regime preset) to move the flow through Stokes creeping flow, laminar attachment, a steady separated wake and unsteady vortex shedding — the Reynolds number and regime are computed live from the solver's own numbers. Thousands of tracer particles are advected through the live velocity field by trilinear interpolation; an optional cross-section slice shows speed or vorticity. Single file, vendored three.js, no other dependencies.",
     "date": "2026-09-18",

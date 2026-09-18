@@ -1,0 +1,130 @@
+{
+  "$schema": "Single source of truth for the warehouse model. Every value here is an INDEPENDENT input — nothing here is a calculated output. FreeCAD (freecad/create_model.py), the analytical model (web/src/calculations.js) and the web UI all read this same file so they can never disagree about what a parameter means or what range it's allowed to take.",
+  "units": {
+    "length": "m",
+    "small_length": "mm",
+    "count": "count",
+    "percent": "%",
+    "rate": "pallets/hr/dock",
+    "speed": "m/s",
+    "time": "s",
+    "currency": "$"
+  },
+  "parameters": {
+    "warehouse_length": {
+      "value": 100, "unit": "m", "minimum": 40, "maximum": 300,
+      "category": "Building",
+      "description": "Overall building length, measured along the direction the rack aisles run (the direction a forklift travels furthest)."
+    },
+    "warehouse_width": {
+      "value": 60, "unit": "m", "minimum": 20, "maximum": 150,
+      "category": "Building",
+      "description": "Overall building width, perpendicular to the aisles — this is what limits how many rack rows fit side by side."
+    },
+    "clear_height": {
+      "value": 10, "unit": "m", "minimum": 6, "maximum": 18,
+      "category": "Building",
+      "description": "Clear height under the roof structure. Must exceed rack height plus clearance for sprinklers/lighting; the model warns if racks don't fit."
+    },
+    "wall_thickness": {
+      "value": 200, "unit": "mm", "minimum": 150, "maximum": 400,
+      "category": "Building",
+      "description": "Perimeter wall thickness (tilt-up concrete panel range). Affects only the building envelope, not usable floor area meaningfully at this scale."
+    },
+    "rack_height": {
+      "value": 8, "unit": "m", "minimum": 3, "maximum": 12,
+      "category": "Racking",
+      "description": "Top-beam height of the storage rack. Taller racks pack more levels into the same footprint, but need taller (costlier) lift trucks and a taller building."
+    },
+    "rack_depth": {
+      "value": 1.1, "unit": "m", "minimum": 0.9, "maximum": 1.5,
+      "category": "Racking",
+      "description": "Single-deep pallet rack depth (front to back). Two rows are placed back-to-back between aisles."
+    },
+    "bay_width": {
+      "value": 2.7, "unit": "m", "minimum": 1.8, "maximum": 3.2,
+      "category": "Racking",
+      "description": "Width of one rack bay (the repeating upright-to-upright frame module) — this is how many meters of aisle one storage position 'costs' along the row."
+    },
+    "levels_per_rack": {
+      "value": 4, "unit": "count", "minimum": 2, "maximum": 8,
+      "category": "Racking",
+      "description": "Number of storage levels stacked in the rack, floor level included."
+    },
+    "positions_per_level_per_bay": {
+      "value": 2, "unit": "count", "minimum": 1, "maximum": 3,
+      "category": "Racking",
+      "description": "Pallet positions across one bay's width at one level (1 = single pallet per bay, 2 = double-deep or two standard pallets side by side)."
+    },
+    "aisle_width": {
+      "value": 3.2, "unit": "m", "minimum": 2.4, "maximum": 4.5,
+      "category": "Racking",
+      "description": "Clear aisle width between two facing rack rows — set by the turning radius of the lift truck fleet. Narrower aisles fit more rack rows but restrict equipment choice."
+    },
+    "num_receiving_docks": {
+      "value": 4, "unit": "count", "minimum": 1, "maximum": 20,
+      "category": "Docks & Flow",
+      "description": "Number of inbound truck dock doors."
+    },
+    "num_shipping_docks": {
+      "value": 4, "unit": "count", "minimum": 1, "maximum": 20,
+      "category": "Docks & Flow",
+      "description": "Number of outbound truck dock doors."
+    },
+    "dock_bay_width": {
+      "value": 3.7, "unit": "m", "minimum": 3.2, "maximum": 4.5,
+      "category": "Docks & Flow",
+      "description": "Width allotted per dock door along the dock wall, trailer-width driven."
+    },
+    "cross_aisle_width": {
+      "value": 5, "unit": "m", "minimum": 3, "maximum": 8,
+      "category": "Docks & Flow",
+      "description": "Clear staging zone at each end of the racking, between the dock doors and the first rack row — reserved for staging and cross-traffic, not used for storage."
+    },
+    "current_inventory_pallets": {
+      "value": 4000, "unit": "count", "minimum": 0, "maximum": 20000,
+      "category": "Operations",
+      "description": "Pallets currently in storage — set independently of physical capacity, on purpose: this is what lets you see utilization exceed 100% when you shrink capacity without shrinking demand."
+    },
+    "daily_throughput_pallets": {
+      "value": 800, "unit": "count", "minimum": 50, "maximum": 5000,
+      "category": "Operations",
+      "description": "Pallets moved in + out per day (inbound plus outbound, combined) — drives dock loading and total travel distance."
+    },
+    "dock_handling_rate": {
+      "value": 18, "unit": "pallets/hr/dock", "minimum": 5, "maximum": 40,
+      "category": "Operations",
+      "description": "Sustained pallets processed per hour per active dock door, loading/unloading + paperwork included."
+    },
+    "operating_hours_per_day": {
+      "value": 16, "unit": "hr", "minimum": 8, "maximum": 24,
+      "category": "Operations",
+      "description": "Hours per day the docks and floor are actively operating (e.g. two shifts = 16h)."
+    },
+    "forklift_speed": {
+      "value": 1.8, "unit": "m/s", "minimum": 1.0, "maximum": 3.0,
+      "category": "Operations",
+      "description": "Loaded travel speed used for the travel-time estimate (reach trucks in narrow aisles run slower than counterbalance trucks in open floor)."
+    },
+    "forklift_cycle_overhead": {
+      "value": 60, "unit": "s", "minimum": 30, "maximum": 180,
+      "category": "Operations",
+      "description": "Fixed time per trip that isn't travel — picking/placing the pallet, lift/lower at height, aisle turn."
+    },
+    "cost_per_rack_position": {
+      "value": 65, "unit": "$", "minimum": 30, "maximum": 150,
+      "category": "Cost",
+      "description": "Installed cost per storage position (racking, hardware, install) — illustrative, not a quotation."
+    },
+    "cost_per_sqm_building": {
+      "value": 550, "unit": "$", "minimum": 300, "maximum": 1200,
+      "category": "Cost",
+      "description": "Shell building cost per square metre of footprint — illustrative, scales with clear height beyond this base rate is not modeled."
+    },
+    "cost_per_dock": {
+      "value": 45000, "unit": "$", "minimum": 20000, "maximum": 120000,
+      "category": "Cost",
+      "description": "Installed cost per dock door (leveler, seal, door, door control) — illustrative."
+    }
+  }
+}
