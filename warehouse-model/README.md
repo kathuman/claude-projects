@@ -60,11 +60,18 @@ warehouse-model/
 │   └── parameters.json          single source of truth: every parameter, unit, range,
 │                                 description — read by BOTH create_model.py and the web app
 │
+├── tools/
+│   └── render_blueprint.js      generates web/assets/blueprint.svg from the SAME
+│                                 calculations.js layout arithmetic (no FreeCAD needed —
+│                                 pure Node, run `node tools/render_blueprint.js`)
+│
 └── web/
     ├── index.html
     ├── style.css
     ├── models/
     │   └── warehouse_baseline.glb   generated output (exported by create_model.py)
+    ├── assets/
+    │   └── blueprint.svg            generated output (exported by tools/render_blueprint.js)
     ├── src/
     │   ├── model.js              parameter state management (load/get/set/reset)
     │   ├── calculations.js       the analytical model — pure functions, no DOM
@@ -119,7 +126,20 @@ spreadsheet — edit a cell (e.g. `rack_height`) and recompute, and the bound ge
 The *count* of rack rows/bays is fixed at generation time (re-run the script to change it) —
 see the docstring at the top of `create_model.py` for exactly why.
 
-### 2. Run the web app locally
+### 2. Regenerate the floor-plan blueprint (optional — a generated copy is already committed)
+
+Pure Node, no FreeCAD needed — it reuses `web/src/calculations.js`'s tested layout
+arithmetic directly:
+
+```bash
+node tools/render_blueprint.js
+```
+
+Writes `web/assets/blueprint.svg`, shown in the app under **Floor Plan (Blueprint)**. Like
+the Reference Model 3D view, it's a snapshot of `data/parameters.json`'s baseline values —
+regenerate it after changing the defaults, or point the script at a different parameter set.
+
+### 3. Run the web app locally
 
 Browsers block ES-module-like loading and GLB fetches over `file://`, so serve it:
 
@@ -129,7 +149,7 @@ python -m http.server 8000
 # then open http://localhost:8000/warehouse-model/web/
 ```
 
-### 3. Deployment
+### 4. Deployment
 
 Nothing to configure — this repo's GitHub Pages is already live at
 `kathuman.github.io/claude-projects/`. Pushing to `main` republishes every sub-app,
@@ -182,6 +202,13 @@ names and order specifically so a side-by-side diff stays easy.
   view's structure/rack/dock styling, the overflow warning fires correctly when inventory is
   pushed past capacity, and the browser console showed zero errors across the full
   interaction sequence.
+- Floor-plan blueprint (`tools/render_blueprint.js` → `web/assets/blueprint.svg`): confirmed
+  the exact numbers on the drawing (capacity, rack row count, footprint) come from the same
+  `computeAll()` call the rest of the app uses, not separately re-typed; rendered and
+  screenshotted in a real browser (both standalone and embedded on the app page) to catch
+  layout bugs — an early draft had a stray coordinate-system bug drawing a diagonal line
+  across the title block and detail dimensions crowding the corner labels, both fixed and
+  re-verified visually, not just by reading the SVG source.
 
 **NOT VERIFIED:**
 

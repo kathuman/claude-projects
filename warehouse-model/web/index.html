@@ -66,6 +66,21 @@
   </main>
 
   <section class="lower">
+    <div class="panel blueprint-panel">
+      <h2>Floor Plan (Blueprint)</h2>
+      <p class="panel-note">
+        A dimensioned top-down plan generated from the same baseline parameters and the same
+        <code>calculations.js</code> layout arithmetic as the rest of this page — not a separate,
+        hand-drawn illustration. Like the Reference Model 3D view, it reflects
+        <code>data/parameters.json</code>'s defaults and does not redraw itself as you drag a slider;
+        regenerate it (<code>node tools/render_blueprint.js</code>, see the project README) after
+        changing the defaults.
+      </p>
+      <a href="assets/blueprint.svg" target="_blank" rel="noopener" class="blueprint-link">
+        <img src="assets/blueprint.svg" alt="Dimensioned top-down floor plan of the baseline warehouse: building envelope, 22 rack rows, receiving and shipping staging zones, and dock doors, drawn to scale." class="blueprint-img" />
+      </a>
+    </div>
+
     <div class="lower-grid">
       <div class="panel">
         <h2>Visual Analytics</h2>
