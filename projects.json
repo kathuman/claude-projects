@@ -1,5 +1,13 @@
 [
   {
+    "title": "Tube Flow",
+    "description": "A real-time 3D CFD simulator: air flowing through a tube around a small sphere. The brief called for a finite-element model; what actually runs is a D3Q19 lattice-Boltzmann solver — the standard technique for interactive CFD, since literal tetrahedral FEM doesn't run at frame rate in a browser. Drag inlet speed and viscosity (or tap a regime preset) to move the flow through Stokes creeping flow, laminar attachment, a steady separated wake and unsteady vortex shedding — the Reynolds number and regime are computed live from the solver's own numbers. Thousands of tracer particles are advected through the live velocity field by trilinear interpolation; an optional cross-section slice shows speed or vorticity. Single file, vendored three.js, no other dependencies.",
+    "date": "2026-09-18",
+    "tags": ["javascript", "web", "3d", "simulation", "physics", "cfd"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/tube-flow-sim",
+    "demoUrl": "https://kathuman.github.io/claude-projects/tube-flow-sim/"
+  },
+  {
     "title": "Linkage",
     "description": "A real-time 3D robotic arm simulator. Drive a 5-axis cobot by hand with per-joint sliders, or run canned Home / Wave / Pick & Place routines with an async tween engine. Live HUD reads the end-effector's actual forward-kinematics position off the joint hierarchy, an optional tip trace draws its path through space, and a cannon.js rigid-body world means anything the gripper releases actually falls, bounces and settles on the floor instead of snapping into place. Drag to orbit, scroll to zoom. Single page, vendored three.js + cannon.js, no runtime CDN dependency.",
     "date": "2026-09-17",

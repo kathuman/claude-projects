@@ -81,6 +81,7 @@ othello/index.html                 — https://kathuman.github.io/claude-project
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
 chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
 robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
+tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
 ```
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
