@@ -1,5 +1,13 @@
 [
   {
+    "title": "Face Morph",
+    "description": "Live face-landmark detection and triangulated face morphing, entirely on-device. Two small neural nets (TinyFaceDetector + a 68-point landmark CNN, via TensorFlow.js) run in the browser against your camera or an uploaded photo — nothing is ever uploaded, a persistent banner says so. Capture two faces, then morph between them with a real triangulated affine warp and cross-dissolve, the classic technique behind photo-morph effects. The 142-triangle mesh isn't computed live — it's a fixed, offline-verified triangulation (exact area match against the convex hull, so no gaps or overlaps) reused for every pair, since the 68 landmark indices always mean the same point on any detected face. Drag the blend slider, watch it auto-morph, or peek at the triangle mesh itself. Single file, vendored face-api.js, no other dependencies.",
+    "date": "2026-09-21",
+    "tags": ["javascript", "web", "computer-vision", "machine-learning", "canvas", "camera"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/face-morph",
+    "demoUrl": "https://kathuman.github.io/claude-projects/face-morph/"
+  },
+  {
     "title": "Warehouse Model",
     "description": "An interactive engineering reasoning environment for warehouse design — not a CAD viewer. A real parametric FreeCAD model (Spreadsheet-driven, Part workbench geometry) is the authoritative engineering source; an analytical model derives storage capacity, utilization, travel distance, dock throughput and cost from the same parameters, with every result showing its exact formula chain; a live Three.js view rebuilds instantly as you drag a slider, since a static GLB export can't. Toggle to the real FreeCAD-exported reference model to see the two agree. Warnings flag physically impossible configurations (racks too tall for the building, inventory past capacity, docks over capacity) instead of hiding them. Guided experiments included. Multi-file project (FreeCAD generator script + analytical model + Three.js app), vendored three.js, no other dependencies.",
     "date": "2026-09-18",

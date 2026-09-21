@@ -83,6 +83,7 @@ chess/index.html                   — https://kathuman.github.io/claude-project
 robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
 tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
 warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/
+face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/
 ```
 
 `warehouse-model` is a multi-file project (a FreeCAD generator script + an analytical model
