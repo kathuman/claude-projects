@@ -73,6 +73,7 @@ Some projects are self-contained web apps that live in their own folder here and
 are served straight from GitHub Pages:
 
 ```
+network-stress-test/web/index.html — https://kathuman.github.io/claude-projects/network-stress-test/web/
 scientific-calculator/index.html   — https://kathuman.github.io/claude-projects/scientific-calculator/
 rubiks-cube/index.html             — https://kathuman.github.io/claude-projects/rubiks-cube/
 supply-chain-viz/index.html        — https://kathuman.github.io/claude-projects/supply-chain-viz/
@@ -86,9 +87,9 @@ warehouse-model/web/index.html     — https://kathuman.github.io/claude-project
 face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/
 ```
 
-`warehouse-model` is a multi-file project (a FreeCAD generator script + an analytical model
-alongside the web app, not just a single HTML file) — its entry point is `web/index.html`,
-not the folder root. See `warehouse-model/README.md` for its own architecture.
+`warehouse-model` and `network-stress-test` are multi-file projects (several JS modules
+alongside the page, not just a single HTML file) — their entry points are `web/index.html`,
+not the folder root. See each folder's own `README.md` for its architecture.
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
 app has no runtime CDN dependency); the licence sits beside it.

@@ -1,5 +1,13 @@
 [
   {
+    "title": "Network Stress Test",
+    "description": "A supply-network resilience sandbox: build or generate a production/warehouse/consumer network (hundreds of editable nodes) connected by air/sea/road lanes with mode-characteristic defaults, and stress-test it against a real min-cost-flow solver. Phase 1: deterministic disruption scenarios and an N-1 contingency scan (the power-grid idea — which single node or lane, if lost, hurts the most). Phase 2: Monte Carlo random-failure sampling, a Time-to-Survive vs. Time-to-Recover check against consumer inventory buffers, and a greedy adversarial search for the worst combination of simultaneous failures. Every algorithm is unit-tested in Node before touching the UI, and the full pipeline is driven end-to-end in headless Chromium. Multi-file project, no runtime dependencies.",
+    "date": "2026-09-28",
+    "tags": ["javascript", "web", "simulation", "supply-chain", "engineering", "optimization"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/network-stress-test",
+    "demoUrl": "https://kathuman.github.io/claude-projects/network-stress-test/web/"
+  },
+  {
     "title": "Face Morph",
     "description": "Live face-landmark detection and triangulated face morphing, entirely on-device. Two small neural nets (TinyFaceDetector + a 68-point landmark CNN, via TensorFlow.js) run in the browser against your camera or an uploaded photo — nothing is ever uploaded, a persistent banner says so. Capture two faces, then morph between them with a real triangulated affine warp and cross-dissolve, the classic technique behind photo-morph effects. The 142-triangle mesh isn't computed live — it's a fixed, offline-verified triangulation (exact area match against the convex hull, so no gaps or overlaps) reused for every pair, since the 68 landmark indices always mean the same point on any detected face. Drag the blend slider, watch it auto-morph, or peek at the triangle mesh itself. Single file, vendored face-api.js, no other dependencies.",
     "date": "2026-09-21",

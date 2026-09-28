@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Network Stress Test — Supply Network Resilience Sandbox</title>
+  <meta name="description" content="Build (or generate) a production/warehouse/consumer network with air/sea/road lanes, run deterministic disruption scenarios against a real min-cost-flow solver, and scan for single points of failure with an N-1 contingency analysis. By kathuman." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">NETWORK<span>STRESS TEST</span></div>
+      <div class="sub">PRODUCTION · WAREHOUSE · CONSUMER — AIR / SEA / ROAD</div>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="../">← Projects</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="rail" id="rail-network">
+      <div class="rail-header">
+        <h1 class="rail-h1">Network</h1>
+      </div>
+      <p class="rail-note">Nothing here is a fixed demo network — generate a random starting point at any size, or build/import your own. Every node and lane stays fully editable in the tables below the map.</p>
+
+      <div class="rail-section">
+        <h2>Generate</h2>
+        <div class="gen-grid">
+          <label>Production <input type="number" id="gen-production" value="60" min="0" max="2000" /></label>
+          <label>Warehouse <input type="number" id="gen-warehouse" value="120" min="0" max="2000" /></label>
+          <label>Consumer <input type="number" id="gen-consumer" value="150" min="0" max="2000" /></label>
+          <label>Products <input type="number" id="gen-products" value="5" min="1" max="20" /></label>
+          <label>Fanout <input type="number" id="gen-fanout" value="5" min="1" max="15" /></label>
+          <label>Seed <input type="number" id="gen-seed" value="42" min="0" max="999999" /></label>
+        </div>
+        <button class="btn" id="btn-generate">Generate network</button>
+      </div>
+
+      <div class="rail-section">
+        <h2>Import / Export</h2>
+        <div class="btn-row">
+          <button class="btn small" id="btn-export-nodes">Export nodes CSV</button>
+          <button class="btn small" id="btn-export-edges">Export edges CSV</button>
+        </div>
+        <div class="btn-row">
+          <label class="btn small file-btn">Import nodes CSV<input type="file" id="file-import-nodes" accept=".csv" hidden /></label>
+          <label class="btn small file-btn">Import edges CSV<input type="file" id="file-import-edges" accept=".csv" hidden /></label>
+        </div>
+        <p class="rail-note" id="import-status"></p>
+      </div>
+
+      <div class="rail-section">
+        <h2>Products</h2>
+        <div id="products-list" class="products-list"></div>
+        <button class="btn small" id="btn-add-product">+ Add product</button>
+      </div>
+
+      <div class="rail-section">
+        <h2>Mode defaults</h2>
+        <p class="rail-note">Applied when generating or adding new lanes. Editing a mode here does not retroactively change lanes already created — edit those directly in the Edges table.</p>
+        <div id="mode-defaults" class="mode-defaults"></div>
+      </div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div id="stage"><svg id="map-svg" width="100%" height="100%"></svg></div>
+
+      <div class="stage-toolbar">
+        <div class="viewmode-group">
+          <button class="btn small active" data-basemode="normal">Base network</button>
+          <button class="btn small" data-basemode="flow">Flow (after solve)</button>
+        </div>
+        <button class="btn small" id="btn-solve">Solve network</button>
+      </div>
+
+      <p class="caption" id="map-caption">Click a node or lane to select it · scroll to zoom · drag to pan</p>
+    </section>
+
+    <aside class="side-panel">
+      <div class="rail-section">
+        <h2>Key Results</h2>
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div id="kpi-perproduct" class="kpi-perproduct"></div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Scenario</h2>
+        <p class="rail-note">Select a node or lane on the map (or below) to disable or derate it, then Solve.</p>
+        <div id="scenario-list" class="scenario-list"></div>
+        <button class="btn small" id="btn-clear-scenario">Clear scenario</button>
+      </div>
+
+      <div class="rail-section">
+        <h2>Inspector</h2>
+        <div class="inspector" id="inspector"><p class="hint">Click a node or lane in the map, or a table row below, to inspect it.</p></div>
+      </div>
+
+      <div class="rail-section">
+        <h2>N-1 Contingency Scan</h2>
+        <p class="rail-note">Re-solves the network once per active node/lane, ranked by how much service level it costs if lost alone. Elements carrying zero flow in the current solve are skipped — they provably can't be the sole cause of a shortfall.</p>
+        <label class="scan-limit-label">Elements to test <input type="number" id="scan-limit" value="40" min="5" max="500" /></label>
+        <button class="btn small" id="btn-scan">Run scan</button>
+        <div id="scan-status" class="rail-note"></div>
+        <div id="scan-results" class="scan-results"></div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="lower">
+    <div class="lower-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Nodes <span id="node-count" class="count-badge"></span></h2>
+          <button class="btn small" id="btn-add-node">+ Add node</button>
+        </div>
+        <div class="table-wrap"><table id="nodes-table" class="data-table"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Edges <span id="edge-count" class="count-badge"></span></h2>
+          <button class="btn small" id="btn-add-edge">+ Add edge</button>
+        </div>
+        <div class="table-wrap"><table id="edges-table" class="data-table"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Phase 2 — Stress Testing</h2>
+    <div class="phase2-grid">
+      <div class="panel">
+        <h2>Monte Carlo Stress Test</h2>
+        <p class="panel-note">Every edge fails at random with its own <code>baseFailureRate</code>; every node fails with a configurable rate (nodes don't carry a per-node rate in the base schema). Runs many independent trials and shows the distribution of outcomes, not just one scenario.</p>
+        <div class="mc-controls">
+          <label>Trials <input type="number" id="mc-trials" value="50" min="5" max="1000" /></label>
+          <label>Node fail rate <input type="number" id="mc-node-rate" value="0.01" min="0" max="1" step="0.005" /></label>
+          <label>Seed <input type="number" id="mc-seed" value="1" min="0" max="999999" /></label>
+        </div>
+        <button class="btn small" id="btn-run-mc">Run Monte Carlo</button>
+        <div id="mc-status" class="rail-note"></div>
+        <div id="mc-results"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Time-to-Survive vs. Time-to-Recover</h2>
+        <p class="panel-note">Checks the <b>currently applied scenario</b> (set it via the Scenario panel, a table's disable toggle, or a Contingency/Adversarial result) against consumer inventory buffers. A static single comparison, not a day-by-day dynamic simulation — see "How this works" below.</p>
+        <div class="mc-controls">
+          <label>Default buffer (days) <input type="number" id="res-buffer-days" value="10" min="0" max="365" /></label>
+        </div>
+        <button class="btn small" id="btn-run-resilience">Check current scenario</button>
+        <div id="res-status" class="rail-note"></div>
+        <div id="res-results"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Adversarial Worst-Case Search</h2>
+        <p class="panel-note">Greedily finds the worst combination of up to N simultaneous failures (network-interdiction framing) by repeatedly re-running the N-1 scan against the already-degraded network. A tractable heuristic, not a guaranteed global worst case.</p>
+        <div class="mc-controls">
+          <label>Budget (failures) <input type="number" id="adv-budget" value="3" min="1" max="15" /></label>
+          <label>Candidates/step <input type="number" id="adv-per-step" value="20" min="5" max="100" /></label>
+        </div>
+        <button class="btn small" id="btn-run-adversarial">Run search</button>
+        <div id="adv-status" class="rail-note"></div>
+        <div id="adv-results"></div>
+      </div>
+    </div>
+
+    <div class="explain-grid">
+      <details class="rules" open>
+        <summary>How the solver works</summary>
+        <div>
+          <p>
+            Each product is solved as its own min-cost flow problem (successive shortest augmenting paths with
+            node potentials), production and warehouse nodes are node-capacitated via the standard split-node
+            technique, and consumer demand is the sink. Products are solved <b>sequentially in ascending priority
+            order</b>, each consuming from whatever edge capacity earlier products left behind. This is a
+            deliberate, documented approximation of the much harder general multi-commodity flow problem — a
+            higher-priority product claims a shared lane first; a lower-priority one gets only the leftover. It is
+            not a global joint optimum across products.
+          </p>
+          <p>
+            A <b>scenario</b> disables or derates specific nodes/lanes to model a disruption before re-solving —
+            compare Key Results before and after. The <b>N-1 scan</b> automates this: it tries disabling every
+            currently-active node and lane, one at a time, and ranks them by how much service level each single
+            loss costs — the power-grid "N-1 contingency" idea applied to a supply network.
+          </p>
+        </div>
+      </details>
+      <details class="rules">
+        <summary>About the generated starting network</summary>
+        <div>
+          <p>
+            "Generate" produces a random network clustered around real-world trade regions so the map looks
+            plausible, with mode-characteristic lane defaults and a coverage pass that guarantees every node has
+            at least one upstream path for each product it handles — but it is not calibrated to a pristine 100%
+            baseline service level. A freshly generated network typically clears only 55-70% of demand out of the
+            box, the same way a real, un-optimized network would: some lanes are genuinely capacity-constrained,
+            some nodes are one hop further from supply than others. That's an intentional, honest starting point
+            for a stress-testing tool, not a bug to chase to zero — edit capacities, add lanes, or regenerate with
+            a different seed/fanout to explore how those choices change resilience.
+          </p>
+        </div>
+      </details>
+      <details class="rules">
+        <summary>Phase 2 — Monte Carlo, Time-to-Survive/Recover, and adversarial search</summary>
+        <div>
+          <p>
+            <b>Monte Carlo</b> samples many independent random scenarios (each edge fails with its own lane
+            <code>baseFailureRate</code>; each node fails at a configurable rate) and reports the distribution of
+            outcomes — mean, percentiles, worst trial observed — rather than one hand-picked "what if". It assumes
+            independent failures: a real regional event that knocks out several correlated lanes at once isn't
+            modeled here.
+          </p>
+          <p>
+            <b>Time-to-Survive vs. Time-to-Recover</b> compares, for the currently applied scenario, how long a
+            consumer's inventory buffer covers its shortfall (<code>buffer days × pre-disruption receipt ÷
+            shortfall rate</code>) against how long the disrupted element takes to come back
+            (<code>meanDisruptionDays</code>, per element, defaulting to 14 days for a node and reusing lane
+            defaults for an edge). If time-to-survive is shorter, that consumer stocks out before recovery — the
+            gap is genuine downtime. This is a <em>static, single comparison</em> built on the same solver as
+            everything else here, not a day-by-day dynamic simulation with depleting/replenishing inventories and
+            cascading recovery — an intentional, documented simplification of the full MIT CTL / Sheffi resilience
+            framework this app is built around, not a claim of full dynamic realism.
+          </p>
+          <p>
+            <b>Adversarial search</b> greedily re-runs the N-1 contingency scan against the network as it's already
+            been degraded by prior steps, each time removing whatever does the most additional damage, up to a
+            budget of simultaneous failures. Like the N-1 scan, this is a tractable heuristic (network-interdiction
+            framing), not a guaranteed globally-worst combination — exhaustively checking every possible
+            combination of even a handful of failures out of hundreds of elements is computationally infeasible.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    A supply-network stress-test sandbox: editable production/warehouse/consumer nodes and air/sea/road lanes, a real min-cost-flow solver, disruption scenarios, an N-1 contingency scan, Monte Carlo stress testing, a Time-to-Survive/Time-to-Recover resilience check, and adversarial worst-case search. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+
+<script src="src/modeDefaults.js"></script>
+<script src="src/flowSolver.js"></script>
+<script src="src/network.js"></script>
+<script src="src/generator.js"></script>
+<script src="src/graphAnalysis.js"></script>
+<script src="src/monteCarlo.js"></script>
+<script src="src/resilienceSim.js"></script>
+<script src="src/adversarial.js"></script>
+<script src="src/csv.js"></script>
+<script src="src/mapView.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>
