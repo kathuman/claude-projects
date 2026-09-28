@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess</title>
-  <meta name="description" content="Play chess against a friend on one screen — full rules including castling, en passant, promotion, check, checkmate and stalemate. Undo, flip board, move log, board themes. Single file, no dependencies." />
+  <meta name="description" content="Play chess against a friend on one screen or against the Stockfish engine (eight strength levels) — full rules including castling, en passant, promotion, check, checkmate and stalemate. Undo, flip board, move log, board themes." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9818;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -198,6 +198,14 @@
     .swatch { flex: 1; height: 30px; border-radius: 8px; border: 1px solid var(--border); position: relative; overflow: hidden; }
     .swatch .pv { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; }
 
+    .engine-only[hidden] { display: none; }
+    .engine-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); }
+    .engine-status .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+    .engine-status.ready .led { background: #3f9b5a; }
+    .engine-status.busy .led { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+    .engine-status.error .led { background: #d0453a; }
+    @keyframes pulse { 50% { opacity: .3; } }
+
     .stats { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
     .stats div { display: flex; justify-content: space-between; padding: 3px 0; }
     .stats b { color: var(--ink); font-weight: 600; }
@@ -263,7 +271,7 @@
       <span class="mk">♞</span>
       <div>
         <h1>Chess</h1>
-        <div class="sub">two players &middot; one screen</div>
+        <div class="sub">vs a friend &middot; or vs Stockfish</div>
       </div>
     </div>
     <div class="hactions">
@@ -281,12 +289,12 @@
         <div class="turn-row">
           <div class="side-score" id="scoreWhite">
             <span class="chip w"></span>
-            <span class="lbl">White</span>
+            <span class="lbl" id="lblWhite">White</span>
             <span class="cap" id="capWhite"></span>
           </div>
           <div class="side-score" id="scoreBlack">
             <span class="chip b"></span>
-            <span class="lbl">Black</span>
+            <span class="lbl" id="lblBlack">Black</span>
             <span class="cap" id="capBlack"></span>
           </div>
         </div>
@@ -297,6 +305,38 @@
       </section>
 
       <aside>
+        <div class="panel">
+          <h3>Opponent</h3>
+          <div class="field">
+            <label for="oppSel">Play against</label>
+            <select class="sel" id="oppSel">
+              <option value="human">A friend — same screen</option>
+              <option value="engine">Computer — Stockfish</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="sideSel">You play</label>
+            <select class="sel" id="sideSel">
+              <option value="w">White</option>
+              <option value="b">Black</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="levelSel">Strength</label>
+            <select class="sel" id="levelSel">
+              <option value="1">1 — Beginner</option>
+              <option value="2">2 — Novice</option>
+              <option value="3">3 — Casual</option>
+              <option value="4">4 — Club</option>
+              <option value="5">5 — Strong club</option>
+              <option value="6">6 — Expert</option>
+              <option value="7">7 — Master</option>
+              <option value="8">8 — Full strength</option>
+            </select>
+          </div>
+          <div class="engine-status engine-only" id="engineStatus"><span class="led"></span><span id="engineText">Engine not loaded</span></div>
+        </div>
+
         <div class="panel">
           <h3>Game</h3>
           <button class="btn primary" id="newBtn">New game</button>
@@ -349,8 +389,15 @@
       <p>
         A king in check is ringed in red; you must get out of check immediately. Checkmate ends
         the game for the side with no way out; if the side to move has no legal move but isn't in
-        check, it's stalemate — a draw. Undo steps back one full move at a time; Flip board turns
+        check, it's stalemate — a draw. Undo steps back one move at a time; Flip board turns
         the board around for the other player without changing whose turn it is.
+      </p>
+      <p>
+        To play the computer, set <b>Play against</b> to <b>Computer — Stockfish</b>, pick your colour
+        and a strength, and just play. Level 1 blunders freely and suits a first game; level 8 is the
+        engine at full (lite) strength and will beat any human. You can switch sides or strength
+        mid-game — the engine picks up from the current position. In this mode Undo takes back your
+        last move <em>and</em> the computer's reply, so it's your turn again.
       </p>
     </details>
 
@@ -358,7 +405,8 @@
       <summary>How the code is built</summary>
       <div class="codedoc">
         <p>
-          The whole game is this one HTML file — no build step, no libraries. All the
+          The whole game is this one HTML file — no build step, no libraries (the optional
+          Stockfish engine is a separate file it loads on demand; see below). All the
           JavaScript lives in a single function (an <em>IIFE</em>) at the bottom, split into
           labelled sections with <code>// ===</code> banners, mirroring the structure of the
           Python/Tkinter version this was ported from:
@@ -413,6 +461,26 @@
           "is this move legal" all reduce to calls to this one function.
         </p>
 
+        <h4>The computer opponent is Stockfish, talking UCI</h4>
+        <p>
+          The engine is <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>
+          — the open-source <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish 18</a>
+          compiled to WebAssembly (the ~7&nbsp;MB "lite, single-threaded" build, GPLv3), vendored in
+          <code>chess/engine/</code>. It runs in a <code>Web Worker</code> so it never freezes the page, and
+          is only downloaded the first time you pick the computer as opponent. The page talks to it in
+          plain-text <em>UCI</em>, the protocol every chess GUI uses: it sends
+          <code>position startpos moves e2e4 e7e5 …</code> (the whole game, so the engine also sees
+          repetitions), then <code>go depth N</code>, and waits for a <code>bestmove g1f3</code> line.
+          That string is matched against this page's own legal-move list, and played through the same
+          <code>makeMove</code> a click uses — so the engine can never make a move the rules here don't allow.
+        </p>
+        <p>
+          Strength levels set Stockfish's <code>Skill Level</code> option (0–20, which makes it
+          deliberately choose weaker moves) together with a search-depth cap. If you undo or start a new
+          game while it's thinking, the page sends <code>stop</code> and throws away the answer that
+          comes back.
+        </p>
+
         <h4>Undo is snapshots, not reverse moves</h4>
         <p>
           Before every move, the entire board, castling rights, en-passant square and last move
@@ -450,7 +518,7 @@
 
   <footer class="foot">
     <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Classic chess, two players on one screen. Single file, no dependencies. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
   <script>
@@ -744,7 +812,13 @@
       moveList: [],
       captured: { w: [], b: [] }, // pieces captured BY white / BY black
       animating: false,
-      pendingPromotion: null
+      pendingPromotion: null,
+      uciMoves: [],         // the game so far in UCI ("e2e4", "e7e8q") — what the engine is sent
+      opponent: "human",    // "human" | "engine"
+      humanColor: "w",
+      level: 3,
+      thinking: false,
+      gameId: 0             // bumped by New game, so a move still animating from the old game is dropped
     };
     state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
 
@@ -752,7 +826,152 @@
       var b = readLS("chess-board", "classic");
       if (b && b !== "classic") document.documentElement.setAttribute("data-board", b);
       state._board = b || "classic";
+      state.opponent = readLS("chess-opponent", "human") === "engine" ? "engine" : "human";
+      state.humanColor = readLS("chess-side", "w") === "b" ? "b" : "w";
+      var lv = parseInt(readLS("chess-level", "3"), 10);
+      state.level = lv >= 1 && lv <= 8 ? lv : 3;
+      state.flipped = state.opponent === "engine" && state.humanColor === "b";
     })();
+
+    // ========================================================== ENGINE
+    // Stockfish 18 (lite, single-threaded WASM build of Stockfish.js, GPLv3) in a
+    // Web Worker, spoken to in UCI. Loaded lazily the first time it's needed.
+    var ENGINE_URL = "engine/stockfish-18-lite-single.js";
+    // level -> Stockfish "Skill Level" (0-20) + a search limit
+    var LEVELS = {
+      1: { skill: 0,  go: "depth 1" },
+      2: { skill: 3,  go: "depth 2" },
+      3: { skill: 6,  go: "depth 4" },
+      4: { skill: 9,  go: "depth 6" },
+      5: { skill: 12, go: "depth 8" },
+      6: { skill: 15, go: "depth 11" },
+      7: { skill: 18, go: "depth 14" },
+      8: { skill: 20, go: "movetime 1500" }
+    };
+    var MIN_THINK_MS = 450; // so an instant reply still reads as a move, not a glitch
+
+    var engine = {
+      worker: null,
+      status: "off",        // off | loading | ready | error
+      // Every "go" gets exactly one "bestmove", in order, so counting both tells us
+      // which search a reply belongs to; replies to cancelled searches are dropped.
+      gosSent: 0,
+      bestsSeen: 0,
+      pending: null,        // { id, cb } for the search we still want an answer to
+      searchToken: 0,       // bumped on cancel, so a reply already in hand is ignored too
+      onReady: []
+    };
+
+    function setEngineStatus(status, text) {
+      engine.status = status;
+      var el = document.getElementById("engineStatus");
+      el.classList.toggle("ready", status === "ready" && !state.thinking);
+      el.classList.toggle("busy", status === "loading" || state.thinking);
+      el.classList.toggle("error", status === "error");
+      document.getElementById("engineText").textContent = text;
+    }
+
+    function engineIdleText() { return "Stockfish 18 · ready · level " + state.level; }
+
+    function engineSend(cmd) { if (engine.worker) engine.worker.postMessage(cmd); }
+
+    function ensureEngine(cb) {
+      if (engine.status === "ready") { cb(); return; }
+      if (engine.status === "error") return;
+      engine.onReady.push(cb);
+      if (engine.status === "loading") return;
+      setEngineStatus("loading", "Loading Stockfish (≈7 MB, first time only)…");
+      try {
+        engine.worker = new Worker(ENGINE_URL);
+      } catch (e) {
+        engineFailed();
+        return;
+      }
+      engine.worker.onerror = engineFailed;
+      setTimeout(function () { if (engine.status === "loading") engineFailed(); }, 60000);
+      engine.worker.onmessage = function (e) {
+        var line = typeof e.data === "string" ? e.data : "";
+        if (line === "uciok") {
+          engineSend("isready");
+        } else if (line === "readyok" && engine.status === "loading") {
+          setEngineStatus("ready", engineIdleText());
+          var q = engine.onReady; engine.onReady = [];
+          q.forEach(function (f) { f(); });
+        } else if (line.indexOf("bestmove") === 0) {
+          engine.bestsSeen++;
+          var p = engine.pending;
+          if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1]); }
+        }
+      };
+      engineSend("uci");
+    }
+
+    function engineFailed() {
+      engine.onReady = [];
+      if (engine.worker) { try { engine.worker.terminate(); } catch (e) {} }
+      engine.worker = null;
+      state.thinking = false;
+      var local = location.protocol === "file:";
+      setEngineStatus("error", local
+        ? "Engine can't start from a local file — serve the folder over http"
+        : "Couldn't load the engine — check your connection");
+      render();
+    }
+
+    function engineSearch(cb) {
+      var lv = LEVELS[state.level];
+      engine.pending = { id: ++engine.gosSent, cb: cb };
+      engineSend("setoption name Skill Level value " + lv.skill);
+      engineSend("position startpos" + (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : ""));
+      engineSend("go " + lv.go);
+    }
+
+    function cancelEngine() {
+      if (!state.thinking) return;
+      state.thinking = false;
+      engine.searchToken++;
+      if (engine.pending) { engine.pending = null; engineSend("stop"); }
+      if (engine.status === "ready") setEngineStatus("ready", engineIdleText());
+    }
+
+    function isEngineTurn() {
+      return state.opponent === "engine" && !state.over && state.turn !== state.humanColor;
+    }
+
+    // Called whenever the position settles: if it's the computer's move, ask for one.
+    function maybeEngineMove() {
+      if (!isEngineTurn() || state.thinking || state.animating || engine.status === "error") return;
+      state.thinking = true;
+      var token = engine.searchToken;
+      render();
+      ensureEngine(function () {
+        if (token !== engine.searchToken) return; // cancelled while the engine was loading
+        setEngineStatus("ready", "Stockfish is thinking…");
+        var started = Date.now();
+        engineSearch(function (uci) {
+          var wait = Math.max(0, MIN_THINK_MS - (Date.now() - started));
+          setTimeout(function () {
+            if (token !== engine.searchToken) return;
+            state.thinking = false;
+            setEngineStatus("ready", engineIdleText());
+            var mv = uciToMove(uci);
+            if (mv) makeMove(mv); else render();
+          }, wait);
+        });
+      });
+    }
+
+    function moveToUCI(m) {
+      return squareName(m[0], m[1]) + squareName(m[2], m[3]) + (m[4] === "promo" ? m[5].toLowerCase() : "");
+    }
+    // Map the engine's answer back onto our own legal-move list, so it can only play legal moves.
+    function uciToMove(uci) {
+      if (!uci || uci === "(none)") return null;
+      for (var i = 0; i < state.legalCache.length; i++) {
+        if (moveToUCI(state.legalCache[i]) === uci) return state.legalCache[i];
+      }
+      return null;
+    }
 
     // ========================================================== RENDER
     var boardEl = document.getElementById("board");
@@ -833,7 +1052,7 @@
           }
         }
 
-        cell.classList.toggle("playable", !!legalSet[r + "," + c] || (piece != null && colorOf(piece) === state.turn && !state.over));
+        cell.classList.toggle("playable", !!legalSet[r + "," + c] || (piece != null && colorOf(piece) === state.turn && !state.over && !isEngineTurn()));
       }
 
       renderStatus();
@@ -849,12 +1068,18 @@
       document.getElementById("stTurn").textContent = turnName;
       document.getElementById("stLast").textContent = state.moveList.length ? state.moveList[state.moveList.length - 1] : "—";
       document.getElementById("undoBtn").disabled = state.history.length === 0 || state.animating;
+      var vsEngine = state.opponent === "engine";
+      document.getElementById("lblWhite").textContent = "White" + (vsEngine ? (state.humanColor === "w" ? " · you" : " · Stockfish") : "");
+      document.getElementById("lblBlack").textContent = "Black" + (vsEngine ? (state.humanColor === "b" ? " · you" : " · Stockfish") : "");
 
       var banner = document.getElementById("banner");
       banner.classList.remove("win");
       if (state.over) {
         banner.classList.add("win");
         banner.textContent = state.overText;
+      } else if (isEngineTurn()) {
+        banner.textContent = engine.status === "error" ? "Engine unavailable — switch to a friend, or undo"
+          : (inCheck(state.board, state.turn) ? "Check! " : "") + "Stockfish is thinking…";
       } else if (inCheck(state.board, state.turn)) {
         banner.textContent = turnName + " to move — Check!";
       } else {
@@ -945,6 +1170,7 @@
         enPassant: state.enPassant,
         lastMove: state.lastMove,
         moveList: state.moveList.slice(),
+        uciMoves: state.uciMoves.slice(),
         captured: { w: state.captured.w.slice(), b: state.captured.b.slice() },
         over: state.over,
         overText: state.overText
@@ -963,11 +1189,15 @@
         if (isCheckAfter) {
           var winner = state.turn === "w" ? "Black" : "White";
           state.overText = "Checkmate! " + winner + " wins.";
+          if (state.opponent === "engine") {
+            state.overText = state.turn === state.humanColor ? "Checkmate — Stockfish wins." : "Checkmate — you win!";
+          }
         } else {
           state.overText = "Stalemate! Draw.";
         }
       }
       render();
+      maybeEngineMove();
     }
 
     function makeMove(move) {
@@ -977,6 +1207,7 @@
       if (flag === "ep") captured = state.turn === "w" ? "p" : "P";
 
       pushHistory();
+      state.uciMoves.push(moveToUCI(move));
       var preBoard = cloneBoard(state.board);
       var boardBefore = preBoard;
       applyMoveTo(state.board, move, state.castling);
@@ -990,7 +1221,9 @@
       move._boardBefore = boardBefore;
       move._legalBefore = legalBefore;
 
+      var gameId = state.gameId;
       animateMove(move, preBoard, function () {
+        if (gameId !== state.gameId) { maybeEngineMove(); return; }
         var stillLegal = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
         var isCheckAfter = inCheck(state.board, state.turn);
         var isMate = stillLegal.length === 0 && isCheckAfter;
@@ -1000,13 +1233,17 @@
 
     function undo() {
       if (!state.history.length || state.animating) return;
+      cancelEngine();
       var snap = state.history.pop();
+      // vs the computer, step back to the human's turn (their move + the engine's reply)
+      if (state.opponent === "engine" && snap.turn !== state.humanColor && state.history.length) snap = state.history.pop();
       state.board = snap.board;
       state.turn = snap.turn;
       state.castling = snap.castling;
       state.enPassant = snap.enPassant;
       state.lastMove = snap.lastMove;
       state.moveList = snap.moveList;
+      state.uciMoves = snap.uciMoves;
       state.captured = snap.captured;
       state.over = snap.over;
       state.overText = snap.overText;
@@ -1014,9 +1251,12 @@
       state.legalTargets = [];
       state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
       render();
+      maybeEngineMove();
     }
 
     function newGame() {
+      cancelEngine();
+      state.gameId++;
       state.board = initialBoard();
       state.turn = "w";
       state.castling = { K: true, Q: true, k: true, q: true };
@@ -1028,9 +1268,11 @@
       state.over = false;
       state.overText = "";
       state.moveList = [];
+      state.uciMoves = [];
       state.captured = { w: [], b: [] };
       state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
       render();
+      maybeEngineMove();
     }
 
     function askPromotion(color, cb) {
@@ -1059,7 +1301,7 @@
     }
 
     function onCellClick(e) {
-      if (state.over || state.animating) return;
+      if (state.over || state.animating || isEngineTurn()) return;
       var row = +this.dataset.r, col = +this.dataset.c;
       var board = state.board;
 
@@ -1105,6 +1347,44 @@
       state.flipped = !state.flipped;
       buildGrid();
       render();
+    });
+
+    var oppSel = document.getElementById("oppSel");
+    var sideSel = document.getElementById("sideSel");
+    var levelSel = document.getElementById("levelSel");
+    function applyOpponentUI() {
+      var vs = state.opponent === "engine";
+      document.querySelectorAll(".engine-only").forEach(function (el) { el.hidden = !vs; });
+      oppSel.value = state.opponent;
+      sideSel.value = state.humanColor;
+      levelSel.value = String(state.level);
+    }
+    oppSel.addEventListener("change", function () {
+      state.opponent = this.value; writeLS("chess-opponent", this.value);
+      applyOpponentUI();
+      if (state.opponent === "engine") {
+        if (state.flipped !== (state.humanColor === "b")) { state.flipped = state.humanColor === "b"; buildGrid(); }
+        state.selected = null; state.legalTargets = [];
+        render();
+        maybeEngineMove();
+        if (engine.status === "off") ensureEngine(function () {}); // warm up in the background
+      } else {
+        cancelEngine();
+        render();
+      }
+    });
+    sideSel.addEventListener("change", function () {
+      cancelEngine();
+      state.humanColor = this.value; writeLS("chess-side", this.value);
+      state.flipped = state.humanColor === "b";
+      state.selected = null; state.legalTargets = [];
+      buildGrid();
+      render();
+      maybeEngineMove();
+    });
+    levelSel.addEventListener("change", function () {
+      state.level = parseInt(this.value, 10); writeLS("chess-level", this.value);
+      if (engine.status === "ready" && !state.thinking) setEngineStatus("ready", engineIdleText());
     });
 
     var BOARD_PREVIEW = {
@@ -1164,8 +1444,10 @@
 
     // ========================================================== GO
     applyLook();
+    applyOpponentUI();
     buildGrid();
     render();
+    maybeEngineMove();
   })();
   </script>
 </body>
