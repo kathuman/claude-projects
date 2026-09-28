@@ -255,6 +255,9 @@ details.rules summary:before{content:"▸ "; color:var(--accent);}
 details.rules[open] summary:before{content:"▾ ";}
 details.rules[open] summary{color:var(--ink);}
 details.rules p{font-size:13.5px; line-height:1.65; color:var(--ink-dim); margin:8px 0 14px;}
+details.rules a{color:var(--accent);}
+details.rules .doc-link{font-family:var(--head); font-weight:700; font-size:13.5px; letter-spacing:.02em; text-decoration:none;}
+details.rules .doc-link:hover{text-decoration:underline;}
 
 footer.foot{max-width:1500px; margin:0 auto; padding:22px 22px 50px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:12.5px; line-height:1.7;}
 footer.foot a{color:var(--ink-faint);}
@@ -289,6 +292,36 @@ footer.foot .consult a{color:var(--accent);}
 @media (max-width:640px){
   .tutorial-panel{left:16px; right:16px; width:auto; bottom:12px;}
 }
+
+/* ---------- solver-guide.html (documentation page) ---------- */
+.docs-wrap{max-width:820px; margin:0 auto; padding:36px 22px 90px;}
+.docs-intro{font-size:15px; line-height:1.7; color:var(--ink-dim); margin:0 0 28px; padding-bottom:24px; border-bottom:1px solid var(--line-soft);}
+.docs-toc{background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:16px 20px; margin-bottom:32px;}
+.docs-toc-title{font-family:var(--head); font-weight:700; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 10px;}
+.docs-toc ol{margin:0; padding-left:20px; font-size:13px; line-height:1.9;}
+.docs-toc a{color:var(--ink-dim);}
+.docs-toc a:hover{color:var(--accent);}
+.docs-section{margin-bottom:38px; scroll-margin-top:20px;}
+.docs-section h2{font-family:var(--head); font-weight:700; font-size:20px; letter-spacing:.02em; color:var(--ink); margin:0 0 6px; padding-top:6px; border-top:1px solid var(--line-soft);}
+.docs-section h3{font-family:var(--head); font-weight:600; font-size:14.5px; letter-spacing:.02em; color:var(--ink-dim); margin:20px 0 8px;}
+.docs-section p, .docs-section li{font-size:14px; line-height:1.75; color:var(--ink-dim);}
+.docs-section ul, .docs-section ol{padding-left:22px;}
+.docs-section li{margin-bottom:6px;}
+.docs-section a{color:var(--accent);}
+.docs-section code{font-size:0.88em;}
+pre.code-block{
+  background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+  overflow-x:auto; font-family:var(--mono); font-size:12px; line-height:1.65; color:var(--ink-dim); margin:12px 0 16px;
+}
+pre.code-block code{background:none; border:none; padding:0; font-size:1em; color:inherit;}
+.docs-callout{
+  background:rgba(125,211,252,.06); border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0; padding:12px 16px; margin:14px 0; font-size:13.5px; line-height:1.65; color:var(--ink-dim);
+}
+.docs-callout b{color:var(--ink);}
+.docs-checklist{list-style:none; padding-left:0;}
+.docs-checklist li{padding-left:26px; position:relative;}
+.docs-checklist li:before{content:"\2610"; position:absolute; left:0; color:var(--accent);}
 
 @media (max-width:1200px){
   .layout{grid-template-columns:1fr;}

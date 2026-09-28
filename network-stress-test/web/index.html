@@ -265,6 +265,30 @@
           </p>
         </div>
       </details>
+      <details class="rules">
+        <summary>Swapping in a different solver</summary>
+        <div>
+          <p>
+            The flow engine (<code>web/src/flowSolver.js</code>) is a plain min-cost flow implementation —
+            successive shortest augmenting paths with node potentials — behind a narrow, exact interface:
+            a class you construct with a node count, feed edges via <code>addEdge(from, to, cap, cost)</code>,
+            then call <code>run(source, sink, maxFlow)</code> on. <code>network.js</code> is the <em>only</em>
+            file that talks to it, so any replacement that keeps that same shape — and the same "flow is
+            optimal for cost" guarantee — drops in without touching the rest of the app.
+          </p>
+          <p>
+            Going further than a drop-in swap — genuine joint optimization across all products at once,
+            instead of this app's documented sequential-by-priority approximation — is a bigger change: it
+            needs <code>network.js</code>'s orchestration rewritten too, and realistically a real LP/MILP
+            engine, since hand-written JavaScript doesn't have a competitive general-purpose one.
+          </p>
+          <p>
+            <a class="doc-link" href="solver-guide.html">Read the full solver guide →</a> — the exact
+            interface contract, a complete worked example of a second, independently-implemented solver, how
+            to wire it in, and how to verify it before trusting it.
+          </p>
+        </div>
+      </details>
     </div>
   </section>
 

@@ -7,7 +7,14 @@ Time-to-Recover resilience check, and a greedy adversarial worst-case search.
 
 **Live demo:** `https://kathuman.github.io/claude-projects/network-stress-test/web/`
 
-**Version:** shown as a badge in the header and footer (currently v1.3.0), bumped on every
+**Docs:** [`web/solver-guide.html`](web/solver-guide.html) — how to implement and swap in a
+different flow solver: the exact interface contract `network.js` requires, a complete
+alternative implementation (independently verified against the shipped solver before being
+published), how to wire it in, how to test it, and what it would actually take to go beyond a
+drop-in replacement to genuine joint multi-commodity optimization. Linked from an in-app
+summary panel ("Swapping in a different solver", in the explanations at the bottom of the app).
+
+**Version:** shown as a badge in the header and footer (currently v1.4.0), bumped on every
 user-visible change — see the `APP_VERSION` constant at the top of `web/src/app.js`. The
 header and footer also credit **Estay Dynamics**, with a header "Contact" button and the
 footer's "get in touch" link both pointing at the same consulting contact destination used
@@ -154,7 +161,15 @@ chase to zero.
   budget-2 is monotonically at least as damaging and hits two independent chains, large-budget
   termination, cumulative-drop bookkeeping, a 330-node performance check.
 
-**Browser-level (real Chromium via Playwright)**, 74 checks across four suites covering the
+`web/solver-guide.html`'s worked-example alternative solver (plain Bellman-Ford successive
+shortest paths, no node potentials) was itself verified the same way before being published as
+a "correct, complete" reference implementation: 8 Node checks confirming it produces identical
+flow and cost to the shipped solver across a hand-built bottleneck network, a cost-ordering
+case, an infeasible-demand case, a disconnected graph, and a 150-node random network — plus a
+timed comparison at the app's real 330-node/~1,100-edge reference scale, which is where the
+guide's honest performance note comes from (measured, not assumed).
+
+**Browser-level (real Chromium via Playwright)**, 97 checks across six suites covering the
 full user-facing pipeline: initial generate+solve, map rendering (node/edge SVG element
 counts), click-to-select syncing map/table/inspector, scenario disable/clear, inline table
 editing, add/delete rows, CSV export *and* import round-trips, the N-1 scan with
@@ -163,9 +178,11 @@ including their own click-to-apply actions, zoom actually rescaling the viewBox 
 markers converge back to a constant on-screen pixel size, the Map/Diagram layout toggle
 (including that every production node shares one column x-coordinate in Diagram mode), a full
 run through every tutorial step (including that its actions produce real results, not just UI
-motion), and the World Map/Grid basemap toggle (a real multi-continent land path renders by
-default, toggles cleanly to/from the grid, and correctly hides itself in Diagram view) — with
-the console asserted error-free throughout every sequence.
+motion), the World Map/Grid basemap toggle (a real multi-continent land path renders by
+default, toggles cleanly to/from the grid, and correctly hides itself in Diagram view), the
+version badge/brand credit/Contact link, and navigation into and back out of the solver guide
+(including that its code blocks render with comparison operators intact, not broken by
+unescaped HTML) — with the console asserted error-free throughout every sequence.
 
 **Not verified:** cross-browser testing beyond Chromium, mobile/touch interaction on an actual
 device, and GitHub Pages deployment of this specific sub-app post-push (the parent repo's

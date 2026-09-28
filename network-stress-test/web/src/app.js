@@ -6,8 +6,9 @@
   // Bump this on any user-visible change (matches the site's git history:
   // 1.0.0 Phase 1 launch, 1.1.0 Phase 2 (Monte Carlo/TTS-TTR/adversarial),
   // 1.2.0 zoom fix + Map/Diagram toggle + guided tutorial, 1.3.0 world map
-  // basemap). Estay Dynamics branding lives beside it in the header/footer.
-  const APP_VERSION = "1.3.0";
+  // basemap, 1.4.0 solver-guide.html + in-app "swap the solver" panel).
+  // Estay Dynamics branding lives beside it in the header/footer.
+  const APP_VERSION = "1.4.0";
 
   const state = {
     network: { products: [], nodes: [], edges: [] },
