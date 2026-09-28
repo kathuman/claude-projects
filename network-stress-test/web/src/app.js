@@ -348,8 +348,23 @@
       map.resetView();
       map.setSelection(state.selection);
       updateMapFlow();
+      // the world-map/grid basemap is only meaningful against real
+      // geographic positions -- hide it while the abstract Diagram
+      // layout (which doesn't use lat/lon at all) is active.
+      document.getElementById("basemap-group").style.display = btn.dataset.layoutmode === "diagram" ? "none" : "";
     });
   });
+  document.querySelectorAll(".viewmode-group [data-basemap]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".viewmode-group [data-basemap]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      map.setBasemapMode(btn.dataset.basemap);
+    });
+  });
+  fetch("assets/land.json")
+    .then((r) => r.json())
+    .then((d) => map.setLandData(d.rings || []))
+    .catch(() => { /* falls back to the plain grid automatically -- see mapView.js render() */ });
 
   // ---------- generate ----------
   document.getElementById("btn-generate").addEventListener("click", () => {

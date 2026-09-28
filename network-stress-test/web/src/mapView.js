@@ -1,11 +1,16 @@
 /*
  * mapView.js — renders a network in one of two layouts:
  *
- *   'geo'     a plain equirectangular (lat/lon -> x/y) projection. Not a
- *             real basemap (no coastlines/borders) -- this app's networks
- *             are synthetic/user-defined, so a projection that's easy to
- *             reason about matters more than geographic accuracy. A faint
- *             lon/lat grid stands in for a basemap.
+ *   'geo'     a plain equirectangular (lat/lon -> x/y) projection, shown
+ *             against either an actual world land-outline basemap or a
+ *             plain lon/lat grid (toggle via setBasemapMode). The land
+ *             outline is a simplified, public-domain-derived coastline
+ *             dataset (assets/land.json, lon/lat polygon rings) -- not
+ *             survey-accurate, but real continent shapes rather than a
+ *             grid standing in for one. Since the projection is a
+ *             straight lon->x, lat->-y mapping (no actual map projection
+ *             math), each ring draws directly as an SVG path with no
+ *             projection library needed.
  *   'diagram' an abstract layered layout -- three columns (production /
  *             warehouse / consumer), nodes spread evenly down each column
  *             by id. Geography is often the wrong lens for understanding
@@ -47,6 +52,8 @@
     let selection = null; // {type:'node'|'edge', id}
     let layoutMode = "geo"; // 'geo' | 'diagram'
     let diagramPositions = new Map();
+    let basemapMode = "world"; // 'world' | 'grid' -- only meaningful in 'geo' layout
+    let landRings = []; // array of rings, each an array of [lon, lat] pairs
 
     function applyViewBox() {
       svgEl.setAttribute("viewBox", viewBox.x + " " + viewBox.y + " " + viewBox.w + " " + viewBox.h);
@@ -90,6 +97,23 @@
         l.setAttribute("stroke", "rgba(125,211,252,0.07)"); l.setAttribute("stroke-width", "0.3");
         g.appendChild(l);
       }
+      return g;
+    }
+
+    function buildWorldMap() {
+      const path = document.createElementNS(NS, "path");
+      let d = "";
+      landRings.forEach((ring) => {
+        if (!ring.length) return;
+        d += "M " + ring[0][0] + " " + (-ring[0][1]);
+        for (let i = 1; i < ring.length; i++) d += " L " + ring[i][0] + " " + (-ring[i][1]);
+        d += " Z ";
+      });
+      path.setAttribute("d", d.trim());
+      path.setAttribute("class", "map-land");
+      path.setAttribute("vector-effect", "non-scaling-stroke");
+      const g = document.createElementNS(NS, "g");
+      g.appendChild(path);
       return g;
     }
 
@@ -137,7 +161,13 @@
 
     function render() {
       while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
-      svgEl.appendChild(layoutMode === "diagram" ? buildDiagramGuides() : buildGeoGrid());
+      if (layoutMode === "diagram") {
+        svgEl.appendChild(buildDiagramGuides());
+      } else if (basemapMode === "world" && landRings.length > 0) {
+        svgEl.appendChild(buildWorldMap());
+      } else {
+        svgEl.appendChild(buildGeoGrid());
+      }
 
       const nodeById = new Map(network.nodes.map((n) => [n.id, n]));
       const edgeLayer = document.createElementNS(NS, "g");
@@ -229,6 +259,9 @@
       setSelection(sel) { selection = sel; render(); },
       setLayoutMode(mode) { layoutMode = mode === "diagram" ? "diagram" : "geo"; render(); },
       getLayoutMode() { return layoutMode; },
+      setBasemapMode(mode) { basemapMode = mode === "grid" ? "grid" : "world"; render(); },
+      getBasemapMode() { return basemapMode; },
+      setLandData(rings) { landRings = rings || []; if (layoutMode === "geo") render(); },
       resetView() { viewBox = { x: -180, y: -90, w: 360, h: 180 }; applyViewBox(); rescaleNodes(); },
       render,
     };

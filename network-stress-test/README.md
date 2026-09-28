@@ -18,6 +18,10 @@ and see what gives.
 ## Architecture
 
 ```text
+web/assets/
+  land.json          simplified world land-outline data (lon/lat polygon rings), for the
+                      World Map basemap toggle
+
 web/src/
   modeDefaults.js   mode-characteristic (air/sea/road) lane defaults + haversine geography
   flowSolver.js      pure min-cost flow (successive shortest augmenting paths, node potentials)
@@ -46,6 +50,16 @@ on Earth. Zooming (scroll wheel) never resizes node markers or lane lines on scr
 view — node radius is recomputed to a constant on-screen pixel size after every zoom step, and
 lanes use SVG's native `vector-effect="non-scaling-stroke"` so their pixel width is never
 affected by the viewBox transform at all.
+
+Within Map view, a second toggle switches the basemap between an actual **World Map** (real,
+simplified land outlines — `web/assets/land.json`, ~1,950 points across 92 land/island
+polygons in plain lon/lat rings) and a plain lon/lat **Grid**. Since the projection is a
+straight `x = lon, y = -lat` mapping with no real map-projection math, each ring draws directly
+as an SVG path — no projection library needed. The basemap toggle hides itself in Diagram view,
+where node positions aren't geographic and a world map would be misleading. `land.json` is a
+lightweight, simplified, public-domain-derived land-boundary dataset (not survey-accurate —
+it's meant to make the network's geographic clustering legible at a glance, not serve as a GIS
+basemap).
 
 ### Guided tutorial
 
@@ -134,16 +148,18 @@ chase to zero.
   budget-2 is monotonically at least as damaging and hits two independent chains, large-budget
   termination, cumulative-drop bookkeeping, a 330-node performance check.
 
-**Browser-level (real Chromium via Playwright)**, 59 checks across three suites covering the
+**Browser-level (real Chromium via Playwright)**, 74 checks across four suites covering the
 full user-facing pipeline: initial generate+solve, map rendering (node/edge SVG element
 counts), click-to-select syncing map/table/inspector, scenario disable/clear, inline table
 editing, add/delete rows, CSV export *and* import round-trips, the N-1 scan with
 click-to-apply, all three Phase 2 panels (Monte Carlo, resilience check, adversarial search)
 including their own click-to-apply actions, zoom actually rescaling the viewBox while node
 markers converge back to a constant on-screen pixel size, the Map/Diagram layout toggle
-(including that every production node shares one column x-coordinate in Diagram mode), and a
-full run through every tutorial step (including that its actions produce real results, not
-just UI motion) — with the console asserted error-free throughout every sequence.
+(including that every production node shares one column x-coordinate in Diagram mode), a full
+run through every tutorial step (including that its actions produce real results, not just UI
+motion), and the World Map/Grid basemap toggle (a real multi-continent land path renders by
+default, toggles cleanly to/from the grid, and correctly hides itself in Diagram view) — with
+the console asserted error-free throughout every sequence.
 
 **Not verified:** cross-browser testing beyond Chromium, mobile/touch interaction on an actual
 device, and GitHub Pages deployment of this specific sub-app post-push (the parent repo's
