@@ -81,6 +81,7 @@ real-options/index.html            — https://kathuman.github.io/claude-project
 othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
 chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
+xiangqi/index.html                 — https://kathuman.github.io/claude-projects/xiangqi/
 robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
 tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
 warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/

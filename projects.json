@@ -1,5 +1,13 @@
 [
   {
+    "title": "Xiangqi",
+    "description": "Xiangqi (Chinese chess) against a friend on one screen, or against the open-source Fairy-Stockfish engine — one of the strongest Xiangqi engines, compiled to WebAssembly and running entirely in your browser — at eight strength levels from beginner to full strength. Full rules: generals confined to the palace and the flying-general rule, hobbled horses, blocked elephants that can't cross the river, cannons that capture over a screen, soldiers that step sideways once across the river, stalemate-loses, and perpetual check adjudicated from threefold repetition. Traditional Chinese-character pieces or Western letters, five board styles, WXF move notation, undo and board flip. The move generator is verified against the published perft counts to depth 4 (3,290,240 positions). A small service worker supplies the cross-origin-isolation headers the multi-threaded engine needs, since GitHub Pages can't.",
+    "date": "2026-09-28",
+    "tags": ["javascript", "web", "game", "webassembly"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/xiangqi",
+    "demoUrl": "https://kathuman.github.io/claude-projects/xiangqi/"
+  },
+  {
     "title": "Network Stress Test",
     "description": "A supply-network resilience sandbox: build or generate a production/warehouse/consumer network (hundreds of editable nodes) connected by air/sea/road lanes with mode-characteristic defaults, and stress-test it against a real min-cost-flow solver. Phase 1: deterministic disruption scenarios and an N-1 contingency scan (the power-grid idea — which single node or lane, if lost, hurts the most). Phase 2: Monte Carlo random-failure sampling, a Time-to-Survive vs. Time-to-Recover check against consumer inventory buffers, and a greedy adversarial search for the worst combination of simultaneous failures. Every algorithm is unit-tested in Node before touching the UI, and the full pipeline is driven end-to-end in headless Chromium. Multi-file project, no runtime dependencies.",
     "date": "2026-09-28",

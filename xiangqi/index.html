@@ -1,0 +1,1329 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xiangqi</title>
+  <meta name="description" content="Play Xiangqi (Chinese chess) against a friend on one screen or against the open-source Fairy-Stockfish engine at eight strength levels — full rules including the flying-general rule, hobbled horses, blocked elephants, cannon screens and perpetual check." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%23f4e3c1%22 stroke=%22%23b3261e%22 stroke-width=%226%22/><text x=%2250%22 y=%2268%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%23b3261e%22>帥</text></svg>" />
+  <!-- The Fairy-Stockfish WASM build is multi-threaded and needs SharedArrayBuffer, which
+       browsers only allow on "cross-origin isolated" pages. GitHub Pages can't send the
+       COOP/COEP headers that enable that, so this small service worker adds them (the page
+       reloads itself once on the very first visit). -->
+  <script>window.coi = { quiet: true };</script>
+  <script src="coi-serviceworker.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap&text=%E5%B8%A5%E4%BB%95%E7%9B%B8%E5%82%8C%E4%BF%A5%E7%82%AE%E5%85%B5%E5%B0%87%E5%A3%AB%E8%B1%A1%E9%A6%AC%E8%BB%8A%E7%A0%B2%E5%8D%92%E6%A5%9A%E6%B2%B3%E6%BC%A2%E7%95%8C" rel="stylesheet" crossorigin="anonymous" />
+  <style>
+    /* ------------------------------------------------------------------
+       Chrome follows the parent site's warm neutrals + accent, stepped
+       per theme. The board keeps its own palette regardless of theme,
+       same convention as the Chess, Go and Othello sub-apps.
+       ------------------------------------------------------------------ */
+    :root {
+      --bg: #f7f7f5;
+      --panel: #ffffff;
+      --panel-2: #faf9f7;
+      --border: #e6e4de;
+      --ink: #1b1b18;
+      --ink-2: #5c5b54;
+      --muted: #8a8880;
+      --accent: #c15f3c;
+      --accent-soft: #f3e3da;
+      --accent-ink: #ffffff;
+      --surface: #fcfcfb;
+
+      /* board palette is user-picked (data-board on :root) and stays the
+         same in light and dark theme */
+      --bd-bg: #e9c88f; --bd-line: #6b4424; --bd-edge: #8a5a30; --bd-river: #6b4424;
+      --pc-face: #f6e7c8; --pc-rim: #c9a574; --pc-red: #b3261e; --pc-black: #1f1d1b;
+
+      --shadow: 0 1px 2px rgba(20,20,15,.04), 0 10px 30px -8px rgba(20,20,15,.10);
+      --radius: 14px;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+      --font-cjk: "Noto Serif SC", "Songti SC", "STSong", "SimSun", "Noto Serif CJK SC", serif;
+      color-scheme: light;
+    }
+    :root[data-theme="dark"] {
+      --bg: #16151a; --panel: #1e1d24; --panel-2: #191820; --border: #302e38;
+      --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
+      --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
+      --surface: #1a1a19;
+      --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16151a; --panel: #1e1d24; --panel-2: #191820; --border: #302e38;
+        --ink: #f1efe9; --ink-2: #b7b4bd; --muted: #8f8c97;
+        --accent: #e08a63; --accent-soft: #3a2a24; --accent-ink: #16151a;
+        --surface: #1a1a19;
+        --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -10px rgba(0,0,0,.5);
+        color-scheme: dark;
+      }
+    }
+
+    /* ---- board palettes ---- */
+    :root[data-board="bamboo"]   { --bd-bg: #e6dcaa; --bd-line: #4f5a2a; --bd-edge: #6f7a3a; --bd-river: #4f5a2a; }
+    :root[data-board="paper"]    { --bd-bg: #f3ede0; --bd-line: #3b3a36; --bd-edge: #5c5a52; --bd-river: #3b3a36; }
+    :root[data-board="jade"]     { --bd-bg: #bcd9c6; --bd-line: #1f4a37; --bd-edge: #2e6a50; --bd-river: #1f4a37; }
+    :root[data-board="charcoal"] { --bd-bg: #34333a; --bd-line: #b9b4a6; --bd-edge: #1f1e24; --bd-river: #d8d2c2;
+                                   --pc-face: #efe3c8; --pc-rim: #8f7b58; }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+    body { font-family: var(--font-sans); line-height: 1.55; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { color: var(--accent); }
+
+    header.bar {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand .mk { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 15px; font-family: var(--font-cjk); font-weight: 700; }
+    .brand h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -.01em; white-space: nowrap; }
+    .brand .sub { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .hactions { display: flex; align-items: center; gap: 8px; flex: none; }
+    .lnk { font-size: 12.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
+    .lnk:hover { border-color: var(--accent); color: var(--ink); }
+    .icon-btn { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+    .icon-btn:hover { border-color: var(--accent); color: var(--ink); }
+    .icon-moon { display: none; }
+    :root[data-theme="dark"] .icon-sun { display: none; }
+    :root[data-theme="dark"] .icon-moon { display: block; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .icon-sun { display: none; }
+      :root:not([data-theme="light"]) .icon-moon { display: block; }
+    }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 26px 22px 10px; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 26px; align-items: start; }
+
+    /* -------------------------------------------------------- board */
+    .board-wrap {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .turn-row { display: flex; align-items: center; gap: 14px; width: 100%; justify-content: center; flex-wrap: wrap; }
+    .side-score {
+      display: flex; align-items: center; gap: 9px; padding: 6px 12px; border-radius: 999px;
+      border: 1px solid var(--border); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px;
+      transition: border-color .15s, background .15s;
+    }
+    .side-score.active { border-color: var(--accent); background: var(--accent-soft); }
+    .side-score .chip { width: 15px; height: 15px; border-radius: 50%; flex: none; border: 2px solid; background: #f6e7c8; }
+    .chip.r { border-color: #b3261e; }
+    .chip.b { border-color: #1f1d1b; }
+    :root[data-theme="dark"] .chip.b { border-color: #8f8c97; }
+    .side-score .lbl { font-size: 11px; font-weight: 600; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+    .side-score .cap { display: flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; font-family: var(--font-cjk); }
+    .side-score .cap .r { color: #b3261e; }
+    .side-score .cap .b { color: var(--ink-2); }
+
+    .board-frame { width: min(82vw, 540px); }
+    .files { display: grid; grid-template-columns: repeat(9, 1fr); font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; line-height: 1; }
+    .files.top { margin-bottom: 5px; }
+    .files.bot { margin-top: 5px; }
+    .board {
+      position: relative; width: 100%; aspect-ratio: 9 / 10;
+      display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(10, 1fr);
+      background: var(--bd-bg);
+      border: 4px solid var(--bd-edge); border-radius: 6px;
+      touch-action: manipulation; user-select: none;
+    }
+    .board svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .lines .ln { stroke: var(--bd-line); stroke-width: .35; fill: none; }
+    .lines .frame { stroke: var(--bd-line); stroke-width: .7; fill: none; }
+    .lines .river { fill: var(--bd-river); font-family: var(--font-cjk); font-size: 5.2px; font-weight: 700; opacity: .8; }
+
+    .pt { position: relative; display: grid; place-items: center; z-index: 1; }
+    .pt.playable { cursor: pointer; }
+
+    .pc {
+      width: 88%; aspect-ratio: 1; border-radius: 50%;
+      display: grid; place-items: center;
+      background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--pc-face) 70%, #fff) 0%, var(--pc-face) 55%, color-mix(in srgb, var(--pc-face) 85%, #000) 100%);
+      box-shadow: 0 0 0 1.5px var(--pc-rim), 0 2px 3px rgba(0,0,0,.35), inset 0 0 0 3px var(--pc-face), inset 0 0 0 4.5px currentColor;
+      font-family: var(--font-cjk); font-weight: 700; line-height: 1;
+      font-size: min(5vw, 30px);
+      pointer-events: none; position: relative;
+    }
+    .pc.r { color: var(--pc-red); }
+    .pc.b { color: var(--pc-black); }
+    :root[data-pieces="letters"] .pc { font-family: var(--font-sans); font-weight: 800; font-size: min(4.2vw, 25px); }
+
+    .hl { position: absolute; inset: 4%; border-radius: 50%; pointer-events: none; }
+    .hl.select { box-shadow: 0 0 0 3px rgba(255, 196, 0, .95), 0 0 14px rgba(255, 196, 0, .6); z-index: 2; }
+    .hl.check { box-shadow: 0 0 0 3px rgba(220, 45, 35, .95), 0 0 18px rgba(220, 45, 35, .8); z-index: 2; }
+    .hl.lastto { box-shadow: 0 0 0 2.5px rgba(40, 140, 200, .85); z-index: 2; }
+    .lastfrom { position: absolute; width: 34%; aspect-ratio: 1; border-radius: 50%; border: 2px dashed rgba(40, 140, 200, .85); pointer-events: none; }
+    .dot { position: absolute; width: 26%; aspect-ratio: 1; border-radius: 50%; background: rgba(30, 120, 60, .75); pointer-events: none; z-index: 3; }
+    .ring { position: absolute; inset: 2%; border-radius: 50%; box-shadow: inset 0 0 0 3.5px rgba(30, 150, 70, .9); pointer-events: none; z-index: 3; }
+
+    .anim-piece {
+      position: absolute; width: calc(100% / 9); height: 10%;
+      display: grid; place-items: center; pointer-events: none; z-index: 5;
+      transition: left .18s ease-out, top .18s ease-out;
+    }
+
+    .banner { min-height: 22px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); text-align: center; }
+    .banner.win { color: var(--accent); font-size: 15px; }
+
+    /* -------------------------------------------------------- side panel */
+    .panel {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px 16px 18px;
+    }
+    .panel + .panel { margin-top: 18px; }
+    .panel h3 { margin: 0 0 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .field > label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+
+    .btn {
+      width: 100%; padding: 9px 12px; font: inherit; font-size: 13px; font-weight: 600;
+      border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer;
+    }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .btn.primary:hover { filter: brightness(1.05); }
+    .btn + .btn { margin-top: 8px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .sel {
+      width: 100%; padding: 7px 10px; font: inherit; font-size: 12.5px; font-weight: 600;
+      color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; cursor: pointer;
+    }
+    .sel:hover { border-color: var(--accent); }
+
+    .engine-only[hidden] { display: none; }
+    .engine-status { display: flex; align-items: flex-start; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); }
+    .engine-status .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; margin-top: 5px; }
+    .engine-status.ready .led { background: #3f9b5a; }
+    .engine-status.busy .led { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+    .engine-status.error .led { background: #d0453a; }
+    @keyframes pulse { 50% { opacity: .3; } }
+
+    .stats { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+    .stats div { display: flex; justify-content: space-between; padding: 3px 0; }
+    .stats b { color: var(--ink); font-weight: 600; }
+
+    .movelog { max-height: 190px; overflow-y: auto; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
+    .movelog .mv { display: inline-block; min-width: 54px; }
+    .movelog .n { color: var(--muted); }
+
+    details.rules { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 16px; box-shadow: var(--shadow); }
+    details.rules summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 12px 0; color: var(--ink-2); }
+    details.rules[open] summary { color: var(--ink); }
+    details.rules p { font-size: 13px; color: var(--ink-2); margin: 8px 0 14px; }
+    .ptable { width: 100%; border-collapse: collapse; font-size: 12.5px; color: var(--ink-2); margin: 6px 0 16px; }
+    .ptable td { padding: 6px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+    .ptable td.g { font-family: var(--font-cjk); font-weight: 700; font-size: 17px; white-space: nowrap; }
+    .ptable td.g .r { color: #b3261e; }
+    .ptable td.nm { font-weight: 600; color: var(--ink); white-space: nowrap; }
+
+    .codedoc { padding-bottom: 6px; }
+    .codedoc h4 { margin: 18px 0 4px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+    .codedoc ul { margin: 8px 0 14px; padding-left: 20px; }
+    .codedoc li { font-size: 13px; color: var(--ink-2); margin: 5px 0; }
+    .codedoc code, .rules code { font-family: var(--font-mono); font-size: 11.5px; background: var(--surface); border: 1px solid var(--border); padding: 1px 4px; border-radius: 4px; color: var(--ink); }
+    .viewsrc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+    .viewsrc .btn { width: auto; flex: 1; min-width: 150px; text-align: center; text-decoration: none; display: inline-block; }
+    .viewsrc .btn + .btn { margin-top: 0; }
+    .srcnote { font-size: 12px !important; color: var(--muted) !important; }
+    pre#srcPre {
+      max-height: 460px; overflow: auto; margin: 6px 0 12px;
+      font-family: var(--font-mono); font-size: 11px; line-height: 1.6;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px; color: var(--ink-2); white-space: pre; tab-size: 2;
+    }
+    pre#srcPre .bnr { color: var(--accent); font-weight: 500; }
+
+    footer.foot { max-width: 1080px; margin: 0 auto; padding: 22px 22px 50px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+    footer.foot a { color: var(--muted); }
+    footer.foot .consult { display: block; margin-bottom: 6px; font-weight: 600; color: var(--ink); }
+    footer.foot .consult a { color: var(--accent); }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .board-frame { width: min(100%, 520px); }
+      .pc { font-size: min(6.2vw, 30px); }
+      :root[data-pieces="letters"] .pc { font-size: min(5.2vw, 25px); }
+      main { padding: 18px 16px 10px; }
+      .board-wrap { padding: 12px; }
+    }
+    @media (max-width: 520px) {
+      .brand .sub { display: none; }
+      .pc { font-size: min(5.8vw, 30px); }
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="mk">帥</span>
+      <div>
+        <h1>Xiangqi</h1>
+        <div class="sub">Chinese chess &middot; vs a friend or Fairy-Stockfish</div>
+      </div>
+    </div>
+    <div class="hactions">
+      <a class="lnk" href="../index.html">&larr; All projects</a>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <section class="board-wrap">
+        <div class="turn-row">
+          <div class="side-score" id="scoreRed">
+            <span class="chip r"></span>
+            <span class="lbl" id="lblRed">Red</span>
+            <span class="cap" id="capRed"></span>
+          </div>
+          <div class="side-score" id="scoreBlack">
+            <span class="chip b"></span>
+            <span class="lbl" id="lblBlack">Black</span>
+            <span class="cap" id="capBlack"></span>
+          </div>
+        </div>
+
+        <div class="board-frame">
+          <div class="files top" id="filesTop"></div>
+          <div class="board" id="board" role="grid" aria-label="Xiangqi board"></div>
+          <div class="files bot" id="filesBot"></div>
+        </div>
+
+        <div class="banner" id="banner">Red to move</div>
+      </section>
+
+      <aside>
+        <div class="panel">
+          <h3>Opponent</h3>
+          <div class="field">
+            <label for="oppSel">Play against</label>
+            <select class="sel" id="oppSel">
+              <option value="human">A friend — same screen</option>
+              <option value="engine">Computer — Fairy-Stockfish</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="sideSel">You play</label>
+            <select class="sel" id="sideSel">
+              <option value="w">Red (moves first)</option>
+              <option value="b">Black</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="levelSel">Strength</label>
+            <select class="sel" id="levelSel">
+              <option value="1">1 — Beginner</option>
+              <option value="2">2 — Novice</option>
+              <option value="3">3 — Casual</option>
+              <option value="4">4 — Club</option>
+              <option value="5">5 — Strong club</option>
+              <option value="6">6 — Expert</option>
+              <option value="7">7 — Master</option>
+              <option value="8">8 — Full strength</option>
+            </select>
+          </div>
+          <div class="engine-status engine-only" id="engineStatus"><span class="led"></span><span id="engineText">Engine not loaded</span></div>
+        </div>
+
+        <div class="panel">
+          <h3>Game</h3>
+          <button class="btn primary" id="newBtn">New game</button>
+          <button class="btn" id="undoBtn">Undo</button>
+          <button class="btn" id="flipBtn">Flip board</button>
+        </div>
+
+        <div class="panel">
+          <h3>Look</h3>
+          <div class="field">
+            <label for="boardSel">Board</label>
+            <select class="sel" id="boardSel">
+              <option value="wood">Wood</option>
+              <option value="bamboo">Bamboo</option>
+              <option value="paper">Rice paper</option>
+              <option value="jade">Jade</option>
+              <option value="charcoal">Charcoal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pieceSel">Pieces</label>
+            <select class="sel" id="pieceSel">
+              <option value="chars">Chinese characters</option>
+              <option value="letters">Western letters (K A E H R C P)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Status</h3>
+          <div class="stats" id="stats">
+            <div><span>Move</span><b id="stMove">1</b></div>
+            <div><span>Turn</span><b id="stTurn">Red</b></div>
+            <div><span>Last move</span><b id="stLast">—</b></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Moves</h3>
+          <div class="movelog" id="movelog"><span class="n">—</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <details class="rules">
+      <summary>How to play</summary>
+      <p>
+        Xiangqi is played on the <em>points</em> where lines cross, not inside squares — a board of
+        9 files by 10 ranks, split across the middle by the <b>river</b>. Each side has a 3×3
+        <b>palace</b> marked with a diagonal cross. Red moves first. Click one of your pieces to see
+        where it can go (a dot, or a ring on a capture), then click the destination.
+      </p>
+      <table class="ptable">
+        <tr><td class="g"><span class="r">帥</span> 將</td><td class="nm">General (K)</td><td>One point orthogonally, and never leaves the palace. The two generals may never face each other on an open file — the <em>flying general</em> rule — so a move that would leave them facing is illegal.</td></tr>
+        <tr><td class="g"><span class="r">仕</span> 士</td><td class="nm">Advisor (A)</td><td>One point diagonally, inside the palace only.</td></tr>
+        <tr><td class="g"><span class="r">相</span> 象</td><td class="nm">Elephant (E)</td><td>Exactly two points diagonally, and can't cross the river. Blocked if the point it jumps over (the "elephant's eye") is occupied.</td></tr>
+        <tr><td class="g"><span class="r">傌</span> 馬</td><td class="nm">Horse (H)</td><td>One point orthogonally then one diagonally outward, like a chess knight — but it's <em>hobbled</em>: blocked if the point directly next to it in that direction is occupied.</td></tr>
+        <tr><td class="g"><span class="r">俥</span> 車</td><td class="nm">Chariot (R)</td><td>Any distance orthogonally, like a chess rook. The strongest piece.</td></tr>
+        <tr><td class="g"><span class="r">炮</span> 砲</td><td class="nm">Cannon (C)</td><td>Moves like a chariot, but captures only by jumping over exactly one piece (of either colour), the <em>screen</em>, onto the enemy piece behind it.</td></tr>
+        <tr><td class="g"><span class="r">兵</span> 卒</td><td class="nm">Soldier (P)</td><td>One point forward. Once across the river it may also step sideways. It never moves backward and never promotes.</td></tr>
+      </table>
+      <p>
+        You win by <b>checkmating</b> the enemy general — and, unlike chess, also by <b>stalemating</b>
+        it: a side with no legal move loses. <b>Perpetual check is forbidden:</b> if the same position
+        comes up a third time and one side has been giving check on every move of that cycle, that side
+        loses; any other threefold repetition is scored a draw. (Tournament rules also forbid perpetual
+        <em>chasing</em> of an unprotected piece; that finer rule isn't adjudicated here, though the
+        engine knows it.)
+      </p>
+      <p>
+        To play the computer, set <b>Play against</b> to <b>Computer — Fairy-Stockfish</b>, pick a side
+        and a strength, and play. Level 1 makes plenty of mistakes; level 8 is the engine at full
+        strength. In this mode Undo takes back your last move <em>and</em> the computer's reply.
+        The move list uses <b>WXF notation</b>: piece letter, the file it starts on (numbered 1–9 from
+        each player's own right), then <code>+</code> advance, <code>-</code> retreat or
+        <code>=</code> sideways, then the number of points moved (for pieces moving straight along a
+        file) or the destination file. So <code>C2=5</code> is "cannon on file 2 moves across to file 5"
+        — the classic Central Cannon opening. When two identical pieces share a file,
+        <code>+</code>/<code>-</code> replace the file number for the front/rear one.
+      </p>
+    </details>
+
+    <details class="rules" id="codeInfo">
+      <summary>How the code is built</summary>
+      <div class="codedoc">
+        <p>
+          The game is this one HTML file — no build step, no libraries — plus the optional engine,
+          loaded on demand. All the JavaScript lives in one function (an <em>IIFE</em>) at the bottom,
+          split into labelled sections with <code>// ===</code> banners, following the Chess sub-app:
+        </p>
+        <ul>
+          <li>
+            <b>The rules</b> (<code>BOARD LOGIC</code>) — pure functions over a 10×9 array of
+            single-letter piece codes, the same letters Fairy-Stockfish uses in its FEN
+            (<code>K A B N R C P</code> for Red, lowercase for Black; <code>B</code> is the elephant and
+            <code>N</code> the horse). No DOM, no shared state.
+          </li>
+          <li>
+            <b>Notation</b> (<code>moveToWXF</code>) — turns a move into WXF notation, working in each
+            side's own file numbering and its own idea of "forward".
+          </li>
+          <li>
+            <b>The engine</b> (<code>ENGINE</code>) — loads Fairy-Stockfish and talks UCI to it.
+          </li>
+          <li>
+            <b>The screen &amp; the glue</b> (<code>RENDER</code>, <code>ANIMATION</code>,
+            <code>FLOW</code>) — the only code allowed to touch the DOM.
+          </li>
+        </ul>
+
+        <h4>Every piece is one small rule in <code>pseudoMovesFor</code></h4>
+        <p>
+          A move is just <code>[fromRow, fromCol, toRow, toCol]</code> — Xiangqi has no castling,
+          en passant or promotion, so no flags are needed. The horse checks its "leg" point before
+          jumping, the elephant checks its "eye" and its own side of the river, and the cannon walks
+          outward in each direction: empty points are quiet moves; the first piece it meets becomes the
+          screen, and the first piece <em>after</em> the screen is its only possible capture.
+        </p>
+
+        <h4>Legality: simulate, then look at the generals</h4>
+        <p>
+          <code>generateLegalMoves</code> plays every pseudo-legal move on a cloned board and rejects it
+          if <code>inCheck</code> is then true. <code>inCheck</code> covers both real attacks (any enemy
+          pseudo-move landing on the general) and the flying-general rule (both generals on one file with
+          nothing between them) — so that unusual rule costs one loop, not special cases everywhere.
+        </p>
+
+        <h4>Repetition: position keys + a "gave check" flag per move</h4>
+        <p>
+          After each move, the board and side-to-move are stored as a string key, and whether the move
+          gave check is recorded. When a key appears for the third time, the moves in that cycle are
+          checked: if one side checked on every one of its moves, it loses for perpetual check;
+          otherwise it's a draw.
+        </p>
+
+        <h4>The computer: Fairy-Stockfish over UCI</h4>
+        <p>
+          <a href="https://fairy-stockfish.github.io" target="_blank" rel="noopener">Fairy-Stockfish</a>
+          is the open-source (GPLv3) Stockfish derivative for chess variants, and one of the strongest
+          Xiangqi engines there is. Its WebAssembly build
+          (<a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>,
+          ~1.6&nbsp;MB) is vendored in <code>xiangqi/vendor/fairy-stockfish/</code> and downloaded only when
+          you first choose the computer. The page sends it plain-text UCI —
+          <code>setoption name UCI_Variant value xiangqi</code>, then
+          <code>position startpos moves h3e3 h10g8 …</code> and <code>go depth N</code> — and gets back a
+          line like <code>bestmove b1c3</code>. Points use files <code>a–i</code> and ranks
+          <code>1–10</code> from Red's side. The reply is matched against this page's own legal-move list
+          before it's played, so the engine can only make moves the rules here allow.
+        </p>
+        <p>
+          That WASM build is multi-threaded, so it needs <code>SharedArrayBuffer</code>, which browsers
+          only enable on <em>cross-origin isolated</em> pages (served with COOP/COEP headers). GitHub Pages
+          can't set headers, so the page includes
+          <a href="https://github.com/gzuidhof/coi-serviceworker" target="_blank" rel="noopener">coi-serviceworker</a>
+          (MIT): a tiny service worker that adds those headers to every response for this folder. It
+          installs on the first visit and reloads the page once. Strength levels set the engine's
+          <code>Skill Level</code> and cap its search depth.
+        </p>
+
+        <h4>Board = SVG lines under a CSS grid of points</h4>
+        <p>
+          The 9×10 grid of clickable points is a CSS grid; the lines, palaces, river and position marks
+          are one SVG drawn underneath, with each line passing through the centre of a grid cell. The
+          drawing is symmetric under a half-turn, so flipping the board only changes which logical point
+          each grid cell maps to — every other function thinks in logical coordinates only.
+        </p>
+
+        <div class="viewsrc">
+          <button class="btn" id="srcBtn" type="button">Show the full source ↓</button>
+          <a class="btn" id="srcGh" href="https://github.com/kathuman/claude-projects/blob/main/xiangqi/index.html" target="_blank" rel="noopener">View on GitHub ↗</a>
+        </div>
+        <p class="srcnote" id="srcNote" hidden></p>
+        <pre id="srcPre" hidden></pre>
+      </div>
+    </details>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    Xiangqi (Chinese chess), two players on one screen or against <a href="https://fairy-stockfish.github.io" target="_blank" rel="noopener">Fairy-Stockfish</a> (GPLv3). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ========================================================== THEME
+    (function initTheme() {
+      var s = null;
+      try { s = localStorage.getItem("xiangqi-theme"); } catch (e) {}
+      if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s);
+    })();
+    document.getElementById("themeToggle").addEventListener("click", function () {
+      var root = document.documentElement;
+      var pd = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var cur = root.getAttribute("data-theme") || (pd ? "dark" : "light");
+      var next = cur === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("xiangqi-theme", next); } catch (e) {}
+    });
+
+    function readLS(k, def) {
+      try { var v = localStorage.getItem(k); return v == null ? def : v; } catch (e) { return def; }
+    }
+    function writeLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+    // ========================================================== CONSTANTS
+    // Rows 0-9 top to bottom (row 0 = Black's back rank = rank 10), cols 0-8 left to right
+    // from Red's side (col 0 = file "a"). Piece letters match Fairy-Stockfish's xiangqi FEN.
+    var ROWS = 10, COLS = 9;
+    var FILES = "abcdefghi";
+    var CHARS = {
+      K: "帥", A: "仕", B: "相", N: "傌", R: "俥", C: "炮", P: "兵",
+      k: "將", a: "士", b: "象", n: "馬", r: "車", c: "砲", p: "卒"
+    };
+    var LETTER = { K: "K", A: "A", B: "E", N: "H", R: "R", C: "C", P: "P" };
+    var CAPTURE_ORDER = { R: 0, C: 1, N: 2, B: 3, A: 4, P: 5, K: 6 };
+    var ORTHO = [[-1,0],[1,0],[0,-1],[0,1]];
+    var DIAG = [[-1,-1],[-1,1],[1,-1],[1,1]];
+
+    function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+    function colorOf(p) { if (p == null) return null; return p === p.toUpperCase() ? "w" : "b"; }
+    function opponent(color) { return color === "w" ? "b" : "w"; }
+    function colorName(color) { return color === "w" ? "Red" : "Black"; }
+    function pointName(r, c) { return FILES[c] + (ROWS - r); }
+    function cloneBoard(b) { return b.map(function (row) { return row.slice(); }); }
+    function inPalace(color, r, c) { return c >= 3 && c <= 5 && (color === "w" ? r >= 7 : r <= 2); }
+    function onOwnSide(color, r) { return color === "w" ? r >= 5 : r <= 4; }
+
+    function initialBoard() {
+      var rows = ["rnbakabnr", ".........", ".c.....c.", "p.p.p.p.p", ".........",
+                  ".........", "P.P.P.P.P", ".C.....C.", ".........", "RNBAKABNR"];
+      return rows.map(function (s) { return s.split("").map(function (ch) { return ch === "." ? null : ch; }); });
+    }
+
+    // ========================================================== BOARD LOGIC
+    // A move is [fr, fc, tr, tc].
+
+    function pseudoMovesFor(board, r, c) {
+      var piece = board[r][c];
+      if (piece == null) return [];
+      var color = colorOf(piece), t = piece.toUpperCase(), moves = [];
+      function add(rr, cc) {
+        if (!inBounds(rr, cc)) return;
+        var q = board[rr][cc];
+        if (q == null || colorOf(q) !== color) moves.push([r, c, rr, cc]);
+      }
+      var i, dr, dc, rr, cc;
+
+      if (t === "K") {
+        for (i = 0; i < 4; i++) { rr = r + ORTHO[i][0]; cc = c + ORTHO[i][1]; if (inPalace(color, rr, cc)) add(rr, cc); }
+      } else if (t === "A") {
+        for (i = 0; i < 4; i++) { rr = r + DIAG[i][0]; cc = c + DIAG[i][1]; if (inPalace(color, rr, cc)) add(rr, cc); }
+      } else if (t === "B") {
+        for (i = 0; i < 4; i++) {
+          dr = DIAG[i][0]; dc = DIAG[i][1]; rr = r + 2 * dr; cc = c + 2 * dc;
+          if (inBounds(rr, cc) && onOwnSide(color, rr) && board[r + dr][c + dc] == null) add(rr, cc);
+        }
+      } else if (t === "N") {
+        for (i = 0; i < 4; i++) {
+          dr = ORTHO[i][0]; dc = ORTHO[i][1];
+          if (!inBounds(r + dr, c + dc) || board[r + dr][c + dc] != null) continue; // hobbled
+          if (dr !== 0) { add(r + 2 * dr, c - 1); add(r + 2 * dr, c + 1); }
+          else { add(r - 1, c + 2 * dc); add(r + 1, c + 2 * dc); }
+        }
+      } else if (t === "R" || t === "C") {
+        for (i = 0; i < 4; i++) {
+          dr = ORTHO[i][0]; dc = ORTHO[i][1]; rr = r + dr; cc = c + dc;
+          var screened = false;
+          while (inBounds(rr, cc)) {
+            var q = board[rr][cc];
+            if (t === "R") {
+              if (q == null) moves.push([r, c, rr, cc]);
+              else { if (colorOf(q) !== color) moves.push([r, c, rr, cc]); break; }
+            } else if (!screened) {
+              if (q == null) moves.push([r, c, rr, cc]);
+              else screened = true;
+            } else if (q != null) {
+              if (colorOf(q) !== color) moves.push([r, c, rr, cc]);
+              break;
+            }
+            rr += dr; cc += dc;
+          }
+        }
+      } else if (t === "P") {
+        var fwd = color === "w" ? -1 : 1;
+        add(r + fwd, c);
+        if (!onOwnSide(color, r)) { add(r, c - 1); add(r, c + 1); }
+      }
+      return moves;
+    }
+
+    function generalPos(board, color) {
+      var target = color === "w" ? "K" : "k";
+      for (var r = 0; r < ROWS; r++) for (var c = 3; c <= 5; c++) if (board[r][c] === target) return [r, c];
+      return null;
+    }
+
+    // True if `color`'s general is attacked, or the two generals face each other on an open file.
+    function inCheck(board, color) {
+      var g = generalPos(board, color), o = generalPos(board, opponent(color));
+      if (!g) return true;
+      if (o && o[1] === g[1]) {
+        var lo = Math.min(g[0], o[0]), hi = Math.max(g[0], o[0]), open = true;
+        for (var rr = lo + 1; rr < hi; rr++) if (board[rr][g[1]] != null) { open = false; break; }
+        if (open) return true;
+      }
+      var opp = opponent(color);
+      for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+        var p = board[r][c];
+        if (p == null || colorOf(p) !== opp) continue;
+        var t = p.toUpperCase();
+        if (t === "A" || t === "B" || t === "K") continue; // can never reach the other palace
+        var pm = pseudoMovesFor(board, r, c);
+        for (var i = 0; i < pm.length; i++) if (pm[i][2] === g[0] && pm[i][3] === g[1]) return true;
+      }
+      return false;
+    }
+
+    function applyMoveTo(board, m) {
+      var captured = board[m[2]][m[3]];
+      board[m[2]][m[3]] = board[m[0]][m[1]];
+      board[m[0]][m[1]] = null;
+      return captured;
+    }
+
+    function generateLegalMoves(board, color) {
+      var legal = [];
+      for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+        var p = board[r][c];
+        if (p == null || colorOf(p) !== color) continue;
+        var pm = pseudoMovesFor(board, r, c);
+        for (var i = 0; i < pm.length; i++) {
+          var b2 = cloneBoard(board);
+          applyMoveTo(b2, pm[i]);
+          if (!inCheck(b2, color)) legal.push(pm[i]);
+        }
+      }
+      return legal;
+    }
+
+    function positionKey(board, turn) {
+      return board.map(function (row) { return row.map(function (p) { return p || "."; }).join(""); }).join("/") + " " + turn;
+    }
+
+    // ========================================================== NOTATION
+    // WXF: piece letter, start file (1-9 from the mover's own right), + / - / =, then steps
+    // (straight movers along a file) or destination file (everything else / sideways moves).
+    function fileNum(color, c) { return color === "w" ? COLS - c : c + 1; }
+
+    function moveToWXF(move, boardBefore) {
+      var r = move[0], c = move[1], rr = move[2], cc = move[3];
+      var piece = boardBefore[r][c], color = colorOf(piece), t = piece.toUpperCase();
+      var letter = LETTER[t];
+
+      // identical pieces on the same file -> front/rear markers replace the file number
+      var same = [];
+      for (var i = 0; i < ROWS; i++) if (boardBefore[i][c] === piece) same.push(i);
+      var from = String(fileNum(color, c));
+      if (same.length > 1) {
+        same.sort(function (a, b) { return color === "w" ? a - b : b - a; }); // front first
+        var idx = same.indexOf(r);
+        from = idx === 0 ? "+" : (idx === same.length - 1 ? "-" : ".");
+      }
+
+      if (rr === r) return letter + from + "=" + fileNum(color, cc);
+      var forward = color === "w" ? rr < r : rr > r;
+      var op = forward ? "+" : "-";
+      var straight = t === "K" || t === "R" || t === "C" || t === "P";
+      var dest = straight && cc === c ? Math.abs(rr - r) : fileNum(color, cc);
+      return letter + from + op + dest;
+    }
+
+    function moveToUCI(m) { return pointName(m[0], m[1]) + pointName(m[2], m[3]); }
+
+    // ========================================================== STATE
+    var state = {
+      board: initialBoard(),
+      turn: "w",
+      history: [],
+      lastMove: null,
+      selected: null,
+      legalTargets: [],
+      legalCache: [],
+      over: false,
+      overText: "",
+      flipped: false,
+      moveList: [],
+      uciMoves: [],
+      keys: [],             // position key after each ply (index 0 = start)
+      checks: [],           // checks[i] = did ply i (1-based via keys) give check
+      captured: { w: [], b: [] }, // pieces captured BY red / BY black
+      animating: false,
+      opponent: "human",
+      humanColor: "w",
+      level: 3,
+      thinking: false,
+      gameId: 0,
+      _board: "wood",
+      _pieces: "chars"
+    };
+    state.keys = [positionKey(state.board, state.turn)];
+    state.legalCache = generateLegalMoves(state.board, state.turn);
+
+    (function loadSettings() {
+      var b = readLS("xiangqi-board", "wood");
+      state._board = ["wood", "bamboo", "paper", "jade", "charcoal"].indexOf(b) >= 0 ? b : "wood";
+      state._pieces = readLS("xiangqi-pieces", "chars") === "letters" ? "letters" : "chars";
+      state.opponent = readLS("xiangqi-opponent", "human") === "engine" ? "engine" : "human";
+      state.humanColor = readLS("xiangqi-side", "w") === "b" ? "b" : "w";
+      var lv = parseInt(readLS("xiangqi-level", "3"), 10);
+      state.level = lv >= 1 && lv <= 8 ? lv : 3;
+      state.flipped = state.opponent === "engine" && state.humanColor === "b";
+    })();
+
+    // ========================================================== ENGINE
+    // Fairy-Stockfish (WASM, GPLv3), loaded lazily. Its build is multi-threaded, so it needs a
+    // cross-origin-isolated page — coi-serviceworker.js arranges that on GitHub Pages.
+    var ENGINE_DIR = "vendor/fairy-stockfish/";
+    var LEVELS = {
+      1: { skill: -9, go: "depth 1" },
+      2: { skill: -3, go: "depth 2" },
+      3: { skill: 3,  go: "depth 4" },
+      4: { skill: 8,  go: "depth 6" },
+      5: { skill: 12, go: "depth 8" },
+      6: { skill: 15, go: "depth 11" },
+      7: { skill: 18, go: "depth 14" },
+      8: { skill: 20, go: "movetime 2000" }
+    };
+    var MIN_THINK_MS = 450;
+
+    var engine = {
+      sf: null,
+      status: "off",        // off | loading | ready | error
+      // Every "go" gets exactly one "bestmove", in order, so counting both tells us which
+      // search a reply belongs to; replies to cancelled searches are dropped.
+      gosSent: 0,
+      bestsSeen: 0,
+      pending: null,
+      searchToken: 0,
+      onReady: []
+    };
+
+    function setEngineStatus(status, text) {
+      engine.status = status;
+      var el = document.getElementById("engineStatus");
+      el.classList.toggle("ready", status === "ready" && !state.thinking);
+      el.classList.toggle("busy", status === "loading" || state.thinking);
+      el.classList.toggle("error", status === "error");
+      document.getElementById("engineText").textContent = text;
+    }
+    function engineIdleText() { return "Fairy-Stockfish · ready · level " + state.level; }
+    function engineSend(cmd) { if (engine.sf) engine.sf.postMessage(cmd); }
+
+    function onEngineLine(line) {
+      if (line === "uciok") {
+        engineSend("setoption name UCI_Variant value xiangqi");
+        engineSend("isready");
+      } else if (line === "readyok" && engine.status === "loading") {
+        setEngineStatus("ready", engineIdleText());
+        var q = engine.onReady; engine.onReady = [];
+        q.forEach(function (f) { f(); });
+      } else if (line.indexOf("bestmove") === 0) {
+        engine.bestsSeen++;
+        var p = engine.pending;
+        if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1]); }
+      }
+    }
+
+    function ensureEngine(cb) {
+      if (engine.status === "ready") { cb(); return; }
+      if (engine.status === "error") return;
+      engine.onReady.push(cb);
+      if (engine.status === "loading") return;
+      if (!window.crossOriginIsolated || typeof SharedArrayBuffer === "undefined") {
+        engineFailed(location.protocol === "file:"
+          ? "The engine can't run from a local file — serve the folder over http(s)"
+          : "This browser didn't enable cross-origin isolation (needed by the engine) — try reloading, or another browser");
+        return;
+      }
+      setEngineStatus("loading", "Loading Fairy-Stockfish (≈1.7 MB, first time only)…");
+      var timer = setTimeout(function () { if (engine.status === "loading") engineFailed(); }, 60000);
+      var s = document.createElement("script");
+      s.src = ENGINE_DIR + "stockfish.js";
+      s.onerror = function () { clearTimeout(timer); engineFailed(); };
+      s.onload = function () {
+        // absolute URLs: the engine's thread workers resolve relative paths against their own location
+        var base = new URL(ENGINE_DIR, location.href).href;
+        window.Stockfish({
+          locateFile: function (f) { return base + f; },
+          mainScriptUrlOrBlob: base + "stockfish.js"
+        }).then(function (sf) {
+          engine.sf = sf;
+          sf.addMessageListener(onEngineLine);
+          engineSend("uci");
+        }).catch(function () { clearTimeout(timer); engineFailed(); });
+      };
+      document.head.appendChild(s);
+    }
+
+    function engineFailed(msg) {
+      engine.onReady = [];
+      engine.sf = null;
+      state.thinking = false;
+      setEngineStatus("error", typeof msg === "string" ? msg : "Couldn't load the engine — check your connection and reload");
+      render();
+    }
+
+    function engineSearch(cb) {
+      var lv = LEVELS[state.level];
+      engine.pending = { id: ++engine.gosSent, cb: cb };
+      engineSend("setoption name Skill Level value " + lv.skill);
+      engineSend("position startpos" + (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : ""));
+      engineSend("go " + lv.go);
+    }
+
+    function cancelEngine() {
+      if (!state.thinking) return;
+      state.thinking = false;
+      engine.searchToken++;
+      if (engine.pending) { engine.pending = null; engineSend("stop"); }
+      if (engine.status === "ready") setEngineStatus("ready", engineIdleText());
+    }
+
+    function isEngineTurn() {
+      return state.opponent === "engine" && !state.over && state.turn !== state.humanColor;
+    }
+
+    // Called whenever the position settles: if it's the computer's move, ask for one.
+    function maybeEngineMove() {
+      if (!isEngineTurn() || state.thinking || state.animating || engine.status === "error") return;
+      state.thinking = true;
+      var token = engine.searchToken;
+      render();
+      ensureEngine(function () {
+        if (token !== engine.searchToken) return; // cancelled while the engine was loading
+        setEngineStatus("ready", "Fairy-Stockfish is thinking…");
+        var started = Date.now();
+        engineSearch(function (uci) {
+          var wait = Math.max(0, MIN_THINK_MS - (Date.now() - started));
+          setTimeout(function () {
+            if (token !== engine.searchToken) return;
+            state.thinking = false;
+            setEngineStatus("ready", engineIdleText());
+            var mv = uciToMove(uci);
+            if (mv) makeMove(mv); else render();
+          }, wait);
+        });
+      });
+    }
+
+    // Map the engine's answer back onto our own legal-move list, so it can only play legal moves.
+    function uciToMove(uci) {
+      if (!uci || uci === "(none)") return null;
+      for (var i = 0; i < state.legalCache.length; i++) {
+        if (moveToUCI(state.legalCache[i]) === uci) return state.legalCache[i];
+      }
+      return null;
+    }
+
+    // ========================================================== RENDER
+    var boardEl = document.getElementById("board");
+    var cells = []; // cells[r][c] -> DOM node, indexed by LOGICAL point
+
+    function drawLines() {
+      // viewBox 90x100: point (r, c) sits at (c*10+5, r*10+5), the centre of its grid cell.
+      var s = [];
+      function L(x1, y1, x2, y2, cls) { s.push('<line class="' + (cls || "ln") + '" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>'); }
+      for (var r = 0; r < ROWS; r++) L(5, r * 10 + 5, 85, r * 10 + 5);
+      for (var c = 0; c < COLS; c++) {
+        if (c === 0 || c === 8) { L(c * 10 + 5, 5, c * 10 + 5, 95); continue; }
+        L(c * 10 + 5, 5, c * 10 + 5, 45);   // the river interrupts the inner files
+        L(c * 10 + 5, 55, c * 10 + 5, 95);
+      }
+      L(35, 5, 55, 25); L(55, 5, 35, 25);   // palaces
+      L(35, 75, 55, 95); L(55, 75, 35, 95);
+      s.push('<rect class="frame" x="3.6" y="3.6" width="82.8" height="92.8"/>');
+      // little corner marks on the cannon and soldier starting points
+      var marks = [[2,1],[2,7],[7,1],[7,7],[3,0],[3,2],[3,4],[3,6],[3,8],[6,0],[6,2],[6,4],[6,6],[6,8]];
+      marks.forEach(function (m) {
+        var x = m[1] * 10 + 5, y = m[0] * 10 + 5, g = 1, k = 2.2;
+        [-1, 1].forEach(function (sx) {
+          if ((sx < 0 && m[1] === 0) || (sx > 0 && m[1] === 8)) return;
+          [-1, 1].forEach(function (sy) {
+            s.push('<path class="ln" d="M' + (x + sx * g) + ' ' + (y + sy * (g + k)) + ' L' + (x + sx * g) + ' ' + (y + sy * g) + ' L' + (x + sx * (g + k)) + ' ' + (y + sy * g) + '"/>');
+          });
+        });
+      });
+      s.push('<text class="river" x="25" y="51.9" text-anchor="middle">楚 河</text>');
+      s.push('<text class="river" x="65" y="51.9" text-anchor="middle">漢 界</text>');
+      return '<svg class="lines" viewBox="0 0 90 100" preserveAspectRatio="none" aria-hidden="true">' + s.join("") + "</svg>";
+    }
+
+    function buildGrid() {
+      boardEl.innerHTML = drawLines();
+      cells = [];
+      for (var r = 0; r < ROWS; r++) cells.push(new Array(COLS));
+      for (var vr = 0; vr < ROWS; vr++) {
+        for (var vc = 0; vc < COLS; vc++) {
+          var r2 = state.flipped ? ROWS - 1 - vr : vr;
+          var c2 = state.flipped ? COLS - 1 - vc : vc;
+          var cell = document.createElement("div");
+          cell.className = "pt";
+          cell.setAttribute("role", "gridcell");
+          cell.setAttribute("aria-label", pointName(r2, c2));
+          cell.dataset.r = r2; cell.dataset.c = c2;
+          cell.addEventListener("click", onCellClick);
+          boardEl.appendChild(cell);
+          cells[r2][c2] = cell;
+        }
+      }
+      // file numbers: each side numbers files 1-9 from its own right
+      var topColor = state.flipped ? "w" : "b", botColor = opponent(topColor), top = "", bot = "";
+      for (var v = 0; v < COLS; v++) {
+        var c3 = state.flipped ? COLS - 1 - v : v;
+        top += "<span>" + fileNum(topColor, c3) + "</span>";
+        bot += "<span>" + fileNum(botColor, c3) + "</span>";
+      }
+      document.getElementById("filesTop").innerHTML = top;
+      document.getElementById("filesBot").innerHTML = bot;
+    }
+
+    function pieceEl(p) {
+      var el = document.createElement("div");
+      el.className = "pc " + (colorOf(p) === "w" ? "r" : "b");
+      el.textContent = state._pieces === "letters" ? LETTER[p.toUpperCase()] : CHARS[p];
+      return el;
+    }
+
+    function visPos(r, c) {
+      var vr = state.flipped ? ROWS - 1 - r : r;
+      var vc = state.flipped ? COLS - 1 - c : c;
+      return { left: (vc / COLS * 100) + "%", top: (vr / ROWS * 100) + "%" };
+    }
+
+    function render() {
+      var board = state.board;
+      var legalSet = {};
+      state.legalTargets.forEach(function (m) { legalSet[m[2] + "," + m[3]] = true; });
+      var checked = inCheck(board, state.turn) ? generalPos(board, state.turn) : null;
+      var myTurn = !state.over && !isEngineTurn();
+
+      for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+        var cell = cells[r][c];
+        cell.innerHTML = "";
+        var piece = board[r][c];
+        var isSel = state.selected && state.selected[0] === r && state.selected[1] === c;
+        var lm = state.lastMove;
+        if (piece) cell.appendChild(pieceEl(piece));
+        if (checked && checked[0] === r && checked[1] === c) addDiv(cell, "hl check");
+        else if (isSel) addDiv(cell, "hl select");
+        else if (lm && lm[2] === r && lm[3] === c) addDiv(cell, "hl lastto");
+        if (lm && lm[0] === r && lm[1] === c && !piece) addDiv(cell, "lastfrom");
+        if (legalSet[r + "," + c]) addDiv(cell, piece ? "ring" : "dot");
+        cell.classList.toggle("playable", myTurn && (!!legalSet[r + "," + c] || (piece != null && colorOf(piece) === state.turn)));
+      }
+      renderStatus();
+      renderCaptured();
+      renderLog();
+    }
+    function addDiv(parent, cls) { var d = document.createElement("div"); d.className = cls; parent.appendChild(d); }
+
+    function renderStatus() {
+      var turnName = colorName(state.turn);
+      document.getElementById("scoreRed").classList.toggle("active", !state.over && state.turn === "w");
+      document.getElementById("scoreBlack").classList.toggle("active", !state.over && state.turn === "b");
+      document.getElementById("stMove").textContent = Math.floor(state.moveList.length / 2) + 1;
+      document.getElementById("stTurn").textContent = turnName;
+      document.getElementById("stLast").textContent = state.moveList.length ? state.moveList[state.moveList.length - 1] : "—";
+      document.getElementById("undoBtn").disabled = state.history.length === 0 || state.animating;
+      var vs = state.opponent === "engine";
+      document.getElementById("lblRed").textContent = "Red" + (vs ? (state.humanColor === "w" ? " · you" : " · engine") : "");
+      document.getElementById("lblBlack").textContent = "Black" + (vs ? (state.humanColor === "b" ? " · you" : " · engine") : "");
+
+      var banner = document.getElementById("banner");
+      banner.classList.toggle("win", state.over);
+      if (state.over) banner.textContent = state.overText;
+      else if (isEngineTurn()) {
+        banner.textContent = engine.status === "error" ? "Engine unavailable — switch to a friend, or undo"
+          : (inCheck(state.board, state.turn) ? "Check! " : "") + "Fairy-Stockfish is thinking…";
+      } else if (inCheck(state.board, state.turn)) banner.textContent = turnName + " to move — Check!";
+      else banner.textContent = turnName + " to move";
+    }
+
+    function renderCaptured() {
+      function html(list) {
+        return list.slice().sort(function (a, b) { return CAPTURE_ORDER[a.toUpperCase()] - CAPTURE_ORDER[b.toUpperCase()]; })
+          .map(function (p) {
+            var g = state._pieces === "letters" ? LETTER[p.toUpperCase()] : CHARS[p];
+            return '<span class="' + (colorOf(p) === "w" ? "r" : "b") + '">' + g + "</span>";
+          }).join("");
+      }
+      document.getElementById("capRed").innerHTML = html(state.captured.w);
+      document.getElementById("capBlack").innerHTML = html(state.captured.b);
+    }
+
+    function renderLog() {
+      var el = document.getElementById("movelog");
+      if (!state.moveList.length) { el.innerHTML = '<span class="n">—</span>'; return; }
+      var html = "";
+      for (var i = 0; i < state.moveList.length; i++) {
+        if (i % 2 === 0) html += '<span class="n">' + (i / 2 + 1) + ".</span> ";
+        html += '<span class="mv">' + state.moveList[i] + "</span> ";
+      }
+      el.innerHTML = html;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // ========================================================== ANIMATION
+    function animateMove(move, piece, done) {
+      state.animating = true;
+      var el = document.createElement("div");
+      el.className = "anim-piece";
+      el.appendChild(pieceEl(piece));
+      var p0 = visPos(move[0], move[1]);
+      el.style.left = p0.left; el.style.top = p0.top;
+      boardEl.appendChild(el);
+      [[move[0], move[1]], [move[2], move[3]]].forEach(function (sq) {
+        var pe = cells[sq[0]][sq[1]].querySelector(".pc");
+        if (pe) pe.style.visibility = "hidden";
+      });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          var p1 = visPos(move[2], move[3]);
+          el.style.left = p1.left; el.style.top = p1.top;
+        });
+      });
+      setTimeout(function () {
+        el.remove();
+        state.animating = false;
+        done();
+      }, 210);
+    }
+
+    // ========================================================== FLOW
+    function pushHistory() {
+      state.history.push({
+        board: cloneBoard(state.board),
+        turn: state.turn,
+        lastMove: state.lastMove,
+        moveList: state.moveList.slice(),
+        uciMoves: state.uciMoves.slice(),
+        keys: state.keys.slice(),
+        checks: state.checks.slice(),
+        captured: { w: state.captured.w.slice(), b: state.captured.b.slice() },
+        over: state.over,
+        overText: state.overText
+      });
+    }
+
+    // Threefold repetition: perpetual checker loses, otherwise draw.
+    function repetitionVerdict() {
+      var key = state.keys[state.keys.length - 1], first = -1, count = 0;
+      for (var i = 0; i < state.keys.length; i++) if (state.keys[i] === key) { if (first < 0) first = i; count++; }
+      if (count < 3) return null;
+      // plies first+1 .. end were played in the cycle; ply k was made by the side to move at keys[k-1]
+      var allCheck = { w: true, b: true }, any = { w: false, b: false };
+      for (var k = first + 1; k < state.keys.length; k++) {
+        var mover = state.keys[k - 1].slice(-1);
+        any[mover] = true;
+        if (!state.checks[k]) allCheck[mover] = false;
+      }
+      var w = any.w && allCheck.w, b = any.b && allCheck.b;
+      if (w && !b) return { loser: "w", text: "Red loses — perpetual check." };
+      if (b && !w) return { loser: "b", text: "Black loses — perpetual check." };
+      return { loser: null, text: "Draw by repetition." };
+    }
+
+    function finishMove(move, san, gaveCheck) {
+      state.moveList.push(san);
+      state.selected = null;
+      state.legalTargets = [];
+      state.lastMove = move.slice(0, 4);
+      state.keys.push(positionKey(state.board, state.turn));
+      state.checks[state.keys.length - 1] = gaveCheck;
+      state.legalCache = generateLegalMoves(state.board, state.turn);
+      var vs = state.opponent === "engine";
+      if (state.legalCache.length === 0) {
+        state.over = true;
+        var winner = opponent(state.turn);
+        var how = gaveCheck ? "Checkmate" : "Stalemate (no legal moves loses in Xiangqi)";
+        state.overText = vs
+          ? how + " — " + (winner === state.humanColor ? "you win!" : "Fairy-Stockfish wins.")
+          : how + " — " + colorName(winner) + " wins.";
+      } else {
+        var rep = repetitionVerdict();
+        if (rep) { state.over = true; state.overText = rep.text; }
+      }
+      render();
+      maybeEngineMove();
+    }
+
+    function makeMove(move) {
+      var preBoard = cloneBoard(state.board);
+      var san = moveToWXF(move, preBoard);
+      var piece = preBoard[move[0]][move[1]];
+      pushHistory();
+      state.uciMoves.push(moveToUCI(move));
+      var captured = applyMoveTo(state.board, move);
+      if (captured) state.captured[state.turn].push(captured);
+      state.turn = opponent(state.turn);
+      var gaveCheck = inCheck(state.board, state.turn);
+      var gameId = state.gameId;
+      animateMove(move, piece, function () {
+        if (gameId !== state.gameId) { maybeEngineMove(); return; } // New game while animating
+        finishMove(move, san, gaveCheck);
+      });
+    }
+
+    function restore(snap) {
+      state.board = snap.board;
+      state.turn = snap.turn;
+      state.lastMove = snap.lastMove;
+      state.moveList = snap.moveList;
+      state.uciMoves = snap.uciMoves;
+      state.keys = snap.keys;
+      state.checks = snap.checks;
+      state.captured = snap.captured;
+      state.over = snap.over;
+      state.overText = snap.overText;
+    }
+
+    function undo() {
+      if (!state.history.length || state.animating) return;
+      cancelEngine();
+      var snap = state.history.pop();
+      // vs the computer, step back to the human's turn (their move + the engine's reply)
+      if (state.opponent === "engine" && snap.turn !== state.humanColor && state.history.length) snap = state.history.pop();
+      restore(snap);
+      state.selected = null;
+      state.legalTargets = [];
+      state.legalCache = generateLegalMoves(state.board, state.turn);
+      render();
+      maybeEngineMove();
+    }
+
+    function newGame() {
+      cancelEngine();
+      state.gameId++;
+      state.board = initialBoard();
+      state.turn = "w";
+      state.history = [];
+      state.lastMove = null;
+      state.selected = null;
+      state.legalTargets = [];
+      state.over = false;
+      state.overText = "";
+      state.moveList = [];
+      state.uciMoves = [];
+      state.keys = [positionKey(state.board, state.turn)];
+      state.checks = [];
+      state.captured = { w: [], b: [] };
+      state.legalCache = generateLegalMoves(state.board, state.turn);
+      render();
+      maybeEngineMove();
+    }
+
+    function onCellClick() {
+      if (state.over || state.animating || isEngineTurn()) return;
+      var row = +this.dataset.r, col = +this.dataset.c;
+      var piece = state.board[row][col];
+
+      if (state.selected) {
+        var hit = state.legalTargets.filter(function (m) { return m[2] === row && m[3] === col; })[0];
+        if (hit) { makeMove(hit); return; }
+      }
+      if (piece && colorOf(piece) === state.turn && !(state.selected && state.selected[0] === row && state.selected[1] === col)) {
+        state.selected = [row, col];
+        state.legalTargets = state.legalCache.filter(function (m) { return m[0] === row && m[1] === col; });
+      } else {
+        state.selected = null;
+        state.legalTargets = [];
+      }
+      render();
+    }
+
+    // ========================================================== CONTROLS
+    document.getElementById("newBtn").addEventListener("click", newGame);
+    document.getElementById("undoBtn").addEventListener("click", undo);
+    document.getElementById("flipBtn").addEventListener("click", function () {
+      state.flipped = !state.flipped;
+      buildGrid();
+      render();
+    });
+
+    var oppSel = document.getElementById("oppSel");
+    var sideSel = document.getElementById("sideSel");
+    var levelSel = document.getElementById("levelSel");
+    function applyOpponentUI() {
+      var vs = state.opponent === "engine";
+      document.querySelectorAll(".engine-only").forEach(function (el) { el.hidden = !vs; });
+      oppSel.value = state.opponent;
+      sideSel.value = state.humanColor;
+      levelSel.value = String(state.level);
+    }
+    oppSel.addEventListener("change", function () {
+      state.opponent = this.value; writeLS("xiangqi-opponent", this.value);
+      applyOpponentUI();
+      if (state.opponent === "engine") {
+        if (state.flipped !== (state.humanColor === "b")) { state.flipped = state.humanColor === "b"; buildGrid(); }
+        state.selected = null; state.legalTargets = [];
+        render();
+        maybeEngineMove();
+        if (engine.status === "off") ensureEngine(function () {}); // warm up in the background
+      } else {
+        cancelEngine();
+        render();
+      }
+    });
+    sideSel.addEventListener("change", function () {
+      cancelEngine();
+      state.humanColor = this.value; writeLS("xiangqi-side", this.value);
+      state.flipped = state.humanColor === "b";
+      state.selected = null; state.legalTargets = [];
+      buildGrid();
+      render();
+      maybeEngineMove();
+    });
+    levelSel.addEventListener("change", function () {
+      state.level = parseInt(this.value, 10); writeLS("xiangqi-level", this.value);
+      if (engine.status === "ready" && !state.thinking) setEngineStatus("ready", engineIdleText());
+    });
+
+    function applyLook() {
+      var root = document.documentElement;
+      if (state._board === "wood") root.removeAttribute("data-board"); else root.setAttribute("data-board", state._board);
+      if (state._pieces === "chars") root.removeAttribute("data-pieces"); else root.setAttribute("data-pieces", state._pieces);
+    }
+    var boardSel = document.getElementById("boardSel");
+    var pieceSel = document.getElementById("pieceSel");
+    boardSel.value = state._board;
+    pieceSel.value = state._pieces;
+    boardSel.addEventListener("change", function () {
+      state._board = this.value; writeLS("xiangqi-board", this.value); applyLook();
+    });
+    pieceSel.addEventListener("change", function () {
+      state._pieces = this.value; writeLS("xiangqi-pieces", this.value); applyLook(); render();
+    });
+
+    // ---- source viewer: the page reads and shows its own code ----
+    (function wireSource() {
+      var btn = document.getElementById("srcBtn");
+      var pre = document.getElementById("srcPre");
+      var note = document.getElementById("srcNote");
+      var loaded = false, shown = false;
+      function esc(s) {
+        return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; });
+      }
+      btn.addEventListener("click", function () {
+        if (loaded) {
+          shown = !shown;
+          pre.hidden = !shown;
+          btn.textContent = shown ? "Hide the source ↑" : "Show the full source ↓";
+          return;
+        }
+        btn.textContent = "Loading…";
+        fetch(window.location.href, { cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+          .then(function (txt) {
+            var lines = txt.split("\n").length;
+            pre.innerHTML = esc(txt).replace(/^(\s*\/\/ =+.*)$/gm, '<span class="bnr">$1</span>');
+            pre.hidden = false;
+            note.textContent = "xiangqi/index.html — " + lines + " lines, HTML + CSS + JS in one file. This is the exact text running the page right now.";
+            note.hidden = false;
+            loaded = true; shown = true;
+            btn.textContent = "Hide the source ↑";
+          })
+          .catch(function () {
+            note.textContent = "A browser won't let a local file read itself — open the GitHub link instead, or serve the folder over http.";
+            note.hidden = false;
+            btn.textContent = "Show the full source ↓";
+          });
+      });
+    })();
+
+    // ========================================================== GO
+    applyLook();
+    applyOpponentUI();
+    buildGrid();
+    render();
+    maybeEngineMove();
+  })();
+  </script>
+</body>
+</html>
