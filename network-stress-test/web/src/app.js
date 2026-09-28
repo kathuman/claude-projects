@@ -3,6 +3,12 @@
   const NST = window.NST;
   const MODE_DEFAULTS = NST.modeDefaults.MODE_DEFAULTS;
 
+  // Bump this on any user-visible change (matches the site's git history:
+  // 1.0.0 Phase 1 launch, 1.1.0 Phase 2 (Monte Carlo/TTS-TTR/adversarial),
+  // 1.2.0 zoom fix + Map/Diagram toggle + guided tutorial, 1.3.0 world map
+  // basemap). Estay Dynamics branding lives beside it in the header/footer.
+  const APP_VERSION = "1.3.0";
+
   const state = {
     network: { products: [], nodes: [], edges: [] },
     scenario: { disabledNodes: new Set(), disabledEdges: new Set(), derate: {} },
@@ -690,6 +696,8 @@
   });
 
   // ---------- init ----------
+  document.getElementById("version-badge").textContent = "v" + APP_VERSION;
+  document.getElementById("version-badge-footer").textContent = "v" + APP_VERSION;
   renderModeDefaults();
   document.getElementById("btn-generate").click();
 })();

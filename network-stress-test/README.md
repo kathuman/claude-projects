@@ -7,6 +7,12 @@ Time-to-Recover resilience check, and a greedy adversarial worst-case search.
 
 **Live demo:** `https://kathuman.github.io/claude-projects/network-stress-test/web/`
 
+**Version:** shown as a badge in the header and footer (currently v1.3.0), bumped on every
+user-visible change — see the `APP_VERSION` constant at the top of `web/src/app.js`. The
+header and footer also credit **Estay Dynamics**, with a header "Contact" button and the
+footer's "get in touch" link both pointing at the same consulting contact destination used
+site-wide (`github.com/kathuman`).
+
 ## Why this exists
 
 A network-design consulting question — "how resilient is this supply network, and where
