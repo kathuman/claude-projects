@@ -30,9 +30,31 @@ web/src/
   resilienceSim.js    Time-to-Survive vs. Time-to-Recover static comparison (Phase 2)
   adversarial.js      greedy worst-k-combination search (Phase 2)
   csv.js              bulk import/export for nodes and edges
-  mapView.js          plain equirectangular SVG map, pan/zoom, click-to-select (browser-only)
-  app.js              UI wiring / state management (browser-only)
+  mapView.js          two SVG layouts (geographic map + abstract diagram), pan/zoom,
+                      click-to-select (browser-only)
+  app.js              UI wiring / state management, incl. the guided tutorial (browser-only)
 ```
+
+### Two ways to look at the same network
+
+A **Map** view (real lat/lon positions) and a **Diagram** view (an abstract layered layout —
+production / warehouse / consumer columns, nodes spread evenly by id) render from the same
+node/edge data via one toggle. Geography is often the wrong lens for reading *topology*: at a
+few hundred nodes, region-clustered coordinates put many lanes on top of each other, while the
+diagram makes "how many hops, how many parallel paths" legible regardless of where things sit
+on Earth. Zooming (scroll wheel) never resizes node markers or lane lines on screen in either
+view — node radius is recomputed to a constant on-screen pixel size after every zoom step, and
+lanes use SVG's native `vector-effect="non-scaling-stroke"` so their pixel width is never
+affected by the viewBox transform at all.
+
+### Guided tutorial
+
+A "Tutorial" button in the top bar opens a floating step-by-step walkthrough of one concrete
+worked example (generate a small network → find its single biggest weak point → apply it →
+check whether it's actually survivable → compare against natural random risk → push it further
+with an adversarial search). Every step's action button dispatches a real click on the actual
+control it's teaching (rather than re-implementing that control's behavior in the tutorial
+itself), so the walkthrough can never drift out of sync with what the button really does.
 
 Every module except `mapView.js` and `app.js` is dual-exported (`module.exports` for Node,
 `window.NST.<module>` for the browser) so the actual algorithms are independently unit-tested
@@ -112,13 +134,16 @@ chase to zero.
   budget-2 is monotonically at least as damaging and hits two independent chains, large-budget
   termination, cumulative-drop bookkeeping, a 330-node performance check.
 
-**Browser-level (real Chromium via Playwright)**, 34 checks across two suites covering the
+**Browser-level (real Chromium via Playwright)**, 59 checks across three suites covering the
 full user-facing pipeline: initial generate+solve, map rendering (node/edge SVG element
 counts), click-to-select syncing map/table/inspector, scenario disable/clear, inline table
 editing, add/delete rows, CSV export *and* import round-trips, the N-1 scan with
-click-to-apply, and all three Phase 2 panels (Monte Carlo, resilience check, adversarial
-search) including their own click-to-apply actions — with the console asserted error-free
-throughout every sequence.
+click-to-apply, all three Phase 2 panels (Monte Carlo, resilience check, adversarial search)
+including their own click-to-apply actions, zoom actually rescaling the viewBox while node
+markers converge back to a constant on-screen pixel size, the Map/Diagram layout toggle
+(including that every production node shares one column x-coordinate in Diagram mode), and a
+full run through every tutorial step (including that its actions produce real results, not
+just UI motion) — with the console asserted error-free throughout every sequence.
 
 **Not verified:** cross-browser testing beyond Chromium, mobile/touch interaction on an actual
 device, and GitHub Pages deployment of this specific sub-app post-push (the parent repo's

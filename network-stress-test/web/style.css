@@ -83,6 +83,7 @@ input[type=number]:focus, input[type=text]:focus, select:focus{outline:none; bor
   text-align:center;
 }
 .btn:hover{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 1px rgba(125,211,252,.25) inset;}
+.btn:disabled{opacity:.4; cursor:not-allowed; pointer-events:none;}
 .btn.active{border-color:var(--accent); color:var(--accent-ink); background:var(--accent);}
 .btn.small{padding:6px 10px; font-size:11px; width:auto;}
 .btn.danger:hover{border-color:var(--bad); color:var(--bad);}
@@ -127,11 +128,13 @@ input[type=number]:focus, input[type=text]:focus, select:focus{outline:none; bor
   position:absolute; top:14px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
   pointer-events:none;
 }
-.stage-toolbar .btn, .stage-toolbar .viewmode-group{pointer-events:auto;}
+.stage-toolbar .btn, .stage-toolbar .viewmode-group, .stage-toolbar .toolbar-left{pointer-events:auto;}
+.toolbar-left{display:flex; gap:8px; flex-wrap:wrap;}
 .viewmode-group{display:flex; gap:6px; background:rgba(10,47,82,.72); border:1px solid var(--line); border-radius:8px; padding:4px; backdrop-filter:blur(6px);}
 .viewmode-group .btn{background:transparent; border:none; width:auto;}
 .viewmode-group .btn.active{background:var(--accent); color:var(--accent-ink);}
 #btn-solve{width:auto;}
+.map-diagram-label{font-family:var(--head); font-size:6px; font-weight:700; letter-spacing:.08em; fill:var(--ink-faint);}
 
 .caption{
   position:absolute; left:14px; bottom:14px; font-family:var(--mono); font-size:11px; color:var(--ink-faint);
@@ -252,6 +255,35 @@ footer.foot{max-width:1500px; margin:0 auto; padding:22px 22px 50px; border-top:
 footer.foot a{color:var(--ink-faint);}
 footer.foot .consult{display:block; margin-bottom:6px; font-weight:600; color:var(--ink);}
 footer.foot .consult a{color:var(--accent);}
+
+.tutorial-panel{
+  position:fixed; right:20px; bottom:20px; width:320px; z-index:50;
+  background:var(--panel-2); border:1px solid var(--accent); border-radius:10px;
+  padding:14px 16px 16px; box-shadow:0 8px 30px rgba(0,0,0,.45);
+}
+.tutorial-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+.tutorial-step-count{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); letter-spacing:.04em; text-transform:uppercase;}
+.tutorial-close{background:none; border:none; color:var(--ink-faint); font-size:18px; line-height:1; cursor:pointer; padding:0 2px;}
+.tutorial-close:hover{color:var(--bad);}
+.tutorial-title{font-family:var(--head); font-weight:700; font-size:15px; color:var(--ink); margin-bottom:6px;}
+.tutorial-body{font-size:12.5px; line-height:1.6; color:var(--ink-dim); margin-bottom:12px;}
+.tutorial-actions{margin-bottom:10px;}
+.tutorial-actions .btn{width:100%;}
+.tutorial-nav{display:flex; gap:8px;}
+.tutorial-nav .btn{flex:1; width:auto;}
+
+@keyframes tutorial-pulse{
+  0%, 100%{box-shadow:0 0 0 2px var(--accent), 0 0 0 2px var(--accent);}
+  50%{box-shadow:0 0 0 2px var(--accent), 0 0 14px 4px rgba(125,211,252,.75);}
+}
+.tutorial-highlight{
+  position:relative; z-index:30; border-radius:8px;
+  animation:tutorial-pulse 1.4s ease-in-out infinite;
+}
+
+@media (max-width:640px){
+  .tutorial-panel{left:16px; right:16px; width:auto; bottom:12px;}
+}
 
 @media (max-width:1200px){
   .layout{grid-template-columns:1fr;}

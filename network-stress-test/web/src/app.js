@@ -340,6 +340,16 @@
       updateMapFlow();
     });
   });
+  document.querySelectorAll(".viewmode-group [data-layoutmode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".viewmode-group [data-layoutmode]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      map.setLayoutMode(btn.dataset.layoutmode);
+      map.resetView();
+      map.setSelection(state.selection);
+      updateMapFlow();
+    });
+  });
 
   // ---------- generate ----------
   document.getElementById("btn-generate").addEventListener("click", () => {
@@ -548,6 +558,121 @@
       refreshAllTables(); map.setScenario(state.scenario); doSolve();
     });
   }
+
+  // ---------- Tutorial: a worked example ----------
+  // Every step's action button dispatches a real click on the actual
+  // control (or sets its inputs first) rather than re-implementing that
+  // control's behavior here, so the tutorial can never drift out of sync
+  // with what the button really does.
+  const TUTORIAL_STEPS = [
+    {
+      title: "A worked example",
+      body: "We'll find your network's single biggest weak point, apply it as a disruption, check whether consumers can actually survive it, then compare against natural random risk and a compounded worst case. Each step has a button that performs it for you — watch what happens, then try it yourself anytime.",
+      highlight: null, actionLabel: null, action: null,
+    },
+    {
+      title: "1. Generate a small network",
+      body: "We'll use a smaller network (15 production / 25 warehouse / 30 consumer sites, 3 products) so every step below runs in a second or two. The same tools work identically at full hundreds-of-nodes scale.",
+      highlight: "#btn-generate", actionLabel: "Generate it",
+      action: () => {
+        document.getElementById("gen-production").value = 15;
+        document.getElementById("gen-warehouse").value = 25;
+        document.getElementById("gen-consumer").value = 30;
+        document.getElementById("gen-products").value = 3;
+        document.getElementById("btn-generate").click();
+      },
+    },
+    {
+      title: "2. Solve the baseline",
+      body: "Before breaking anything, see what “normal” looks like — watch the Service Level tile in Key Results.",
+      highlight: "#kpi-grid", actionLabel: "Solve the network",
+      action: () => document.getElementById("btn-solve").click(),
+    },
+    {
+      title: "3. Find the single biggest weak point",
+      body: "The N-1 Contingency Scan disables every currently-active node and lane, one at a time, and ranks them by how much service level each single loss costs.",
+      highlight: "#btn-scan", actionLabel: "Run the scan",
+      action: () => { document.getElementById("scan-limit").value = 30; document.getElementById("btn-scan").click(); },
+    },
+    {
+      title: "4. Apply the worst one",
+      body: "Click that top-ranked result to disable it and re-solve automatically — exactly what happens if you click any scan row yourself.",
+      highlight: "#scan-results", actionLabel: "Apply the top result",
+      action: () => { const row = document.querySelector("#scan-results .scan-row"); if (row) row.click(); },
+    },
+    {
+      title: "5. See the impact",
+      body: "Compare Service Level to the baseline from step 2. Switching to Flow shows which lanes are actually carrying traffic now that one element is down.",
+      highlight: "#kpi-grid", actionLabel: "Show flow on the map",
+      action: () => { const btn = document.querySelector('[data-basemode="flow"]'); if (btn) btn.click(); },
+    },
+    {
+      title: "6. Is it actually survivable?",
+      body: "Time-to-Survive compares consumer inventory buffers against Time-to-Recover for whatever's disabled. If TTS is shorter, that consumer stocks out before recovery — real downtime, not just a percentage.",
+      highlight: "#btn-run-resilience", actionLabel: "Run the check",
+      action: () => document.getElementById("btn-run-resilience").click(),
+    },
+    {
+      title: "7. What does normal risk look like?",
+      body: "One hand-picked failure is a start. Monte Carlo asks a different question: given how often things actually fail, what's the realistic spread of outcomes? We'll clear the scenario first so it samples fresh.",
+      highlight: "#btn-run-mc", actionLabel: "Clear scenario & run Monte Carlo",
+      action: () => {
+        document.getElementById("btn-clear-scenario").click();
+        document.getElementById("mc-trials").value = 40;
+        document.getElementById("btn-run-mc").click();
+      },
+    },
+    {
+      title: "8. How bad can it get on purpose?",
+      body: "Adversarial Search greedily hunts for the worst combination of a few simultaneous failures — an adversary, or just bad luck, hitting more than one thing at once.",
+      highlight: "#btn-run-adversarial", actionLabel: "Run adversarial search",
+      action: () => { document.getElementById("adv-budget").value = 2; document.getElementById("btn-run-adversarial").click(); },
+    },
+    {
+      title: "Done",
+      body: "The full toolkit: Scenario + N-1 Scan for “what's the single biggest risk”, Time-to-Survive/Recover for “is it actually survivable”, Monte Carlo for “what does normal risk look like”, and Adversarial Search for “how bad can it get on purpose”. Now try it on your own data — edit nodes, import a CSV, or regenerate at full scale.",
+      highlight: null, actionLabel: null, action: null,
+    },
+  ];
+
+  let tutorialStep = 0;
+  function showTutorialStep() {
+    const s = TUTORIAL_STEPS[tutorialStep];
+    document.getElementById("tutorial-step-count").textContent = "Step " + (tutorialStep + 1) + " of " + TUTORIAL_STEPS.length;
+    document.getElementById("tutorial-title").textContent = s.title;
+    document.getElementById("tutorial-body").textContent = s.body;
+    const doBtn = document.getElementById("btn-tutorial-do");
+    if (s.action) { doBtn.style.display = ""; doBtn.textContent = s.actionLabel; }
+    else { doBtn.style.display = "none"; }
+    document.getElementById("btn-tutorial-back").disabled = tutorialStep === 0;
+    document.getElementById("btn-tutorial-next").textContent = tutorialStep === TUTORIAL_STEPS.length - 1 ? "Finish" : "Next →";
+    document.querySelectorAll(".tutorial-highlight").forEach((el) => el.classList.remove("tutorial-highlight"));
+    if (s.highlight) {
+      const el = document.querySelector(s.highlight);
+      if (el) { el.classList.add("tutorial-highlight"); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }
+  }
+  function closeTutorial() {
+    document.getElementById("tutorial-panel").hidden = true;
+    document.querySelectorAll(".tutorial-highlight").forEach((el) => el.classList.remove("tutorial-highlight"));
+  }
+  document.getElementById("btn-tutorial").addEventListener("click", () => {
+    tutorialStep = 0;
+    document.getElementById("tutorial-panel").hidden = false;
+    showTutorialStep();
+  });
+  document.getElementById("btn-tutorial-close").addEventListener("click", closeTutorial);
+  document.getElementById("btn-tutorial-do").addEventListener("click", () => {
+    const s = TUTORIAL_STEPS[tutorialStep];
+    if (s.action) s.action();
+  });
+  document.getElementById("btn-tutorial-back").addEventListener("click", () => {
+    if (tutorialStep > 0) { tutorialStep--; showTutorialStep(); }
+  });
+  document.getElementById("btn-tutorial-next").addEventListener("click", () => {
+    if (tutorialStep < TUTORIAL_STEPS.length - 1) { tutorialStep++; showTutorialStep(); }
+    else closeTutorial();
+  });
 
   // ---------- init ----------
   renderModeDefaults();

@@ -20,9 +20,26 @@
       <div class="sub">PRODUCTION · WAREHOUSE · CONSUMER — AIR / SEA / ROAD</div>
     </div>
     <div class="header-actions">
+      <button class="btn small" id="btn-tutorial">▸ Tutorial</button>
       <a class="back-link" href="../">← Projects</a>
     </div>
   </header>
+
+  <div id="tutorial-panel" class="tutorial-panel" hidden>
+    <div class="tutorial-head">
+      <span id="tutorial-step-count" class="tutorial-step-count"></span>
+      <button class="tutorial-close" id="btn-tutorial-close" title="Close tutorial">×</button>
+    </div>
+    <div class="tutorial-title" id="tutorial-title"></div>
+    <div class="tutorial-body" id="tutorial-body"></div>
+    <div class="tutorial-actions">
+      <button class="btn small" id="btn-tutorial-do"></button>
+    </div>
+    <div class="tutorial-nav">
+      <button class="btn small" id="btn-tutorial-back">← Back</button>
+      <button class="btn small" id="btn-tutorial-next">Next →</button>
+    </div>
+  </div>
 
   <main class="layout">
     <aside class="rail" id="rail-network">
@@ -74,14 +91,20 @@
       <div id="stage"><svg id="map-svg" width="100%" height="100%"></svg></div>
 
       <div class="stage-toolbar">
-        <div class="viewmode-group">
-          <button class="btn small active" data-basemode="normal">Base network</button>
-          <button class="btn small" data-basemode="flow">Flow (after solve)</button>
+        <div class="toolbar-left">
+          <div class="viewmode-group">
+            <button class="btn small active" data-layoutmode="geo" title="Real lat/lon positions">Map</button>
+            <button class="btn small" data-layoutmode="diagram" title="Abstract layered layout by node type — easier to read topology at high node counts">Diagram</button>
+          </div>
+          <div class="viewmode-group">
+            <button class="btn small active" data-basemode="normal">Base network</button>
+            <button class="btn small" data-basemode="flow">Flow (after solve)</button>
+          </div>
         </div>
         <button class="btn small" id="btn-solve">Solve network</button>
       </div>
 
-      <p class="caption" id="map-caption">Click a node or lane to select it · scroll to zoom · drag to pan</p>
+      <p class="caption" id="map-caption">Click a node or lane to select it · scroll to zoom · drag to pan · Map = geography, Diagram = topology by type</p>
     </section>
 
     <aside class="side-panel">
