@@ -1,5 +1,5 @@
 // Unit tests for urdf.js + the generic-chain kinematics — run with:
-//   node robotic-arm-sim/tests/urdf.test.js
+//   node cobot-lab/tests/urdf.test.js
 "use strict";
 const fs = require("fs"), path = require("path");
 const K = require("../kinematics.js");

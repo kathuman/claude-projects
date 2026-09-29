@@ -1,4 +1,4 @@
-// Unit tests for planner.js — run with:  node robotic-arm-sim/tests/planner.test.js
+// Unit tests for planner.js — run with:  node cobot-lab/tests/planner.test.js
 "use strict";
 const K = require("../kinematics.js");
 const P = require("../planner.js");

@@ -82,7 +82,7 @@ othello/index.html                 — https://kathuman.github.io/claude-project
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
 chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
 xiangqi/index.html                 — https://kathuman.github.io/claude-projects/xiangqi/
-robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
+cobot-lab/index.html               — https://kathuman.github.io/claude-projects/cobot-lab/
 tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
 warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/
 face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/

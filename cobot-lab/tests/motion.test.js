@@ -1,4 +1,4 @@
-// Unit tests for motion.js — run with:  node robotic-arm-sim/tests/motion.test.js
+// Unit tests for motion.js — run with:  node cobot-lab/tests/motion.test.js
 "use strict";
 const K = require("../kinematics.js");
 const M = require("../motion.js");

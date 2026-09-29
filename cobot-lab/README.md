@@ -3,7 +3,7 @@
 A browser simulator of the Universal Robots e-Series 6-axis collaborative arms (UR3e, UR5e,
 UR10e, UR16e), built from their published kinematic (Denavit–Hartenberg) and dynamics
 parameters. Live demo:
-https://kathuman.github.io/claude-projects/robotic-arm-sim/
+https://kathuman.github.io/claude-projects/cobot-lab/
 
 ## Files
 
@@ -39,7 +39,7 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
   as a plain written guide. It talks to the app only through the small `tutApp` interface at
   the end of `index.html`.
 - `tests/` — unit tests for the three cores, no dependencies:
-  `node robotic-arm-sim/tests/kinematics.test.js`, `motion.test.js`, `planner.test.js`,
+  `node cobot-lab/tests/kinematics.test.js`, `motion.test.js`, `planner.test.js`,
   `urdf.test.js`.
 - `vendor/` — three.js r186 (ES modules, resolved by the import map in `index.html`, plus the
   few add-ons used: studio environment, effect composer, ground-truth ambient occlusion, output
