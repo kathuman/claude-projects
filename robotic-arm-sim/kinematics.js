@@ -24,8 +24,13 @@
     vmax: [Math.PI, Math.PI, Math.PI, Math.PI, Math.PI, Math.PI],
     amax: [4, 4, 4, 6, 6, 6],
     tool: 0.16,     // flange -> tool centre point (between the gripper fingertips), along flange z
-    // link masses (kg), UR5e published dynamics values — used later for gravity torques
-    mass: [3.761, 8.058, 2.846, 1.37, 1.3, 0.365]
+    // link masses (kg) and centres of mass (m, in each link's own DH frame): Universal Robots'
+    // published UR5e dynamics parameters
+    mass: [3.761, 8.058, 2.846, 1.37, 1.3, 0.365],
+    com: [[0, -0.02561, 0.00193], [0.2125, 0, 0.11336], [0.15, 0, 0.0265], [0, -0.0018, 0.01634], [0, 0.0018, 0.01634], [0, 0, -0.001159]],
+    // rated joint torques (N·m): size-3 joints for base/shoulder/elbow, size-1 for the wrists
+    tauMax: [150, 150, 150, 28, 28, 28],
+    gripperMass: 0.9    // the two-finger gripper on the flange (kg), centre of mass 0.06 m out
   };
 
   // ---------------------------------------------------------------- 4x4 helpers
@@ -290,7 +295,68 @@
     return false;
   }
 
+  // ---------------------------------------------------------------- statics
+  // Torque each joint motor must supply to hold the arm still against gravity (N·m), for the
+  // links, the gripper and an optional payload (kg) at the TCP: τ_j = ∂V/∂q_j with
+  // V = Σ m g z_com, using ∂c/∂q_j = z_j × (c − o_j) for every mass beyond joint j.
+  var G = 9.81;
+  function comPositions(q, robot, payload, fkr) {
+    robot = robot || UR5E;
+    var f = fkr || fk(q, robot), out = [];
+    for (var k = 0; k < 6; k++) {
+      var c = robot.com[k], F = f.frames[k + 1];
+      out.push({ m: robot.mass[k], p: [F[0] * c[0] + F[1] * c[1] + F[2] * c[2] + F[3], F[4] * c[0] + F[5] * c[1] + F[6] * c[2] + F[7], F[8] * c[0] + F[9] * c[1] + F[10] * c[2] + F[11]], link: k });
+    }
+    out.push({ m: robot.gripperMass, p: pos(mul(f.flange, transl(0, 0, 0.06))), link: 5 });
+    if (payload) out.push({ m: payload, p: pos(f.tcp), link: 5 });
+    return out;
+  }
+  function gravityTorques(q, robot, payload) {
+    robot = robot || UR5E;
+    var f = fk(q, robot), masses = comPositions(q, robot, payload, f), tau = [0, 0, 0, 0, 0, 0];
+    for (var j = 0; j < 6; j++) {
+      var z = axis(f.frames[j], 2), o = pos(f.frames[j]);
+      masses.forEach(function (ms) {
+        if (ms.link < j) return;                          // masses before joint j don't move with it
+        var r = sub(ms.p, o);
+        var dzdq = z[0] * r[1] - z[1] * r[0];            // z-component of z × r
+        tau[j] += ms.m * G * dzdq;
+      });
+    }
+    return tau;
+  }
+  function potentialEnergy(q, robot, payload) {
+    return comPositions(q, robot, payload).reduce(function (s, ms) { return s + ms.m * G * ms.p[2]; }, 0);
+  }
+
+  // Tool-velocity ellipsoid: principal axes (unit vectors) and lengths (sqrt of eigenvalues
+  // of Jv·Jvᵀ) — how far the tool moves per unit joint speed in each direction.
+  function velocityEllipsoid(q, robot) {
+    var J = jacobian(q, robot), A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) for (var k = 0; k < 6; k++) A[r][c] += J[r][k] * J[c][k];
+    var e = eig3(A);
+    return { axes: e.vectors, radii: e.values.map(function (v) { return Math.sqrt(Math.max(0, v)); }) };
+  }
+  // symmetric 3×3 eigen-decomposition (Jacobi rotations)
+  function eig3(A) {
+    var a = A.map(function (r) { return r.slice(); }), V = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    for (var sweep = 0; sweep < 50; sweep++) {
+      var off = Math.abs(a[0][1]) + Math.abs(a[0][2]) + Math.abs(a[1][2]);
+      if (off < 1e-14) break;
+      for (var p = 0; p < 2; p++) for (var qq = p + 1; qq < 3; qq++) {
+        if (Math.abs(a[p][qq]) < 1e-18) continue;
+        var th = (a[qq][qq] - a[p][p]) / (2 * a[p][qq]);
+        var t = (th >= 0 ? 1 : -1) / (Math.abs(th) + Math.sqrt(th * th + 1)), c = 1 / Math.sqrt(t * t + 1), s = t * c;
+        for (var k = 0; k < 3; k++) { var akp = a[k][p], akq = a[k][qq]; a[k][p] = c * akp - s * akq; a[k][qq] = s * akp + c * akq; }
+        for (var k2 = 0; k2 < 3; k2++) { var apk = a[p][k2], aqk = a[qq][k2]; a[p][k2] = c * apk - s * aqk; a[qq][k2] = s * apk + c * aqk; }
+        for (var k3 = 0; k3 < 3; k3++) { var vkp = V[k3][p], vkq = V[k3][qq]; V[k3][p] = c * vkp - s * vkq; V[k3][qq] = s * vkp + c * vkq; }
+      }
+    }
+    return { values: [a[0][0], a[1][1], a[2][2]], vectors: [0, 1, 2].map(function (i) { return [V[0][i], V[1][i], V[2][i]]; }) };
+  }
+
   var api = {
+    gravityTorques: gravityTorques, potentialEnergy: potentialEnergy, comPositions: comPositions, velocityEllipsoid: velocityEllipsoid, eig3: eig3,
     UR5E: UR5E, fk: fk, ik: ik, ikFlange: ikFlange, jacobian: jacobian, manipulability: manipulability,
     capsules: capsules, checkCollision: checkCollision, segDist: segDist,
     mul: mul, inv: inv, pos: pos, axis: axis, transl: transl, dh: dh, wrap: wrap, nearestBranch: nearestBranch,

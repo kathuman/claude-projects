@@ -173,6 +173,15 @@ input[type=range]:focus-visible{box-shadow:0 0 0 2px var(--accent);}
 .plot .tabs button.on{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
 .plot .tabs .legend{margin-left:auto; display:flex; gap:7px; font-family:var(--mono); font-size:10px;}
 .plot canvas{display:block; width:100%; height:150px;}
+.loads{display:grid; grid-template-columns:auto 1fr 38px; gap:3px 7px; align-items:center; font-size:10.5px;}
+.loads i{display:block; height:5px; border-radius:3px; background:var(--line-soft); overflow:hidden;}
+.loads i b{display:block; height:100%; width:0; background:var(--ok);}
+.loads span:nth-child(3n){text-align:right; color:var(--tele);}
+table.dh{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:10.5px; color:var(--ink-dim);}
+table.dh th{font-weight:500; color:var(--ink-faint); text-align:right; padding:2px 3px; border-bottom:1px solid var(--line-soft);}
+table.dh td{text-align:right; padding:2px 3px;}
+table.dh th:first-child, table.dh td:first-child{text-align:left;}
+table.dh td.live{color:var(--tele);}
 footer.foot{
   flex:0 0 auto; display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:space-between;
   padding:7px 20px; border-top:1px solid var(--line); background:var(--panel-2);
@@ -285,6 +294,19 @@ footer.foot .consult{color:var(--ink);}
           <button class="btn" id="btn-clear">Clear Blocks</button>
           <button class="btn wide small" id="btn-workpiece">Reset workpiece</button>
         </div>
+        <p class="note">Rapier physics: the arm's links and fingers are solid, so they push blocks.</p>
+      </div>
+
+      <div class="rail-section">
+        <h2>Obstacles &amp; planning</h2>
+        <div class="btn-grid">
+          <button class="btn" id="btn-obstacle">Add obstacle</button>
+          <button class="btn" id="btn-clear-obstacles">Clear</button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Plan around obstacles<small>RRT-Connect finds a collision-free joint path when the direct one is blocked</small></span>
+          <button class="switch on" id="plan-switch" role="switch" aria-checked="true" aria-label="Plan around obstacles"><span class="knob"></span></button>
+        </div>
       </div>
 
       <div class="rail-section">
@@ -306,6 +328,26 @@ footer.foot .consult{color:var(--ink);}
           <button class="switch on" id="gizmo-switch" role="switch" aria-checked="true" aria-label="Show the target handle"><span class="knob"></span></button>
         </div>
       </div>
+
+      <div class="rail-section">
+        <h2>Learn</h2>
+        <div class="switch-row">
+          <span class="name">Joint frames<small>The DH coordinate frame of every joint</small></span>
+          <button class="switch" id="frames-switch" role="switch" aria-checked="false" aria-label="Show joint frames"><span class="knob"></span></button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Reachable workspace<small>6,000 random collision-free poses, coloured by dexterity</small></span>
+          <button class="switch" id="ws-switch" role="switch" aria-checked="false" aria-label="Show reachable workspace"><span class="knob"></span></button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Dexterity ellipsoid<small>How easily the tool can move in each direction</small></span>
+          <button class="switch" id="ell-switch" role="switch" aria-checked="false" aria-label="Show dexterity ellipsoid"><span class="knob"></span></button>
+        </div>
+        <table class="dh" aria-label="Denavit–Hartenberg parameters">
+          <thead><tr><th>Joint</th><th>θ (live)</th><th>d m</th><th>a m</th><th>α</th></tr></thead>
+          <tbody id="dh-body"></tbody>
+        </table>
+      </div>
     </aside>
 
     <section class="stage-wrap">
@@ -324,6 +366,9 @@ footer.foot .consult{color:var(--ink);}
         <div class="hud-line"><span>Dexterity</span><b id="hud-manip">—</b></div>
         <div class="meter" title="Manipulability: how freely the tool can move in every direction. Near zero = singular pose."><i id="hud-meter"></i></div>
         <div class="hud-line warnline" id="hud-warn"></div>
+        <div class="hud-sep"></div>
+        <div class="hud-title">Motor load <span id="hud-payload" style="text-transform:none;letter-spacing:0;font-family:var(--mono);font-weight:400"></span></div>
+        <div class="loads" id="hud-loads"></div>
       </div>
 
       <div class="alert" id="alert" role="status"></div>
@@ -333,6 +378,7 @@ footer.foot .consult{color:var(--ink);}
           <button type="button" data-q="pos" class="on">Position</button>
           <button type="button" data-q="vel">Speed</button>
           <button type="button" data-q="acc">Accel</button>
+          <button type="button" data-q="tau">Torque</button>
           <span class="legend" id="plot-legend"></span>
         </div>
         <canvas id="plot-canvas" width="800" height="300"></canvas>
@@ -352,14 +398,14 @@ footer.foot .consult{color:var(--ink);}
 
   <footer class="foot">
     <span class="consult">Linkage <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    <span>UR5e-class kinematics (published DH parameters) · three.js + cannon.js</span>
+    <span>UR5e-class kinematics &amp; dynamics (published parameters) · three.js + Rapier</span>
   </footer>
 </div>
 
 <script src="vendor/three.min.js"></script>
-<script src="vendor/cannon.min.js"></script>
 <script src="kinematics.js"></script>
 <script src="motion.js"></script>
+<script src="planner.js"></script>
 <script>
 (function(){
   "use strict";
@@ -373,11 +419,15 @@ footer.foot .consult{color:var(--ink);}
   //          MoveJ / MoveL / MoveC with synchronised trapezoidal timing inside joint limits;
   //          alternative IK configurations; joint position/speed/acceleration plots; a real
   //          pick & place that reads the workpiece from physics and holds it with a constraint
-  var APP_VERSION = "3.0.0";
+  //   4.0.0  Rapier physics (WebAssembly) with the arm itself solid — links and fingers push
+  //          blocks; obstacles; collision-free path planning (RRT-Connect) for Move J and pick
+  //          & place; motor load from gravity torques (published UR5e masses); teaching overlays:
+  //          joint frames, DH table, reachable workspace, dexterity ellipsoid
+  var APP_VERSION = "4.0.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
-  var K = window.LinkageKin, MO = window.LinkageMotion, ROBOT = K.UR5E;
+  var K = window.LinkageKin, MO = window.LinkageMotion, PL = window.LinkagePlanner, ROBOT = K.UR5E;
   var DEG = Math.PI / 180;
 
   // ================================================================ JOINTS & STATE
@@ -391,7 +441,7 @@ footer.foot .consult{color:var(--ink);}
   ];
   // "ready" pose: arm raised, tool pointing straight down (a classic UR home)
   var HOME = [0, -90, 90, -90, -90, 0].map(function(d){ return d * DEG; });
-  var state = { q: HOME.slice(), gripper: 60, guard: true, follow: true, speed: 0.6 };
+  var state = { q: HOME.slice(), gripper: 60, guard: true, follow: true, speed: 0.6, plan: true };
 
   // ================================================================ RENDERER & SCENE
   var stageEl = document.getElementById('stage');
@@ -582,7 +632,7 @@ footer.foot .consult{color:var(--ink);}
     tcpMarker.position.set(p[0], p[1], p[2]);
 
     // capsules + hit overlays
-    var col = lastCollision = K.checkCollision(q);
+    var col = lastCollision = checkQ(q);
     var hitSet = {};
     col.hits.forEach(function(h){ h.links.forEach(function(i){ hitSet[i] = true; }); });
     col.capsules.forEach(function(c, i){
@@ -753,7 +803,7 @@ footer.foot .consult{color:var(--ink);}
   // A pose that already collides (e.g. left there with the guard off) may always move, so the
   // arm can be brought back out; the guard only stops a free arm from entering a collision.
   function setJoints(q, source){
-    var res = K.checkCollision(q);
+    var res = checkQ(q);
     var wasFree = !lastCollision || lastCollision.ok;
     if (!res.ok && state.guard && wasFree){
       flashSet = {};
@@ -822,15 +872,33 @@ footer.foot .consult{color:var(--ink);}
       requestAnimationFrame(step);
     });
   }
+  // Joint move. If a straight joint move would hit an obstacle and planning is on, RRT-Connect
+  // finds a collision-free route and the arm follows it waypoint by waypoint.
+  var PLAN_LO = [-Math.PI, -Math.PI, -Math.PI * 0.95, -Math.PI, -Math.PI, -Math.PI], PLAN_HI = [Math.PI, 0, Math.PI * 0.95, Math.PI, Math.PI, Math.PI], planSeed = 1;
+  function freeQ(q){ return checkQ(q).ok; }
   function moveJ(qGoal, token, speed){
-    return execute(MO.planJoint(state.q, qGoal, ROBOT, { speed: speed || state.speed }), token);
+    var sp = speed || state.speed;
+    if (!obstacles.length || !state.plan || PL.edgeFree(state.q, qGoal, freeQ, 0.02)){
+      return execute(MO.planJoint(state.q, qGoal, ROBOT, { speed: sp }), token);
+    }
+    var t0 = performance.now(), r = PL.rrtConnect(state.q, qGoal, freeQ, { lo: PLAN_LO, hi: PLAN_HI, seed: planSeed++ });
+    if (!r.ok){ showAlert('No collision-free path found (' + r.reason + ')'); return Promise.resolve(false); }
+    showPlannedPath(r.path);
+    showAlert('Planned around obstacles: ' + (r.path.length - 1) + ' segment' + (r.path.length > 2 ? 's' : '') + ' in ' + Math.round(performance.now() - t0) + ' ms');
+    return (async function(){
+      for (var i = 1; i < r.path.length; i++){
+        if (!(await execute(MO.planJoint(state.q, r.path[i], ROBOT, { speed: sp }), token))) return false;
+      }
+      clearPlannedPath();
+      return true;
+    })();
   }
   var REASONS = { unreachable: 'the target is out of reach', singularity: 'the path passes through a singularity', collision: 'the path would collide', 'too fast': 'no feasible timing', collinear: 'the three points are in a line' };
   function explain(err){
     var r = REASONS[err.reason] || err.reason;
     return r + (err.reason !== 'unreachable' && err.at > 0 ? ' (' + Math.round(err.at * 100) + '% along)' : '') + (err.text ? ': ' + err.text : '');
   }
-  function collideFn(q){ var c = K.checkCollision(q); return c.ok ? null : c.hits[0].text; }
+  function collideFn(q){ var c = checkQ(q); return c.ok ? null : c.hits[0].text; }
   function moveL(Tgoal, token, speed){
     var tr = MO.planLinear(state.q, Tgoal, ROBOT, { speed: speed || state.speed, collide: state.guard ? collideFn : null });
     if (!tr.ok){ showAlert('Move L not possible: ' + explain(tr.error)); return Promise.resolve(false); }
@@ -864,101 +932,222 @@ footer.foot .consult{color:var(--ink);}
   });
   btnStop.addEventListener('click', cancelSequence);
 
-  // ================================================================ PHYSICS BENCH
-  var world = new CANNON.World();
-  world.gravity.set(0, -9.82, 0);
-  world.broadphase = new CANNON.NaiveBroadphase();
-  world.solver.iterations = 14;
-  world.allowSleep = true;
-  var groundMat = new CANNON.Material('ground'), blockMat = new CANNON.Material('block');
-  world.addContactMaterial(new CANNON.ContactMaterial(groundMat, blockMat, {friction:0.45, restitution:0.25}));
-  world.addContactMaterial(new CANNON.ContactMaterial(blockMat, blockMat, {friction:0.4, restitution:0.15}));
-  var groundBody = new CANNON.Body({mass:0, material:groundMat});
-  groundBody.addShape(new CANNON.Plane());
-  groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-  world.addBody(groundBody);
-
+  // ================================================================ PHYSICS (Rapier)
+  // Rapier (Rust compiled to WebAssembly, vendored) loads on demand as an ES module. The arm is
+  // part of the simulation: every link capsule and both fingers are kinematic bodies that follow
+  // the kinematics each frame, so blocks get pushed by the arm. Robot (x, y, z) = three (x, z, -y).
+  var RAPIER = null, phys = { ready: false, world: null, acc: 0, hand: null };
+  var GROUP = { ARM: 1, OBJ: 2, GROUND: 4 };
+  function groups(member, filter){ return ((member & 0xffff) << 16) | (filter & 0xffff); }
   var blocks = [], BLOCK = 0.05, PALETTE = [0xffcf4a, 0x4fe0ff, 0x3ddc97, 0xc7ced6];
-  function spawnBlock(x, y, z){
-    var m = shadowy(new THREE.Mesh(new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK), new THREE.MeshStandardMaterial({color:PALETTE[blocks.length % PALETTE.length], metalness:0.15, roughness:0.5})));
+  var armBodies = [], fingerBodies = [];
+  var robotRootRot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+  function r2t(x, y, z){ return new THREE.Vector3(x, z, -y); }
+  function rv(v){ return { x: v.x, y: v.y, z: v.z }; }
+  var physButtons = ['btn-drop', 'btn-clear', 'btn-workpiece', 'btn-pickplace', 'btn-obstacle', 'btn-clear-obstacles'];
+  physButtons.forEach(function(id){ var b = document.getElementById(id); if (b) b.disabled = true; });
+
+  import('./vendor/rapier/rapier.mjs').then(function(m){
+    return m.init().then(function(){ RAPIER = m; initPhysics(); });
+  }).catch(function(e){
+    console.error(e);
+    showAlert('The physics engine failed to load — kinematics still work');
+  });
+
+  function initPhysics(){
+    var w = phys.world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+    w.createCollider(RAPIER.ColliderDesc.cuboid(3, 0.05, 3).setTranslation(0, -0.05, 0).setFriction(0.7).setCollisionGroups(groups(GROUP.GROUND, GROUP.OBJ)));
+    K.capsules(state.q).forEach(function(c, i){
+      if (c.name === 'fingers') return;                 // the fingers get their own two boxes below
+      var len = Math.hypot(c.b[0] - c.a[0], c.b[1] - c.a[1], c.b[2] - c.a[2]);
+      var body = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+      w.createCollider(RAPIER.ColliderDesc.capsule(Math.max(len / 2, 1e-3), c.r).setFriction(0.5).setCollisionGroups(groups(GROUP.ARM, GROUP.OBJ)), body);
+      armBodies.push({ i: i, body: body });
+    });
+    for (var f = 0; f < 2; f++){
+      var fb = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+      w.createCollider(RAPIER.ColliderDesc.cuboid(0.006, 0.013, 0.05).setFriction(0.9).setCollisionGroups(groups(GROUP.ARM, GROUP.OBJ)), fb);
+      fingerBodies.push(fb);
+    }
+    phys.hand = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+    obstacles.forEach(addObstacleBody);
+    phys.ready = true;
+    syncArmBodies(true);
+    resetWorkpiece();
+    physButtons.forEach(function(id){ var b = document.getElementById(id); if (b) b.disabled = false; });
+    markDirty();
+  }
+
+  // move the kinematic arm bodies to the current pose (teleport = no sweep, used at start)
+  var _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _yUp = new THREE.Vector3(0, 1, 0);
+  function flangeQuat(T){
+    _m4.set(T[0], T[1], T[2], 0, T[4], T[5], T[6], 0, T[8], T[9], T[10], 0, 0, 0, 0, 1);
+    return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().multiplyMatrices(robotRootRot, _m4));
+  }
+  function place(body, pos, quat, teleport){
+    if (teleport){ body.setTranslation(rv(pos), true); body.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }, true); }
+    else { body.setNextKinematicTranslation(rv(pos)); body.setNextKinematicRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }); }
+  }
+  function syncArmBodies(teleport){
+    if (!phys.ready || !lastCollision || !lastFK) return;
+    var caps = lastCollision.capsules;
+    armBodies.forEach(function(ab){
+      var c = caps[ab.i], a = r2t(c.a[0], c.a[1], c.a[2]), b = r2t(c.b[0], c.b[1], c.b[2]);
+      var dir = b.clone().sub(a), len = dir.length();
+      var q = len > 1e-9 ? new THREE.Quaternion().setFromUnitVectors(_yUp, dir.normalize()) : new THREE.Quaternion();
+      place(ab.body, a.add(b).multiplyScalar(0.5), q, teleport);
+    });
+    var T = lastFK.flange, fq = flangeQuat(T), gap = 0.012 + state.gripper / 100 * 0.07;
+    [-1, 1].forEach(function(sgn, k){
+      var lx = sgn * (gap / 2 + 0.006), lz = 0.11;     // finger centre in flange coordinates
+      var p = r2t(T[0] * lx + T[2] * lz + T[3], T[4] * lx + T[6] * lz + T[7], T[8] * lx + T[10] * lz + T[11]);
+      place(fingerBodies[k], p, fq, teleport);
+    });
+    var tp = lastFK.tcp;
+    place(phys.hand, r2t(tp[3], tp[7], tp[11]), flangeQuat(tp), teleport);
+  }
+
+  function makeBlockMesh(color){
+    var m = shadowy(new THREE.Mesh(new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK), new THREE.MeshStandardMaterial({color:color, metalness:0.12, roughness:0.48})));
     scene.add(m);
-    var body = new CANNON.Body({mass:0.12, material:blockMat, shape:new CANNON.Box(new CANNON.Vec3(BLOCK / 2, BLOCK / 2, BLOCK / 2))});
-    body.position.set(x, y, z);
-    body.quaternion.setFromEuler(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-    body.linearDamping = 0.1; body.angularDamping = 0.2;
-    body.sleepSpeedLimit = 0.05; body.sleepTimeLimit = 0.4;
-    world.addBody(body);
-    blocks.push({mesh:m, body:body});
-    if (blocks.length > 20){ var old = blocks.shift(); scene.remove(old.mesh); world.removeBody(old.body); }
+    return m;
+  }
+  var OBJ_GROUPS = groups(GROUP.OBJ, GROUP.ARM | GROUP.OBJ | GROUP.GROUND);
+  function spawnBody(pos, quat){
+    var body = phys.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x, pos.y, pos.z).setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }).setLinearDamping(0.1).setAngularDamping(0.25).setCcdEnabled(true));
+    // 0.05 m cube of 960 kg/m³ = 0.12 kg
+    var col = phys.world.createCollider(RAPIER.ColliderDesc.cuboid(BLOCK / 2, BLOCK / 2, BLOCK / 2).setDensity(960).setFriction(0.7).setRestitution(0.12).setCollisionGroups(OBJ_GROUPS), body);
+    return { body: body, col: col };
+  }
+  function removeObj(o){ scene.remove(o.mesh); phys.world.removeRigidBody(o.body); }
+  function spawnBlock(x, y, z){
+    if (!phys.ready) return;
+    var q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.random() * 3, Math.random() * 3, Math.random() * 3));
+    var o = spawnBody(new THREE.Vector3(x, y, z), q);
+    o.mesh = makeBlockMesh(PALETTE[blocks.length % PALETTE.length]);
+    blocks.push(o);
+    if (blocks.length > 20) removeObj(blocks.shift());
     markDirty();
   }
   document.getElementById('btn-drop').addEventListener('click', function(){
     // somewhere on the table in front of the arm, inside its reach
-    var a = Math.random() * Math.PI * 2, r = 0.25 + Math.random() * 0.45;
-    spawnBlock(Math.cos(a) * r, 0.6 + Math.random() * 0.3, Math.sin(a) * r);
+    var a = Math.PI * (0.55 + Math.random() * 0.9), r = 0.3 + Math.random() * 0.4;
+    spawnBlock(Math.cos(a) * r, 0.6 + Math.random() * 0.3, -Math.sin(a) * r);
   });
   document.getElementById('btn-clear').addEventListener('click', function(){
-    blocks.forEach(function(b){ scene.remove(b.mesh); world.removeBody(b.body); });
+    if (!phys.ready) return;
+    blocks.forEach(removeObj);
     blocks = [];
     markDirty();
   });
 
-  // ---- the workpiece for Pick & Place: a real physics block, and two markers on the table.
-  // Robot coordinates (x, y, z) are three.js (x, z, -y).
-  // in front of the arm: a UR's zero pose points along base −X
+  // ---- the workpiece for Pick & Place, and its two sites (in front of the arm: a UR's zero
+  // pose points along base −X)
   var SITE_A = [-0.45, 0.22], SITE_B = [-0.28, -0.45];
-  function r2t(x, y, z){ return new THREE.Vector3(x, z, -y); }
   [[SITE_A, 0x4fe0ff], [SITE_B, 0xffcf4a]].forEach(function(site){
-    var ring = ringLine(0.045, site[1], 0.7);
-    var c = r2t(site[0][0], site[0][1], 0);
+    var ring = ringLine(0.045, site[1], 0.7), c = r2t(site[0][0], site[0][1], 0);
     ring.position.set(c.x, 0.001, c.z);
     scene.add(ring);
   });
   var workpiece = null;
   function resetWorkpiece(){
-    if (workpiece){ scene.remove(workpiece.mesh); world.removeBody(workpiece.body); }
-    var m = shadowy(new THREE.Mesh(new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK), new THREE.MeshStandardMaterial({color:0xffcf4a, metalness:0.1, roughness:0.45})));
-    scene.add(m);
-    var body = new CANNON.Body({mass:0.12, material:blockMat, shape:new CANNON.Box(new CANNON.Vec3(BLOCK / 2, BLOCK / 2, BLOCK / 2))});
-    var c = r2t(SITE_A[0], SITE_A[1], BLOCK / 2);
-    body.position.set(c.x, c.y + 0.0005, c.z);
-    body.quaternion.setFromEuler(0, 0.35, 0);     // lying at an angle, so the grasp has to line up with it
-    body.linearDamping = 0.1; body.angularDamping = 0.2; body.sleepSpeedLimit = 0.05; body.sleepTimeLimit = 0.4;
-    world.addBody(body);
-    workpiece = { mesh: m, body: body };
+    if (!phys.ready) return;
+    releaseGrasp();
+    if (workpiece) removeObj(workpiece);
+    var c = r2t(SITE_A[0], SITE_A[1], BLOCK / 2 + 0.0005);
+    // lying at an angle, so the grasp has to line up with it
+    var o = spawnBody(c, new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.35));
+    o.mesh = makeBlockMesh(0xffcf4a);
+    workpiece = o;
     markDirty();
   }
-  document.getElementById('btn-workpiece').addEventListener('click', function(){ cancelSequence(); releaseGrasp(); resetWorkpiece(); });
+  document.getElementById('btn-workpiece').addEventListener('click', function(){ cancelSequence(); resetWorkpiece(); });
 
-  // The "hand": a kinematic body that follows the tool centre point; a grasped part is held to
-  // it by a lock constraint, so while carried it is still a physics body.
-  var handBody = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC });
-  handBody.collisionResponse = false;
-  world.addBody(handBody);
+  // grasp: the part is held to the kinematic "hand" (at the TCP) by a fixed joint, and stops
+  // colliding with the fingers so the two don't fight
   var grasp = null;
-  function syncHand(){
-    if (!lastFK) return;
-    var T = lastFK.tcp, p = r2t(T[3], T[7], T[11]);
-    var m = new THREE.Matrix4().set(T[0], T[1], T[2], 0, T[4], T[5], T[6], 0, T[8], T[9], T[10], 0, 0, 0, 0, 1);
-    var qr = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().multiplyMatrices(robotRootRot, m));
-    handBody.position.set(p.x, p.y, p.z);
-    handBody.quaternion.set(qr.x, qr.y, qr.z, qr.w);
-  }
-  var robotRootRot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
   function takeGrasp(obj){
-    syncHand();
-    var c = new CANNON.LockConstraint(handBody, obj.body, { maxForce: 1e4 });
-    world.addConstraint(c);
+    syncArmBodies(true);
+    var hp = phys.hand.translation(), hr = phys.hand.rotation(), bp = obj.body.translation(), br = obj.body.rotation();
+    var hq = new THREE.Quaternion(hr.x, hr.y, hr.z, hr.w), hqi = hq.clone().invert();
+    var a1 = new THREE.Vector3(bp.x - hp.x, bp.y - hp.y, bp.z - hp.z).applyQuaternion(hqi);
+    var f1 = hqi.clone().multiply(new THREE.Quaternion(br.x, br.y, br.z, br.w));
+    var jd = RAPIER.JointData.fixed(rv(a1), { x: f1.x, y: f1.y, z: f1.z, w: f1.w }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0, w: 1 });
+    var jt = phys.world.createImpulseJoint(jd, phys.hand, obj.body, true);
+    obj.col.setCollisionGroups(groups(GROUP.OBJ, GROUP.OBJ | GROUP.GROUND));
     obj.body.wakeUp();
-    grasp = { obj: obj, c: c };
+    grasp = { obj: obj, joint: jt };
   }
   function releaseGrasp(){
     if (!grasp) return;
-    world.removeConstraint(grasp.c);
-    grasp.obj.body.velocity.set(0, 0, 0); grasp.obj.body.angularVelocity.set(0, 0, 0);
-    grasp.obj.body.wakeUp();
+    phys.world.removeImpulseJoint(grasp.joint, true);
+    grasp.obj.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    grasp.obj.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    grasp.obj.col.setCollisionGroups(OBJ_GROUPS);
     grasp = null;
   }
+
+  // ================================================================ OBSTACLES
+  // Boxes on the table: the collision guard, the path planner and the physics all see them.
+  var OBSTACLE_PRESETS = [
+    { name: 'the tall box', min: [-0.62, 0.0, 0], max: [-0.38, 0.1, 0.45] },   // between the two pick & place sites
+    { name: 'the side post', min: [-0.2, 0.34, 0], max: [-0.06, 0.46, 0.55] },
+    { name: 'the low wall', min: [-0.8, -0.3, 0], max: [-0.72, 0.3, 0.22] }
+  ];
+  var obstacles = [];
+  var obstacleMat = new THREE.MeshStandardMaterial({ color: 0xff8a4c, transparent: true, opacity: 0.55, roughness: 0.6 });
+  function obstacleBoxes(){ return obstacles; }
+  function checkQ(q){ return K.checkCollision(q, ROBOT, { obstacles: obstacles }); }
+  function addObstacleBody(o){
+    if (!phys.ready) return;
+    var hx = (o.max[0] - o.min[0]) / 2, hy = (o.max[1] - o.min[1]) / 2, hz = (o.max[2] - o.min[2]) / 2;
+    var c = r2t((o.min[0] + o.max[0]) / 2, (o.min[1] + o.max[1]) / 2, (o.min[2] + o.max[2]) / 2);
+    o.body = phys.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(c.x, c.y, c.z));
+    phys.world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hz, hy).setFriction(0.6).setCollisionGroups(groups(GROUP.GROUND, GROUP.OBJ)), o.body);
+  }
+  document.getElementById('btn-obstacle').addEventListener('click', function(){
+    var next = OBSTACLE_PRESETS.filter(function(pr){ return obstacles.indexOf(pr) < 0; })[0];
+    if (!next) return showAlert('All the preset obstacles are already on the table');
+    var hit = K.checkCollision(state.q, ROBOT, { obstacles: [next] });
+    if (!hit.ok) return showAlert('Move the arm out of the way first — it would be inside ' + next.name);
+    var sx = next.max[0] - next.min[0], sy = next.max[1] - next.min[1], sz = next.max[2] - next.min[2];
+    next.mesh = shadowy(new THREE.Mesh(new THREE.BoxGeometry(sx, sz, sy), obstacleMat));
+    var c = r2t((next.min[0] + next.max[0]) / 2, (next.min[1] + next.max[1]) / 2, (next.min[2] + next.max[2]) / 2);
+    next.mesh.position.copy(c);
+    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(next.mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffb48a }));
+    next.mesh.add(edges);
+    scene.add(next.mesh);
+    obstacles.push(next);
+    addObstacleBody(next);
+    poseRobot();
+    showAlert('Added ' + next.name + ' — Move J and Pick & Place now plan around it');
+  });
+  document.getElementById('btn-clear-obstacles').addEventListener('click', function(){
+    obstacles.forEach(function(o){ scene.remove(o.mesh); if (o.body && phys.ready) phys.world.removeRigidBody(o.body); o.body = null; });
+    obstacles = [];
+    clearPlannedPath();
+    poseRobot();
+  });
+
+  // ---- the planned path, drawn as the tool's route through the waypoints
+  var plannedLine = null;
+  function showPlannedPath(path){
+    clearPlannedPath();
+    var pts = [];
+    for (var i = 1; i < path.length; i++){
+      for (var k = 0; k <= 20; k++){
+        var q = path[i - 1].map(function(v, jj){ return v + (path[i][jj] - v) * k / 20; });
+        var T = K.fk(q).tcp;
+        pts.push(new THREE.Vector3(T[3], T[7], T[11]));
+      }
+    }
+    var g = new THREE.BufferGeometry().setFromPoints(pts);
+    plannedLine = new THREE.Line(g, new THREE.LineDashedMaterial({ color: 0xffb48a, dashSize: 0.02, gapSize: 0.012, transparent: true, opacity: 0.95 }));
+    plannedLine.computeLineDistances();
+    robotRoot.add(plannedLine);
+    markDirty();
+  }
+  function clearPlannedPath(){ if (plannedLine){ robotRoot.remove(plannedLine); plannedLine = null; markDirty(); } }
 
   // ================================================================ TARGET (IK) & HANDLE
   // The target is a desired tool pose. The handle shows it: arrows along the base X/Y/Z move it
@@ -1042,7 +1231,7 @@ footer.foot .consult{color:var(--ink);}
     var q = K.ik(T, state.q, ROBOT);
     if (!q){ target.reachable = false; target.why = 'Out of reach for this arm.'; jogGoal = null; }
     else {
-      var c = K.checkCollision(q);
+      var c = checkQ(q);
       if (!c.ok && state.guard){ target.reachable = false; target.why = 'That pose would collide: ' + c.hits[0].text + '.'; jogGoal = null; }
       else { target.reachable = true; if (state.follow){ cancelSequence(); jogGoal = q; } }
     }
@@ -1170,7 +1359,7 @@ footer.foot .consult{color:var(--ink);}
   // same tool pose, the next of the (up to 8) arm configurations that reach it
   var configIdx = 0;
   document.getElementById('btn-config').addEventListener('click', function(){
-    var T = lastFK.flange, sols = K.ikFlange(T, ROBOT).filter(function(s){ return K.checkCollision(s).ok; });
+    var T = lastFK.flange, sols = K.ikFlange(T, ROBOT).filter(function(s){ return checkQ(s).ok; });
     if (sols.length < 2) return showAlert('No other collision-free configuration reaches this tool pose');
     // order solutions by distance from the current one and step through them
     var cur = state.q;
@@ -1186,7 +1375,7 @@ footer.foot .consult{color:var(--ink);}
 
   // ================================================================ PICK & PLACE
   function blockPoseRobot(obj){   // workpiece pose in robot coordinates: centre + yaw, and whether it's upright
-    var p = obj.body.position, q = new THREE.Quaternion(obj.body.quaternion.x, obj.body.quaternion.y, obj.body.quaternion.z, obj.body.quaternion.w);
+    var p = obj.body.translation(), r = obj.body.rotation(), q = new THREE.Quaternion(r.x, r.y, r.z, r.w);
     var up = new THREE.Vector3(0, 1, 0).applyQuaternion(q), fx = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
     // a cube is upright if any face points up; pick the face axis closest to world up for yaw
     var axes = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)].map(function(v){ return v.applyQuaternion(q); });
@@ -1221,6 +1410,7 @@ footer.foot .consult{color:var(--ink);}
   }
   var GRIP_ON_BLOCK = (BLOCK - 0.012) / 0.07 * 100;   // finger gap = block width
   document.getElementById('btn-pickplace').addEventListener('click', function(){
+    if (!phys.ready) return showAlert('The physics engine is still loading');
     if (!workpiece) resetWorkpiece();
     run('PICK & PLACE', async function(tk){
       var bp = blockPoseRobot(workpiece);
@@ -1282,21 +1472,27 @@ footer.foot .consult{color:var(--ink);}
       qdd = qd.map(function(v, i){ return lastPlotQd ? (v - lastPlotQd[i]) / h : 0; });
     } else { qd = [0, 0, 0, 0, 0, 0]; qdd = [0, 0, 0, 0, 0, 0]; }
     lastPlotQ = q; lastPlotT = t; lastPlotQd = qd;
-    plotBuf.push({ t: t, q: q, qd: qd, qdd: qdd });
+    plotBuf.push({ t: t, q: q, qd: qd, qdd: qdd, tau: loadFractions(q).map(function(f){ return f * Math.PI; }) });
     while (plotBuf.length && plotBuf[0].t < t - PLOT_SECS) plotBuf.shift();
   }
   function drawPlot(){
     var W = plotCv.width, Hh = plotCv.height, g = pctx;
     g.clearRect(0, 0, W, Hh);
     if (plotBuf.length < 2) return;
-    var key = plotQty === 'pos' ? 'q' : plotQty === 'vel' ? 'qd' : 'qdd';
-    var lim = plotQty === 'pos' ? Math.PI : plotQty === 'vel' ? ROBOT.vmax[0] * 1.15 : Math.max.apply(null, ROBOT.amax) * 1.15;
-    var unit = plotQty === 'pos' ? '°' : plotQty === 'vel' ? '°/s' : '°/s²';
+    // torque is stored as a fraction of rated × π, so it shares the degree-style axis labels
+    var key = plotQty === 'pos' ? 'q' : plotQty === 'vel' ? 'qd' : plotQty === 'acc' ? 'qdd' : 'tau';
+    var lim = plotQty === 'pos' ? Math.PI : plotQty === 'vel' ? ROBOT.vmax[0] * 1.15 : plotQty === 'acc' ? Math.max.apply(null, ROBOT.amax) * 1.15 : Math.PI * 1.15;
+    var unit = plotQty === 'pos' ? '°' : plotQty === 'vel' ? '°/s' : plotQty === 'acc' ? '°/s²' : '';
     var t1 = plotBuf[plotBuf.length - 1].t, t0 = t1 - PLOT_SECS, padL = 58;
     function X(t){ return padL + (t - t0) / PLOT_SECS * (W - padL - 8); }
     function Y(v){ return Hh / 2 - v / lim * (Hh / 2 - 12); }
     g.font = '20px IBM Plex Mono, monospace'; g.fillStyle = '#6fa8c9'; g.strokeStyle = 'rgba(111,168,201,.25)'; g.lineWidth = 1;
-    [-1, 0, 1].forEach(function(k){ g.beginPath(); g.moveTo(padL, Y(k * lim * 0.87)); g.lineTo(W - 8, Y(k * lim * 0.87)); g.stroke(); g.fillText((k * lim * 0.87 / DEG).toFixed(0) + unit, 2, Y(k * lim * 0.87) + 6); });
+    [-1, 0, 1].forEach(function(k){
+      g.beginPath(); g.moveTo(padL, Y(k * lim * 0.87)); g.lineTo(W - 8, Y(k * lim * 0.87)); g.stroke();
+      var label = plotQty === 'tau' ? Math.round(k * lim * 0.87 / Math.PI * 100) + '%' : (k * lim * 0.87 / DEG).toFixed(0) + unit;
+      g.fillText(label, 2, Y(k * lim * 0.87) + 6);
+    });
+    if (plotQty === 'tau'){ g.setLineDash([8, 6]); g.strokeStyle = 'rgba(255,107,92,.7)'; [Math.PI, -Math.PI].forEach(function(v){ g.beginPath(); g.moveTo(padL, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); }); g.setLineDash([]); }
     if (plotQty !== 'pos'){   // limit lines
       var L = plotQty === 'vel' ? ROBOT.vmax[0] : null;   // the joints' real speed limit (180°/s)
       if (L){ g.setLineDash([8, 6]); g.strokeStyle = 'rgba(255,107,92,.7)'; [L, -L].forEach(function(v){ g.beginPath(); g.moveTo(padL, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); }); g.setLineDash([]); }
@@ -1307,6 +1503,97 @@ footer.foot .consult{color:var(--ink);}
       g.stroke();
     }
   }
+
+  document.getElementById('plan-switch').addEventListener('click', function(){
+    state.plan = !state.plan;
+    this.classList.toggle('on', state.plan);
+    this.setAttribute('aria-checked', String(state.plan));
+  });
+
+  // ================================================================ MOTOR LOAD (statics)
+  // Holding torque per joint from the published UR5e link masses and centres of mass, plus
+  // the gripper and anything it holds, as a share of each joint's rated torque.
+  var loadsEl = document.getElementById('hud-loads'), payloadEl = document.getElementById('hud-payload');
+  loadsEl.innerHTML = JOINTS.map(function(j){ return '<span>' + j.sub + '</span><i><b></b></i><span></span>'; }).join('');
+  var loadBars = loadsEl.querySelectorAll('i b'), loadVals = loadsEl.querySelectorAll('span:nth-child(3n)');
+  function currentPayload(){ return grasp ? 0.12 : 0; }
+  function loadFractions(q){
+    var tau = K.gravityTorques(q, ROBOT, currentPayload());
+    return tau.map(function(t, i){ return t / ROBOT.tauMax[i]; });
+  }
+  function updateLoads(){
+    var fr = loadFractions(state.q), tau = K.gravityTorques(state.q, ROBOT, currentPayload());
+    fr.forEach(function(f, i){
+      var a = Math.min(1, Math.abs(f));
+      loadBars[i].style.width = (a * 100).toFixed(1) + '%';
+      loadBars[i].style.background = a > 0.8 ? 'var(--bad)' : a > 0.5 ? 'var(--warn)' : 'var(--ok)';
+      loadVals[i].textContent = Math.abs(tau[i]).toFixed(1);
+    });
+    payloadEl.textContent = '(N·m' + (grasp ? ', holding 0.12 kg' : '') + ')';
+  }
+
+  // ================================================================ TEACHING OVERLAYS
+  // joint frames: an RGB triad at each DH frame
+  var frameTriads = [];
+  for (var fi = 0; fi <= 6; fi++){
+    var ah = new THREE.AxesHelper(fi === 0 ? 0.14 : 0.09);
+    ah.material.depthTest = false; ah.material.transparent = true; ah.renderOrder = 9;
+    ah.matrixAutoUpdate = false; ah.visible = false;
+    robotRoot.add(ah); frameTriads.push(ah);
+  }
+  var showFrames = false;
+  function updateFrames(){
+    if (!showFrames || !lastFK) return;
+    lastFK.frames.forEach(function(T, i){
+      frameTriads[i].matrix.set(T[0], T[1], T[2], T[3], T[4], T[5], T[6], T[7], T[8], T[9], T[10], T[11], 0, 0, 0, 1);
+    });
+  }
+  function toggle(id, fn){
+    var el = document.getElementById(id);
+    el.addEventListener('click', function(){ var on = !el.classList.contains('on'); el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); fn(on); markDirty(); });
+  }
+  toggle('frames-switch', function(on){ showFrames = on; frameTriads.forEach(function(a){ a.visible = on; }); updateFrames(); });
+
+  // reachable workspace: random collision-free configurations, TCP coloured by dexterity
+  var wsCloud = null;
+  function buildWorkspace(){
+    var N = 6000, pos = [], col = [], rnd = PL.rng(20260929), c = new THREE.Color();
+    for (var n = 0; n < N * 3 && pos.length < N * 3; n++){
+      var q = [0, 1, 2, 3, 4, 5].map(function(i){ return PLAN_LO[i] + rnd() * (PLAN_HI[i] - PLAN_LO[i]); });
+      if (!K.checkCollision(q).ok) continue;
+      var T = K.fk(q).tcp, m = Math.min(1, K.manipulability(q) / MANIP_REF);
+      pos.push(T[3], T[7], T[11]);
+      c.setHSL(0.62 - 0.45 * m, 0.85, 0.35 + 0.3 * m);   // blue (awkward) -> yellow-green (dexterous)
+      col.push(c.r, c.g, c.b);
+    }
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    wsCloud = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.012, vertexColors: true, transparent: true, opacity: 0.75, depthWrite: false }));
+    robotRoot.add(wsCloud);
+  }
+  toggle('ws-switch', function(on){ if (on && !wsCloud) buildWorkspace(); if (wsCloud) wsCloud.visible = on; });
+
+  // dexterity (velocity) ellipsoid at the tool
+  var ellipsoid = new THREE.Mesh(UNIT_SPH, new THREE.MeshBasicMaterial({ color: 0x3ddc97, wireframe: true, transparent: true, opacity: 0.55, depthTest: false }));
+  ellipsoid.renderOrder = 8; ellipsoid.visible = false; ellipsoid.matrixAutoUpdate = false;
+  robotRoot.add(ellipsoid);
+  var showEllipsoid = false;
+  function updateEllipsoid(){
+    if (!showEllipsoid || !lastFK) return;
+    var e = K.velocityEllipsoid(state.q), p = K.pos(lastFK.tcp), s = 0.22;
+    var ax = e.axes.map(function(v, i){ return new THREE.Vector3(v[0], v[1], v[2]).multiplyScalar(Math.max(0.004, e.radii[i] * s)); });
+    ellipsoid.matrix.makeBasis(ax[0], ax[1], ax[2]).setPosition(p[0], p[1], p[2]);
+  }
+  toggle('ell-switch', function(on){ showEllipsoid = on; ellipsoid.visible = on; updateEllipsoid(); });
+
+  // DH table (θ is live)
+  var dhBody = document.getElementById('dh-body');
+  dhBody.innerHTML = JOINTS.map(function(j, i){
+    return '<tr><td>' + j.sub + '</td><td class="live"></td><td>' + ROBOT.d[i].toFixed(4) + '</td><td>' + ROBOT.a[i].toFixed(4) + '</td><td>' + Math.round(ROBOT.alpha[i] / DEG) + '°</td></tr>';
+  }).join('');
+  var dhLive = dhBody.querySelectorAll('td.live');
+  function updateDH(){ for (var i = 0; i < 6; i++) dhLive[i].textContent = (state.q[i] / DEG).toFixed(1) + '°'; }
 
   // ================================================================ TIP TRACE
   var traceOn = false, TRACE_MAX = 800, tracePos = new Float32Array(TRACE_MAX * 3), traceN = 0, lastTrace = null;
@@ -1361,6 +1648,10 @@ footer.foot .consult{color:var(--ink);}
     H.warn.textContent = warn;
     H.warn.className = 'hud-line warnline' + (lastCollision && !lastCollision.ok ? ' badline' : '');
     rows.forEach(function(r){ r.classList.remove('hit'); });
+    updateLoads();
+    updateFrames();
+    updateEllipsoid();
+    updateDH();
   }
 
   // ================================================================ LOOP (render on demand)
@@ -1373,15 +1664,17 @@ footer.foot .consult{color:var(--ink);}
     lastT = now;
     var active = false;
     stepJog(dt);
-    syncHand();
-    var bodies = blocks.slice();
-    if (workpiece) bodies.push(workpiece);
-    if (bodies.length){
-      world.step(1 / 60, dt, 4);
+    if (phys.ready){
+      syncArmBodies(false);
+      phys.acc = Math.min(phys.acc + dt, 4 / 60);
+      while (phys.acc >= 1 / 60){ phys.world.step(); phys.acc -= 1 / 60; }
+      var bodies = blocks.slice();
+      if (workpiece) bodies.push(workpiece);
       bodies.forEach(function(b){
-        if (b.body.sleepState !== CANNON.Body.SLEEPING) active = true;
-        b.mesh.position.copy(b.body.position);
-        b.mesh.quaternion.copy(b.body.quaternion);
+        if (!b.body.isSleeping()) active = true;
+        var t = b.body.translation(), r = b.body.rotation();
+        b.mesh.position.set(t.x, t.y, t.z);
+        b.mesh.quaternion.set(r.x, r.y, r.z, r.w);
       });
     }
     if (plotOn){ recordPlot(now); drawPlot(); }
@@ -1398,12 +1691,11 @@ footer.foot .consult{color:var(--ink);}
   syncUI();
   poseRobot();
   snapTargetToTool();
-  resetWorkpiece();
   resize();
   requestAnimationFrame(frame);
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+  window.linkageDebug = { spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
       var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
       o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
       return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };

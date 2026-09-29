@@ -115,6 +115,41 @@ console.log("collision model");
   ok(reach && !K.checkCollision(reach, K.UR5E, { obstacles: [box] }).ok, "reaching into the box is flagged");
 }
 
+console.log("gravity torques");
+{
+  // independent check: the holding torque is the derivative of potential energy
+  for (let t = 0; t < 50; t++) {
+    const q = Array.from({ length: 6 }, () => (rnd() * 2 - 1) * Math.PI), pay = t % 2 ? 0.5 : 0;
+    const tau = K.gravityTorques(q, R, pay), h = 1e-6;
+    let worst = 0;
+    for (let j = 0; j < 6; j++) {
+      const qp = q.slice(); qp[j] += h; const qm = q.slice(); qm[j] -= h;
+      const fd = (K.potentialEnergy(qp, R, pay) - K.potentialEnergy(qm, R, pay)) / (2 * h);
+      worst = Math.max(worst, Math.abs(fd - tau[j]));
+    }
+    ok(worst < 1e-5, "τ = ∂V/∂q (trial " + t + ", max diff " + worst.toExponential(1) + ")");
+  }
+  // base axis is vertical: gravity never loads it
+  ok(Math.abs(K.gravityTorques([0.7, -1, 1, -1, 0.5, 0.2])[0]) < 1e-9, "no gravity torque on the vertical base axis");
+  // arm stretched out horizontally loads the shoulder most, well inside its 150 N·m rating
+  const flat = K.gravityTorques([0, 0, 0, 0, 0, 0]);
+  ok(Math.abs(flat[1]) > Math.abs(flat[2]) && Math.abs(flat[1]) < 150 && Math.abs(flat[1]) > 30, "horizontal arm: shoulder carries most (" + flat[1].toFixed(1) + " N·m)");
+  // pointing straight up: almost nothing to hold
+  const up = K.gravityTorques([0, -Math.PI / 2, 0, -Math.PI / 2, 0, 0]);
+  ok(Math.abs(up[1]) < 3, "vertical arm: shoulder nearly unloaded (" + up[1].toFixed(2) + " N·m)");
+}
+
+console.log("velocity ellipsoid");
+{
+  const A = [[4, 1, 0], [1, 3, 0.5], [0, 0.5, 2]], e = K.eig3(A);
+  e.vectors.forEach((v, i) => {
+    const Av = [0, 1, 2].map(r => A[r][0] * v[0] + A[r][1] * v[1] + A[r][2] * v[2]);
+    ok([0, 1, 2].every(r => near(Av[r], e.values[i] * v[r], 1e-9)), "eigenpair " + i);
+  });
+  const el = K.velocityEllipsoid([0.3, -1.2, 1.4, -1.0, 1.1, 0.2]);
+  ok(el.radii.every(r => r > 0), "ellipsoid has three positive radii away from singularities");
+}
+
 console.log("RPY helpers");
 {
   for (let t = 0; t < 200; t++) {

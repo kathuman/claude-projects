@@ -15,9 +15,17 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
   profiles inside each joint's speed/acceleration limits), MoveL (straight tool line, IK every
   step, automatically slowed if a joint would exceed its limit, rejected if unreachable,
   colliding or flipping through a singularity) and MoveC (arcs through a via point).
-- `tests/` — unit tests for both cores, no dependencies:
-  `node robotic-arm-sim/tests/kinematics.test.js` and `node robotic-arm-sim/tests/motion.test.js`.
-- `vendor/` — three.js r128 and cannon.js, with their licences.
+- `planner.js` — collision-free path planning in joint space: RRT-Connect with random
+  shortcutting, every edge checked at fine resolution. Move J and pick & place use it whenever
+  the direct joint move would hit an obstacle.
+- `kinematics.js` also holds the statics (holding torque per joint from the published UR5e
+  link masses and centres of mass, checked against the derivative of potential energy) and
+  the tool-velocity ("dexterity") ellipsoid.
+- `tests/` — unit tests for the three cores, no dependencies:
+  `node robotic-arm-sim/tests/kinematics.test.js`, `motion.test.js`, `planner.test.js`.
+- `vendor/` — three.js r128 and Rapier 0.21 (compat build, WebAssembly inlined; loaded on
+  demand as an ES module), with their licences. In the Rapier world the arm's link capsules and
+  the two fingers are kinematic bodies that follow the kinematics, so the arm pushes things.
 
 ## Conventions
 
