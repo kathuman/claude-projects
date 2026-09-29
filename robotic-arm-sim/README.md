@@ -24,8 +24,9 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
   the tool-velocity ("dexterity") ellipsoid.
 - `tests/` — unit tests for the three cores, no dependencies:
   `node robotic-arm-sim/tests/kinematics.test.js`, `motion.test.js`, `planner.test.js`.
-- `vendor/` — three.js r128 and Rapier 0.21 (compat build, WebAssembly inlined; loaded on
-  demand as an ES module), with their licences. In the Rapier world the arm's link capsules and
+- `vendor/` — three.js r186 (ES modules, resolved by the import map in `index.html`, plus the
+  few add-ons used: studio environment, effect composer, ground-truth ambient occlusion, output
+  pass) and Rapier 0.21 (compat build, WebAssembly inlined; loaded on demand), with licences. In the Rapier world the arm's link capsules and
   the two fingers are kinematic bodies that follow the kinematics, so the arm pushes things.
 
 ## Programs
@@ -36,6 +37,14 @@ joint angles in degrees), or export URScript for a real UR controller — joint 
 `movej`, linear moves `movel(get_forward_kin(q))` so the controller's own kinematics defines the
 pose. **Share link** packs the robot, pose, program and obstacles into the URL (`#s=…`); the last
 session is also remembered in the browser.
+
+## Rendering
+
+Image-based lighting from a prefiltered studio environment, Khronos PBR Neutral tone mapping,
+filtered PCF shadows and GTAO ambient occlusion (switched off automatically if it makes frames
+slow on a device; off by default on phones). Physics runs in fixed 1/60 s steps; the arm's
+kinematic bodies are interpolated across the sub-steps so a large per-frame motion still pushes
+objects instead of tunnelling through them.
 
 ## Conventions
 

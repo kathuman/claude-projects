@@ -361,6 +361,10 @@ footer.foot .consult{color:var(--ink);}
           <button class="switch" id="trace-switch" role="switch" aria-checked="false" aria-label="Tip trace"><span class="knob"></span></button>
         </div>
         <div class="switch-row">
+          <span class="name">Ambient occlusion<small>Soft contact shadows (turn off on slow devices)</small></span>
+          <button class="switch" id="ao-switch" role="switch" aria-checked="false" aria-label="Ambient occlusion"><span class="knob"></span></button>
+        </div>
+        <div class="switch-row">
           <span class="name">Collision capsules</span>
           <button class="switch" id="caps-switch" role="switch" aria-checked="false" aria-label="Show collision capsules"><span class="knob"></span></button>
         </div>
@@ -447,11 +451,19 @@ footer.foot .consult{color:var(--ink);}
   </footer>
 </div>
 
-<script src="vendor/three.min.js"></script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
 <script src="kinematics.js"></script>
 <script src="motion.js"></script>
 <script src="planner.js"></script>
-<script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 (function(){
   "use strict";
 
@@ -471,7 +483,9 @@ footer.foot .consult{color:var(--ink);}
   //   5.0.0  UR e-Series models (UR3e / UR5e / UR10e / UR16e, published parameters); program
   //          editor with MoveJ/MoveL waypoints, gripper actions, loop, JSON import/export and
   //          URScript export; share links; the session is remembered in the browser
-  var APP_VERSION = "5.0.0";
+  //   5.1.0  rendering on three.js r186 (ES modules via an import map): image-based lighting
+  //          from a studio environment, PBR Neutral tone mapping, ground-truth ambient occlusion
+  var APP_VERSION = "5.1.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -498,8 +512,11 @@ footer.foot .consult{color:var(--ink);}
   var renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.type = THREE.PCFShadowMap;     // (r186: filtered PCF; softness via shadow.radius)
+  // Khronos PBR Neutral tone mapping: keeps the UI palette's colours true while handling the
+  // brighter range that image-based lighting brings
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.0;
   stageEl.appendChild(renderer.domElement);
 
   var scene = new THREE.Scene();
@@ -507,8 +524,13 @@ footer.foot .consult{color:var(--ink);}
   scene.fog = new THREE.Fog(0x0a2f52, 4.5, 9);
   var camera = new THREE.PerspectiveCamera(40, 1, 0.01, 50);
 
-  scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x0a2f52, 0.6));
-  var key = new THREE.DirectionalLight(0xfff2e0, 1.0);
+  // image-based lighting: a neutral studio "room" prefiltered into an environment map gives every
+  // PBR material soft, directional reflections; the key light adds the shadows
+  var pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.55;
+  scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x0a2f52, 0.35));
+  var key = new THREE.DirectionalLight(0xfff2e0, 2.2);
   key.position.set(1.6, 2.6, 1.2);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -516,17 +538,18 @@ footer.foot .consult{color:var(--ink);}
   key.shadow.camera.top = 1.4; key.shadow.camera.bottom = -1.4;
   key.shadow.camera.near = 0.5; key.shadow.camera.far = 6;
   key.shadow.bias = -0.0006;
+  key.shadow.radius = 3;
   scene.add(key);
-  var rim = new THREE.DirectionalLight(0x4fe0ff, 0.28);
+  var rim = new THREE.DirectionalLight(0x4fe0ff, 0.6);
   rim.position.set(-2, 1.2, -1.6);
   scene.add(rim);
 
   // the table the arm is bolted to (z = 0 in robot coordinates)
-  var floor = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.MeshStandardMaterial({color:0x0d3a63, roughness:0.95, metalness:0.05}));
+  var floor = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.MeshStandardMaterial({color:0x2c6aa0, roughness:0.9, metalness:0.02}));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
-  var grid = new THREE.GridHelper(4, 40, 0x2a5580, 0x163e66);
+  var grid = new THREE.GridHelper(4, 40, 0x6aa6d6, 0x3f7fb4);
   grid.position.y = 0.001;
   scene.add(grid);
 
@@ -549,7 +572,7 @@ footer.foot .consult{color:var(--ink);}
 
   var M = {
     body:   new THREE.MeshPhysicalMaterial({color:0xeef1f4, metalness:0.08, roughness:0.36, clearcoat:0.5, clearcoatRoughness:0.3}),
-    joint:  new THREE.MeshStandardMaterial({color:0x1d242b, metalness:0.4, roughness:0.48}),
+    joint:  new THREE.MeshStandardMaterial({color:0x2c343d, metalness:0.35, roughness:0.45}),
     accent: new THREE.MeshStandardMaterial({color:0x7dd3fc, emissive:0x7dd3fc, emissiveIntensity:0.25, metalness:0.3, roughness:0.4}),
     steel:  new THREE.MeshStandardMaterial({color:0xc7ced6, metalness:0.8, roughness:0.22}),
     pad:    new THREE.MeshStandardMaterial({color:0x2a3138, metalness:0.2, roughness:0.6}),
@@ -801,10 +824,23 @@ footer.foot .consult{color:var(--ink);}
   }, {passive:false});
   function clamp(x, a, b){ return x < a ? a : x > b ? b : x; }
 
+  // ambient occlusion (GTAO) softly darkens creases and contact areas — where the arm meets the
+  // table, the insides of the joints, blocks resting on each other
+  var composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  var gtao = new GTAOPass(scene, camera, 800, 600);
+  gtao.updateGtaoMaterial({ radius: 0.12, distanceExponent: 1.5, thickness: 1.0, scale: 1.2, samples: 16 });
+  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
+  gtao.blendIntensity = 0.9;
+  composer.addPass(gtao);
+  composer.addPass(new OutputPass());
+  var aoOn = !window.matchMedia('(max-width: 820px)').matches;   // phones: off by default
   function resize(){
     var w = stageEl.clientWidth, h = stageEl.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h);
+    composer.setPixelRatio(renderer.getPixelRatio());
+    composer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     markDirty();
@@ -1051,23 +1087,52 @@ footer.foot .consult{color:var(--ink);}
     if (teleport){ body.setTranslation(rv(pos), true); body.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }, true); }
     else { body.setNextKinematicTranslation(rv(pos)); body.setNextKinematicRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w }); }
   }
-  function syncArmBodies(teleport){
-    if (!phys.ready || !lastCollision || !lastFK) return;
+  // where every kinematic arm body should be for the current pose
+  function armTargets(){
+    var out = [];
+    if (!lastCollision || !lastFK) return out;
     var caps = lastCollision.capsules;
     armBodies.forEach(function(ab){
       var c = caps[ab.i], a = r2t(c.a[0], c.a[1], c.a[2]), b = r2t(c.b[0], c.b[1], c.b[2]);
       var dir = b.clone().sub(a), len = dir.length();
       var q = len > 1e-9 ? new THREE.Quaternion().setFromUnitVectors(_yUp, dir.normalize()) : new THREE.Quaternion();
-      place(ab.body, a.add(b).multiplyScalar(0.5), q, teleport);
+      out.push({ body: ab.body, p: a.add(b).multiplyScalar(0.5), q: q });
     });
     var T = lastFK.flange, fq = flangeQuat(T), gap = 0.012 + state.gripper / 100 * 0.07;
     [-1, 1].forEach(function(sgn, k){
       var lx = sgn * (gap / 2 + 0.006), lz = 0.11;     // finger centre in flange coordinates
-      var p = r2t(T[0] * lx + T[2] * lz + T[3], T[4] * lx + T[6] * lz + T[7], T[8] * lx + T[10] * lz + T[11]);
-      place(fingerBodies[k], p, fq, teleport);
+      out.push({ body: fingerBodies[k], p: r2t(T[0] * lx + T[2] * lz + T[3], T[4] * lx + T[6] * lz + T[7], T[8] * lx + T[10] * lz + T[11]), q: fq });
     });
     var tp = lastFK.tcp;
-    place(phys.hand, r2t(tp[3], tp[7], tp[11]), flangeQuat(tp), teleport);
+    out.push({ body: phys.hand, p: r2t(tp[3], tp[7], tp[11]), q: flangeQuat(tp) });
+    return out;
+  }
+  var prevArm = null;
+  function syncArmBodies(teleport){
+    if (!phys.ready) return;
+    var t = armTargets();
+    t.forEach(function(x){ place(x.body, x.p, x.q, teleport); });
+    if (teleport) prevArm = t;
+  }
+  // Advance the physics by dt seconds in 1/60 s steps. The arm's kinematic bodies are moved
+  // smoothly from their previous pose to the current one across the sub-steps, so a fast (or,
+  // on a slow device, a large per-frame) arm motion still pushes blocks instead of tunnelling.
+  function stepPhysics(dt){
+    phys.acc = Math.min(phys.acc + dt, 10 / 60);
+    var n = Math.floor(phys.acc * 60 + 1e-9);
+    if (n < 1) return;
+    phys.acc -= n / 60;
+    var cur = armTargets();
+    for (var k = 1; k <= n; k++){
+      var u = k / n;
+      cur.forEach(function(x, i){
+        var pr = prevArm && prevArm[i] && prevArm[i].body === x.body ? prevArm[i] : null;
+        var p = pr ? pr.p.clone().lerp(x.p, u) : x.p, q = pr ? pr.q.clone().slerp(x.q, u) : x.q;
+        place(x.body, p, q, false);
+      });
+      phys.world.step();
+    }
+    prevArm = cur;
   }
 
   function makeBlockMesh(color){
@@ -1585,6 +1650,21 @@ footer.foot .consult{color:var(--ink);}
     }
   }
 
+  // if ambient occlusion makes frames slow on this device, switch it off once, automatically
+  var slowFrames = 0, aoAutoOff = false;
+  function watchFrameTime(ms){
+    if (!aoOn || aoAutoOff) return;
+    slowFrames = ms > 45 ? slowFrames + 1 : Math.max(0, slowFrames - 1);
+    if (slowFrames > 12){
+      aoAutoOff = true; aoOn = false;
+      aoSwitch.classList.remove('on'); aoSwitch.setAttribute('aria-checked', 'false');
+      showAlert('Ambient occlusion switched off to keep motion smooth on this device');
+    }
+  }
+  var aoSwitch = document.getElementById('ao-switch');
+  aoSwitch.classList.toggle('on', aoOn); aoSwitch.setAttribute('aria-checked', String(aoOn));
+  aoSwitch.addEventListener('click', function(){ aoOn = !aoOn; this.classList.toggle('on', aoOn); this.setAttribute('aria-checked', String(aoOn)); markDirty(); });
+
   document.getElementById('plan-switch').addEventListener('click', function(){
     state.plan = !state.plan;
     this.classList.toggle('on', state.plan);
@@ -1933,6 +2013,7 @@ footer.foot .consult{color:var(--ink);}
   var dirty = true;
   function markDirty(){ dirty = true; }
   var lastT = performance.now();
+  var lastPhysT = performance.now();
   function frame(now){
     requestAnimationFrame(frame);
     var dt = Math.min((now - lastT) / 1000, 1 / 30);
@@ -1940,9 +2021,7 @@ footer.foot .consult{color:var(--ink);}
     var active = false;
     stepJog(dt);
     if (phys.ready){
-      syncArmBodies(false);
-      phys.acc = Math.min(phys.acc + dt, 4 / 60);
-      while (phys.acc >= 1 / 60){ phys.world.step(); phys.acc -= 1 / 60; }
+      stepPhysics(Math.min((now - lastPhysT) / 1000, 10 / 60));
       var bodies = blocks.slice();
       if (workpiece) bodies.push(workpiece);
       bodies.forEach(function(b){
@@ -1953,12 +2032,15 @@ footer.foot .consult{color:var(--ink);}
       });
     }
     if (plotOn){ recordPlot(now); drawPlot(); }
+    lastPhysT = now;
     var camMoving = stepCamera();
     if (!(dirty || active || camMoving)) return;
     dirty = false;
     updateTrace();
     updateHud();
-    renderer.render(scene, camera);
+    var t0r = performance.now();
+    if (aoOn) composer.render(); else renderer.render(scene, camera);
+    watchFrameTime(performance.now() - t0r);
   }
 
   // ================================================================ GO
@@ -1977,7 +2059,7 @@ footer.foot .consult{color:var(--ink);}
   })();
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+  window.linkageDebug = { three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
       var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
       o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
       return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
