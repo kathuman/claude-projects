@@ -66,6 +66,12 @@ console.log("IK from TCP + seed");
     if (K.manipulability(q) > 5e-3) ok(s.every((v, i) => near(v, q[i], 1e-6)), "away from singularities it's the original branch (trial " + t + ")");
   }
   ok(K.ik(K.transl(3, 0, 0.5), [0, 0, 0, 0, 0, 0]) === null, "unreachable pose -> null");
+  // regression: a seed near -165° on the base, target whose solutions sit across the ±180° wrap.
+  // Blindly unwrapping toward the seed pushed every solution outside the joint limits.
+  const seedFar = [-2.88, -1.32, 2.15, -2.40, -1.57, -1.66];
+  const Tw = K.poseFromRPY(0.30, -0.42, 0.028, Math.PI, 0, 0);
+  const qw = K.ik(Tw, seedFar);
+  ok(qw && poseErr(K.fk(qw).tcp, Tw) < 1e-8 && qw.every((v, i) => v >= R.lo[i] - 1e-9 && v <= R.hi[i] + 1e-9), "limit-aware branch choice finds the reachable pose");
 }
 
 console.log("wrist singularity (θ5 = 0)");

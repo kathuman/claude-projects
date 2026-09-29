@@ -154,6 +154,25 @@ input[type=range]:focus-visible{box-shadow:0 0 0 2px var(--accent);}
 }
 .caption .views button:hover{color:var(--accent); border-color:var(--accent);}
 
+.num-row{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+.num-row label{display:flex; flex-direction:column; gap:3px; font-family:var(--mono); font-size:10px; color:var(--ink-faint);}
+.num-row input{
+  width:100%; min-width:0; font-family:var(--mono); font-size:12px; color:var(--tele); background:var(--panel);
+  border:1px solid var(--line); border-radius:6px; padding:5px 6px;
+}
+.num-row input:focus{outline:none; border-color:var(--accent);}
+.speed-row{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+.speed-row b{color:var(--tele); font-weight:500; min-width:36px; text-align:right;}
+.plot{
+  position:absolute; right:14px; bottom:48px; width:min(420px, calc(100% - 28px)); padding:8px 10px 10px;
+  background:rgba(10,47,82,.84); border:1px solid var(--line); border-radius:4px; backdrop-filter:blur(6px);
+}
+.plot[hidden]{display:none;}
+.plot .tabs{display:flex; gap:4px; margin-bottom:6px; align-items:center;}
+.plot .tabs button{font-family:var(--head); font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); background:transparent; border:1px solid var(--line); border-radius:5px; padding:3px 8px; cursor:pointer;}
+.plot .tabs button.on{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+.plot .tabs .legend{margin-left:auto; display:flex; gap:7px; font-family:var(--mono); font-size:10px;}
+.plot canvas{display:block; width:100%; height:150px;}
 footer.foot{
   flex:0 0 auto; display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:space-between;
   padding:7px 20px; border-top:1px solid var(--line); background:var(--panel-2);
@@ -172,6 +191,8 @@ footer.foot .consult{color:var(--ink);}
   .brand .sub .rest{display:none;}
   .hud{min-width:0; font-size:10.5px; padding:8px 10px;}
   .caption .hint{display:none;}
+  .plot{bottom:44px;}
+  .plot canvas{height:110px;}
 }
 </style>
 </head>
@@ -206,10 +227,45 @@ footer.foot .consult{color:var(--ink);}
       </div>
 
       <div class="rail-section">
+        <h2>Tool target (IK)</h2>
+        <div class="switch-row">
+          <span class="name">Follow live<small>Drag the target handle and the arm follows at joint speed</small></span>
+          <button class="switch on" id="follow-switch" role="switch" aria-checked="true" aria-label="Arm follows the target"><span class="knob"></span></button>
+        </div>
+        <div class="num-row">
+          <label>X m<input type="number" id="tx" step="0.01"></label>
+          <label>Y m<input type="number" id="ty" step="0.01"></label>
+          <label>Z m<input type="number" id="tz" step="0.01"></label>
+        </div>
+        <div class="num-row">
+          <label>Roll °<input type="number" id="trx" step="5"></label>
+          <label>Pitch °<input type="number" id="try" step="5"></label>
+          <label>Yaw °<input type="number" id="trz" step="5"></label>
+        </div>
+        <div class="btn-grid">
+          <button class="btn small" id="btn-tooldown">Point tool down</button>
+          <button class="btn small" id="btn-snap">Target = tool</button>
+        </div>
+        <p class="note" id="target-note">Drag the arrows (or the ball) on the target handle.</p>
+      </div>
+
+      <div class="rail-section">
+        <h2>Motion</h2>
+        <div class="btn-grid">
+          <button class="btn" id="btn-movej" title="Joint move: all joints finish together, fastest path for the motors">Move J</button>
+          <button class="btn" id="btn-movel" title="Linear move: the tool travels in a straight line">Move L</button>
+          <button class="btn" id="btn-circle" title="Circular moves: the tool draws a 10 cm circle">Draw circle</button>
+          <button class="btn" id="btn-config" title="Same tool pose, a different arm configuration">Next IK config</button>
+        </div>
+        <div class="speed-row"><span>Speed</span><input type="range" id="speed" min="10" max="100" step="5" value="60" aria-label="Motion speed"><b id="speed-val">60%</b></div>
+      </div>
+
+      <div class="rail-section">
         <h2>Sequences</h2>
         <div class="btn-grid">
           <button class="btn" id="btn-home">Home</button>
           <button class="btn" id="btn-wave">Wave</button>
+          <button class="btn wide" id="btn-pickplace" title="Picks the yellow workpiece from where it lies and places it on the other marker">Pick &amp; Place</button>
           <button class="btn danger wide" id="btn-stop" disabled>Stop</button>
         </div>
       </div>
@@ -227,6 +283,7 @@ footer.foot .consult{color:var(--ink);}
         <div class="btn-grid">
           <button class="btn" id="btn-drop">Drop Block</button>
           <button class="btn" id="btn-clear">Clear Blocks</button>
+          <button class="btn wide small" id="btn-workpiece">Reset workpiece</button>
         </div>
       </div>
 
@@ -239,6 +296,14 @@ footer.foot .consult{color:var(--ink);}
         <div class="switch-row">
           <span class="name">Collision capsules</span>
           <button class="switch" id="caps-switch" role="switch" aria-checked="false" aria-label="Show collision capsules"><span class="knob"></span></button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Joint plots</span>
+          <button class="switch" id="plot-switch" role="switch" aria-checked="false" aria-label="Show joint plots"><span class="knob"></span></button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Target handle</span>
+          <button class="switch on" id="gizmo-switch" role="switch" aria-checked="true" aria-label="Show the target handle"><span class="knob"></span></button>
         </div>
       </div>
     </aside>
@@ -263,8 +328,18 @@ footer.foot .consult{color:var(--ink);}
 
       <div class="alert" id="alert" role="status"></div>
 
+      <div class="plot" id="plot" hidden>
+        <div class="tabs" role="group" aria-label="Plot quantity">
+          <button type="button" data-q="pos" class="on">Position</button>
+          <button type="button" data-q="vel">Speed</button>
+          <button type="button" data-q="acc">Accel</button>
+          <span class="legend" id="plot-legend"></span>
+        </div>
+        <canvas id="plot-canvas" width="800" height="300"></canvas>
+      </div>
+
       <div class="caption">
-        <span class="hint">Drag: orbit · Shift/right-drag or two fingers: pan · Wheel/pinch: zoom</span>
+        <span class="hint">Drag: orbit · Drag the target handle: move the tool · Shift/right-drag or two fingers: pan · Wheel/pinch: zoom</span>
         <div class="views" role="group" aria-label="Camera views">
           <button type="button" data-view="iso">Iso</button>
           <button type="button" data-view="front">Front</button>
@@ -284,6 +359,7 @@ footer.foot .consult{color:var(--ink);}
 <script src="vendor/three.min.js"></script>
 <script src="vendor/cannon.min.js"></script>
 <script src="kinematics.js"></script>
+<script src="motion.js"></script>
 <script>
 (function(){
   "use strict";
@@ -293,11 +369,15 @@ footer.foot .consult{color:var(--ink);}
   //   2.0.0  6-axis arm with real UR5e proportions on a tested kinematics core; collision
   //          guard (table + self); tool pose + singularity telemetry; pan/pinch camera with
   //          view presets; render on demand; version + credit + footer
-  var APP_VERSION = "2.0.0";
+  //   3.0.0  inverse kinematics with a draggable tool target (live follow or plan-then-move);
+  //          MoveJ / MoveL / MoveC with synchronised trapezoidal timing inside joint limits;
+  //          alternative IK configurations; joint position/speed/acceleration plots; a real
+  //          pick & place that reads the workpiece from physics and holds it with a constraint
+  var APP_VERSION = "3.0.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
-  var K = window.LinkageKin, ROBOT = K.UR5E;
+  var K = window.LinkageKin, MO = window.LinkageMotion, ROBOT = K.UR5E;
   var DEG = Math.PI / 180;
 
   // ================================================================ JOINTS & STATE
@@ -311,7 +391,7 @@ footer.foot .consult{color:var(--ink);}
   ];
   // "ready" pose: arm raised, tool pointing straight down (a classic UR home)
   var HOME = [0, -90, 90, -90, -90, 0].map(function(d){ return d * DEG; });
-  var state = { q: HOME.slice(), gripper: 60, guard: true };
+  var state = { q: HOME.slice(), gripper: 60, guard: true, follow: true, speed: 0.6 };
 
   // ================================================================ RENDERER & SCENE
   var stageEl = document.getElementById('stage');
@@ -517,13 +597,14 @@ footer.foot .consult{color:var(--ink);}
 
   // ================================================================ CAMERA
   // Orbit around a target, pan it, zoom; smooth (damped) and only re-rendering when moving.
-  var cam = { target: new THREE.Vector3(0, 0.32, 0), theta: 0.75, phi: 1.12, radius: 2.1 };
+  // looking at the arm from its front-right (the arm reaches along base −X, i.e. three.js −x)
+  var cam = { target: new THREE.Vector3(-0.2, 0.3, 0), theta: -2.35, phi: 1.12, radius: 2.1 };
   var camGoal = { target: cam.target.clone(), theta: cam.theta, phi: cam.phi, radius: cam.radius };
   var VIEWS = {
-    iso:   { target: [0, 0.32, 0], theta: 0.75, phi: 1.12, radius: 2.1 },
-    front: { target: [0, 0.35, 0], theta: 0, phi: 1.45, radius: 2.0 },
-    side:  { target: [0, 0.35, 0], theta: Math.PI / 2, phi: 1.45, radius: 2.0 },
-    top:   { target: [0, 0.0, 0], theta: 0, phi: 0.02, radius: 2.3 }
+    iso:   { target: [-0.2, 0.3, 0], theta: -2.35, phi: 1.12, radius: 2.1 },
+    front: { target: [-0.2, 0.35, 0], theta: -Math.PI / 2, phi: 1.45, radius: 2.0 },
+    side:  { target: [-0.2, 0.35, 0], theta: Math.PI, phi: 1.45, radius: 2.0 },
+    top:   { target: [-0.2, 0.0, 0], theta: -Math.PI / 2, phi: 0.02, radius: 2.3 }
   };
   function setView(name){
     var v = VIEWS[name];
@@ -566,6 +647,10 @@ footer.foot .consult{color:var(--ink);}
   dom.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   dom.addEventListener('pointerdown', function(e){
     dom.setPointerCapture(e.pointerId);
+    if (!Object.keys(pointers).length && e.button === 0 && !e.shiftKey){
+      var hitG = pickGizmo(e);
+      if (hitG){ startGizmoDrag(hitG, e); dom.style.cursor = 'grabbing'; return; }
+    }
     pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
     var ids = Object.keys(pointers);
     if (ids.length === 2){
@@ -576,6 +661,7 @@ footer.foot .consult{color:var(--ink);}
     }
   });
   dom.addEventListener('pointermove', function(e){
+    if (gzDrag){ moveGizmoDrag(e); return; }
     var p = pointers[e.pointerId];
     if (!p) return;
     var dx = e.clientX - p.x, dy = e.clientY - p.y;
@@ -597,6 +683,7 @@ footer.foot .consult{color:var(--ink);}
     markDirty();
   });
   function endPointer(e){
+    if (gzDrag){ gzDrag = null; dom.style.cursor = ''; return; }
     delete pointers[e.pointerId];
     var ids = Object.keys(pointers);
     gesture = ids.length === 1 ? { kind: 'orbit' } : null;
@@ -634,6 +721,7 @@ footer.foot .consult{color:var(--ink);}
     valEls.push(row.querySelector('.val'));
     sliders[i].addEventListener('input', function(){
       cancelSequence();
+      jogGoal = null;
       var q = state.q.slice();
       q[i] = parseFloat(this.value) * DEG;
       if (!setJoints(q, 'slider')) this.value = (state.q[i] / DEG).toFixed(1);
@@ -683,6 +771,8 @@ footer.foot .consult{color:var(--ink);}
     state.q = q.map(function(v){ return clamp(v, ROBOT.lo[0], ROBOT.hi[0]); });
     poseRobot();
     syncUI();
+    // anything other than the live jog moves the target along with the tool
+    if (source !== 'jog' && source !== 'test-keep' && (state.follow || source === 'slider')) snapTargetToTool(false);
     return true;
   }
   var guardSwitch = document.getElementById('guard-switch');
@@ -711,27 +801,44 @@ footer.foot .consult{color:var(--ink);}
   var btnHome = document.getElementById('btn-home'), btnWave = document.getElementById('btn-wave'), btnStop = document.getElementById('btn-stop');
   function setRunning(on, label){
     btnStop.disabled = !on;
-    [btnHome, btnWave].forEach(function(b){ b.disabled = on; });
+    document.querySelectorAll('#btn-home,#btn-wave,#btn-pickplace,#btn-movej,#btn-movel,#btn-circle,#btn-config').forEach(function(b){ b.disabled = on; });
     setStatus(on ? 'running' : '', on ? 'RUNNING: ' + label : 'IDLE');
   }
-  function cancelSequence(){ if (activeToken){ activeToken.cancelled = true; activeToken = null; setRunning(false); } }
-  function easeInOut(t){ return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
-  // joint-space move; every intermediate pose goes through the collision guard
-  function moveJoints(target, ms, token){
+  function cancelSequence(){
+    if (activeToken){ activeToken.cancelled = true; activeToken = null; setRunning(false); }
+    plotFromTraj = null;
+  }
+  // Play a planned trajectory in real time; every sample passes the collision guard.
+  function execute(traj, token){
     return new Promise(function(resolve){
-      var start = state.q.slice(), t0 = performance.now();
+      var t0 = performance.now();
       function step(now){
         if (token.cancelled) return resolve(false);
-        var t = Math.min(1, (now - t0) / ms), e = easeInOut(t);
-        var q = start.map(function(s, i){ return s + (target[i] - s) * e; });
-        if (!setJoints(q, 'sequence')){ token.cancelled = true; return resolve(false); }
-        if (t < 1) requestAnimationFrame(step); else resolve(true);
+        var t = Math.min(traj.T, (now - t0) / 1000), s = traj.sample(t);
+        if (!setJoints(s.q, 'traj')){ token.cancelled = true; return resolve(false); }
+        plotFromTraj = s;
+        if (t < traj.T) requestAnimationFrame(step); else { plotFromTraj = null; resolve(true); }
       }
       requestAnimationFrame(step);
     });
   }
+  function moveJ(qGoal, token, speed){
+    return execute(MO.planJoint(state.q, qGoal, ROBOT, { speed: speed || state.speed }), token);
+  }
+  var REASONS = { unreachable: 'the target is out of reach', singularity: 'the path passes through a singularity', collision: 'the path would collide', 'too fast': 'no feasible timing', collinear: 'the three points are in a line' };
+  function explain(err){
+    var r = REASONS[err.reason] || err.reason;
+    return r + (err.reason !== 'unreachable' && err.at > 0 ? ' (' + Math.round(err.at * 100) + '% along)' : '') + (err.text ? ': ' + err.text : '');
+  }
+  function collideFn(q){ var c = K.checkCollision(q); return c.ok ? null : c.hits[0].text; }
+  function moveL(Tgoal, token, speed){
+    var tr = MO.planLinear(state.q, Tgoal, ROBOT, { speed: speed || state.speed, collide: state.guard ? collideFn : null });
+    if (!tr.ok){ showAlert('Move L not possible: ' + explain(tr.error)); return Promise.resolve(false); }
+    return execute(tr, token);
+  }
   function run(label, body){
     cancelSequence();
+    jogGoal = null;
     var token = { cancelled: false };
     activeToken = token;
     setRunning(true, label);
@@ -740,19 +847,19 @@ footer.foot .consult{color:var(--ink);}
     });
   }
   btnHome.addEventListener('click', function(){
-    run('HOME', function(tk){ return moveJoints(HOME, 1200, tk); });
+    run('HOME', function(tk){ return moveJ(HOME, tk); });
   });
   btnWave.addEventListener('click', function(){
     run('WAVE', async function(tk){
       var up = [0, -95, 20, -15, 90, 0].map(function(d){ return d * DEG; });
-      var ok = await moveJoints(up, 1000, tk);
+      var ok = await moveJ(up, tk);
       for (var i = 0; ok && i < 3; i++){
         var l = up.slice(); l[3] = -55 * DEG; l[5] = -40 * DEG;
         var r = up.slice(); r[3] = 25 * DEG; r[5] = 40 * DEG;
-        ok = await moveJoints(l, 420, tk);
-        if (ok) ok = await moveJoints(r, 420, tk);
+        ok = await moveJ(l, tk, 1);
+        if (ok) ok = await moveJ(r, tk, 1);
       }
-      if (ok) await moveJoints(HOME, 1000, tk);
+      if (ok) await moveJ(HOME, tk);
     });
   });
   btnStop.addEventListener('click', cancelSequence);
@@ -795,6 +902,411 @@ footer.foot .consult{color:var(--ink);}
     blocks = [];
     markDirty();
   });
+
+  // ---- the workpiece for Pick & Place: a real physics block, and two markers on the table.
+  // Robot coordinates (x, y, z) are three.js (x, z, -y).
+  // in front of the arm: a UR's zero pose points along base −X
+  var SITE_A = [-0.45, 0.22], SITE_B = [-0.28, -0.45];
+  function r2t(x, y, z){ return new THREE.Vector3(x, z, -y); }
+  [[SITE_A, 0x4fe0ff], [SITE_B, 0xffcf4a]].forEach(function(site){
+    var ring = ringLine(0.045, site[1], 0.7);
+    var c = r2t(site[0][0], site[0][1], 0);
+    ring.position.set(c.x, 0.001, c.z);
+    scene.add(ring);
+  });
+  var workpiece = null;
+  function resetWorkpiece(){
+    if (workpiece){ scene.remove(workpiece.mesh); world.removeBody(workpiece.body); }
+    var m = shadowy(new THREE.Mesh(new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK), new THREE.MeshStandardMaterial({color:0xffcf4a, metalness:0.1, roughness:0.45})));
+    scene.add(m);
+    var body = new CANNON.Body({mass:0.12, material:blockMat, shape:new CANNON.Box(new CANNON.Vec3(BLOCK / 2, BLOCK / 2, BLOCK / 2))});
+    var c = r2t(SITE_A[0], SITE_A[1], BLOCK / 2);
+    body.position.set(c.x, c.y + 0.0005, c.z);
+    body.quaternion.setFromEuler(0, 0.35, 0);     // lying at an angle, so the grasp has to line up with it
+    body.linearDamping = 0.1; body.angularDamping = 0.2; body.sleepSpeedLimit = 0.05; body.sleepTimeLimit = 0.4;
+    world.addBody(body);
+    workpiece = { mesh: m, body: body };
+    markDirty();
+  }
+  document.getElementById('btn-workpiece').addEventListener('click', function(){ cancelSequence(); releaseGrasp(); resetWorkpiece(); });
+
+  // The "hand": a kinematic body that follows the tool centre point; a grasped part is held to
+  // it by a lock constraint, so while carried it is still a physics body.
+  var handBody = new CANNON.Body({ mass: 0, type: CANNON.Body.KINEMATIC });
+  handBody.collisionResponse = false;
+  world.addBody(handBody);
+  var grasp = null;
+  function syncHand(){
+    if (!lastFK) return;
+    var T = lastFK.tcp, p = r2t(T[3], T[7], T[11]);
+    var m = new THREE.Matrix4().set(T[0], T[1], T[2], 0, T[4], T[5], T[6], 0, T[8], T[9], T[10], 0, 0, 0, 0, 1);
+    var qr = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().multiplyMatrices(robotRootRot, m));
+    handBody.position.set(p.x, p.y, p.z);
+    handBody.quaternion.set(qr.x, qr.y, qr.z, qr.w);
+  }
+  var robotRootRot = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+  function takeGrasp(obj){
+    syncHand();
+    var c = new CANNON.LockConstraint(handBody, obj.body, { maxForce: 1e4 });
+    world.addConstraint(c);
+    obj.body.wakeUp();
+    grasp = { obj: obj, c: c };
+  }
+  function releaseGrasp(){
+    if (!grasp) return;
+    world.removeConstraint(grasp.c);
+    grasp.obj.body.velocity.set(0, 0, 0); grasp.obj.body.angularVelocity.set(0, 0, 0);
+    grasp.obj.body.wakeUp();
+    grasp = null;
+  }
+
+  // ================================================================ TARGET (IK) & HANDLE
+  // The target is a desired tool pose. The handle shows it: arrows along the base X/Y/Z move it
+  // along that axis, the ball moves it in the screen plane. With "Follow live" the arm chases
+  // the target at joint speed (a servo on the IK solution nearest the current pose).
+  var target = { T: null, reachable: true, why: '' };
+  var gz = new THREE.Group();
+  robotRoot.add(gz);
+  var GZ = { x: 0xff6b6b, y: 0x5de08a, z: 0x61a8ff, free: 0x7dd3fc };
+  function gzMat(c){ return new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.95, depthTest: false }); }
+  var gzParts = [], gzPick = [];
+  [['x', [1, 0, 0]], ['y', [0, 1, 0]], ['z', [0, 0, 1]]].forEach(function(ax){
+    var dir = new THREE.Vector3(ax[1][0], ax[1][1], ax[1][2]);
+    var mat = gzMat(GZ[ax[0]]);
+    var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.1, 10), mat);
+    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    shaft.position.copy(dir).multiplyScalar(0.05);
+    var cone = new THREE.Mesh(new THREE.ConeGeometry(0.011, 0.03, 16), mat);
+    cone.quaternion.copy(shaft.quaternion);
+    cone.position.copy(dir).multiplyScalar(0.112);
+    var pick = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.13, 8), new THREE.MeshBasicMaterial({ visible: false }));
+    pick.quaternion.copy(shaft.quaternion);
+    pick.position.copy(dir).multiplyScalar(0.07);
+    pick.userData = { axis: ax[0], dir: ax[1], mat: mat, base: GZ[ax[0]] };
+    [shaft, cone].forEach(function(m){ m.renderOrder = 10; gz.add(m); gzParts.push(m); });
+    gz.add(pick); gzPick.push(pick);
+  });
+  var ballMat = gzMat(GZ.free);
+  var ball = new THREE.Mesh(new THREE.SphereGeometry(0.016, 20, 14), ballMat);
+  ball.renderOrder = 10; ball.userData = { axis: 'free', mat: ballMat, base: GZ.free };
+  gz.add(ball); gzPick.push(ball);
+  // the target's own orientation: a small tool-frame triad
+  var triad = new THREE.Group();
+  [[0xff6b6b, [1, 0, 0]], [0x5de08a, [0, 1, 0]], [0x61a8ff, [0, 0, 1]]].forEach(function(t){
+    var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(t[1][0], t[1][1], t[1][2]).multiplyScalar(0.05)]);
+    var l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: t[0], depthTest: false, transparent: true, opacity: 0.8 }));
+    l.renderOrder = 10; triad.add(l);
+  });
+  gz.add(triad);
+  var showGizmo = true;
+
+  function updateGizmo(){
+    if (!target.T) return;
+    var T = target.T;
+    gz.position.set(T[3], T[7], T[11]);
+    triad.quaternion.setFromRotationMatrix(new THREE.Matrix4().set(T[0], T[1], T[2], 0, T[4], T[5], T[6], 0, T[8], T[9], T[10], 0, 0, 0, 0, 1));
+    gz.visible = showGizmo;
+    var bad = !target.reachable;
+    gzPick.forEach(function(p){ p.userData.mat.color.setHex(bad ? 0xff4b3a : (p.userData.hover ? 0xffffff : p.userData.base)); });
+    syncTargetUI();
+    markDirty();
+  }
+  var TI = {};
+  ['tx', 'ty', 'tz', 'trx', 'try', 'trz'].forEach(function(id){ TI[id] = document.getElementById(id); });
+  var targetNote = document.getElementById('target-note');
+  function syncTargetUI(){
+    if (!target.T) return;
+    var T = target.T, rpy = K.rpyFromPose(T), ae = document.activeElement;
+    var vals = { tx: T[3].toFixed(3), ty: T[7].toFixed(3), tz: T[11].toFixed(3), trx: (rpy[0] / DEG).toFixed(1), try: (rpy[1] / DEG).toFixed(1), trz: (rpy[2] / DEG).toFixed(1) };
+    Object.keys(vals).forEach(function(k){ if (ae !== TI[k]) TI[k].value = vals[k]; });
+    targetNote.textContent = target.reachable ? (state.follow ? 'Drag the arrows (or the ball) on the target handle.' : 'Target set — press Move J or Move L to go there.') : '⚠ ' + target.why;
+    targetNote.style.color = target.reachable ? '' : 'var(--bad)';
+  }
+  Object.keys(TI).forEach(function(k){
+    TI[k].addEventListener('change', function(){
+      var v = Object.keys(TI).map(function(id){ return parseFloat(TI[id].value) || 0; });
+      setTarget(K.poseFromRPY(v[0], v[1], v[2], v[3] * DEG, v[4] * DEG, v[5] * DEG));
+    });
+  });
+
+  function snapTargetToTool(render){
+    if (!lastFK) return;
+    target.T = lastFK.tcp.slice();
+    target.reachable = true;
+    if (render !== false) updateGizmo(); else { updateGizmo(); }
+  }
+  // New target: check it can be reached (and safely), then either chase it or just show it.
+  var jogGoal = null;
+  function setTarget(T){
+    target.T = T;
+    var q = K.ik(T, state.q, ROBOT);
+    if (!q){ target.reachable = false; target.why = 'Out of reach for this arm.'; jogGoal = null; }
+    else {
+      var c = K.checkCollision(q);
+      if (!c.ok && state.guard){ target.reachable = false; target.why = 'That pose would collide: ' + c.hits[0].text + '.'; jogGoal = null; }
+      else { target.reachable = true; if (state.follow){ cancelSequence(); jogGoal = q; } }
+    }
+    updateGizmo();
+  }
+  // live follow: move every joint toward the IK goal at up to its speed limit
+  function stepJog(dt){
+    if (!jogGoal || activeToken) return;
+    var q = state.q.slice(), done = true;
+    for (var i = 0; i < 6; i++){
+      var d = jogGoal[i] - q[i], m = ROBOT.vmax[i] * state.speed * dt;
+      if (Math.abs(d) > m){ q[i] += Math.sign(d) * m; done = false; } else q[i] = jogGoal[i];
+    }
+    if (!setJoints(q, 'jog')) jogGoal = null;
+    if (done) jogGoal = null;
+  }
+
+  // ---- dragging the handle
+  var ray = new THREE.Raycaster(), gzDrag = null;
+  function ndc(e){ var r = dom.getBoundingClientRect(); return new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); }
+  function pickGizmo(e){
+    if (!gz.visible || !target.T) return null;
+    ray.setFromCamera(ndc(e), camera);
+    var hits = ray.intersectObjects(gzPick, false);
+    return hits.length ? hits[0].object : null;
+  }
+  function robotDirToWorld(d){ return new THREE.Vector3(d[0], d[1], d[2]).applyMatrix4(robotRootRot); }
+  function worldToRobotPoint(v){ return v.clone().applyMatrix4(new THREE.Matrix4().copy(robotRootRot).invert()); }
+  function targetWorld(){ return new THREE.Vector3(target.T[3], target.T[7], target.T[11]).applyMatrix4(robotRootRot); }
+  // parameter along the line (p0, a) closest to the mouse ray
+  function lineParam(p0, a, e){
+    ray.setFromCamera(ndc(e), camera);
+    var o = ray.ray.origin, d = ray.ray.direction, w0 = new THREE.Vector3().subVectors(p0, o);
+    var b = a.dot(d), dd = a.dot(w0), ee = d.dot(w0), den = 1 - b * b;
+    if (Math.abs(den) < 1e-6) return null;
+    return (b * ee - dd) / den;
+  }
+  function planeHit(p0, n, e){
+    ray.setFromCamera(ndc(e), camera);
+    var pl = new THREE.Plane().setFromNormalAndCoplanarPoint(n, p0), out = new THREE.Vector3();
+    return ray.ray.intersectPlane(pl, out) ? out : null;
+  }
+  function startGizmoDrag(obj, e){
+    var ax = obj.userData.axis, p0 = targetWorld();
+    gzDrag = { axis: ax, T0: target.T.slice(), p0: p0 };
+    if (ax === 'free'){
+      gzDrag.n = new THREE.Vector3(); camera.getWorldDirection(gzDrag.n);
+      gzDrag.hit0 = planeHit(p0, gzDrag.n, e);
+    } else {
+      gzDrag.a = robotDirToWorld(obj.userData.dir).normalize();
+      gzDrag.s0 = lineParam(p0, gzDrag.a, e);
+    }
+  }
+  function moveGizmoDrag(e){
+    var T = gzDrag.T0.slice(), deltaW = null;
+    if (gzDrag.axis === 'free'){
+      var h = planeHit(gzDrag.p0, gzDrag.n, e);
+      if (h && gzDrag.hit0) deltaW = h.sub(gzDrag.hit0);
+    } else {
+      var sNow = lineParam(gzDrag.p0, gzDrag.a, e);
+      if (sNow != null && gzDrag.s0 != null) deltaW = gzDrag.a.clone().multiplyScalar(sNow - gzDrag.s0);
+    }
+    if (!deltaW) return;
+    var dR = worldToRobotPoint(deltaW);
+    T[3] += dR.x; T[7] += dR.y; T[11] = Math.max(0.005, T[11] + dR.z);
+    setTarget(T);
+  }
+  var hoverObj = null;
+  dom.addEventListener('pointermove', function(e){
+    if (gzDrag || Object.keys(pointers).length) return;
+    var o = pickGizmo(e);
+    if (o !== hoverObj){
+      if (hoverObj) hoverObj.userData.hover = false;
+      if (o) o.userData.hover = true;
+      hoverObj = o;
+      dom.style.cursor = o ? 'grab' : '';
+      updateGizmo();
+    }
+  });
+
+  document.getElementById('follow-switch').addEventListener('click', function(){
+    state.follow = !state.follow;
+    this.classList.toggle('on', state.follow);
+    this.setAttribute('aria-checked', String(state.follow));
+    if (state.follow) setTarget(target.T); else { jogGoal = null; updateGizmo(); }
+  });
+  document.getElementById('gizmo-switch').addEventListener('click', function(){
+    showGizmo = !showGizmo;
+    this.classList.toggle('on', showGizmo);
+    this.setAttribute('aria-checked', String(showGizmo));
+    updateGizmo();
+  });
+  document.getElementById('btn-tooldown').addEventListener('click', function(){
+    var T = target.T, yaw = K.rpyFromPose(T)[2];
+    setTarget(K.poseFromRPY(T[3], T[7], T[11], Math.PI, 0, yaw));
+  });
+  document.getElementById('btn-snap').addEventListener('click', function(){ jogGoal = null; snapTargetToTool(); });
+
+  // ================================================================ MOTION COMMANDS
+  var speedEl = document.getElementById('speed'), speedVal = document.getElementById('speed-val');
+  speedEl.addEventListener('input', function(){ state.speed = this.value / 100; speedVal.textContent = this.value + '%'; });
+  document.getElementById('btn-movej').addEventListener('click', function(){
+    var q = K.ik(target.T, state.q, ROBOT);
+    if (!q) return showAlert('Move J not possible: the target is out of reach');
+    run('MOVE J', function(tk){ return moveJ(q, tk); });
+  });
+  document.getElementById('btn-movel').addEventListener('click', function(){
+    var T = target.T.slice();
+    run('MOVE L', function(tk){ return moveL(T, tk); });
+  });
+  // two half-circle MoveC segments: a 10 cm circle in the horizontal plane
+  document.getElementById('btn-circle').addEventListener('click', function(){
+    if (!traceOn) traceSwitch.click();
+    run('MOVE C', async function(tk){
+      var r = 0.1, T0 = lastFK.tcp.slice(), p = K.pos(T0), c = [p[0] + r, p[1], p[2]];
+      var mid = T0.slice(); mid[3] = c[0] + r;
+      var a = MO.planCircular(state.q, [c[0], c[1] + r, c[2]], mid, ROBOT, { speed: state.speed, collide: state.guard ? collideFn : null });
+      if (!a.ok) return showAlert('Circle not possible here: ' + explain(a.error));
+      if (!(await execute(a, tk))) return;
+      var b = MO.planCircular(state.q, [c[0], c[1] - r, c[2]], T0, ROBOT, { speed: state.speed, collide: state.guard ? collideFn : null });
+      if (!b.ok) return showAlert('Circle not possible here: ' + explain(b.error));
+      await execute(b, tk);
+    });
+  });
+  // same tool pose, the next of the (up to 8) arm configurations that reach it
+  var configIdx = 0;
+  document.getElementById('btn-config').addEventListener('click', function(){
+    var T = lastFK.flange, sols = K.ikFlange(T, ROBOT).filter(function(s){ return K.checkCollision(s).ok; });
+    if (sols.length < 2) return showAlert('No other collision-free configuration reaches this tool pose');
+    // order solutions by distance from the current one and step through them
+    var cur = state.q;
+    sols = sols.map(function(s){ return s.map(function(v, i){ return K.nearestBranch(v, cur[i]); }); });
+    sols.sort(function(a, b){ return dist(a, cur) - dist(b, cur); });
+    var others = sols.filter(function(s){ return dist(s, cur) > 1e-3; });
+    configIdx = (configIdx + 1) % others.length;
+    var goal = others[configIdx], n = others.length + 1;
+    showAlert('Switching arm configuration (' + n + ' collision-free ones reach this tool pose)');
+    run('RECONFIGURE', function(tk){ return moveJ(goal, tk); });
+  });
+  function dist(a, b){ var s = 0; for (var i = 0; i < 6; i++) s += Math.abs(a[i] - b[i]); return s; }
+
+  // ================================================================ PICK & PLACE
+  function blockPoseRobot(obj){   // workpiece pose in robot coordinates: centre + yaw, and whether it's upright
+    var p = obj.body.position, q = new THREE.Quaternion(obj.body.quaternion.x, obj.body.quaternion.y, obj.body.quaternion.z, obj.body.quaternion.w);
+    var up = new THREE.Vector3(0, 1, 0).applyQuaternion(q), fx = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
+    // a cube is upright if any face points up; pick the face axis closest to world up for yaw
+    var axes = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)].map(function(v){ return v.applyQuaternion(q); });
+    var upAxis = axes.reduce(function(b, v){ return Math.abs(v.y) > Math.abs(b.y) ? v : b; });
+    var side = axes.filter(function(v){ return v !== upAxis; })[0];
+    // three (x, z) of a horizontal side axis -> robot (x, y) = (x, -z)
+    var yaw = Math.atan2(-side.z, side.x);
+    return { x: p.x, y: -p.z, z: p.y, yaw: yaw, upright: Math.abs(upAxis.y) > 0.97 };
+  }
+  function graspPose(x, y, z, yaw){
+    // tool pointing straight down (roll 180°), fingers closing across the block's faces
+    return K.poseFromRPY(x, y, z, Math.PI, 0, yaw);
+  }
+  function bestYaw(yaw){   // of the four equivalent grasp yaws, the one needing least wrist turn
+    var cur = K.rpyFromPose(lastFK.tcp)[2], best = yaw, bd = Infinity;
+    for (var k = -2; k <= 2; k++){ var y2 = yaw + k * Math.PI / 2, d = Math.abs(Math.atan2(Math.sin(y2 - cur), Math.cos(y2 - cur))); if (d < bd){ bd = d; best = y2; } }
+    return best;
+  }
+  function gripTo(pct, ms, token){
+    return new Promise(function(resolve){
+      var g0 = state.gripper, t0 = performance.now();
+      function step(now){
+        if (token.cancelled) return resolve(false);
+        var t = Math.min(1, (now - t0) / ms);
+        state.gripper = g0 + (pct - g0) * t;
+        gripSlider.value = state.gripper; gripVal.textContent = Math.round(state.gripper) + '%';
+        poseRobot();
+        if (t < 1) requestAnimationFrame(step); else resolve(true);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+  var GRIP_ON_BLOCK = (BLOCK - 0.012) / 0.07 * 100;   // finger gap = block width
+  document.getElementById('btn-pickplace').addEventListener('click', function(){
+    if (!workpiece) resetWorkpiece();
+    run('PICK & PLACE', async function(tk){
+      var bp = blockPoseRobot(workpiece);
+      if (!bp.upright) return showAlert('The workpiece has tipped over — press Reset workpiece');
+      if (Math.hypot(bp.x, bp.y) > 0.8) return showAlert('The workpiece is out of reach');
+      var dA = Math.hypot(bp.x - SITE_A[0], bp.y - SITE_A[1]), dB = Math.hypot(bp.x - SITE_B[0], bp.y - SITE_B[1]);
+      var dest = dA < dB ? SITE_B : SITE_A;
+      var yaw = bestYaw(bp.yaw), zGrasp = bp.z, hover = 0.15;
+      var above = graspPose(bp.x, bp.y, zGrasp + hover, yaw), at = graspPose(bp.x, bp.y, zGrasp, yaw);
+      var qa = K.ik(above, state.q, ROBOT);
+      if (!qa) return showAlert('Cannot reach above the workpiece');
+      if (!(await gripTo(90, 300, tk))) return;
+      if (!(await moveJ(qa, tk))) return;
+      if (!(await moveL(at, tk, state.speed * 0.6))) return;
+      if (!(await gripTo(GRIP_ON_BLOCK, 350, tk))) return;
+      // grasp check: the block centre must be between the fingertips
+      var tcp = K.pos(lastFK.tcp), nowP = blockPoseRobot(workpiece);
+      if (Math.hypot(nowP.x - tcp[0], nowP.y - tcp[1], nowP.z - tcp[2]) > 0.015){ showAlert('Missed the grasp — the workpiece moved'); return; }
+      takeGrasp(workpiece);
+      if (!(await moveL(above, tk))) { releaseGrasp(); return; }
+      var dyaw = bestYaw(0);
+      var aboveD = graspPose(dest[0], dest[1], BLOCK / 2 + hover, dyaw), atD = graspPose(dest[0], dest[1], BLOCK / 2 + 0.003, dyaw);
+      var qd = K.ik(aboveD, state.q, ROBOT);
+      if (!qd){ releaseGrasp(); return showAlert('Cannot reach the place position'); }
+      if (!(await moveJ(qd, tk))) { releaseGrasp(); return; }
+      if (!(await moveL(atD, tk, state.speed * 0.6))) { releaseGrasp(); return; }
+      releaseGrasp();
+      if (!(await gripTo(90, 300, tk))) return;
+      if (!(await moveL(aboveD, tk))) return;
+      await moveJ(HOME, tk);
+    });
+  });
+
+  // ================================================================ JOINT PLOTS
+  var plotOn = false, plotQty = 'pos', plotBuf = [], PLOT_SECS = 8, plotFromTraj = null, lastPlotQ = null, lastPlotT = 0, lastPlotQd = null;
+  var JCOL = ['#ff6b6b', '#ffcf4a', '#5de08a', '#4fe0ff', '#b48bff', '#ff9de0'];
+  var plotEl = document.getElementById('plot'), plotCv = document.getElementById('plot-canvas'), pctx = plotCv.getContext('2d');
+  document.getElementById('plot-legend').innerHTML = JOINTS.map(function(j, i){ return '<span style="color:' + JCOL[i] + '">' + j.sub + '</span>'; }).join('');
+  document.getElementById('plot-switch').addEventListener('click', function(){
+    plotOn = !plotOn;
+    this.classList.toggle('on', plotOn);
+    this.setAttribute('aria-checked', String(plotOn));
+    plotEl.hidden = !plotOn;
+    plotBuf = []; lastPlotQ = null;
+    markDirty();
+  });
+  plotEl.querySelectorAll('.tabs button').forEach(function(b){
+    b.addEventListener('click', function(){
+      plotQty = this.dataset.q;
+      plotEl.querySelectorAll('.tabs button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    });
+  });
+  function recordPlot(now){
+    var t = now / 1000, q = state.q.slice(), qd, qdd;
+    if (plotFromTraj){ qd = plotFromTraj.qd; qdd = plotFromTraj.qdd; }
+    else if (lastPlotQ){
+      var h = Math.max(1e-3, t - lastPlotT);
+      qd = q.map(function(v, i){ return (v - lastPlotQ[i]) / h; });
+      qdd = qd.map(function(v, i){ return lastPlotQd ? (v - lastPlotQd[i]) / h : 0; });
+    } else { qd = [0, 0, 0, 0, 0, 0]; qdd = [0, 0, 0, 0, 0, 0]; }
+    lastPlotQ = q; lastPlotT = t; lastPlotQd = qd;
+    plotBuf.push({ t: t, q: q, qd: qd, qdd: qdd });
+    while (plotBuf.length && plotBuf[0].t < t - PLOT_SECS) plotBuf.shift();
+  }
+  function drawPlot(){
+    var W = plotCv.width, Hh = plotCv.height, g = pctx;
+    g.clearRect(0, 0, W, Hh);
+    if (plotBuf.length < 2) return;
+    var key = plotQty === 'pos' ? 'q' : plotQty === 'vel' ? 'qd' : 'qdd';
+    var lim = plotQty === 'pos' ? Math.PI : plotQty === 'vel' ? ROBOT.vmax[0] * 1.15 : Math.max.apply(null, ROBOT.amax) * 1.15;
+    var unit = plotQty === 'pos' ? '°' : plotQty === 'vel' ? '°/s' : '°/s²';
+    var t1 = plotBuf[plotBuf.length - 1].t, t0 = t1 - PLOT_SECS, padL = 58;
+    function X(t){ return padL + (t - t0) / PLOT_SECS * (W - padL - 8); }
+    function Y(v){ return Hh / 2 - v / lim * (Hh / 2 - 12); }
+    g.font = '20px IBM Plex Mono, monospace'; g.fillStyle = '#6fa8c9'; g.strokeStyle = 'rgba(111,168,201,.25)'; g.lineWidth = 1;
+    [-1, 0, 1].forEach(function(k){ g.beginPath(); g.moveTo(padL, Y(k * lim * 0.87)); g.lineTo(W - 8, Y(k * lim * 0.87)); g.stroke(); g.fillText((k * lim * 0.87 / DEG).toFixed(0) + unit, 2, Y(k * lim * 0.87) + 6); });
+    if (plotQty !== 'pos'){   // limit lines
+      var L = plotQty === 'vel' ? ROBOT.vmax[0] : null;   // the joints' real speed limit (180°/s)
+      if (L){ g.setLineDash([8, 6]); g.strokeStyle = 'rgba(255,107,92,.7)'; [L, -L].forEach(function(v){ g.beginPath(); g.moveTo(padL, Y(v)); g.lineTo(W - 8, Y(v)); g.stroke(); }); g.setLineDash([]); }
+    }
+    for (var j = 0; j < 6; j++){
+      g.strokeStyle = JCOL[j]; g.lineWidth = 2.5; g.beginPath();
+      plotBuf.forEach(function(s, i){ var v = Math.max(-lim, Math.min(lim, s[key][j])); if (i) g.lineTo(X(s.t), Y(v)); else g.moveTo(X(s.t), Y(v)); });
+      g.stroke();
+    }
+  }
 
   // ================================================================ TIP TRACE
   var traceOn = false, TRACE_MAX = 800, tracePos = new Float32Array(TRACE_MAX * 3), traceN = 0, lastTrace = null;
@@ -860,14 +1372,19 @@ footer.foot .consult{color:var(--ink);}
     var dt = Math.min((now - lastT) / 1000, 1 / 30);
     lastT = now;
     var active = false;
-    if (blocks.length){
+    stepJog(dt);
+    syncHand();
+    var bodies = blocks.slice();
+    if (workpiece) bodies.push(workpiece);
+    if (bodies.length){
       world.step(1 / 60, dt, 4);
-      blocks.forEach(function(b){
+      bodies.forEach(function(b){
         if (b.body.sleepState !== CANNON.Body.SLEEPING) active = true;
         b.mesh.position.copy(b.body.position);
         b.mesh.quaternion.copy(b.body.quaternion);
       });
     }
+    if (plotOn){ recordPlot(now); drawPlot(); }
     var camMoving = stepCamera();
     if (!(dirty || active || camMoving)) return;
     dirty = false;
@@ -880,11 +1397,17 @@ footer.foot .consult{color:var(--ink);}
   applyCamera();
   syncUI();
   poseRobot();
+  snapTargetToTool();
+  resetWorkpiece();
   resize();
   requestAnimationFrame(frame);
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { state: state, fk: function(){ return lastFK; }, collision: function(){ return lastCollision; }, renders: function(){ return renderer.info.render.frame; }, cam: function(){ return { theta: camGoal.theta, phi: camGoal.phi, radius: camGoal.radius, target: camGoal.target.toArray() }; }, setJoints: function(qdeg){ return setJoints(qdeg.map(function(d){ return d * DEG; }), 'test'); } };
+  window.linkageDebug = { target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+      var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
+      o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
+      return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
+    }, state: state, fk: function(){ return lastFK; }, collision: function(){ return lastCollision; }, renders: function(){ return renderer.info.render.frame; }, cam: function(){ return { theta: camGoal.theta, phi: camGoal.phi, radius: camGoal.radius, target: camGoal.target.toArray() }; }, setJoints: function(qdeg){ return setJoints(qdeg.map(function(d){ return d * DEG; }), 'test'); } };
 })();
 </script>
 </body>

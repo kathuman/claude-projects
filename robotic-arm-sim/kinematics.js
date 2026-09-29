@@ -149,8 +149,18 @@
     var T = mul(Ttcp, transl(0, 0, -robot.tool));
     var sols = ikFlange(T, robot), best = null, bestD = Infinity;
     sols.forEach(function (s) {
-      var q = s.map(function (v, i) { return seed ? nearestBranch(v, seed[i]) : v; });
-      for (var i = 0; i < 6; i++) if (q[i] < robot.lo[i] - 1e-9 || q[i] > robot.hi[i] + 1e-9) return;
+      // per joint: of the equivalent angles v, v ± 2π, the one nearest the seed that is
+      // inside the joint's limits (a blind "nearest branch" could land outside them)
+      var q = [];
+      for (var i = 0; i < 6; i++) {
+        var best1 = null;
+        [s[i], s[i] - 2 * Math.PI, s[i] + 2 * Math.PI].forEach(function (v) {
+          if (v < robot.lo[i] - 1e-9 || v > robot.hi[i] + 1e-9) return;
+          if (best1 === null || (seed && Math.abs(v - seed[i]) < Math.abs(best1 - seed[i]))) best1 = v;
+        });
+        if (best1 === null) return;
+        q.push(best1);
+      }
       var dsum = 0;
       if (seed) for (var j = 0; j < 6; j++) dsum += (j < 3 ? 2 : 1) * Math.abs(q[j] - seed[j]);  // prefer keeping the big joints still
       if (dsum < bestD) { bestD = dsum; best = q; }
@@ -206,7 +216,7 @@
     robot = robot || UR5E;
     var f = fkr || fk(q, robot), F = f.frames;
     var o0 = pos(F[0]), o1 = pos(F[1]), o2 = pos(F[2]), o3 = pos(F[3]), o4 = pos(F[4]), o5 = pos(F[5]), o6 = pos(F[6]);
-    var z1 = axis(F[1], 2), z2 = axis(F[2], 2);
+    var z1 = axis(F[1], 2), z2 = axis(F[2], 2), z6 = axis(F[6], 2);
     return [
       { name: "base", a: o0, b: [0, 0, robot.d[0]], r: 0.075 },
       { name: "shoulder", a: o1, b: add(o1, z1, SHOULDER_OFF), r: 0.07 },
@@ -216,11 +226,13 @@
       { name: "wrist 1", a: o3, b: o4, r: 0.045 },
       { name: "wrist 2", a: o4, b: o5, r: 0.045 },
       { name: "wrist 3", a: o5, b: o6, r: 0.045 },
-      { name: "gripper", a: o6, b: pos(f.tcp), r: 0.045 }
+      // the gripper: a chunky body on the flange, then two slim fingers out to the TCP
+      { name: "gripper", a: o6, b: add(o6, z6, 0.07), r: 0.045 },
+      { name: "fingers", a: add(o6, z6, 0.07), b: pos(f.tcp), r: 0.018 }
     ];
   }
   // pairs far enough apart in the chain that touching means a real collision
-  var SELF_PAIRS = [[0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [1, 5], [1, 6], [1, 7], [1, 8], [2, 6], [2, 7], [2, 8], [4, 8]];
+  var SELF_PAIRS = [[0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [1, 5], [1, 6], [1, 7], [1, 8], [1, 9], [2, 6], [2, 7], [2, 8], [2, 9], [4, 8], [4, 9]];
 
   function segDist(p1, q1, p2, q2) {   // closest distance between two segments
     var d1 = sub(q1, p1), d2 = sub(q2, p2), r = sub(p1, p2);

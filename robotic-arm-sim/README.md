@@ -11,8 +11,12 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
   kinematics, analytic inverse kinematics (all 8 solutions), geometric Jacobian and
   manipulability, capsule collision model (table, self, box obstacles). The scene draws the
   arm straight from these results, so what you see is exactly what is checked.
-- `tests/kinematics.test.js` — unit tests for the core. Run with
-  `node robotic-arm-sim/tests/kinematics.test.js` (no dependencies).
+- `motion.js` — trajectories on top of the kinematics: MoveJ (synchronised trapezoidal joint
+  profiles inside each joint's speed/acceleration limits), MoveL (straight tool line, IK every
+  step, automatically slowed if a joint would exceed its limit, rejected if unreachable,
+  colliding or flipping through a singularity) and MoveC (arcs through a via point).
+- `tests/` — unit tests for both cores, no dependencies:
+  `node robotic-arm-sim/tests/kinematics.test.js` and `node robotic-arm-sim/tests/motion.test.js`.
 - `vendor/` — three.js r128 and cannon.js, with their licences.
 
 ## Conventions
