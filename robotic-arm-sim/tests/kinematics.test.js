@@ -150,6 +150,31 @@ console.log("velocity ellipsoid");
   ok(el.radii.every(r => r > 0), "ellipsoid has three positive radii away from singularities");
 }
 
+console.log("UR e-Series models");
+{
+  Object.keys(K.MODELS).forEach(name => {
+    const M = K.MODELS[name];
+    const z = K.pos(K.fk([0, 0, 0, 0, 0, 0], M).flange);
+    ok(near(z[0], M.a[1] + M.a[2], 1e-12) && near(z[1], -(M.d[3] + M.d[5]), 1e-12) && near(z[2], M.d[0] - M.d[4], 1e-12), name + " zero pose from its DH table");
+    let worst = 0, recovered = 0;
+    for (let t = 0; t < 300; t++) {
+      const q = Array.from({ length: 6 }, () => (rnd() * 2 - 1) * Math.PI);
+      const T = K.fk(q, M).flange, sols = K.ikFlange(T, M);
+      sols.forEach(sl => { worst = Math.max(worst, poseErr(K.fk(sl, M).flange, T)); });
+      if (sols.some(sl => sl.every((v, i) => near(K.wrap(v - q[i]), 0, 1e-6)))) recovered++;
+    }
+    ok(worst < 1e-8 && recovered >= 298, name + " IK round-trip (max err " + worst.toExponential(1) + ", " + recovered + "/300 recovered)");
+    const straight = Math.abs(M.a[1] + M.a[2]) + M.d[5] + M.tool;
+    ok(M.reach > 0.9 * Math.abs(M.a[1] + M.a[2]) && M.reach < straight + 0.2, name + " nominal reach " + M.reach + " m is consistent with its link lengths");
+    ok(K.checkCollision([0, -Math.PI / 2, Math.PI / 2, -Math.PI / 2, -Math.PI / 2, 0], M).ok, name + " home pose is collision-free");
+    const h = 1e-6, qq = [0.3, -1.1, 1.2, -0.9, 0.7, 0.4], tau = K.gravityTorques(qq, M);
+    let fdMax = 0;
+    for (let j = 0; j < 6; j++) { const a = qq.slice(), b = qq.slice(); a[j] += h; b[j] -= h; fdMax = Math.max(fdMax, Math.abs((K.potentialEnergy(a, M) - K.potentialEnergy(b, M)) / (2 * h) - tau[j])); }
+    ok(fdMax < 1e-5, name + " gravity torques = dV/dq");
+  });
+  ok(K.MODELS.UR10e.tauMax[1] > K.MODELS.UR5e.tauMax[1] && K.MODELS.UR3e.tauMax[1] < K.MODELS.UR5e.tauMax[1], "bigger arms have stronger shoulders");
+}
+
 console.log("RPY helpers");
 {
   for (let t = 0; t < 200; t++) {

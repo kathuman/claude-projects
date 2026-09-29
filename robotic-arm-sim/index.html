@@ -182,6 +182,18 @@ table.dh th{font-weight:500; color:var(--ink-faint); text-align:right; padding:2
 table.dh td{text-align:right; padding:2px 3px;}
 table.dh th:first-child, table.dh td:first-child{text-align:left;}
 table.dh td.live{color:var(--tele);}
+.sel{width:100%; font-family:var(--head); font-weight:600; font-size:13px; letter-spacing:.04em; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:7px 8px;}
+.sel:focus{outline:none; border-color:var(--accent);}
+ol.prog{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; max-height:240px; overflow-y:auto;}
+ol.prog:empty::before{content:"No waypoints yet — pose the arm and press + Waypoint."; font-size:11.5px; color:var(--ink-faint);}
+ol.prog li{display:grid; grid-template-columns:24px 1fr 1fr 50px; gap:4px 5px; align-items:center; padding:5px 6px; border:1px solid var(--line-soft); border-radius:6px; background:var(--panel);}
+ol.prog li .acts{grid-column:2 / -1; justify-content:flex-end;}
+ol.prog li.cur{border-color:var(--ok); box-shadow:0 0 0 1px rgba(61,220,151,.4) inset;}
+ol.prog li b{font-family:var(--mono); font-size:11px; color:var(--tele); font-weight:500;}
+ol.prog select, ol.prog input{min-width:0; font-family:var(--mono); font-size:10.5px; color:var(--ink); background:var(--panel-2); border:1px solid var(--line); border-radius:4px; padding:3px 2px;}
+ol.prog .acts{display:flex; gap:2px;}
+ol.prog .acts button{font-size:11px; line-height:1; color:var(--ink-dim); background:transparent; border:1px solid var(--line); border-radius:4px; padding:3px 4px; cursor:pointer;}
+ol.prog .acts button:hover{color:var(--accent); border-color:var(--accent);}
 footer.foot{
   flex:0 0 auto; display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:space-between;
   padding:7px 20px; border-top:1px solid var(--line); background:var(--panel-2);
@@ -222,6 +234,17 @@ footer.foot .consult{color:var(--ink);}
 
   <main class="layout">
     <aside class="rail">
+      <div class="rail-section">
+        <h2>Robot</h2>
+        <select class="sel" id="model-sel" aria-label="Robot model">
+          <option value="UR3e">UR3e — 500 mm reach</option>
+          <option value="UR5e" selected>UR5e — 850 mm reach</option>
+          <option value="UR16e">UR16e — 900 mm reach</option>
+          <option value="UR10e">UR10e — 1300 mm reach</option>
+        </select>
+        <p class="note" id="model-note"></p>
+      </div>
+
       <div class="rail-section" id="jointSection">
         <h2>Joints</h2>
         <!-- rows generated from JOINTS below -->
@@ -267,6 +290,28 @@ footer.foot .consult{color:var(--ink);}
           <button class="btn" id="btn-config" title="Same tool pose, a different arm configuration">Next IK config</button>
         </div>
         <div class="speed-row"><span>Speed</span><input type="range" id="speed" min="10" max="100" step="5" value="60" aria-label="Motion speed"><b id="speed-val">60%</b></div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Program</h2>
+        <ol class="prog" id="prog-list" aria-label="Program waypoints"></ol>
+        <div class="btn-grid">
+          <button class="btn small" id="prog-add" title="Add the arm's current pose as the next waypoint">+ Waypoint</button>
+          <button class="btn small" id="prog-demo" title="A pick & place program built from waypoints">Load demo</button>
+          <button class="btn" id="prog-run">Run</button>
+          <button class="btn small" id="prog-clear">Clear</button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Loop</span>
+          <button class="switch" id="prog-loop" role="switch" aria-checked="false" aria-label="Loop the program"><span class="knob"></span></button>
+        </div>
+        <div class="btn-grid">
+          <button class="btn small" id="prog-export">Export JSON</button>
+          <button class="btn small" id="prog-import">Import JSON</button>
+          <button class="btn small" id="prog-urscript" title="Download as a URScript program for a real UR controller">URScript</button>
+          <button class="btn small" id="prog-share" title="Copy a link that reopens this robot, pose, program and obstacles">Share link</button>
+        </div>
+        <input type="file" id="prog-file" accept="application/json,.json" hidden>
       </div>
 
       <div class="rail-section">
@@ -398,7 +443,7 @@ footer.foot .consult{color:var(--ink);}
 
   <footer class="foot">
     <span class="consult">Linkage <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    <span>UR5e-class kinematics &amp; dynamics (published parameters) · three.js + Rapier</span>
+    <span>UR e-Series kinematics &amp; dynamics (published parameters) · three.js + Rapier</span>
   </footer>
 </div>
 
@@ -423,11 +468,16 @@ footer.foot .consult{color:var(--ink);}
   //          blocks; obstacles; collision-free path planning (RRT-Connect) for Move J and pick
   //          & place; motor load from gravity torques (published UR5e masses); teaching overlays:
   //          joint frames, DH table, reachable workspace, dexterity ellipsoid
-  var APP_VERSION = "4.0.0";
+  //   5.0.0  UR e-Series models (UR3e / UR5e / UR10e / UR16e, published parameters); program
+  //          editor with MoveJ/MoveL waypoints, gripper actions, loop, JSON import/export and
+  //          URScript export; share links; the session is remembered in the browser
+  var APP_VERSION = "5.0.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
   var K = window.LinkageKin, MO = window.LinkageMotion, PL = window.LinkagePlanner, ROBOT = K.UR5E;
+  function modelScale(){ return ROBOT.viz.r[0] / 0.075; }      // 1 for the UR5e
+  function reachScale(){ return ROBOT.reach / 0.85; }          // work-cell layout scales with reach
   var DEG = Math.PI / 180;
 
   // ================================================================ JOINTS & STATE
@@ -486,7 +536,8 @@ footer.foot .consult{color:var(--ink);}
     return new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:color, transparent:true, opacity:opacity}));
   }
   // nominal UR5e reach radius (850 mm) marked on the table
-  scene.add(ringLine(0.85, 0x4fe0ff, 0.22));
+  var reachRing = ringLine(0.85, 0x4fe0ff, 0.22);
+  scene.add(reachRing);
 
   // ================================================================ ROBOT VISUALS
   // Everything robot-related lives in `robotRoot`, which turns the robot's z-up base frame
@@ -572,7 +623,7 @@ footer.foot .consult{color:var(--ink);}
 
   // collision capsules (debug view) and red "hit" overlays, one per capsule
   var capViews = [], hitViews = [];
-  K.capsules(state.q).forEach(function(){
+  K.capsules(state.q, ROBOT).forEach(function(){
     var body = new THREE.Mesh(UNIT_CYL, M.cap), capA = new THREE.Mesh(UNIT_SPH, M.cap), capB = new THREE.Mesh(UNIT_SPH, M.cap);
     [body, capA, capB].forEach(function(m){ m.visible = false; m.renderOrder = 2; robotRoot.add(m); });
     capViews.push([body, capA, capB]);
@@ -592,33 +643,35 @@ footer.foot .consult{color:var(--ink);}
 
   var lastFK = null, lastCollision = null;
   function poseRobot(){
-    var q = state.q, f = K.fk(q), F = f.frames;
+    var q = state.q, f = K.fk(q, ROBOT), F = f.frames;
     var o = F.map(K.pos), z = F.map(function(T){ return K.axis(T, 2); });
     lastFK = f;
-    var SO = 0.138, EO = 0.007;     // shoulder / elbow offsets along the joint axes (as in the collision model)
-    placeBetween(baseBody, [0, 0, 0.02], [0, 0, ROBOT.d[0] - 0.045], 0.075);
-    placeBetween(V.j1, along(o[1], z[0], -0.05), along(o[1], z[0], 0.0), 0.075);
-    placeBetween(V.j2, along(o[1], z[1], -0.02), along(o[1], z[1], SO + 0.02), 0.068);
-    placeBetween(V.j2ring, along(o[1], z[1], SO - 0.002), along(o[1], z[1], SO + 0.006), 0.07);
+    // shoulder / elbow offsets along the joint axes (as in the collision model); every size
+    // below scales with the model (sc = 1 for the UR5e)
+    var SO = ROBOT.viz.so, EO = ROBOT.viz.eo, sc = modelScale();
+    placeBetween(baseBody, [0, 0, 0.02], [0, 0, ROBOT.d[0] - 0.045 * sc], 0.075 * sc);
+    placeBetween(V.j1, along(o[1], z[0], -0.05 * sc), along(o[1], z[0], 0.0), 0.075 * sc);
+    placeBetween(V.j2, along(o[1], z[1], -0.02 * sc), along(o[1], z[1], SO + 0.02 * sc), 0.068 * sc);
+    placeBetween(V.j2ring, along(o[1], z[1], SO - 0.002 * sc), along(o[1], z[1], SO + 0.006 * sc), 0.07 * sc);
     var ua = along(o[1], z[1], SO), ub = along(o[2], z[1], SO);
-    placeBetween(V.upper, ua, ub, 0.052);
-    V.upperCapA.position.set(ua[0], ua[1], ua[2]); V.upperCapA.scale.setScalar(0.052);
-    V.upperCapB.position.set(ub[0], ub[1], ub[2]); V.upperCapB.scale.setScalar(0.052);
-    placeBetween(V.j3, along(o[2], z[2], EO - 0.02), along(o[2], z[2], SO + 0.02), 0.058);
-    placeBetween(V.j3ring, along(o[2], z[2], EO - 0.026), along(o[2], z[2], EO - 0.018), 0.06);
+    placeBetween(V.upper, ua, ub, 0.052 * sc);
+    V.upperCapA.position.set(ua[0], ua[1], ua[2]); V.upperCapA.scale.setScalar(0.052 * sc);
+    V.upperCapB.position.set(ub[0], ub[1], ub[2]); V.upperCapB.scale.setScalar(0.052 * sc);
+    placeBetween(V.j3, along(o[2], z[2], EO - 0.02 * sc), along(o[2], z[2], SO + 0.02 * sc), 0.058 * sc);
+    placeBetween(V.j3ring, along(o[2], z[2], EO - 0.026 * sc), along(o[2], z[2], EO - 0.018 * sc), 0.06 * sc);
     var fa = along(o[2], z[2], EO), fb = along(o[3], z[2], EO);
-    placeBetween(V.fore, fa, fb, 0.042);
-    V.foreCapB.position.set(fb[0], fb[1], fb[2]); V.foreCapB.scale.setScalar(0.042);
+    placeBetween(V.fore, fa, fb, 0.042 * sc);
+    V.foreCapB.position.set(fb[0], fb[1], fb[2]); V.foreCapB.scale.setScalar(0.042 * sc);
     // UR-style wrist: each housing runs along its own joint axis up to the next joint, so the
     // three wrist cylinders chain together at right angles (o4 lies on z3, o5 on z4, o6 on z5)
-    placeBetween(V.j4, along(o[3], z[3], -0.045), o[4], 0.046);
-    placeBetween(V.j4ring, along(o[3], z[3], -0.052), along(o[3], z[3], -0.044), 0.048);
-    placeBetween(V.w1, o[3], o[4], 0.04);
-    placeBetween(V.j5, along(o[4], z[4], -0.046), o[5], 0.045);
-    placeBetween(V.j5ring, along(o[4], z[4], -0.053), along(o[4], z[4], -0.045), 0.047);
-    placeBetween(V.w2, o[4], o[5], 0.04);
-    placeBetween(V.j6, along(o[5], z[5], -0.046), along(o[6], z[5], -0.012), 0.044);
-    placeBetween(V.flange, along(o[6], z[6], -0.012), o[6], 0.041);
+    placeBetween(V.j4, along(o[3], z[3], -0.045 * sc), o[4], 0.046 * sc);
+    placeBetween(V.j4ring, along(o[3], z[3], -0.052 * sc), along(o[3], z[3], -0.044 * sc), 0.048 * sc);
+    placeBetween(V.w1, o[3], o[4], 0.04 * sc);
+    placeBetween(V.j5, along(o[4], z[4], -0.046 * sc), o[5], 0.045 * sc);
+    placeBetween(V.j5ring, along(o[4], z[4], -0.053 * sc), along(o[4], z[4], -0.045 * sc), 0.047 * sc);
+    placeBetween(V.w2, o[4], o[5], 0.04 * sc);
+    placeBetween(V.j6, along(o[5], z[5], -0.046 * sc), along(o[6], z[5], -0.012), 0.044 * sc);
+    placeBetween(V.flange, along(o[6], z[6], -0.012), o[6], 0.041 * sc);
 
     // gripper follows the flange frame; fingers spread by the opening
     var m = new THREE.Matrix4();
@@ -650,14 +703,15 @@ footer.foot .consult{color:var(--ink);}
   // looking at the arm from its front-right (the arm reaches along base −X, i.e. three.js −x)
   var cam = { target: new THREE.Vector3(-0.2, 0.3, 0), theta: -2.35, phi: 1.12, radius: 2.1 };
   var camGoal = { target: cam.target.clone(), theta: cam.theta, phi: cam.phi, radius: cam.radius };
-  var VIEWS = {
+  var BASE_VIEWS = {
     iso:   { target: [-0.2, 0.3, 0], theta: -2.35, phi: 1.12, radius: 2.1 },
     front: { target: [-0.2, 0.35, 0], theta: -Math.PI / 2, phi: 1.45, radius: 2.0 },
     side:  { target: [-0.2, 0.35, 0], theta: Math.PI, phi: 1.45, radius: 2.0 },
     top:   { target: [-0.2, 0.0, 0], theta: -Math.PI / 2, phi: 0.02, radius: 2.3 }
   };
   function setView(name){
-    var v = VIEWS[name];
+    var v = BASE_VIEWS[name], k = reachScale();
+    v = { target: v.target.map(function(x){ return x * k; }), theta: v.theta, phi: v.phi, radius: v.radius * k };
     camGoal.target.set(v.target[0], v.target[1], v.target[2]);
     // turn the short way round
     var d = v.theta - camGoal.theta;
@@ -823,6 +877,7 @@ footer.foot .consult{color:var(--ink);}
     syncUI();
     // anything other than the live jog moves the target along with the tool
     if (source !== 'jog' && source !== 'test-keep' && (state.follow || source === 'slider')) snapTargetToTool(false);
+    if (source !== 'traj' && source !== 'jog') saveLater();
     return true;
   }
   var guardSwitch = document.getElementById('guard-switch');
@@ -957,7 +1012,22 @@ footer.foot .consult{color:var(--ink);}
   function initPhysics(){
     var w = phys.world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
     w.createCollider(RAPIER.ColliderDesc.cuboid(3, 0.05, 3).setTranslation(0, -0.05, 0).setFriction(0.7).setCollisionGroups(groups(GROUP.GROUND, GROUP.OBJ)));
-    K.capsules(state.q).forEach(function(c, i){
+    buildArmBodies();
+    phys.hand = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+    obstacles.forEach(addObstacleBody);
+    phys.ready = true;
+    syncArmBodies(true);
+    resetWorkpiece();
+    physButtons.forEach(function(id){ var b = document.getElementById(id); if (b) b.disabled = false; });
+    markDirty();
+  }
+
+  // one kinematic capsule per arm link (sized for the current model) + two finger boxes
+  function buildArmBodies(){
+    var w = phys.world;
+    armBodies.concat(fingerBodies.map(function(b){ return { body: b }; })).forEach(function(ab){ w.removeRigidBody(ab.body); });
+    armBodies = []; fingerBodies = [];
+    K.capsules(state.q, ROBOT).forEach(function(c, i){
       if (c.name === 'fingers') return;                 // the fingers get their own two boxes below
       var len = Math.hypot(c.b[0] - c.a[0], c.b[1] - c.a[1], c.b[2] - c.a[2]);
       var body = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
@@ -969,13 +1039,6 @@ footer.foot .consult{color:var(--ink);}
       w.createCollider(RAPIER.ColliderDesc.cuboid(0.006, 0.013, 0.05).setFriction(0.9).setCollisionGroups(groups(GROUP.ARM, GROUP.OBJ)), fb);
       fingerBodies.push(fb);
     }
-    phys.hand = w.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
-    obstacles.forEach(addObstacleBody);
-    phys.ready = true;
-    syncArmBodies(true);
-    resetWorkpiece();
-    physButtons.forEach(function(id){ var b = document.getElementById(id); if (b) b.disabled = false; });
-    markDirty();
   }
 
   // move the kinematic arm bodies to the current pose (teleport = no sweep, used at start)
@@ -1043,12 +1106,17 @@ footer.foot .consult{color:var(--ink);}
 
   // ---- the workpiece for Pick & Place, and its two sites (in front of the arm: a UR's zero
   // pose points along base −X)
-  var SITE_A = [-0.45, 0.22], SITE_B = [-0.28, -0.45];
-  [[SITE_A, 0x4fe0ff], [SITE_B, 0xffcf4a]].forEach(function(site){
-    var ring = ringLine(0.045, site[1], 0.7), c = r2t(site[0][0], site[0][1], 0);
-    ring.position.set(c.x, 0.001, c.z);
-    scene.add(ring);
-  });
+  // (positions for the UR5e; scaled by reach for the other models)
+  var BASE_SITE_A = [-0.45, 0.22], BASE_SITE_B = [-0.28, -0.45], SITE_A, SITE_B;
+  var siteRings = [ringLine(0.045, 0x4fe0ff, 0.7), ringLine(0.045, 0xffcf4a, 0.7)];
+  siteRings.forEach(function(r){ scene.add(r); });
+  function layoutSites(){
+    var k = reachScale();
+    SITE_A = BASE_SITE_A.map(function(v){ return v * k; });
+    SITE_B = BASE_SITE_B.map(function(v){ return v * k; });
+    [SITE_A, SITE_B].forEach(function(site, i){ var c = r2t(site[0], site[1], 0); siteRings[i].position.set(c.x, 0.001, c.z); });
+  }
+  layoutSites();
   var workpiece = null;
   function resetWorkpiece(){
     if (!phys.ready) return;
@@ -1089,11 +1157,18 @@ footer.foot .consult{color:var(--ink);}
 
   // ================================================================ OBSTACLES
   // Boxes on the table: the collision guard, the path planner and the physics all see them.
-  var OBSTACLE_PRESETS = [
+  // (UR5e sizes; scaled by reach for the other models)
+  var BASE_OBSTACLES = [
     { name: 'the tall box', min: [-0.62, 0.0, 0], max: [-0.38, 0.1, 0.45] },   // between the two pick & place sites
     { name: 'the side post', min: [-0.2, 0.34, 0], max: [-0.06, 0.46, 0.55] },
     { name: 'the low wall', min: [-0.8, -0.3, 0], max: [-0.72, 0.3, 0.22] }
   ];
+  var OBSTACLE_PRESETS;
+  function layoutObstaclePresets(){
+    var k = reachScale();
+    OBSTACLE_PRESETS = BASE_OBSTACLES.map(function(b, i){ return { id: i, name: b.name, min: b.min.map(function(v){ return v * k; }), max: b.max.map(function(v){ return v * k; }) }; });
+  }
+  layoutObstaclePresets();
   var obstacles = [];
   var obstacleMat = new THREE.MeshStandardMaterial({ color: 0xff8a4c, transparent: true, opacity: 0.55, roughness: 0.6 });
   function obstacleBoxes(){ return obstacles; }
@@ -1106,10 +1181,13 @@ footer.foot .consult{color:var(--ink);}
     phys.world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hz, hy).setFriction(0.6).setCollisionGroups(groups(GROUP.GROUND, GROUP.OBJ)), o.body);
   }
   document.getElementById('btn-obstacle').addEventListener('click', function(){
-    var next = OBSTACLE_PRESETS.filter(function(pr){ return obstacles.indexOf(pr) < 0; })[0];
+    var next = OBSTACLE_PRESETS.filter(function(pr){ return !obstacles.some(function(o){ return o.id === pr.id; }); })[0];
     if (!next) return showAlert('All the preset obstacles are already on the table');
+    if (addObstacle(next)) showAlert('Added ' + next.name + ' — Move J and Pick & Place now plan around it');
+  });
+  function addObstacle(next){
     var hit = K.checkCollision(state.q, ROBOT, { obstacles: [next] });
-    if (!hit.ok) return showAlert('Move the arm out of the way first — it would be inside ' + next.name);
+    if (!hit.ok){ showAlert('Move the arm out of the way first — it would be inside ' + next.name); return false; }
     var sx = next.max[0] - next.min[0], sy = next.max[1] - next.min[1], sz = next.max[2] - next.min[2];
     next.mesh = shadowy(new THREE.Mesh(new THREE.BoxGeometry(sx, sz, sy), obstacleMat));
     var c = r2t((next.min[0] + next.max[0]) / 2, (next.min[1] + next.max[1]) / 2, (next.min[2] + next.max[2]) / 2);
@@ -1120,14 +1198,17 @@ footer.foot .consult{color:var(--ink);}
     obstacles.push(next);
     addObstacleBody(next);
     poseRobot();
-    showAlert('Added ' + next.name + ' — Move J and Pick & Place now plan around it');
-  });
-  document.getElementById('btn-clear-obstacles').addEventListener('click', function(){
+    saveLater();
+    return true;
+  }
+  function clearObstacles(){
     obstacles.forEach(function(o){ scene.remove(o.mesh); if (o.body && phys.ready) phys.world.removeRigidBody(o.body); o.body = null; });
     obstacles = [];
     clearPlannedPath();
     poseRobot();
-  });
+    saveLater();
+  }
+  document.getElementById('btn-clear-obstacles').addEventListener('click', clearObstacles);
 
   // ---- the planned path, drawn as the tool's route through the waypoints
   var plannedLine = null;
@@ -1137,7 +1218,7 @@ footer.foot .consult{color:var(--ink);}
     for (var i = 1; i < path.length; i++){
       for (var k = 0; k <= 20; k++){
         var q = path[i - 1].map(function(v, jj){ return v + (path[i][jj] - v) * k / 20; });
-        var T = K.fk(q).tcp;
+        var T = K.fk(q, ROBOT).tcp;
         pts.push(new THREE.Vector3(T[3], T[7], T[11]));
       }
     }
@@ -1560,8 +1641,8 @@ footer.foot .consult{color:var(--ink);}
     var N = 6000, pos = [], col = [], rnd = PL.rng(20260929), c = new THREE.Color();
     for (var n = 0; n < N * 3 && pos.length < N * 3; n++){
       var q = [0, 1, 2, 3, 4, 5].map(function(i){ return PLAN_LO[i] + rnd() * (PLAN_HI[i] - PLAN_LO[i]); });
-      if (!K.checkCollision(q).ok) continue;
-      var T = K.fk(q).tcp, m = Math.min(1, K.manipulability(q) / MANIP_REF);
+      if (!K.checkCollision(q, ROBOT).ok) continue;
+      var T = K.fk(q, ROBOT).tcp, m = Math.min(1, K.manipulability(q, ROBOT) / MANIP_REF);
       pos.push(T[3], T[7], T[11]);
       c.setHSL(0.62 - 0.45 * m, 0.85, 0.35 + 0.3 * m);   // blue (awkward) -> yellow-green (dexterous)
       col.push(c.r, c.g, c.b);
@@ -1581,19 +1662,213 @@ footer.foot .consult{color:var(--ink);}
   var showEllipsoid = false;
   function updateEllipsoid(){
     if (!showEllipsoid || !lastFK) return;
-    var e = K.velocityEllipsoid(state.q), p = K.pos(lastFK.tcp), s = 0.22;
+    var e = K.velocityEllipsoid(state.q, ROBOT), p = K.pos(lastFK.tcp), s = 0.22 * modelScale();
     var ax = e.axes.map(function(v, i){ return new THREE.Vector3(v[0], v[1], v[2]).multiplyScalar(Math.max(0.004, e.radii[i] * s)); });
     ellipsoid.matrix.makeBasis(ax[0], ax[1], ax[2]).setPosition(p[0], p[1], p[2]);
   }
   toggle('ell-switch', function(on){ showEllipsoid = on; ellipsoid.visible = on; updateEllipsoid(); });
 
   // DH table (θ is live)
-  var dhBody = document.getElementById('dh-body');
-  dhBody.innerHTML = JOINTS.map(function(j, i){
-    return '<tr><td>' + j.sub + '</td><td class="live"></td><td>' + ROBOT.d[i].toFixed(4) + '</td><td>' + ROBOT.a[i].toFixed(4) + '</td><td>' + Math.round(ROBOT.alpha[i] / DEG) + '°</td></tr>';
-  }).join('');
-  var dhLive = dhBody.querySelectorAll('td.live');
+  var dhBody = document.getElementById('dh-body'), dhLive = [];
+  function buildDH(){
+    dhBody.innerHTML = JOINTS.map(function(j, i){
+      return '<tr><td>' + j.sub + '</td><td class="live"></td><td>' + ROBOT.d[i].toFixed(4) + '</td><td>' + ROBOT.a[i].toFixed(4) + '</td><td>' + Math.round(ROBOT.alpha[i] / DEG) + '°</td></tr>';
+    }).join('');
+    dhLive = dhBody.querySelectorAll('td.live');
+  }
+  buildDH();
   function updateDH(){ for (var i = 0; i < 6; i++) dhLive[i].textContent = (state.q[i] / DEG).toFixed(1) + '°'; }
+
+  // ================================================================ ROBOT MODELS
+  var modelSel = document.getElementById('model-sel'), modelNote = document.getElementById('model-note');
+  var PAYLOAD = { UR3e: 3, UR5e: 5, UR10e: 12.5, UR16e: 16 };
+  function describeModel(){
+    modelNote.textContent = ROBOT.name + ': reach ' + Math.round(ROBOT.reach * 1000) + ' mm, payload ' + PAYLOAD[ROBOT.name] + ' kg, arm ' + ROBOT.mass.reduce(function(a, b){ return a + b; }, 0).toFixed(1) +
+      ' kg. Published DH parameters and dynamics; rated torques ' + ROBOT.tauMax[1] + ' / ' + ROBOT.tauMax[5] + ' N·m (shoulder / wrist).';
+  }
+  function setModel(name, keepPose){
+    if (!K.MODELS[name]) return;
+    cancelSequence(); jogGoal = null;
+    if (grasp) releaseGrasp();
+    clearObstacles();
+    ROBOT = K.MODELS[name];
+    modelSel.value = name;
+    var sc = modelScale(), k = reachScale();
+    placeBetween(basePlate, [0, 0, 0], [0, 0, 0.02], 0.1 * sc);
+    placeBetween(baseRing, [0, 0, 0.02], [0, 0, 0.028], 0.082 * sc);
+    reachRing.scale.setScalar(ROBOT.reach / 0.85);
+    MANIP_REF = K.manipulability(HOME, ROBOT) * 1.4;
+    layoutSites(); layoutObstaclePresets();
+    if (wsCloud){ robotRoot.remove(wsCloud); wsCloud.geometry.dispose(); wsCloud = null; if (document.getElementById('ws-switch').classList.contains('on')) buildWorkspace(); }
+    buildDH();
+    if (!keepPose) state.q = HOME.slice();
+    lastCollision = null;
+    poseRobot(); syncUI(); snapTargetToTool();
+    if (phys.ready){ buildArmBodies(); syncArmBodies(true); resetWorkpiece(); }
+    setView('iso');
+    describeModel();
+    saveLater();
+  }
+  modelSel.addEventListener('change', function(){ setModel(this.value); });
+
+  // ================================================================ PROGRAM (teach pendant)
+  // A program is a list of waypoints: a joint pose, how to get there (MoveJ or MoveL), a speed,
+  // and an optional gripper action on arrival. Saved in the browser; export as JSON or URScript.
+  var prog = [], progLoop = false, progCur = -1;
+  var progList = document.getElementById('prog-list');
+  function renderProg(){
+    progList.innerHTML = '';
+    prog.forEach(function(w, i){
+      var li = document.createElement('li');
+      if (i === progCur) li.className = 'cur';
+      li.innerHTML = '<b>P' + (i + 1) + '</b>' +
+        '<select aria-label="Move type"><option value="J">Move J</option><option value="L">Move L</option></select>' +
+        '<select aria-label="Gripper action"><option value="">no grip</option><option value="open">Open</option><option value="close">Grip</option></select>' +
+        '<input type="number" min="10" max="100" step="10" aria-label="Speed %" title="Speed %">' +
+        '<span class="acts"><button title="Go to this waypoint">▶</button><button title="Move up">↑</button><button title="Move down">↓</button><button title="Delete">✕</button></span>';
+      var sels = li.querySelectorAll('select'), inp = li.querySelector('input'), btns = li.querySelectorAll('.acts button');
+      sels[0].value = w.kind; sels[1].value = w.grip; inp.value = w.speed;
+      sels[0].addEventListener('change', function(){ w.kind = this.value; saveLater(); });
+      sels[1].addEventListener('change', function(){ w.grip = this.value; saveLater(); });
+      inp.addEventListener('change', function(){ w.speed = clamp(Math.round(+this.value || 60), 10, 100); this.value = w.speed; saveLater(); });
+      btns[0].addEventListener('click', function(){ run('GO P' + (i + 1), function(tk){ return moveJ(w.q, tk); }); });
+      btns[1].addEventListener('click', function(){ if (i > 0){ prog.splice(i - 1, 0, prog.splice(i, 1)[0]); renderProg(); saveLater(); } });
+      btns[2].addEventListener('click', function(){ if (i < prog.length - 1){ prog.splice(i + 1, 0, prog.splice(i, 1)[0]); renderProg(); saveLater(); } });
+      btns[3].addEventListener('click', function(){ prog.splice(i, 1); renderProg(); saveLater(); });
+      progList.appendChild(li);
+    });
+  }
+  function setCurrent(i){ progCur = i; Array.prototype.forEach.call(progList.children, function(li, j){ li.classList.toggle('cur', j === i); }); }
+  document.getElementById('prog-add').addEventListener('click', function(){
+    prog.push({ q: state.q.slice(), kind: prog.length ? 'L' : 'J', grip: '', speed: 60 });
+    renderProg(); saveLater();
+    progList.scrollTop = progList.scrollHeight;
+  });
+  document.getElementById('prog-clear').addEventListener('click', function(){ prog = []; renderProg(); saveLater(); });
+  var loopSw = document.getElementById('prog-loop');
+  loopSw.addEventListener('click', function(){ progLoop = !progLoop; this.classList.toggle('on', progLoop); this.setAttribute('aria-checked', String(progLoop)); });
+  // close the gripper and hold whatever is now between the fingers
+  function tryGrasp(){
+    if (!phys.ready || grasp || !lastFK) return false;
+    var tcp = K.pos(lastFK.tcp), cands = blocks.slice(); if (workpiece) cands.push(workpiece);
+    var hit = cands.filter(function(o){ var bp = blockPoseRobot(o); return Math.hypot(bp.x - tcp[0], bp.y - tcp[1], bp.z - tcp[2]) < 0.015; })[0];
+    if (hit){ takeGrasp(hit); return true; }
+    return false;
+  }
+  document.getElementById('prog-run').addEventListener('click', function(){
+    if (!prog.length) return showAlert('The program is empty — add waypoints first');
+    run('PROGRAM', async function(tk){
+      do {
+        for (var i = 0; i < prog.length; i++){
+          if (tk.cancelled) break;
+          setCurrent(i);
+          var w = prog[i], sp = w.speed / 100, wc = checkQ(w.q);
+          if (!wc.ok){ showAlert('Waypoint P' + (i + 1) + ' would collide: ' + wc.hits[0].text); setCurrent(-1); return; }
+          var ok = w.kind === 'L' ? await moveL(K.fk(w.q, ROBOT).tcp, tk, sp) : await moveJ(w.q, tk, sp);
+          if (!ok){ setCurrent(-1); return; }
+          if (w.grip === 'open'){ releaseGrasp(); if (!(await gripTo(90, 300, tk))) break; }
+          else if (w.grip === 'close'){ if (!(await gripTo(GRIP_ON_BLOCK, 350, tk))) break; tryGrasp(); }
+        }
+      } while (progLoop && !tk.cancelled);
+      setCurrent(-1);
+    });
+  });
+  // demo: a waypoint-by-waypoint pick & place of the workpiece (A -> B, then home)
+  document.getElementById('prog-demo').addEventListener('click', function(){
+    if (!phys.ready) return showAlert('The physics engine is still loading');
+    cancelSequence(); resetWorkpiece();
+    var seed = HOME.slice(), hover = 0.15, pts = [];
+    function wp(x, y, z, yaw, kind, grip, speed){
+      var q = K.ik(graspPose(x, y, z, yaw), seed, ROBOT);
+      if (!q) return false;
+      seed = q; pts.push({ q: q, kind: kind, grip: grip, speed: speed }); return true;
+    }
+    var h = BLOCK / 2, ok = wp(SITE_A[0], SITE_A[1], h + hover, 0.35, 'J', 'open', 70) && wp(SITE_A[0], SITE_A[1], h, 0.35, 'L', 'close', 30) &&
+      wp(SITE_A[0], SITE_A[1], h + hover, 0.35, 'L', '', 50) && wp(SITE_B[0], SITE_B[1], h + hover, 0, 'J', '', 70) &&
+      wp(SITE_B[0], SITE_B[1], h + 0.003, 0, 'L', 'open', 30) && wp(SITE_B[0], SITE_B[1], h + hover, 0, 'L', '', 50);
+    if (!ok) return showAlert('This robot cannot reach the demo positions');
+    pts.push({ q: HOME.slice(), kind: 'J', grip: '', speed: 70 });
+    prog = pts; renderProg(); saveLater();
+    showAlert('Demo loaded: 7 waypoints — press Run');
+  });
+
+  // ---- export / import
+  function download(name, text, type){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: type }));
+    a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function progToJSON(){
+    return { format: 'linkage-program', version: 1, robot: ROBOT.name, app: 'Linkage ' + APP_VERSION,
+      waypoints: prog.map(function(w, i){ return { name: 'P' + (i + 1), joints_deg: w.q.map(function(v){ return +(v / DEG).toFixed(3); }), move: w.kind === 'L' ? 'MoveL' : 'MoveJ', gripper: w.grip || 'none', speed_pct: w.speed }; }) };
+  }
+  function progFromJSON(o){
+    if (!o || o.format !== 'linkage-program' || !Array.isArray(o.waypoints)) throw new Error('not a Linkage program');
+    return o.waypoints.map(function(w){
+      if (!Array.isArray(w.joints_deg) || w.joints_deg.length !== 6) throw new Error('bad waypoint');
+      return { q: w.joints_deg.map(function(d){ return +d * DEG; }), kind: w.move === 'MoveL' ? 'L' : 'J', grip: w.gripper === 'open' || w.gripper === 'close' ? w.gripper : '', speed: clamp(+w.speed_pct || 60, 10, 100) };
+    });
+  }
+  document.getElementById('prog-export').addEventListener('click', function(){
+    download('linkage-program.json', JSON.stringify(progToJSON(), null, 2), 'application/json');
+  });
+  var fileIn = document.getElementById('prog-file');
+  document.getElementById('prog-import').addEventListener('click', function(){ fileIn.click(); });
+  fileIn.addEventListener('change', function(){
+    var f = this.files[0]; if (!f) return;
+    f.text().then(function(t){
+      var o = JSON.parse(t);
+      if (o.robot && K.MODELS[o.robot] && o.robot !== ROBOT.name) setModel(o.robot);
+      prog = progFromJSON(o); renderProg(); saveLater();
+      showAlert('Imported ' + prog.length + ' waypoints');
+    }).catch(function(e){ showAlert('Could not import: ' + e.message); });
+    this.value = '';
+  });
+  // URScript for a real UR controller: joint moves as movej, linear moves as movel to the
+  // controller's own forward kinematics of the joint target (no frame-convention guesswork)
+  function toURScript(){
+    var L = ['def linkage_program():', '  # Exported from Linkage ' + APP_VERSION + ' for a ' + ROBOT.name + ' — ' + prog.length + ' waypoints.',
+      '  # Speeds are scaled from the program. Replace the gripper comments with your gripper\'s URCap calls.'];
+    prog.forEach(function(w, i){
+      var q = '[' + w.q.map(function(v){ return v.toFixed(5); }).join(', ') + ']', sp = w.speed / 100;
+      if (w.kind === 'L') L.push('  movel(get_forward_kin(' + q + '), a=' + (1.2 * sp).toFixed(2) + ', v=' + (0.25 * sp).toFixed(3) + ')  # P' + (i + 1));
+      else L.push('  movej(' + q + ', a=' + (1.4 * sp).toFixed(2) + ', v=' + (1.05 * sp).toFixed(2) + ')  # P' + (i + 1));
+      if (w.grip === 'open') L.push('  # gripper: open');
+      if (w.grip === 'close') L.push('  # gripper: close (grip)');
+    });
+    L.push('end', '', 'linkage_program()');
+    return L.join('\n') + '\n';
+  }
+  document.getElementById('prog-urscript').addEventListener('click', function(){
+    if (!prog.length) return showAlert('The program is empty');
+    download('linkage_program.script', toURScript(), 'text/plain');
+  });
+
+  // ---- share links: robot, pose, program and obstacles packed into the URL (#s=…)
+  function snapshot(){
+    return { m: ROBOT.name, q: state.q.map(function(v){ return +(v / DEG).toFixed(2); }),
+      p: prog.map(function(w){ return [w.q.map(function(v){ return +(v / DEG).toFixed(2); }), w.kind, w.grip, w.speed]; }),
+      o: obstacles.map(function(o){ return o.id; }) };
+  }
+  function b64url(str){ return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function unb64url(str){ str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; return decodeURIComponent(escape(atob(str))); }
+  function applySnapshot(o){
+    if (o.m && K.MODELS[o.m]) setModel(o.m, false);
+    if (Array.isArray(o.p)) prog = o.p.map(function(w){ return { q: w[0].map(function(d){ return d * DEG; }), kind: w[1] === 'L' ? 'L' : 'J', grip: w[2] || '', speed: clamp(+w[3] || 60, 10, 100) }; });
+    renderProg();
+    if (Array.isArray(o.q) && o.q.length === 6) setJoints(o.q.map(function(d){ return d * DEG; }), 'slider');
+    if (Array.isArray(o.o)) o.o.forEach(function(id){ if (OBSTACLE_PRESETS[id]) addObstacle(OBSTACLE_PRESETS[id]); });
+  }
+  document.getElementById('prog-share').addEventListener('click', function(){
+    var url = location.href.split('#')[0] + '#s=' + b64url(JSON.stringify(snapshot()));
+    history.replaceState(null, '', url);
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function(){ showAlert('Share link copied to the clipboard'); },
+      function(){ showAlert('Share link is now in the address bar — copy it from there'); });
+  });
+  // remember the session in this browser
+  var saveTimer = 0;
+  function saveLater(){ clearTimeout(saveTimer); saveTimer = setTimeout(function(){ try { localStorage.setItem('linkage-session', JSON.stringify(snapshot())); } catch (e) {} }, 300); }
 
   // ================================================================ TIP TRACE
   var traceOn = false, TRACE_MAX = 800, tracePos = new Float32Array(TRACE_MAX * 3), traceN = 0, lastTrace = null;
@@ -1627,7 +1902,7 @@ footer.foot .consult{color:var(--ink);}
   var H = {};
   ['x', 'y', 'z', 'rx', 'ry', 'rz', 'reach', 'manip', 'meter', 'warn'].forEach(function(k){ H[k] = document.getElementById('hud-' + k); });
   // manipulability of the ready pose, used to scale the meter so "typical" reads ~70%
-  var MANIP_REF = K.manipulability(HOME) * 1.4;
+  var MANIP_REF = K.manipulability(HOME, ROBOT) * 1.4;
   function updateHud(){
     if (!lastFK) return;
     var p = K.pos(lastFK.tcp), rpy = K.rpyFromPose(lastFK.tcp);
@@ -1638,7 +1913,7 @@ footer.foot .consult{color:var(--ink);}
     H.ry.textContent = (rpy[1] / DEG).toFixed(1) + '°';
     H.rz.textContent = (rpy[2] / DEG).toFixed(1) + '°';
     H.reach.textContent = Math.hypot(p[0], p[1], p[2] - ROBOT.d[0]).toFixed(3) + ' m';
-    var mnp = K.manipulability(state.q), frac = clamp(mnp / MANIP_REF, 0, 1);
+    var mnp = K.manipulability(state.q, ROBOT), frac = clamp(mnp / MANIP_REF, 0, 1);
     H.manip.textContent = (frac * 100).toFixed(0) + '%';
     H.meter.style.width = (frac * 100).toFixed(1) + '%';
     H.meter.style.background = frac < 0.08 ? 'var(--bad)' : frac < 0.2 ? 'var(--warn)' : 'var(--ok)';
@@ -1691,11 +1966,18 @@ footer.foot .consult{color:var(--ink);}
   syncUI();
   poseRobot();
   snapTargetToTool();
+  describeModel();
+  renderProg();
   resize();
   requestAnimationFrame(frame);
+  (function restore(){
+    var m = /[#&]s=([A-Za-z0-9_-]+)/.exec(location.hash), o = null;
+    try { o = m ? JSON.parse(unb64url(m[1])) : JSON.parse(localStorage.getItem('linkage-session') || 'null'); } catch (e) { o = null; }
+    if (o) try { applySnapshot(o); } catch (e) { console.warn('could not restore session', e); }
+  })();
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+  window.linkageDebug = { model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
       var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
       o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
       return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };

@@ -1,7 +1,8 @@
 # Linkage — robotic arm simulator
 
-A browser simulator of a 6-axis collaborative robot arm with the published kinematic
-parameters (Denavit–Hartenberg) of a Universal Robots UR5e. Live demo:
+A browser simulator of the Universal Robots e-Series 6-axis collaborative arms (UR3e, UR5e,
+UR10e, UR16e), built from their published kinematic (Denavit–Hartenberg) and dynamics
+parameters. Live demo:
 https://kathuman.github.io/claude-projects/robotic-arm-sim/
 
 ## Files
@@ -26,6 +27,15 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
 - `vendor/` — three.js r128 and Rapier 0.21 (compat build, WebAssembly inlined; loaded on
   demand as an ES module), with their licences. In the Rapier world the arm's link capsules and
   the two fingers are kinematic bodies that follow the kinematics, so the arm pushes things.
+
+## Programs
+
+The Program panel is a small teach pendant: waypoints (a joint pose + Move J / Move L + speed +
+optional gripper open/grip), run or loop, export/import as JSON (`format: "linkage-program"`,
+joint angles in degrees), or export URScript for a real UR controller — joint moves become
+`movej`, linear moves `movel(get_forward_kin(q))` so the controller's own kinematics defines the
+pose. **Share link** packs the robot, pose, program and obstacles into the URL (`#s=…`); the last
+session is also remembered in the browser.
 
 ## Conventions
 

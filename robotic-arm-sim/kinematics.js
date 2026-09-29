@@ -30,8 +30,39 @@
     com: [[0, -0.02561, 0.00193], [0.2125, 0, 0.11336], [0.15, 0, 0.0265], [0, -0.0018, 0.01634], [0, 0.0018, 0.01634], [0, 0, -0.001159]],
     // rated joint torques (N·m): size-3 joints for base/shoulder/elbow, size-1 for the wrists
     tauMax: [150, 150, 150, 28, 28, 28],
-    gripperMass: 0.9    // the two-finger gripper on the flange (kg), centre of mass 0.06 m out
+    gripperMass: 0.9,   // the two-finger gripper on the flange (kg), centre of mass 0.06 m out
+    reach: 0.85,
+    // drawing/collision shape: shoulder and elbow offsets along the joint axes (their
+    // difference is d4) and link radii [base, shoulder, upper arm, elbow, forearm, wrists]
+    viz: { so: 0.138, eo: 0.007, r: [0.075, 0.07, 0.058, 0.058, 0.045, 0.045] }
   };
+
+  // The rest of the UR e-Series, from Universal Robots' published DH parameters and dynamics
+  // values (masses, centres of mass) and datasheet joint torques/speeds.
+  function urModel(name, d, a, mass, com, tauMax, vmax, reach, scale) {
+    var m = {
+      name: name, d: d, a: [0, a[0], a[1], 0, 0, 0], alpha: UR5E.alpha.slice(), lo: UR5E.lo.slice(), hi: UR5E.hi.slice(),
+      vmax: vmax, amax: UR5E.amax.slice(), tool: UR5E.tool, mass: mass, com: com, tauMax: tauMax,
+      gripperMass: UR5E.gripperMass, reach: reach,
+      viz: { so: d[3] + 0.005 * scale, eo: 0.005 * scale, r: UR5E.viz.r.map(function (r) { return r * scale; }) }
+    };
+    return m;
+  }
+  var DPS = Math.PI / 180;
+  var UR3E = urModel("UR3e", [0.15185, 0, 0, 0.13105, 0.08535, 0.0921], [-0.24355, -0.2132],
+    [1.98, 3.4445, 1.437, 0.871, 0.805, 0.261],
+    [[0, -0.02, 0], [0.13, 0, 0.1157], [0.05, 0, 0.0238], [0, 0, 0.01], [0, 0, 0.01], [0, 0, -0.02]],
+    [56, 56, 28, 12, 12, 12], [180, 180, 180, 360, 360, 360].map(function (v) { return v * DPS; }), 0.5, 0.72);
+  var UR10E = urModel("UR10e", [0.1807, 0, 0, 0.17415, 0.11985, 0.11655], [-0.6127, -0.57155],
+    [7.369, 13.051, 3.989, 2.1, 1.98, 0.615],
+    [[0.021, 0, 0.027], [0.38, 0, 0.158], [0.24, 0, 0.068], [0, 0.007, 0.018], [0, 0.007, 0.018], [0, 0, -0.026]],
+    [330, 330, 150, 56, 56, 56], [120, 120, 180, 180, 180, 180].map(function (v) { return v * DPS; }), 1.3, 1.3);
+  var UR16E = urModel("UR16e", [0.1807, 0, 0, 0.17415, 0.11985, 0.11655], [-0.4784, -0.36],
+    [7.369, 10.45, 4.321, 2.18, 2.033, 0.907],
+    [[0, -0.016, 0.03], [0.302, 0, 0.16], [0.194, 0, 0.065], [0, -0.009, 0.011], [0, 0.018, 0.012], [0, 0, -0.044]],
+    [330, 330, 150, 56, 56, 56], [120, 120, 180, 180, 180, 180].map(function (v) { return v * DPS; }), 0.9, 1.3);
+  UR5E.name = "UR5e";
+  var MODELS = { UR3e: UR3E, UR5e: UR5E, UR10e: UR10E, UR16e: UR16E };
 
   // ---------------------------------------------------------------- 4x4 helpers
   function I4() { return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]; }
@@ -215,22 +246,22 @@
   // The arm as capsules (segment + radius) in base coordinates. Offsets along the joint
   // axes reproduce the UR's real shape: the upper arm runs 0.138 m out along the shoulder
   // axis, the forearm 0.007 m (0.138 − 0.131), and d4 carries the wrist back in line.
-  var SHOULDER_OFF = 0.138, ELBOW_OFF = 0.007;
   function add(a, b, s) { return [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]; }
   function capsules(q, robot, fkr) {
     robot = robot || UR5E;
-    var f = fkr || fk(q, robot), F = f.frames;
+    var f = fkr || fk(q, robot), F = f.frames, V = robot.viz || UR5E.viz;
+    var SHOULDER_OFF = V.so, ELBOW_OFF = V.eo, rr = V.r;
     var o0 = pos(F[0]), o1 = pos(F[1]), o2 = pos(F[2]), o3 = pos(F[3]), o4 = pos(F[4]), o5 = pos(F[5]), o6 = pos(F[6]);
     var z1 = axis(F[1], 2), z2 = axis(F[2], 2), z6 = axis(F[6], 2);
     return [
-      { name: "base", a: o0, b: [0, 0, robot.d[0]], r: 0.075 },
-      { name: "shoulder", a: o1, b: add(o1, z1, SHOULDER_OFF), r: 0.07 },
-      { name: "upper arm", a: add(o1, z1, SHOULDER_OFF), b: add(o2, z1, SHOULDER_OFF), r: 0.058 },
-      { name: "elbow", a: add(o2, z2, SHOULDER_OFF), b: add(o2, z2, ELBOW_OFF), r: 0.058 },
-      { name: "forearm", a: add(o2, z2, ELBOW_OFF), b: add(o3, z2, ELBOW_OFF), r: 0.045 },
-      { name: "wrist 1", a: o3, b: o4, r: 0.045 },
-      { name: "wrist 2", a: o4, b: o5, r: 0.045 },
-      { name: "wrist 3", a: o5, b: o6, r: 0.045 },
+      { name: "base", a: o0, b: [0, 0, robot.d[0]], r: rr[0] },
+      { name: "shoulder", a: o1, b: add(o1, z1, SHOULDER_OFF), r: rr[1] },
+      { name: "upper arm", a: add(o1, z1, SHOULDER_OFF), b: add(o2, z1, SHOULDER_OFF), r: rr[2] },
+      { name: "elbow", a: add(o2, z2, SHOULDER_OFF), b: add(o2, z2, ELBOW_OFF), r: rr[3] },
+      { name: "forearm", a: add(o2, z2, ELBOW_OFF), b: add(o3, z2, ELBOW_OFF), r: rr[4] },
+      { name: "wrist 1", a: o3, b: o4, r: rr[5] },
+      { name: "wrist 2", a: o4, b: o5, r: rr[5] },
+      { name: "wrist 3", a: o5, b: o6, r: rr[5] },
       // the gripper: a chunky body on the flange, then two slim fingers out to the TCP
       { name: "gripper", a: o6, b: add(o6, z6, 0.07), r: 0.045 },
       { name: "fingers", a: add(o6, z6, 0.07), b: pos(f.tcp), r: 0.018 }
@@ -357,7 +388,7 @@
 
   var api = {
     gravityTorques: gravityTorques, potentialEnergy: potentialEnergy, comPositions: comPositions, velocityEllipsoid: velocityEllipsoid, eig3: eig3,
-    UR5E: UR5E, fk: fk, ik: ik, ikFlange: ikFlange, jacobian: jacobian, manipulability: manipulability,
+    UR5E: UR5E, MODELS: MODELS, fk: fk, ik: ik, ikFlange: ikFlange, jacobian: jacobian, manipulability: manipulability,
     capsules: capsules, checkCollision: checkCollision, segDist: segDist,
     mul: mul, inv: inv, pos: pos, axis: axis, transl: transl, dh: dh, wrap: wrap, nearestBranch: nearestBranch,
     poseFromRPY: poseFromRPY, rpyFromPose: rpyFromPose, I4: I4
