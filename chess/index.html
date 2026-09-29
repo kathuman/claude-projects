@@ -203,6 +203,19 @@
     :root[data-view="3d"] .edge.n { left: -3px; right: -3px; bottom: calc(100% + 3px); height: 14px; transform-origin: bottom; transform: rotateX(90deg); background: color-mix(in srgb, var(--sq-dark) 78%, #000); }
     :root[data-view="3d"] .edge.w { top: -3px; bottom: -3px; right: calc(100% + 3px); width: 14px; transform-origin: right; transform: rotateY(-90deg); background: color-mix(in srgb, var(--sq-dark) 62%, #000); }
     :root[data-view="3d"] .edge.e { top: -3px; bottom: -3px; left: calc(100% + 3px); width: 14px; transform-origin: left; transform: rotateY(90deg); background: color-mix(in srgb, var(--sq-dark) 62%, #000); }
+    /* ---- "Staunton" pieces: Cburnett SVGs in 2D, a WebGL scene in 3D ---- */
+    .pimg { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+    :root[data-pieces="staunton"] .piece { width: 92%; height: 92%; display: grid; place-items: center; text-shadow: none; }
+    :root[data-pieces="staunton"] .anim-piece { text-shadow: none; }
+    :root[data-pieces="staunton"] .anim-piece .pimg { width: 92%; height: 92%; }
+    .side-score .cap .pimg { width: 18px; height: 18px; display: inline-block; }
+    .modal .choices button .pimg { width: 44px; height: 44px; margin: auto; }
+    .gl-canvas { display: none; width: 100%; border-radius: 10px; touch-action: none; }
+    .stage.gl-on .gl-canvas { display: block; }
+    .stage.gl-on .board-frame { display: none; }
+    :root[data-view="3d"] .stage.gl-on { padding: 0; }
+    .glnote { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+
     .range-row { display: grid; grid-template-columns: 52px 1fr 40px; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
     .range-row input { width: 100%; accent-color: var(--accent); }
     .range-row output { font-family: var(--font-mono); font-size: 11px; text-align: right; color: var(--muted); }
@@ -420,6 +433,14 @@
             <div class="swatches" id="lookPreview" aria-hidden="true"></div>
           </div>
           <div class="field">
+            <label for="pieceSel">Pieces</label>
+            <select class="sel" id="pieceSel">
+              <option value="classic">Classic glyphs</option>
+              <option value="staunton">Staunton — detailed 2D, modelled 3D</option>
+            </select>
+            <p class="glnote" id="glNote" hidden></p>
+          </div>
+          <div class="field">
             <label>View</label>
             <div class="view-toggle" role="group" aria-label="Board view">
               <button type="button" data-view="2d">2D</button>
@@ -475,7 +496,8 @@
       </p>
       <p>
         <b>3D view.</b> Press <b>3D</b> (above the board, or under Look) to see the board in perspective,
-        with the pieces standing up. Drag anywhere on it to turn it around and tilt it — or use the Tilt
+        with the pieces standing up. With <b>Pieces: Staunton</b> the 3D board uses modelled, lit
+        Staunton pieces (and the flat board uses a detailed SVG set). Drag anywhere on it to turn it around and tilt it — or use the Tilt
         and Rotate sliders, and Reset view to go back. Everything else works the same.
       </p>
     </details>
@@ -589,6 +611,21 @@
           at the end of it is swallowed so it can't also move a piece.
         </p>
 
+        <h4>Staunton pieces: SVG in 2D, real geometry in 3D</h4>
+        <p>
+          With <b>Pieces: Staunton</b>, the flat board shows Colin M.L. Burnett's classic SVG set (the one
+          used on Wikipedia and lichess, here under the GPL). In 3D the pieces become actual 3D models
+          drawn with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (WebGL,
+          vendored, only downloaded when first needed). Each piece is a <code>LatheGeometry</code> — a
+          profile of radius against height, spun around its axis like wood on a lathe — plus a few extra
+          parts: rook battlements, the queen's coronet of spheres, the king's cross, and a knight's head
+          that is a 2D silhouette extruded into a solid. A directional light casts soft shadows onto a
+          board whose squares are painted into a canvas texture from the same CSS colours as the flat
+          board. The hidden DOM board is still the one source of truth: a click on the 3D view is
+          raycast to a square (a piece you can see wins, unless a highlighted target square is under the
+          pointer) and handed to that square's normal click handler.
+        </p>
+
         <h4>Look = CSS variables + a data attribute</h4>
         <p>
           Board colours are CSS custom properties. Choosing "Walnut" just sets
@@ -611,7 +648,7 @@
 
   <footer class="foot">
     <span class="consult">Chess <span id="verFooter"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Staunton SVG pieces by Colin M.L. Burnett (GPL); 3D via <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (MIT). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
   <script>
@@ -622,7 +659,8 @@
     //   1.0.0  launch: two players on one screen (ported from chess_game.py)
     //   1.1.0  computer opponent: Stockfish 18 (WASM) at eight levels
     //   1.2.0  3D board view; author credit + version in the header and footer
-    var APP_VERSION = "1.2.0";
+    //   1.3.0  Staunton pieces: Cburnett SVGs in 2D, lathe-modelled WebGL pieces in 3D
+    var APP_VERSION = "1.3.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -927,6 +965,7 @@
       var b = readLS("chess-board", "classic");
       if (b && b !== "classic") document.documentElement.setAttribute("data-board", b);
       state._board = b || "classic";
+      state._pieces = readLS("chess-pieces", "classic") === "staunton" ? "staunton" : "classic";
       state.opponent = readLS("chess-opponent", "human") === "engine" ? "engine" : "human";
       state.humanColor = readLS("chess-side", "w") === "b" ? "b" : "w";
       var lv = parseInt(readLS("chess-level", "3"), 10);
@@ -1116,6 +1155,14 @@
       return { left: (vc / 8 * 100) + "%", top: (vr / 8 * 100) + "%" };
     }
 
+    // What a piece looks like in the DOM: a Unicode glyph, or a Cburnett SVG for "Staunton".
+    function pieceHTML(p) {
+      if (state._pieces === "staunton") {
+        return '<img class="pimg" src="pieces/cburnett/' + colorOf(p) + p.toUpperCase() + '.svg" alt="" draggable="false">';
+      }
+      return UNICODE_PIECES[p];
+    }
+
     function render() {
       var board = state.board;
       var legalSet = {};
@@ -1141,7 +1188,7 @@
         if (piece) {
           var pe = document.createElement("div");
           pe.className = "piece";
-          pe.textContent = UNICODE_PIECES[piece];
+          pe.innerHTML = pieceHTML(piece);
           cell.appendChild(pe);
         }
 
@@ -1161,6 +1208,7 @@
       renderStatus();
       renderCaptured();
       renderLog();
+      if (gl.active) glSync();
     }
 
     function renderStatus() {
@@ -1193,14 +1241,15 @@
     function renderCaptured() {
       var order = { Q: 0, R: 1, B: 2, N: 3, P: 4 };
       function summarize(list, el) {
-        var sorted = list.slice().sort(function (a, b) { return order[a] - order[b]; });
-        var html = sorted.map(function (p) { return UNICODE_PIECES[p]; }).join(" ");
+        var sorted = list.slice().sort(function (a, b) { return order[a.toUpperCase()] - order[b.toUpperCase()]; });
+        // classic glyphs show every captured piece as an outline; Staunton shows its real colour
+        var html = sorted.map(function (p) { return state._pieces === "staunton" ? pieceHTML(p) : UNICODE_PIECES[p.toUpperCase()]; }).join(" ");
         el.innerHTML = html;
       }
       var capWhite = document.getElementById("capWhite"); // pieces White has captured (black pieces)
       var capBlack = document.getElementById("capBlack");
-      summarize(state.captured.w.map(function (p) { return p.toUpperCase(); }), capWhite);
-      summarize(state.captured.b.map(function (p) { return p.toUpperCase(); }), capBlack);
+      summarize(state.captured.w, capWhite);
+      summarize(state.captured.b, capBlack);
       var valW = state.captured.w.reduce(function (s, p) { return s + PIECE_VALUE[p.toUpperCase()]; }, 0);
       var valB = state.captured.b.reduce(function (s, p) { return s + PIECE_VALUE[p.toUpperCase()]; }, 0);
       var diff = valW - valB;
@@ -1228,11 +1277,12 @@
       else if (flag === "O-O-O") movers.push([preBoard[r][0], r, 0, r, 3]);
 
       state.animating = true;
+      if (gl.active) glAnimate(move, preBoard);
       var floaters = movers.map(function (m) {
         var piece = m[0], fr = m[1], fc = m[2];
         var el = document.createElement("div");
         el.className = "anim-piece";
-        el.textContent = UNICODE_PIECES[piece];
+        el.innerHTML = pieceHTML(piece);
         var p0 = visPos(fr, fc);
         el.style.left = p0.left; el.style.top = p0.top;
         boardEl.appendChild(el);
@@ -1391,7 +1441,7 @@
       ["Q", "R", "B", "N"].forEach(function (piece) {
         var btn = document.createElement("button");
         var glyph = color === "w" ? piece : piece.toLowerCase();
-        btn.textContent = UNICODE_PIECES[glyph];
+        btn.innerHTML = pieceHTML(glyph);
         btn.addEventListener("click", function () {
           backdrop.remove();
           cb(piece);
@@ -1496,6 +1546,7 @@
     };
     function applyLook() {
       var root = document.documentElement;
+      if (state._pieces === "staunton") root.setAttribute("data-pieces", "staunton"); else root.removeAttribute("data-pieces");
       if (state._board === "classic") root.removeAttribute("data-board");
       else root.setAttribute("data-board", state._board);
       var host = document.getElementById("lookPreview");
@@ -1529,7 +1580,8 @@
       // the pieces read these to stand upright facing the viewer
       frame.style.setProperty("--tilt", is3d ? String(view.tilt) : "0");
       frame.style.setProperty("--spin", is3d ? String(view.spin) : "0");
-      if (is3d) {
+      var useGL = updateGL();
+      if (is3d && !useGL) {
         // Keep the turned board inside its panel: shrink only when the rotated board's bounding
         // width wouldn't fit, and a little more as tilting brings the near edge closer.
         var w = frame.offsetWidth, h = frame.offsetHeight;
@@ -1557,6 +1609,7 @@
         writeLS("chess-tilt", String(Math.round(view.tilt)));
         writeLS("chess-spin", String(normSpin(view.spin)));
       }
+      if (useGL) { glCamera(); glRender(); }
     }
     document.querySelectorAll(".view-toggle button").forEach(function (b) {
       b.addEventListener("click", function () { view.mode = this.dataset.view; applyView(true); });
@@ -1605,10 +1658,386 @@
       }, true);
     })();
 
+    // ========================================================== 3D PIECES (WebGL)
+    // With "Staunton" pieces, the 3D view is real geometry: three.js (r128, vendored, loaded
+    // only when first needed) draws the board and lathe-turned pieces with light and shadows.
+    // The DOM board stays underneath, hidden, as the one source of truth — a click on the
+    // canvas is raycast to a square and handed to that square's own click handler, so every
+    // rule, highlight and engine hook is shared with 2D. Board units: one square = 1.
+    var gl = { active: false, loading: false, failed: false, onLoad: [] };
+
+    function wantGL() { return view.mode === "3d" && state._pieces === "staunton"; }
+
+    function loadThree(cb) {
+      if (window.THREE) { cb(); return; }
+      gl.onLoad.push(cb);
+      if (gl.loading) return;
+      gl.loading = true;
+      var sc = document.createElement("script");
+      sc.src = "vendor/three.min.js";
+      sc.onload = function () { gl.loading = false; var q = gl.onLoad; gl.onLoad = []; q.forEach(function (f) { f(); }); };
+      sc.onerror = function () { gl.loading = false; gl.failed = true; glNote("Couldn't load the 3D engine — showing the flat 3D board instead."); applyView(false); };
+      document.head.appendChild(sc);
+    }
+    function glNote(text) {
+      var n = document.getElementById("glNote");
+      n.textContent = text || ""; n.hidden = !text;
+    }
+
+    // Turn the WebGL view on/off to match the settings; true when it's the one showing.
+    function updateGL() {
+      if (!wantGL() || gl.failed) {
+        if (gl.active) { gl.active = false; stage.classList.remove("gl-on"); }
+        return false;
+      }
+      if (!window.THREE) { loadThree(function () { applyView(false); }); return false; }
+      if (!gl.renderer && !glInit()) {
+        gl.failed = true;
+        glNote("This browser has no WebGL, so the 3D Staunton set isn't available — showing the flat 3D board.");
+        return false;
+      }
+      if (!gl.active) { gl.active = true; stage.classList.add("gl-on"); glSync(); }
+      glResize();
+      return true;
+    }
+
+    function glInit() {
+      var T = THREE, R;
+      try { R = new T.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { return false; }
+      if (!R.getContext()) return false;
+      gl.renderer = R;
+      R.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      R.shadowMap.enabled = true;
+      R.shadowMap.type = T.PCFSoftShadowMap;
+      R.outputEncoding = T.sRGBEncoding;
+      R.toneMapping = T.NoToneMapping;   // keep the board's CSS colours true
+      R.domElement.className = "gl-canvas";
+      R.domElement.style.display = "";   // three.js sets display:block inline; let the stylesheet decide
+      stage.appendChild(R.domElement);
+
+      var scene = gl.scene = new T.Scene();
+      gl.camera = new T.PerspectiveCamera(32, 1, 0.1, 200);
+      scene.add(new T.HemisphereLight(0xfff4e2, 0x3b3128, 0.55));
+      var sun = new T.DirectionalLight(0xffffff, 0.85);
+      sun.position.set(-4.5, 11, 6.5);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      var sc = sun.shadow.camera;
+      sc.left = -6.5; sc.right = 6.5; sc.top = 6.5; sc.bottom = -6.5; sc.near = 1; sc.far = 30;
+      sun.shadow.bias = -0.0006;
+      scene.add(sun);
+      var rim = new T.DirectionalLight(0xdce6ff, 0.28);
+      rim.position.set(6, 6, -7);
+      scene.add(rim);
+
+      // board: a wooden slab with the squares as a canvas texture on top
+      gl.frameMat = new T.MeshStandardMaterial({ color: 0x5b3a22, roughness: 0.55 });
+      var slab = new T.Mesh(new T.BoxGeometry(8.9, 0.42, 8.9), gl.frameMat);
+      slab.position.y = -0.21; slab.receiveShadow = true; scene.add(slab);
+      gl.topMat = new T.MeshStandardMaterial({ roughness: 0.5, metalness: 0 });
+      var top = new T.Mesh(new T.PlaneGeometry(8, 8), gl.topMat);
+      top.rotation.x = -Math.PI / 2; top.position.y = 0.002; top.receiveShadow = true; scene.add(top);
+      glBoardTexture();
+
+      gl.marks = new T.Group(); scene.add(gl.marks);
+      gl.pieceGroup = new T.Group(); scene.add(gl.pieceGroup);
+      gl.meshes = {};   // "r,c" -> { piece, obj }
+      gl.dying = [];    // captured pieces waiting to be removed
+      gl.tweens = [];
+      gl.geo = {};
+
+      function mat(color, rough, metal) { return new T.MeshStandardMaterial({ color: color, roughness: rough, metalness: metal }); }
+      gl.mat = { w: mat(0xe9dcc2, 0.4, 0.02), b: mat(0x1c1715, 0.28, 0.08) };
+      ["w", "b"].forEach(function (k) {
+        var f = gl.mat[k].clone(); f.transparent = true; f.opacity = 0.28; f.depthWrite = false;
+        gl.mat[k + "Fade"] = f;
+      });
+      function markMat(color, opacity) { return new T.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity, depthWrite: false }); }
+      gl.markMat = { sel: markMat(0xffd633, 0.5), last: markMat(0xb6c52a, 0.42), check: markMat(0xe0402f, 0.62), dot: markMat(0x14140f, 0.38), ring: markMat(0x14140f, 0.45) };
+      gl.markGeo = { sq: new T.PlaneGeometry(1, 1), dot: new T.CircleGeometry(0.14, 32), ring: new T.RingGeometry(0.39, 0.47, 48) };
+
+      gl.ray = new T.Raycaster();
+      gl.plane = new T.Plane(new T.Vector3(0, 1, 0), 0);
+      var cv = R.domElement;
+      cv.addEventListener("click", function (e) {
+        var sq = glPick(e);
+        if (sq) cells[sq[0]][sq[1]].click();   // the square's own handler does the rest
+      });
+      cv.addEventListener("pointermove", function (e) {
+        var sq = glPick(e);
+        cv.style.cursor = sq && cells[sq[0]][sq[1]].classList.contains("playable") ? "pointer" : "";
+      });
+      return true;
+    }
+
+    function glBoardTexture() {
+      var cs = getComputedStyle(document.documentElement);
+      var light = cs.getPropertyValue("--sq-light").trim() || "#f0d9b5";
+      var dark = cs.getPropertyValue("--sq-dark").trim() || "#b58863";
+      var N = 1024, s = N / 8, cv = document.createElement("canvas");
+      cv.width = cv.height = N;
+      var g = cv.getContext("2d");
+      for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+        g.fillStyle = (r + c) % 2 ? dark : light;
+        g.fillRect(c * s, r * s, s, s);
+      }
+      // a faint, fixed wood grain so the squares don't look like flat plastic
+      var seed = 7;
+      function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+      g.globalAlpha = 0.045; g.strokeStyle = "#000"; g.lineWidth = 1.2;
+      for (var i = 0; i < 700; i++) {
+        var y = rnd() * N, x = rnd() * N, len = 40 + rnd() * 160;
+        g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + len / 3, y + rnd() * 6 - 3, x + 2 * len / 3, y + rnd() * 6 - 3, x + len, y + rnd() * 4 - 2); g.stroke();
+      }
+      g.globalAlpha = 0.75;
+      g.font = "600 22px ui-monospace, Menlo, monospace";
+      for (var k = 0; k < 8; k++) {
+        g.fillStyle = k % 2 ? light : dark;            // file letters along rank 1
+        g.fillText(FILES[k], k * s + s - 20, N - 8);
+        g.fillStyle = k % 2 ? light : dark;            // rank numbers along the a-file
+        g.fillText(String(8 - k), 6, k * s + 24);
+      }
+      var tex = new THREE.CanvasTexture(cv);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = gl.renderer.capabilities.getMaxAnisotropy();
+      if (gl.topMat.map) gl.topMat.map.dispose();
+      gl.topMat.map = tex; gl.topMat.needsUpdate = true;
+      gl.frameMat.color.set(dark).multiplyScalar(0.42);
+    }
+
+    // ---- the pieces: lathe profiles [radius, height], plus a few extra parts
+    var BASE = [[0, 0], [0.37, 0], [0.37, 0.045], [0.34, 0.075], [0.35, 0.095], [0.3, 0.125], [0.25, 0.15]];
+    function arc(cx, cy, rad, a0, a1, n) {   // points on a circle, for heads and balls
+      var out = [];
+      for (var i = 0; i <= n; i++) { var a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; out.push([Math.max(0, rad * Math.cos(a)), cy + rad * Math.sin(a)]); }
+      out[out.length - 1][0] = 0;
+      return out;
+    }
+    var PROFILE = {
+      P: BASE.concat([[0.2, 0.19], [0.14, 0.25], [0.12, 0.33], [0.2, 0.36], [0.2, 0.385], [0.12, 0.405]], arc(0, 0.5, 0.12, -55, 90, 12)),
+      R: BASE.concat([[0.25, 0.19], [0.21, 0.25], [0.19, 0.47], [0.24, 0.51], [0.28, 0.53], [0.28, 0.66], [0.21, 0.66], [0.21, 0.62], [0, 0.62]]),
+      N: BASE.concat([[0.24, 0.19], [0.22, 0.23], [0, 0.23]]),
+      B: BASE.concat([[0.22, 0.19], [0.14, 0.27], [0.1, 0.5], [0.2, 0.535], [0.2, 0.56], [0.11, 0.58]], arc(0, 0.72, 0.155, -75, 72, 12), [[0.035, 0.88]], arc(0, 0.92, 0.045, -60, 90, 6)),
+      Q: BASE.concat([[0.23, 0.19], [0.16, 0.29], [0.1, 0.62], [0.21, 0.66], [0.21, 0.69], [0.12, 0.71], [0.14, 0.76], [0.25, 0.92], [0.21, 0.925], [0.12, 0.87], [0, 0.86]]),
+      K: BASE.concat([[0.23, 0.19], [0.16, 0.29], [0.11, 0.66], [0.22, 0.7], [0.22, 0.725], [0.13, 0.75], [0.15, 0.8], [0.23, 0.95], [0.23, 0.98], [0.11, 1.0], [0.06, 1.02], [0, 1.02]])
+    };
+    // side silhouette of the knight's head (x = forward, y = up), extruded into a solid
+    var KNIGHT_HEAD = [[-0.2, 0.2], [0.2, 0.2], [0.19, 0.31], [0.13, 0.43], [0.18, 0.51], [0.28, 0.57], [0.34, 0.63], [0.32, 0.7], [0.21, 0.71],
+      [0.12, 0.75], [0.09, 0.84], [0.03, 0.92], [-0.02, 0.85], [-0.08, 0.87], [-0.15, 0.79], [-0.21, 0.63], [-0.22, 0.46], [-0.21, 0.31]];
+
+    function glParts(t) {
+      if (gl.geo[t]) return gl.geo[t];
+      var T = THREE, parts = [];
+      parts.push({ g: new T.LatheGeometry(PROFILE[t].map(function (q) { return new T.Vector2(q[0], q[1]); }), 48) });
+      if (t === "N") {
+        var sh = new T.Shape();
+        KNIGHT_HEAD.forEach(function (q, i) { if (i) sh.lineTo(q[0], q[1]); else sh.moveTo(q[0], q[1]); });
+        var eg = new T.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.055, bevelSize: 0.04, bevelSegments: 5, curveSegments: 8 });
+        eg.translate(0, 0, -0.1);
+        parts.push({ g: eg, knight: true });
+      } else if (t === "R") {
+        for (var i = 0; i < 6; i++) {   // battlements
+          var a = i / 6 * Math.PI * 2;
+          parts.push({ g: new T.BoxGeometry(0.1, 0.08, 0.07), x: 0.245 * Math.cos(a), y: 0.7, z: 0.245 * Math.sin(a), ry: -a });
+        }
+      } else if (t === "Q") {
+        for (var j = 0; j < 9; j++) {   // coronet
+          var b = j / 9 * Math.PI * 2;
+          parts.push({ g: new T.SphereGeometry(0.036, 12, 10), x: 0.23 * Math.cos(b), y: 0.945, z: 0.23 * Math.sin(b) });
+        }
+        parts.push({ g: new T.SphereGeometry(0.07, 18, 14), y: 0.93 });
+      } else if (t === "K") {
+        parts.push({ g: new T.BoxGeometry(0.055, 0.22, 0.055), y: 1.12 });   // the cross
+        parts.push({ g: new T.BoxGeometry(0.16, 0.055, 0.055), y: 1.15 });
+      }
+      gl.geo[t] = parts;
+      return parts;
+    }
+
+    function glMakePiece(p) {
+      var T = THREE, color = colorOf(p), grp = new T.Group();
+      glParts(p.toUpperCase()).forEach(function (part) {
+        var m = new T.Mesh(part.g, gl.mat[color]);
+        m.castShadow = true; m.receiveShadow = true;
+        m.position.set(part.x || 0, part.y || 0, part.z || 0);
+        if (part.ry) m.rotation.y = part.ry;
+        // knights face the enemy, turned ~50° so their profile reads from the player's side
+        if (part.knight) m.rotation.y = (color === "w" ? Math.PI / 2 : -Math.PI / 2) + 0.9;
+        grp.add(m);
+      });
+      grp.userData.color = color;
+      return grp;
+    }
+    function glSetFade(grp, fade) {
+      var m = gl.mat[grp.userData.color + (fade ? "Fade" : "")];
+      grp.userData.faded = fade;
+      grp.children.forEach(function (ch) { ch.material = m; ch.castShadow = !fade; });
+    }
+    function sqX(c) { return c - 3.5; }
+    function sqZ(r) { return r - 3.5; }
+
+    // Make the scene match `state`: pieces, fading, and the square markers.
+    function glSync() {
+      if (!gl.active) return;
+      gl.tweens = [];
+      gl.dying.forEach(function (o) { gl.pieceGroup.remove(o); });
+      gl.dying = [];
+      var seen = {}, key, r, c;
+      var legal = {};
+      state.legalTargets.forEach(function (m) { legal[m[2] + "," + m[3]] = true; });
+      for (r = 0; r < 8; r++) for (c = 0; c < 8; c++) {
+        var p = state.board[r][c];
+        if (!p) continue;
+        key = r + "," + c;
+        var e = gl.meshes[key];
+        if (!e || e.piece !== p) {
+          if (e) gl.pieceGroup.remove(e.obj);
+          e = gl.meshes[key] = { piece: p, obj: glMakePiece(p) };
+          gl.pieceGroup.add(e.obj);
+        }
+        e.obj.position.set(sqX(c), 0, sqZ(r));
+        e.obj.scale.setScalar(1);
+        e.obj.userData.sq = [r, c];
+        var isSel = state.selected && state.selected[0] === r && state.selected[1] === c;
+        glSetFade(e.obj, !!state.selected && !isSel && !legal[key]);
+        seen[key] = true;
+      }
+      Object.keys(gl.meshes).forEach(function (k) {
+        if (!seen[k]) { gl.pieceGroup.remove(gl.meshes[k].obj); delete gl.meshes[k]; }
+      });
+
+      // markers
+      while (gl.marks.children.length) gl.marks.remove(gl.marks.children[0]);
+      function mark(geo, m, rr, cc, y) {
+        var me = new THREE.Mesh(geo, m);
+        me.rotation.x = -Math.PI / 2;
+        me.position.set(sqX(cc), y, sqZ(rr));
+        gl.marks.add(me);
+      }
+      var lm = state.lastMove;
+      if (lm) { mark(gl.markGeo.sq, gl.markMat.last, lm[0], lm[1], 0.004); mark(gl.markGeo.sq, gl.markMat.last, lm[2], lm[3], 0.004); }
+      if (state.selected) mark(gl.markGeo.sq, gl.markMat.sel, state.selected[0], state.selected[1], 0.006);
+      if (inCheck(state.board, state.turn)) { var kp = kingPos(state.board, state.turn); if (kp) mark(gl.markGeo.sq, gl.markMat.check, kp[0], kp[1], 0.008); }
+      state.legalTargets.forEach(function (m) {
+        var occupied = state.board[m[2]][m[3]] != null || m[4] === "ep";
+        mark(occupied ? gl.markGeo.ring : gl.markGeo.dot, occupied ? gl.markMat.ring : gl.markMat.dot, m[2], m[3], 0.01);
+      });
+      glCamera();
+      glRender();
+    }
+
+    // Slide the moving piece(s) along a small arc; the knight hops higher.
+    function glAnimate(move, preBoard) {
+      var r = move[0], c = move[1], rr = move[2], cc = move[3], flag = move[4];
+      var movers = [[r, c, rr, cc]];
+      if (flag === "O-O") movers.push([r, 7, r, 5]);
+      else if (flag === "O-O-O") movers.push([r, 0, r, 3]);
+      var capKey = flag === "ep" ? r + "," + cc : (preBoard[rr][cc] ? rr + "," + cc : null);
+      if (capKey && gl.meshes[capKey]) { gl.dying.push(gl.meshes[capKey].obj); delete gl.meshes[capKey]; }
+      var now = performance.now();
+      movers.forEach(function (mv) {
+        var e = gl.meshes[mv[0] + "," + mv[1]];
+        if (!e) return;
+        delete gl.meshes[mv[0] + "," + mv[1]];
+        gl.meshes[mv[2] + "," + mv[3]] = e;
+        e.obj.userData.sq = [mv[2], mv[3]];
+        var hop = e.piece.toUpperCase() === "N" ? 0.55 : 0.18;
+        gl.tweens.push({ o: e.obj, x0: sqX(mv[1]), z0: sqZ(mv[0]), x1: sqX(mv[3]), z1: sqZ(mv[2]), t0: now, dur: 185, hop: hop });
+      });
+      glRender();
+    }
+
+    function glPick(e) {
+      if (!gl.active) return null;
+      var rect = gl.renderer.domElement.getBoundingClientRect();
+      var ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      gl.ray.setFromCamera(ndc, gl.camera);
+      var planeSq = null, pt = new THREE.Vector3();
+      if (gl.ray.ray.intersectPlane(gl.plane, pt)) {
+        var pc = Math.floor(pt.x + 4), pr = Math.floor(pt.z + 4);
+        if (pc >= 0 && pc < 8 && pr >= 0 && pr < 8) planeSq = [pr, pc];
+      }
+      // a solid (not faded) piece under the pointer wins — you click the piece you see; but if
+      // the ray also passes through the piece standing on the square right under the pointer
+      // (you clicked the visible base of a piece partly hidden behind a taller one), that one wins
+      var pieceSq = null;
+      var hits = gl.ray.intersectObjects(gl.pieceGroup.children, true);
+      for (var i = 0; i < hits.length; i++) {
+        var g = hits[i].object.parent;
+        if (!g || !g.userData.sq || g.userData.faded) continue;
+        if (!pieceSq) pieceSq = g.userData.sq;
+        if (planeSq && g.userData.sq[0] === planeSq[0] && g.userData.sq[1] === planeSq[1]) { pieceSq = planeSq; break; }
+      }
+      // …except that a legal target square under the pointer always wins once a piece is selected
+      if (state.selected && planeSq && state.legalTargets.some(function (m) { return m[2] === planeSq[0] && m[3] === planeSq[1]; })) return planeSq;
+      return pieceSq || planeSq;
+    }
+
+    function glResize() {
+      var w = Math.max(200, stage.clientWidth), h = Math.round(Math.min(w * 0.86, 660));
+      gl.renderer.setSize(w, h, false);
+      gl.renderer.domElement.style.height = h + "px";
+      gl.camera.aspect = w / h;
+      gl.camera.updateProjectionMatrix();
+    }
+
+    // Orbit the camera from the same tilt/rotation the drag and sliders control.
+    function glCamera() {
+      if (!gl.camera) return;
+      var t = Math.max(1, view.tilt) * Math.PI / 180;
+      var a = (-view.spin + (state.flipped ? 180 : 0)) * Math.PI / 180;
+      // back off far enough that the turned board fits both across and up/down
+      var span = 4.75 * (Math.abs(Math.cos(a)) + Math.abs(Math.sin(a)));
+      var half = Math.tan(gl.camera.fov * Math.PI / 360);
+      var needW = span / (half * gl.camera.aspect);
+      var needH = (span * Math.cos(t) + 1.2 * Math.sin(t)) / half;
+      // (+ margin: the near edge is closer to the camera, so it looks wider than `span`)
+      var d = Math.max(needW, needH, 9) * (1.08 + 0.14 * Math.sin(t));
+      gl.camera.position.set(d * Math.sin(t) * Math.sin(a), d * Math.cos(t), d * Math.sin(t) * Math.cos(a));
+      gl.camera.lookAt(0, 0.25 * Math.sin(t), 0);
+    }
+
+    // For automated tests only (open the page with ?debug3d): where a square is on screen.
+    if (/[?&]debug3d\b/.test(location.search)) {
+      window.chess3dDebug = {
+        active: function () { return gl.active; },
+        square: function (r, c) {
+          var v = new THREE.Vector3(sqX(c), 0.03, sqZ(r)).project(gl.camera);
+          var rect = gl.renderer.domElement.getBoundingClientRect();
+          return { x: rect.left + (v.x + 1) / 2 * rect.width, y: rect.top + (1 - v.y) / 2 * rect.height };
+        }
+      };
+    }
+
+    function glRender() {
+      if (!gl.active || gl.raf) return;
+      gl.raf = requestAnimationFrame(glFrame);
+    }
+    function glFrame() {
+      gl.raf = 0;
+      var now = performance.now();
+      gl.tweens = gl.tweens.filter(function (tw) {
+        var k = Math.min(1, (now - tw.t0) / tw.dur);
+        var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        tw.o.position.set(tw.x0 + (tw.x1 - tw.x0) * e, tw.hop * Math.sin(Math.PI * k), tw.z0 + (tw.z1 - tw.z0) * e);
+        return k < 1;
+      });
+      if (!gl.tweens.length && gl.dying.length) { gl.dying.forEach(function (o) { gl.pieceGroup.remove(o); }); gl.dying = []; }
+      gl.renderer.render(gl.scene, gl.camera);
+      if (gl.tweens.length) glRender();
+    }
+
     var boardSel = document.getElementById("boardSel");
     boardSel.value = state._board;
     boardSel.addEventListener("change", function () {
       state._board = this.value; writeLS("chess-board", this.value); applyLook();
+      if (gl.renderer) { glBoardTexture(); glRender(); }
+    });
+    var pieceSel = document.getElementById("pieceSel");
+    pieceSel.value = state._pieces;
+    pieceSel.addEventListener("change", function () {
+      state._pieces = this.value; writeLS("chess-pieces", this.value);
+      applyLook(); render(); applyView(false);
     });
 
     // ---- source viewer: the page reads and shows its own code ----
