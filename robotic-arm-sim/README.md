@@ -1,4 +1,4 @@
-# Linkage — robotic arm simulator
+# Cobot Lab — robotic arm simulator
 
 A browser simulator of the Universal Robots e-Series 6-axis collaborative arms (UR3e, UR5e,
 UR10e, UR16e), built from their published kinematic (Denavit–Hartenberg) and dynamics
@@ -21,7 +21,7 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
   frame (`tool0` / `flange` / `ee_link` …), reads limits and `<inertial>` masses. Imported arms
   use a generic joint chain in `kinematics.js`, numerical IK (damped least squares with
   restarts) and capsule collisions/drawing. Limits: 6 revolute joints; meshes aren't loaded.
-- `urdf/` — two sample URDFs written for Linkage: a spherical-wrist 6R arm, and the UR5e written
+- `urdf/` — two sample URDFs written for Cobot Lab: a spherical-wrist 6R arm, and the UR5e written
   straight from its DH table (used to check the URDF path reproduces the analytic model exactly;
   note the published centres of mass had to be moved from DH to URDF link frames).
 - `planner.js` — collision-free path planning in joint space: RRT-Connect with random
@@ -49,7 +49,7 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
 ## Programs
 
 The Program panel is a small teach pendant: waypoints (a joint pose + Move J / Move L + speed +
-optional gripper open/grip), run or loop, export/import as JSON (`format: "linkage-program"`,
+optional gripper open/grip), run or loop, export/import as JSON (`format: "cobot-lab-program"`,
 joint angles in degrees), or export URScript for a real UR controller — joint moves become
 `movej`, linear moves `movel(get_forward_kin(q))` so the controller's own kinematics defines the
 pose. **Share link** packs the robot, pose, program and obstacles into the URL (`#s=…`); the last
@@ -57,11 +57,11 @@ session is also remembered in the browser.
 
 ## ROS bridge
 
-Connect to a `rosbridge_server` (ROS 1 or ROS 2, default `ws://localhost:9090`). Linkage speaks
+Connect to a `rosbridge_server` (ROS 1 or ROS 2, default `ws://localhost:9090`). Cobot Lab speaks
 the rosbridge v2 JSON protocol directly: it publishes `sensor_msgs/JointState` on
 `/joint_states` (UR joint names; effort = holding torques) and `geometry_msgs/PoseStamped` on
-`/linkage/tcp_pose` at 20 Hz, and with "Follow joint commands" on it subscribes to
-`/linkage/joint_command` (`sensor_msgs/JointState`, radians) and servos the arm there through
+`/cobot_lab/tcp_pose` at 20 Hz, and with "Follow joint commands" on it subscribes to
+`/cobot_lab/joint_command` (`sensor_msgs/JointState`, radians) and servos the arm there through
 the collision guard. From the https demo, a remote bridge needs `wss://`; `ws://localhost` works.
 
 ## Rendering

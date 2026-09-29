@@ -1,8 +1,8 @@
-/* Linkage — kinematics core.
+/* Cobot Lab — kinematics core.
  *
  * Pure functions, no DOM and no three.js: the page draws whatever this computes, and
  * tests/kinematics.test.js checks it under Node. Works as a browser global
- * (window.LinkageKin) and as a CommonJS module.
+ * (window.CobotLabKin) and as a CommonJS module.
  *
  * Robot: a 6-joint arm with the published Denavit–Hartenberg parameters of the
  * Universal Robots UR5e (standard DH, metres/radians). Base frame is z-up.
@@ -489,5 +489,5 @@
     poseFromRPY: poseFromRPY, rpyFromPose: rpyFromPose, I4: I4
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else root.LinkageKin = api;
+  else root.CobotLabKin = api;
 })(typeof window !== "undefined" ? window : this);

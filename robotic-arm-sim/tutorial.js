@@ -1,4 +1,4 @@
-/* Linkage — guided tutorial.
+/* Cobot Lab — guided tutorial.
  *
  * Three levels (Basic, Intermediate, Advanced). Each step highlights part of the app, explains
  * it, and usually asks the user to try something; the step notices when they have (a `check`
@@ -7,7 +7,7 @@
  *
  * The page hands over a small `app` object (read-only views of the state + a few actions and
  * event counters), so this file never reaches into the simulator's internals.
- * Browser global: window.LinkageTutorial.init(app).
+ * Browser global: window.CobotLabTutorial.init(app).
  */
 (function (root) {
   "use strict";
@@ -29,8 +29,8 @@
               "Drag the tool around and let the arm work out the joints", "Run the built-in pick & place and play with physics blocks"],
       setup: function (app) { app.reset("UR5e"); },
       steps: [
-        { id: "welcome", title: "Welcome to Linkage",
-          body: "<p>Linkage is a simulator of a real <b>6-axis collaborative robot arm</b> — by default a Universal Robots <b>UR5e</b>, built from the manufacturer's published dimensions, masses and joint limits. Everything you do here happens only in your browser; no real robot is connected.</p>" +
+        { id: "welcome", title: "Welcome to Cobot Lab",
+          body: "<p>Cobot Lab is a simulator of a real <b>6-axis collaborative robot arm</b> — by default a Universal Robots <b>UR5e</b>, built from the manufacturer's published dimensions, masses and joint limits. Everything you do here happens only in your browser; no real robot is connected.</p>" +
                 "<p>The screen has three parts: the <b>control rail</b> on the left, the <b>3D view</b> in the middle, and the <b>telemetry panel</b> (top-left of the view) that reads out where the tool is.</p>" +
                 "<p>This level takes about 10 minutes. Each step highlights what it's about and gives you something to try; when you've done it, the step ticks itself off. You can always press <b>Next</b> to skip ahead, or close the tutorial and come back — your place is remembered.</p>" },
         { id: "orbit", title: "Look around the robot", target: "#stage",
@@ -70,7 +70,7 @@
           task: "Close the gripper below 20%.",
           check: function (app) { return app.gripper() < 20; } },
         { id: "guard", title: "The collision guard", target: "#guard-switch",
-          body: "<p>Real cobots stop before they hit things. Linkage's <b>collision guard</b> checks every pose before the arm moves: if the table or the arm's own links would touch, the move is refused, a message says what would have hit what, and the offending links flash red.</p>" +
+          body: "<p>Real cobots stop before they hit things. Cobot Lab's <b>collision guard</b> checks every pose before the arm moves: if the table or the arm's own links would touch, the move is refused, a message says what would have hit what, and the offending links flash red.</p>" +
                 "<p>Try it: drag the <b>Shoulder</b> slider towards <b>+40°</b> — that would push the arm into the table.</p>",
           task: "Make the guard block a move.",
           check: function (app, b) { return since(app, b, "blocked") > 0; } },
@@ -81,7 +81,7 @@
           doit: { label: "Press it for me", run: function (app) { app.click("btn-home"); } } },
         { id: "drag", title: "Drag the tool — the arm follows", target: "#stage",
           body: "<p>The coloured arrows at the gripper tip are the <b>target handle</b>. Drag an arrow to move the tool along that axis (red = X, green = Y, blue = Z), or drag the ball to move it freely.</p>" +
-                "<p>The arm follows by itself: for every new tool position Linkage solves <b>inverse kinematics</b> — working backwards from where the tool should be to the six joint angles that put it there — and moves the joints at their real speeds. If the handle turns red, that spot is out of reach or would collide.</p>",
+                "<p>The arm follows by itself: for every new tool position Cobot Lab solves <b>inverse kinematics</b> — working backwards from where the tool should be to the six joint angles that put it there — and moves the joints at their real speeds. If the handle turns red, that spot is out of reach or would collide.</p>",
           task: "Drag the target handle at least 10 cm.",
           enter: function (app) { app.ensureFollow(true); },
           base: function (app) { return { t: app.targetPos() }; },
@@ -131,13 +131,13 @@
           check: function (app, b) { return since(app, b, "move-joint") > 0 && dist3(app.targetPos(), app.tcp()) < 0.002; },
           doit: { label: "Press it for me", run: function (app) { app.click("btn-movej"); } } },
         { id: "movel", title: "Move L — a straight line", target: "#btn-movel",
-          body: "<p>Now set another target (add 0.2 to <b>X</b>, or use the button below) and press <b>Move L</b>. A linear move keeps the tool on a <b>perfectly straight line</b> — Linkage solves the inverse kinematics hundreds of times along the way.</p>" +
+          body: "<p>Now set another target (add 0.2 to <b>X</b>, or use the button below) and press <b>Move L</b>. A linear move keeps the tool on a <b>perfectly straight line</b> — Cobot Lab solves the inverse kinematics hundreds of times along the way.</p>" +
                 "<p>Use Move L near parts and fixtures, where the tool must approach in a predictable line; use Move J for free travel. Move L is refused if the line leaves the reachable space, would collide, or passes through a singularity — you'll see why in a few steps.</p>",
           task: "Run a Move L to a new target.",
           check: function (app, b) { return since(app, b, "move-linear") > 0; },
           doit: { label: "Set target + Move L", run: function (app) { app.offsetTarget([0.15, 0, 0]); setTimeout(function () { app.click("btn-movel"); }, 300); } } },
         { id: "speed", title: "Speed and timing", target: "#speed",
-          body: "<p>Every joint of a UR5e can turn at most 180°/s and has an acceleration limit. Linkage times each motion so <b>no joint breaks its limits</b>: it speeds up, cruises and slows down (a <em>trapezoidal</em> speed profile), and in a Move J the slowest joint sets the pace while the others slow down to finish at the same moment.</p>" +
+          body: "<p>Every joint of a UR5e can turn at most 180°/s and has an acceleration limit. Cobot Lab times each motion so <b>no joint breaks its limits</b>: it speeds up, cruises and slows down (a <em>trapezoidal</em> speed profile), and in a Move J the slowest joint sets the pace while the others slow down to finish at the same moment.</p>" +
                 "<p>The Speed slider scales everything. Try 100%.</p>",
           task: "Set Speed to 100%.",
           check: function (app) { return app.speed() >= 0.99; } },
@@ -154,7 +154,7 @@
           check: function (app, b) { return since(app, b, "done-MOVE C") > 0; },
           doit: { label: "Press it for me", run: function (app) { app.click("btn-circle"); } } },
         { id: "configs", title: "Same tool pose, different arm", target: "#btn-config",
-          body: "<p>A 6-axis arm can usually reach the same tool position and orientation in up to <b>8 different ways</b>: shoulder left or right, elbow up or down, wrist flipped or not. Linkage's solver finds all eight exactly and normally picks the one closest to where the arm already is.</p>" +
+          body: "<p>A 6-axis arm can usually reach the same tool position and orientation in up to <b>8 different ways</b>: shoulder left or right, elbow up or down, wrist flipped or not. Cobot Lab's solver finds all eight exactly and normally picks the one closest to where the arm already is.</p>" +
                 "<p><b>Next IK config</b> moves to another of them — watch the tool stay perfectly still while the rest of the arm rearranges.</p>",
           task: "Press Next IK config.",
           check: function (app, b) { return since(app, b, "done-RECONFIGURE") > 0; },
@@ -203,7 +203,7 @@
       id: "advanced", name: "Advanced", tagline: "Safety, physics, dynamics & integration", minutes: 25,
       learn: ["See the collision model and test the guard", "Add obstacles and watch the path planner route around them",
               "Push objects with the solid arm; read motor torques and payload effects", "Use the learning overlays: joint frames, DH table, workspace, dexterity ellipsoid",
-              "Import another robot from a URDF file", "Connect Linkage to ROS"],
+              "Import another robot from a URDF file", "Connect Cobot Lab to ROS"],
       setup: function (app) { app.reset("UR5e"); },
       steps: [
         { id: "intro", title: "Under the hood",
@@ -259,10 +259,10 @@
           enter: function (app) { app.ensureToggle("plot-switch", false); },
           check: function (app) { return ["frames-switch", "ws-switch", "ell-switch"].filter(function (id) { return app.toggleOn(id); }).length >= 2; } },
         { id: "render", title: "Rendering quality", target: "#ao-switch",
-          body: "<p>Linkage renders with image-based lighting, soft shadows and <b>ambient occlusion</b> (soft contact shadows where parts meet). On a slow device it switches ambient occlusion off by itself to keep motion smooth; this switch lets you choose. The page also only redraws when something moves, to save battery.</p>" },
+          body: "<p>Cobot Lab renders with image-based lighting, soft shadows and <b>ambient occlusion</b> (soft contact shadows where parts meet). On a slow device it switches ambient occlusion off by itself to keep motion smooth; this switch lets you choose. The page also only redraws when something moves, to save battery.</p>" },
         { id: "urdf", title: "Import another robot (URDF)", target: "#model-sel",
           body: "<p><b>URDF</b> is the standard robot description format in ROS. From the Robot menu, pick <b>Spherical-wrist 6R (sample URDF)</b> — an industrial-style arm whose last three axes meet at a point, unlike the UR's offset wrist.</p>" +
-                "<p>For imported arms Linkage reads the joints, limits, tool frame and masses from the file and solves inverse kinematics <b>numerically</b> (damped least squares). Everything else — dragging, Move L, programs, planning, physics, torques — works the same.</p>",
+                "<p>For imported arms Cobot Lab reads the joints, limits, tool frame and masses from the file and solves inverse kinematics <b>numerically</b> (damped least squares). Everything else — dragging, Move L, programs, planning, physics, torques — works the same.</p>",
           task: "Load the spherical-wrist sample.",
           enter: function (app) { ["frames-switch", "ws-switch", "ell-switch"].forEach(function (id) { app.ensureToggle(id, false); }); },
           check: function (app) { return app.modelKey() === "urdf:spherical_wrist_6r.urdf"; },
@@ -273,11 +273,11 @@
                 "<p>Not supported: mesh files (links are drawn as capsules), 7-joint arms and sliding (prismatic) joints in the arm. A file that doesn't fit is refused with the reason.</p>",
           enter: function (app) { } },
         { id: "ros", title: "Connect to ROS", target: "#ros-url",
-          body: "<p>Linkage can mirror or be driven by <b>ROS</b> through <code>rosbridge</code>. On your ROS 2 machine:</p>" +
+          body: "<p>Cobot Lab can mirror or be driven by <b>ROS</b> through <code>rosbridge</code>. On your ROS 2 machine:</p>" +
                 "<pre>ros2 launch rosbridge_server rosbridge_websocket_launch.xml</pre>" +
-                "<p>then press <b>Connect</b> (default <code>ws://localhost:9090</code>). Linkage publishes <code>/joint_states</code> and <code>/linkage/tcp_pose</code> 20 times a second:</p><pre>ros2 topic echo /joint_states</pre>" +
+                "<p>then press <b>Connect</b> (default <code>ws://localhost:9090</code>). Cobot Lab publishes <code>/joint_states</code> and <code>/cobot_lab/tcp_pose</code> 20 times a second:</p><pre>ros2 topic echo /joint_states</pre>" +
                 "<p>With <b>Follow joint commands</b> on, it moves to joint angles you publish (radians, UR joint names), through the collision guard:</p>" +
-                "<pre>ros2 topic pub --once /linkage/joint_command sensor_msgs/msg/JointState \"{name: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint], position: [0.5, -1.2, 1.4, -1.8, -1.57, 0]}\"</pre>" +
+                "<pre>ros2 topic pub --once /cobot_lab/joint_command sensor_msgs/msg/JointState \"{name: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint], position: [0.5, -1.2, 1.4, -1.8, -1.57, 0]}\"</pre>" +
                 "<p>From this https page a remote bridge needs <code>wss://</code>; <code>ws://localhost</code> works as is. There's a ROS 1 option in the menu too.</p>",
           enter: function (app) { app.setModel("UR5e"); } },
         { id: "done", title: "Advanced level complete",
@@ -333,7 +333,7 @@
 
   function openChooser(mode) {
     load();
-    var h = '<div class="tut-card"><div class="tut-top"><h2>Linkage tutorial</h2><button class="tut-x" type="button" aria-label="Close">×</button></div>';
+    var h = '<div class="tut-card"><div class="tut-top"><h2>Cobot Lab tutorial</h2><button class="tut-x" type="button" aria-label="Close">×</button></div>';
     if (mode && mode.guide) {
       var L = lv(mode.guide);
       h += '<p class="tut-lead"><b>' + L.name + '</b> — ' + L.tagline + ' · written guide (' + L.steps.length + ' steps)</p><div class="tut-guide">';
@@ -458,5 +458,5 @@
       go: function (i) { if (run) go(i); }
     };
   }
-  root.LinkageTutorial = { init: init, LEVELS: LEVELS };
+  root.CobotLabTutorial = { init: init, LEVELS: LEVELS };
 })(window);

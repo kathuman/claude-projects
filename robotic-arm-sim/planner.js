@@ -1,10 +1,10 @@
-/* Linkage — collision-free path planning in joint space.
+/* Cobot Lab — collision-free path planning in joint space.
  *
  * RRT-Connect (Kuffner & LaValle, 2000): grow one random tree from the start and one from the
  * goal, each step extending one tree toward a random sample and then greedily connecting the
  * other tree to the new node; done when they meet. The raw path is then shortened by random
  * shortcutting. Every edge is checked for collisions at a fine joint-space resolution.
- * Pure (no DOM); browser global window.LinkagePlanner or CommonJS.
+ * Pure (no DOM); browser global window.CobotLabPlanner or CommonJS.
  */
 (function (root) {
   "use strict";
@@ -90,5 +90,5 @@
 
   var api = { rrtConnect: rrtConnect, shortcut: shortcut, edgeFree: edgeFree, pathLength: pathLength, rng: rng };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else root.LinkagePlanner = api;
+  else root.CobotLabPlanner = api;
 })(typeof window !== "undefined" ? window : this);

@@ -1,4 +1,4 @@
-/* Linkage — motion planning core (trajectories).
+/* Cobot Lab — motion planning core (trajectories).
  *
  * Pure functions on top of kinematics.js; no DOM. Produces time-parameterised trajectories:
  *   planJoint    — MoveJ: all joints move together and finish together, each with a
@@ -7,11 +7,11 @@
  *                  solved by IK at every step; retimed if any joint would exceed its limits,
  *                  rejected if the path is unreachable, collides, or flips through a singularity.
  *   planCircular — MoveC: an arc through a via point to an end point, same machinery.
- * Browser global window.LinkageMotion, or CommonJS.
+ * Browser global window.CobotLabMotion, or CommonJS.
  */
 (function (root) {
   "use strict";
-  var K = (typeof module !== "undefined" && module.exports) ? require("./kinematics.js") : root.LinkageKin;
+  var K = (typeof module !== "undefined" && module.exports) ? require("./kinematics.js") : root.CobotLabKin;
 
   // ---------------------------------------------------------------- trapezoidal profiles
   // Minimum time to cover distance D starting and ending at rest.
@@ -228,5 +228,5 @@
     circleThrough: circleThrough, matToQuat: matToQuat, quatToRot: quatToRot, slerp: slerp, quatAngle: quatAngle, poseOf: poseOf
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else root.LinkageMotion = api;
+  else root.CobotLabMotion = api;
 })(typeof window !== "undefined" ? window : this);

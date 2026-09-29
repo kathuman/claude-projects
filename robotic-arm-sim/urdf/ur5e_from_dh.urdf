@@ -4,8 +4,8 @@
      origin is the previous DH link's fixed part Tz(d)·Tx(a)·Rx(alpha); every joint turns about
      its local z. The published centres of mass are given in DH link frames (at the far end of
      each link); here they are transformed into the URDF link frames (at the joint) by that same
-     fixed part, c_urdf = Tz(d)·Tx(a)·Rx(alpha)·c_dh. Linkage uses it to check that its generic URDF path reproduces the analytic
-     UR5e model exactly. Written for Linkage (https://github.com/kathuman/claude-projects). -->
+     fixed part, c_urdf = Tz(d)·Tx(a)·Rx(alpha)·c_dh. Cobot Lab uses it to check that its generic URDF path reproduces the analytic
+     UR5e model exactly. Written for Cobot Lab (https://github.com/kathuman/claude-projects). -->
 <robot name="ur5e_from_dh">
   <link name="base_link"/>
   <link name="shoulder_link"><inertial><origin xyz="0 -0.00193 0.13689"/><mass value="3.761"/></inertial></link>

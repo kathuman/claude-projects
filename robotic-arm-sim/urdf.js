@@ -1,18 +1,18 @@
-/* Linkage — URDF import (6-joint serial arms).
+/* Cobot Lab — URDF import (6-joint serial arms).
  *
  * A small, dependency-free URDF reader (works in the browser and under Node): parses the
  * XML, walks the kinematic tree from the root link along the branch with the most moving
- * joints, and returns a Linkage robot model with a generic joint chain:
+ * joints, and returns a Cobot Lab robot model with a generic joint chain:
  *   chain.joints[i] = { name, origin (4x4 fixed transform before the joint), axis, lo, hi }
  *   chain.flange    = fixed transform from the 6th joint's child link to the tool flange
  *                     (the frame of a link named tool0 / flange / ee_link if the file has one)
  * plus masses and centres of mass from <inertial>, limits from <limit>. Meshes are not loaded:
- * Linkage draws the links as capsules between the joints.
- * Browser global window.LinkageURDF, or CommonJS.
+ * Cobot Lab draws the links as capsules between the joints.
+ * Browser global window.CobotLabURDF, or CommonJS.
  */
 (function (root) {
   "use strict";
-  var K = (typeof module !== "undefined" && module.exports) ? require("./kinematics.js") : root.LinkageKin;
+  var K = (typeof module !== "undefined" && module.exports) ? require("./kinematics.js") : root.CobotLabKin;
 
   // ---- a tiny XML reader: elements with attributes and children (text is ignored)
   function parseXML(text) {
@@ -74,11 +74,11 @@
     }
     var path = best(rootLink).path;
     var moving = path.filter(function (j) { return MOVING[j.type]; });
-    if (moving.length !== 6) throw new Error("Linkage imports 6-joint arms; this chain has " + moving.length + " revolute joints");
+    if (moving.length !== 6) throw new Error("Cobot Lab imports 6-joint arms; this chain has " + moving.length + " revolute joints");
     // prismatic joints inside the arm aren't supported (after joint 6 they're gripper fingers: ignored)
     var i6p = path.indexOf(moving[5]);
     if (path.slice(0, i6p).some(function (j) { return j.type === "prismatic" || j.type === "floating" || j.type === "planar"; })) {
-      throw new Error("the arm has a prismatic/floating joint — Linkage handles arms made of revolute joints");
+      throw new Error("the arm has a prismatic/floating joint — Cobot Lab handles arms made of revolute joints");
     }
     path = path.slice(0, i6p + 1);
 
@@ -143,5 +143,5 @@
 
   var api = { parseURDF: parseURDF, parseXML: parseXML };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else root.LinkageURDF = api;
+  else root.CobotLabURDF = api;
 })(typeof window !== "undefined" ? window : this);

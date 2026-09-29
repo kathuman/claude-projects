@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <!-- A generic 6-axis industrial-style arm with a spherical wrist (the last three axes meet
-     at one point), unlike the UR's offset wrist. Made up for Linkage as a demonstration of URDF
+     at one point), unlike the UR's offset wrist. Made up for Cobot Lab as a demonstration of URDF
      import with numerical inverse kinematics; not a model of any specific product. The two
      prismatic finger joints show that a gripper branch after the wrist is ignored.
-     Written for Linkage (https://github.com/kathuman/claude-projects). -->
+     Written for Cobot Lab (https://github.com/kathuman/claude-projects). -->
 <robot name="spherical_wrist_6r">
   <link name="base"><inertial><origin xyz="0 0 0.05"/><mass value="10"/></inertial></link>
   <link name="turret"><inertial><origin xyz="0.05 0 0.22"/><mass value="6"/></inertial></link>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Linkage — Robotic Arm Simulator</title>
+  <title>Cobot Lab — Robotic Arm Simulator</title>
   <meta name="description" content="A real-time 3D simulator of a 6-axis collaborative robot arm with real UR5e-class proportions: tested forward kinematics, collision guarding against the table and itself, live tool-pose telemetry and a singularity meter, and a rigid-body physics bench. By kathuman." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦾</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,7 +39,7 @@ body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body); 
   background:linear-gradient(180deg,#0d3a63,#0a2f52);
 }
 .brand{display:flex; align-items:baseline; gap:10px; min-width:0;}
-.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em; color:var(--ink);}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em; color:var(--ink); white-space:nowrap; flex:none;}
 .brand .mark span{color:var(--accent);}
 .brand .ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:5px; padding:1px 6px; letter-spacing:.02em;}
 .brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -289,6 +289,13 @@ footer.foot .consult{color:var(--ink);}
   .plot{bottom:44px;}
   .plot canvas{height:110px;}
 }
+@media (max-width:480px){
+  /* phone: room for the name next to the buttons (version and credit are also in the footer) */
+  .brand .mark{font-size:17px;}
+  .brand .ver, .brand .sub{display:none;}
+  .back-link .lbl{display:none;}
+  .header-actions{gap:6px;}
+}
 </style>
 </head>
 <body>
@@ -296,14 +303,14 @@ footer.foot .consult{color:var(--ink);}
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <div class="mark">LINK<span>AGE</span></div>
+      <div class="mark">COBOT<span> LAB</span></div>
       <span class="ver" id="ver" title="App version"></span>
-      <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"> · 6-AXIS COBOT · KINEMATICS + PHYSICS BENCH</span></div>
+      <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"> · 6-AXIS ARM · KINEMATICS + PHYSICS BENCH</span></div>
     </div>
     <div class="header-actions">
       <button class="back-link tut-launch" id="btn-tutorial" type="button">▸ Tutorial</button>
       <div class="tut-hint" id="tut-hint" hidden>New here? Take the guided tour — Basic, Intermediate or Advanced. <button type="button" id="tut-hint-x" aria-label="Dismiss">×</button></div>
-      <a class="back-link" href="../">← Projects</a>
+      <a class="back-link" href="../" aria-label="Projects">← <span class="lbl">Projects</span></a>
       <div class="status-pill" id="status-pill"><span class="dot"></span><span id="status-text">IDLE</span></div>
     </div>
   </header>
@@ -404,10 +411,10 @@ footer.foot .consult{color:var(--ink);}
         </div>
         <button class="btn" id="ros-connect">Connect</button>
         <div class="switch-row">
-          <span class="name">Follow joint commands<small>Subscribe to /linkage/joint_command (sensor_msgs/JointState)</small></span>
+          <span class="name">Follow joint commands<small>Subscribe to /cobot_lab/joint_command (sensor_msgs/JointState)</small></span>
           <button class="switch" id="ros-follow" role="switch" aria-checked="false" aria-label="Follow ROS joint commands"><span class="knob"></span></button>
         </div>
-        <p class="note" id="ros-status">Not connected. Run <code>rosbridge_server</code> and connect to publish /joint_states and /linkage/tcp_pose at 20 Hz.</p>
+        <p class="note" id="ros-status">Not connected. Run <code>rosbridge_server</code> and connect to publish /joint_states and /cobot_lab/tcp_pose at 20 Hz.</p>
       </div>
 
       <div class="rail-section">
@@ -542,7 +549,7 @@ footer.foot .consult{color:var(--ink);}
   </main>
 
   <footer class="foot">
-    <span class="consult">Linkage <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span class="consult">Cobot Lab <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
     <span>UR e-Series kinematics &amp; dynamics (published parameters) · three.js + Rapier</span>
   </footer>
 </div>
@@ -584,17 +591,18 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   //   5.1.0  rendering on three.js r186 (ES modules via an import map): image-based lighting
   //          from a studio environment, PBR Neutral tone mapping, ground-truth ambient occlusion
   //   5.2.0  ROS bridge: rosbridge v2 JSON over WebSocket — publishes /joint_states and
-  //          /linkage/tcp_pose, optionally follows /linkage/joint_command (ROS 1 or ROS 2)
+  //          /cobot_lab/tcp_pose, optionally follows /cobot_lab/joint_command (ROS 1 or ROS 2)
   //   5.3.0  URDF import for 6-revolute-joint arms: generic chain kinematics, numerical IK
   //          (damped least squares), capsule drawing/collisions, masses from <inertial>; two
   //          sample URDFs (a spherical-wrist arm, and the UR5e written from its DH table)
   //   5.4.0  guided tutorial: Basic / Intermediate / Advanced levels with highlighted controls,
   //          step tasks that tick themselves off, "do it for me", saved progress, written guides
-  var APP_VERSION = "5.4.0";
+  //   5.5.0  renamed from Linkage to Cobot Lab (ROS topics now /cobot_lab/…, programs cobot-lab-program)
+  var APP_VERSION = "5.5.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
-  var K = window.LinkageKin, MO = window.LinkageMotion, PL = window.LinkagePlanner, ROBOT = K.UR5E;
+  var K = window.CobotLabKin, MO = window.CobotLabMotion, PL = window.CobotLabPlanner, ROBOT = K.UR5E;
   // event counters the tutorial watches ("a Move L finished", "the guard blocked a move", …)
   var tutFlags = {};
   function tutMark(k){ tutFlags[k] = (tutFlags[k] || 0) + 1; }
@@ -1991,7 +1999,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   }
   function applyURDF(text, key, keepPose){
     var m;
-    try { m = window.LinkageURDF.parseURDF(text); } catch (e) { modelSel.value = modelKey; showAlert('URDF not loaded: ' + e.message); return false; }
+    try { m = window.CobotLabURDF.parseURDF(text); } catch (e) { modelSel.value = modelKey; showAlert('URDF not loaded: ' + e.message); return false; }
     if (key === 'urdf-upload'){
       var opt = modelSel.querySelector('option[value="urdf-upload"]');
       if (!opt){ opt = document.createElement('option'); opt.value = 'urdf-upload'; modelSel.querySelector('optgroup').appendChild(opt); }
@@ -2128,18 +2136,18 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   function progToJSON(){
-    return { format: 'linkage-program', version: 1, robot: ROBOT.name, app: 'Linkage ' + APP_VERSION,
+    return { format: 'cobot-lab-program', version: 1, robot: ROBOT.name, app: 'Cobot Lab ' + APP_VERSION,
       waypoints: prog.map(function(w, i){ return { name: 'P' + (i + 1), joints_deg: w.q.map(function(v){ return +(v / DEG).toFixed(3); }), move: w.kind === 'L' ? 'MoveL' : 'MoveJ', gripper: w.grip || 'none', speed_pct: w.speed }; }) };
   }
   function progFromJSON(o){
-    if (!o || o.format !== 'linkage-program' || !Array.isArray(o.waypoints)) throw new Error('not a Linkage program');
+    if (!o || (o.format !== 'cobot-lab-program' && o.format !== 'linkage-program') || !Array.isArray(o.waypoints)) throw new Error('not a Cobot Lab program');
     return o.waypoints.map(function(w){
       if (!Array.isArray(w.joints_deg) || w.joints_deg.length !== 6) throw new Error('bad waypoint');
       return { q: w.joints_deg.map(function(d){ return +d * DEG; }), kind: w.move === 'MoveL' ? 'L' : 'J', grip: w.gripper === 'open' || w.gripper === 'close' ? w.gripper : '', speed: clamp(+w.speed_pct || 60, 10, 100) };
     });
   }
   document.getElementById('prog-export').addEventListener('click', function(){
-    download('linkage-program.json', JSON.stringify(progToJSON(), null, 2), 'application/json');
+    download('cobot-lab-program.json', JSON.stringify(progToJSON(), null, 2), 'application/json');
   });
   var fileIn = document.getElementById('prog-file');
   document.getElementById('prog-import').addEventListener('click', function(){ fileIn.click(); });
@@ -2156,7 +2164,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   // URScript for a real UR controller: joint moves as movej, linear moves as movel to the
   // controller's own forward kinematics of the joint target (no frame-convention guesswork)
   function toURScript(){
-    var L = ['def linkage_program():', '  # Exported from Linkage ' + APP_VERSION + ' for a ' + ROBOT.name + ' — ' + prog.length + ' waypoints.',
+    var L = ['def cobot_lab_program():', '  # Exported from Cobot Lab ' + APP_VERSION + ' for a ' + ROBOT.name + ' — ' + prog.length + ' waypoints.',
       '  # Speeds are scaled from the program. Replace the gripper comments with your gripper\'s URCap calls.'];
     if (ROBOT.chain) L.splice(2, 0, '  # NOTE: this program was made for an imported URDF arm, not a UR — check the joint values suit your controller.');
     prog.forEach(function(w, i){
@@ -2166,12 +2174,12 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
       if (w.grip === 'open') L.push('  # gripper: open');
       if (w.grip === 'close') L.push('  # gripper: close (grip)');
     });
-    L.push('end', '', 'linkage_program()');
+    L.push('end', '', 'cobot_lab_program()');
     return L.join('\n') + '\n';
   }
   document.getElementById('prog-urscript').addEventListener('click', function(){
     if (!prog.length) return showAlert('The program is empty');
-    download('linkage_program.script', toURScript(), 'text/plain');
+    download('cobot_lab_program.script', toURScript(), 'text/plain');
   });
 
   // ---- share links: robot, pose, program and obstacles packed into the URL (#s=…)
@@ -2211,8 +2219,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   // ================================================================ ROS BRIDGE
   // Talks the rosbridge v2 JSON protocol over a WebSocket (no library needed): advertises and
   // publishes sensor_msgs/JointState on /joint_states (UR joint names; effort = the holding
-  // torques) and geometry_msgs/PoseStamped on /linkage/tcp_pose at 20 Hz, and optionally
-  // follows sensor_msgs/JointState commands on /linkage/joint_command. Commands go through
+  // torques) and geometry_msgs/PoseStamped on /cobot_lab/tcp_pose at 20 Hz, and optionally
+  // follows sensor_msgs/JointState commands on /cobot_lab/joint_command. Commands go through
   // the same collision-guarded, speed-limited servo as the drag handle.
   var UR_JOINT_NAMES = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'];
   var ros = { ws: null, open: false, ver: 2, timer: 0, follow: false, sent: 0, got: 0, lastQ: null, lastT: 0 };
@@ -2235,15 +2243,15 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     ros.ws.onopen = function(){
       ros.open = true; ros.sent = 0; ros.got = 0;
       rosBtn.textContent = 'Disconnect';
-      rosSend({ op: 'advertise', id: 'linkage_js', topic: '/joint_states', type: rosType('sensor_msgs/JointState') });
-      rosSend({ op: 'advertise', id: 'linkage_tcp', topic: '/linkage/tcp_pose', type: rosType('geometry_msgs/PoseStamped') });
+      rosSend({ op: 'advertise', id: 'cobot_lab_js', topic: '/joint_states', type: rosType('sensor_msgs/JointState') });
+      rosSend({ op: 'advertise', id: 'cobot_lab_tcp', topic: '/cobot_lab/tcp_pose', type: rosType('geometry_msgs/PoseStamped') });
       if (ros.follow) rosSubscribe();
       ros.timer = setInterval(rosPublish, 50);
-      rosSay('Connected to ' + url + ' (ROS ' + ros.ver + ') — publishing /joint_states and /linkage/tcp_pose.', 'ok');
+      rosSay('Connected to ' + url + ' (ROS ' + ros.ver + ') — publishing /joint_states and /cobot_lab/tcp_pose.', 'ok');
     };
     ros.ws.onmessage = function(ev){
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-      if (m.op === 'publish' && m.topic === '/linkage/joint_command' && m.msg) rosCommand(m.msg);
+      if (m.op === 'publish' && m.topic === '/cobot_lab/joint_command' && m.msg) rosCommand(m.msg);
     };
     ros.ws.onerror = function(){ rosSay('Could not reach the bridge at ' + url + '. Is rosbridge_server running?', 'bad'); };
     ros.ws.onclose = function(){
@@ -2252,7 +2260,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
       if (was) rosSay('Disconnected (' + ros.sent + ' messages sent, ' + ros.got + ' commands received).');
     };
   }
-  function rosSubscribe(){ rosSend({ op: 'subscribe', id: 'linkage_cmd', topic: '/linkage/joint_command', type: rosType('sensor_msgs/JointState') }); }
+  function rosSubscribe(){ rosSend({ op: 'subscribe', id: 'cobot_lab_cmd', topic: '/cobot_lab/joint_command', type: rosType('sensor_msgs/JointState') }); }
   function rosPublish(){
     if (!ros.open || !lastFK) return;
     var now = performance.now() / 1000, q = state.q.slice();
@@ -2261,7 +2269,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     var st = rosStamp();
     rosSend({ op: 'publish', topic: '/joint_states', msg: { header: { stamp: st, frame_id: '' }, name: ROBOT.jointNames || UR_JOINT_NAMES, position: q, velocity: vel, effort: K.gravityTorques(q, ROBOT, currentPayload()) } });
     var T = lastFK.tcp, qq = MO.matToQuat(T);
-    rosSend({ op: 'publish', topic: '/linkage/tcp_pose', msg: { header: { stamp: st, frame_id: 'base_link' }, pose: { position: { x: T[3], y: T[7], z: T[11] }, orientation: { x: qq[1], y: qq[2], z: qq[3], w: qq[0] } } } });
+    rosSend({ op: 'publish', topic: '/cobot_lab/tcp_pose', msg: { header: { stamp: st, frame_id: 'base_link' }, pose: { position: { x: T[3], y: T[7], z: T[11] }, orientation: { x: qq[1], y: qq[2], z: qq[3], w: qq[0] } } } });
     ros.sent += 2;
   }
   // a JointState command: positions matched by joint name (or taken in order if unnamed)
@@ -2283,7 +2291,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   document.getElementById('ros-follow').addEventListener('click', function(){
     ros.follow = !ros.follow;
     this.classList.toggle('on', ros.follow); this.setAttribute('aria-checked', String(ros.follow));
-    if (ros.open){ if (ros.follow) rosSubscribe(); else rosSend({ op: 'unsubscribe', id: 'linkage_cmd', topic: '/linkage/joint_command' }); }
+    if (ros.open){ if (ros.follow) rosSubscribe(); else rosSend({ op: 'unsubscribe', id: 'cobot_lab_cmd', topic: '/cobot_lab/joint_command' }); }
   });
 
   // ================================================================ TUTORIAL
@@ -2352,7 +2360,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
       });
     }
   };
-  var tutorial = window.LinkageTutorial ? window.LinkageTutorial.init(tutApp) : null;
+  var tutorial = window.CobotLabTutorial ? window.CobotLabTutorial.init(tutApp) : null;
   document.getElementById('btn-tutorial').addEventListener('click', function(){ hideTutHint(); if (tutorial) tutorial.open(); });
   var tutHint = document.getElementById('tut-hint');
   function hideTutHint(){ tutHint.hidden = true; try { localStorage.setItem('linkage-tutorial-seen', '1'); } catch (e) {} }
@@ -2470,7 +2478,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   })();
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { tutorial: function(){ return tutorial; }, tutFlags: function(){ return Object.assign({}, tutFlags); }, loadURDFText: function(t){ return applyURDF(t, 'urdf-upload'); }, home: function(){ return HOME.slice(); }, sites: function(){ return [SITE_A, SITE_B]; }, ros: function(){ return { open: ros.open, sent: ros.sent, got: ros.got }; }, three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+  window.cobotLabDebug = { tutorial: function(){ return tutorial; }, tutFlags: function(){ return Object.assign({}, tutFlags); }, loadURDFText: function(t){ return applyURDF(t, 'urdf-upload'); }, home: function(){ return HOME.slice(); }, sites: function(){ return [SITE_A, SITE_B]; }, ros: function(){ return { open: ros.open, sent: ros.sent, got: ros.got }; }, three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
       var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
       o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
       return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
