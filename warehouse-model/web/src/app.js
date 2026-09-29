@@ -21,7 +21,10 @@
   //   5.0.0  discrete-event simulation of the day (random truck arrivals over an hourly profile, yard
   //          queues, doors held by slow loading, lift-truck tasks from the per-slot times), 30 days of
   //          Monte Carlo with ranges beside the analytic results, hourly chart, 3D playback of a day
-  const APP_VERSION = "5.0.0";
+  //   6.0.0  decision support: annual total cost of ownership (capital recovery, drivers, running
+  //          cost), saved scenarios compared side by side, share links, JSON/CSV export, a ±10%
+  //          tornado and parameter sweeps, and an optimiser for the cheapest design meeting targets
+  const APP_VERSION = "6.0.0";
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
@@ -68,10 +71,22 @@
     buildRail();
     viz = new window.WH.Visualization(stageEl);
     viz.onSelect(renderInspector);
+    // a share link (#d=…) carries the parameters that differ from the defaults
+    const m = location.hash.match(/^#d=([A-Za-z0-9_-]+)/);
+    if (m) {
+      try {
+        const txt = decodeURIComponent(escape(atob(m[1].replace(/-/g, "+").replace(/_/g, "/"))));
+        const o = JSON.parse(txt), vals = {};
+        for (const k in model.defaults) vals[k] = model.defaults[k];
+        for (const k in o) vals[k] = o[k];
+        model.setMany(vals);
+      } catch (e) { console.warn("Ignoring a malformed share link"); }
+    }
     viz._onQuality = function (q) {
       if (q === "low") document.querySelector(".caption").textContent = "Shadows switched off to keep the view smooth on this device · drag to orbit · right-drag to pan · scroll to zoom";
     };
     recompute();
+    if (window.WH.initDecisions) window.WH.initDecisions();
     window.addEventListener("resize", function () { viz.resize(); });
     viz.resize();
     requestAnimationFrame(tick);
@@ -244,7 +259,9 @@
     if (viz) viz.stopDay();
     if (viz && viz.mode === "live") viz.rebuildLive(p, results);
     scheduleSimulation();
+    recomputeHooks.forEach(function (f) { f(results); });
   }
+  const recomputeHooks = [];
 
   // -------------------------------------------------------------------
   // Simulated day — Monte Carlo over many random days, re-run shortly
@@ -375,7 +392,9 @@
     kpiEl.appendChild(kpiTile("Truck Wait (Peak)", isFinite(wait) ? (wait < 1 ? "<1" : Math.round(wait)) + " min" : "no limit",
       (t.inbound.trucksPerDay + t.outbound.trucksPerDay).toFixed(0) + " trucks/day · " + Math.round(Math.max(t.inbound.pWait, t.outbound.pWait) * 100) + "% wait",
       !isFinite(wait) || wait > 60 ? "critical" : wait > 30 ? "warning" : null, "wait"));
-    kpiEl.appendChild(kpiTile("Total Cost", "$" + (r.cost.totalCost / 1e6).toFixed(1) + "M", "$" + n(r.cost.costPerPosition) + " / position", null, "cost"));
+    kpiEl.appendChild(kpiTile("Capital Cost", "$" + (r.cost.capitalCost / 1e6).toFixed(1) + "M", "build $" + (r.cost.totalCost / 1e6).toFixed(1) + "M + trucks $" + (r.cost.fleetCost / 1e6).toFixed(2) + "M", null, "cost"));
+    kpiEl.appendChild(kpiTile("Annual Cost", "$" + (r.cost.annualTCO / 1e6).toFixed(2) + "M", "total cost of ownership / year", null, "tco"));
+    kpiEl.appendChild(kpiTile("Cost per Move", isFinite(r.cost.costPerMove) ? "$" + r.cost.costPerMove.toFixed(2) : "—", "per pallet in or out", null, "permove"));
     kpiEl.appendChild(kpiTile("Footprint", areaText(r.cost.footprint), (r.cost.footprint / 10000).toFixed(2) + " hectares", null, "footprint"));
   }
 
@@ -437,6 +456,7 @@
   function renderCharts(r) {
     chartsEl.innerHTML = "";
     chartsEl.appendChild(costBreakdownChart(r));
+    chartsEl.appendChild(annualCostChart(r));
     chartsEl.appendChild(capacityBarChart(r));
     chartsEl.appendChild(cycleChart(r));
   }
@@ -480,6 +500,17 @@
       { label: "Building", value: r.cost.buildingCost, color: "#6da7ec" },
       { label: "Docks", value: r.cost.dockCost, color: "#9ec5f4" }
     ], r.cost.totalCost, function (v) { return "$" + Math.round(v / 1000).toLocaleString("en-US") + "k"; });
+    els.forEach(function (e) { wrap.appendChild(e); });
+    return wrap;
+  }
+
+  function annualCostChart(r) {
+    const c = r.cost, wrap = card("Annual Cost of Ownership ($" + (c.annualTCO / 1e6).toFixed(2) + "M / year)");
+    const els = stackedBar([
+      { label: "Capital", value: c.annualCapital, color: "#3987e5" },
+      { label: "Drivers", value: c.labour, color: "#6da7ec" },
+      { label: "Truck running", value: c.running, color: "#9ec5f4" }
+    ], c.annualTCO, function (v) { return "$" + Math.round(v / 1000).toLocaleString("en-US") + "k"; });
     els.forEach(function (e) { wrap.appendChild(e); });
     return wrap;
   }
@@ -611,5 +642,8 @@
   });
 
   // test hook (headless browser tests)
+  // the interface decisions.js works through
+  window.WH.app = { model: model, results: function () { return results; }, onRecompute: function (f) { recomputeHooks.push(f); }, version: APP_VERSION };
+
   window.warehouseDebug = { model: model, results: function () { return results; }, version: APP_VERSION, viz: function () { return viz; }, sim: function () { return simResult; } };
 })();

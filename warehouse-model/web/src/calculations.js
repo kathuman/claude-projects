@@ -429,24 +429,56 @@
   }
 
   // ---------------------------------------------------------------------
-  // 8. Cost — illustrative order-of-magnitude, not a quotation
+  // 8. Cost — build cost, and the total cost of ownership per year
   // ---------------------------------------------------------------------
-  function computeCost(layout, capacity, p) {
-    const t = p.wall_thickness / 1000;
+  // Illustrative order-of-magnitude figures, not a quotation. Up-front costs
+  // become equivalent annual costs with the capital recovery factor
+  // CRF(r, n) = r(1+r)^n / ((1+r)^n − 1) over each asset's life; the lift-truck
+  // fleet is crewed for the whole operating day and costs energy and upkeep
+  // for every hour it works.
+  const ASSET_LIFE = { building: 30, racking: 20, docks: 20, trucks: 8 };
+  function crf(ratePct, years) {
+    const r = ratePct / 100;
+    if (r <= 0) return 1 / years;
+    const g = Math.pow(1 + r, years);
+    return r * g / (g - 1);
+  }
+  function computeCost(layout, capacity, p, travel) {
+    const t = p.wall_thickness / 1000, rt = layout.rackType;
     const footprint = (p.warehouse_length + 2 * t) * (p.warehouse_width + 2 * t);
     const rackingCost = capacity.storageCapacity * p.cost_per_rack_position;
     const buildingCost = footprint * p.cost_per_sqm_building;
     const dockCost = (p.num_receiving_docks + p.num_shipping_docks) * p.cost_per_dock;
-    const totalCost = rackingCost + buildingCost + dockCost;
+    const totalCost = rackingCost + buildingCost + dockCost;                 // build cost (without the trucks)
     const costPerPosition = capacity.storageCapacity > 0 ? totalCost / capacity.storageCapacity : NaN;
+
+    const fleet = travel ? travel.forkliftsNeeded : 0, truckPrice = rt.truck_cost || 0;
+    const fleetCost = fleet * truckPrice;
+    const capitalCost = totalCost + fleetCost;
+    const days = p.operating_days_per_year || 250, rate = p.discount_rate === undefined ? 7 : p.discount_rate;
+    const annualCapital = buildingCost * crf(rate, ASSET_LIFE.building) + (rackingCost + dockCost) * crf(rate, ASSET_LIFE.racking) + fleetCost * crf(rate, ASSET_LIFE.trucks);
+    const labour = fleet * p.operating_hours_per_day * days * (p.labour_cost_per_hour || 0);
+    const running = (travel ? travel.dailyWorkHours : 0) * days * (p.truck_running_cost_per_hour || 0);
+    const annualTCO = annualCapital + labour + running;
+    const movesPerYear = p.daily_throughput_pallets * days;
+    const costPerMove = movesPerYear > 0 ? annualTCO / movesPerYear : NaN;
+    const costPerPositionYear = capacity.storageCapacity > 0 ? annualTCO / capacity.storageCapacity : NaN;
+
     return {
       footprint, rackingCost, buildingCost, dockCost, totalCost, costPerPosition,
+      fleetCost, capitalCost, annualCapital, labour, running, annualTCO, movesPerYear, costPerMove, costPerPositionYear,
       trace: [
         { label: "Building footprint", expr: "(length + 2 × wall) × (width + 2 × wall)", value: int(footprint) + " m²" },
         { label: "Racking cost", expr: "storage_capacity × cost_per_position", value: "$" + int(rackingCost) },
         { label: "Building shell cost", expr: "footprint × cost_per_sqm", value: "$" + int(buildingCost) },
         { label: "Dock cost", expr: "total_docks × cost_per_dock", value: "$" + int(dockCost) },
-        { label: "Total cost", expr: "racking + building + docks", value: "$" + int(totalCost) }
+        { label: "Build cost", expr: "racking + building + docks", value: "$" + int(totalCost) },
+        { label: "Lift-truck fleet", expr: "trucks × price of a " + rt.truck, value: fleet + " × $" + int(truckPrice) + " = $" + int(fleetCost) },
+        { label: "Annual capital cost", expr: "Σ cost × CRF(" + rate + "%, life) — building " + ASSET_LIFE.building + " y, racking/docks " + ASSET_LIFE.racking + " y, trucks " + ASSET_LIFE.trucks + " y", value: "$" + int(annualCapital) },
+        { label: "Drivers", expr: "trucks × hours/day × days/year × labour_cost_per_hour", value: "$" + int(labour) },
+        { label: "Truck running cost", expr: "working truck-hours/day × days × running cost/h", value: "$" + int(running) },
+        { label: "Total cost of ownership", expr: "annual capital + drivers + running", value: "$" + int(annualTCO) + " / year" },
+        { label: "Cost per pallet move", expr: "TCO / (throughput × days)", value: "$" + fmt(costPerMove, 2) }
       ]
     };
   }
@@ -462,7 +494,7 @@
     const weights = moveWeights(p, grid);
     const travel = computeTravel(layout, p, grid, weights);
     const throughput = computeThroughput(p);
-    const cost = computeCost(layout, capacity, p);
+    const cost = computeCost(layout, capacity, p, travel);
 
     const warnings = layout.warnings.slice();
     if (utilization.status === "critical") {
@@ -489,7 +521,7 @@
 
   return {
     computeLayout, computeCapacity, computeUtilization, computeTravel, computeThroughput, computeCost, computeAll,
-    doorSets, aisleOf, slotGrid, slotTimes, slotTimeGrid, moveWeights, sampler, dcContext, dcPair, erlangC, mulberry32,
+    crf, ASSET_LIFE, doorSets, aisleOf, slotGrid, slotTimes, slotTimeGrid, moveWeights, sampler, dcContext, dcPair, erlangC, mulberry32,
     BEAM_ALLOWANCE, ABC_BOUNDS, DC_SAMPLES, TURN_CS2
   };
 });

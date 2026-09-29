@@ -260,5 +260,23 @@ check("per-slot cycle times average to the headline cycle time (200 designs)", s
   check("saturated doors: infinite wait, critical", !isFinite(sat.inbound.waitMin) && sat.status === "critical");
 }
 
+// ---------------------------------------------------------------- v6: total cost of ownership
+{
+  check("CRF: zero rate = straight line", near(calc.crf(0, 20), 1 / 20, 1e-12));
+  check("CRF: 7% over 30 years = 0.08059", near(calc.crf(7, 30), 0.0805864, 1e-6), calc.crf(7, 30));
+  const r = calc.computeAll(base, RT), c = r.cost, L = calc.ASSET_LIFE;
+  const expectCap = c.buildingCost * calc.crf(7, L.building) + (c.rackingCost + c.dockCost) * calc.crf(7, L.racking) + c.fleetCost * calc.crf(7, L.trucks);
+  check("annual capital cost adds up", near(c.annualCapital, expectCap, 1e-6));
+  check("fleet cost = trucks × reach-truck price", c.fleetCost === r.travel.forkliftsNeeded * 45000);
+  check("drivers = trucks × hours × days × wage", near(c.labour, r.travel.forkliftsNeeded * 16 * 250 * 32, 1e-6));
+  check("TCO = capital + drivers + running", near(c.annualTCO, c.annualCapital + c.labour + c.running, 1e-6));
+  check("cost per move = TCO / annual moves", near(c.costPerMove, c.annualTCO / (800 * 250), 1e-9));
+  const wage2 = calc.computeAll(withP({ labour_cost_per_hour: 64 }), RT);
+  check("doubling the wage doubles the driver cost only", near(wage2.cost.labour, 2 * c.labour, 1e-6) && near(wage2.cost.annualCapital, c.annualCapital, 1e-6));
+  const vna = calc.computeAll(withP({ rack_type: "vna", aisle_width: 1.8 }), RT);
+  check("VNA trucks cost more per truck", vna.cost.fleetCost / vna.travel.forkliftsNeeded > c.fleetCost / r.travel.forkliftsNeeded);
+  check("TCO trace ends with cost per move", /per pallet move/.test(c.trace[c.trace.length - 1].label));
+}
+
 console.log(pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail ? 1 : 0);

@@ -72,6 +72,21 @@
     this._notify(name);
   };
 
+  // Set several parameters at once (a scenario, a share link, an optimiser result) — one notification.
+  ParameterModel.prototype.setMany = function (obj) {
+    let changed = false;
+    for (const name in obj) {
+      const def = this.schema[name], v = obj[name];
+      if (!def) continue;
+      if (def.type === "choice") { if (def.options.indexOf(v) < 0) continue; }
+      else if (typeof v !== "number" || !isFinite(v)) continue;
+      const val = def.type === "choice" ? v : Math.max(def.minimum, Math.min(def.maximum, v));
+      if (this.values[name] !== val) { this.values[name] = val; changed = true; }
+    }
+    if (changed) this._notify(null);
+    return changed;
+  };
+
   ParameterModel.prototype.resetOne = function (name) {
     this.set(name, this.defaults[name]);
   };

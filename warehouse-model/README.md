@@ -68,6 +68,8 @@ warehouse-model/
 │   │                             every door/slot/level, behaviour and warning checks
 │   ├── simulation.test.js       the simulated day: conservation, determinism, lift-truck work
 │   │                             and door waits vs the analytic model
+│   ├── optimizer.test.js        every design the optimiser returns re-checked as feasible,
+│   │                             just long enough, Pareto front, targets respected
 │   ├── parity.test.js           runs create_model.py's layout code and calculations.js on
 │   └── parity_layout.py           the same 400 random designs and requires identical rows
 │
@@ -89,6 +91,8 @@ warehouse-model/
     │   │                         and the reference GLB loader
     │   ├── blueprint.js          the dimensioned floor plan as SVG (browser + Node)
     │   ├── simulation.js         discrete-event simulation of a day + Monte Carlo (browser + Node)
+    │   ├── optimizer.js          search for the cheapest designs meeting the targets (browser + Node)
+    │   ├── decisions.js          the Decisions panel: scenarios, sensitivity, optimiser
     │   └── app.js                wires them together; owns the DOM
     └── vendor/three/             three.js r186 (ES modules, via the page's import map) with the
                                   few add-ons used: GLTFLoader, OrbitControls, RoomEnvironment
@@ -271,12 +275,25 @@ names and order specifically so a side-by-side diff stays easy.
   and a 3D playback of one day. Tests check that pallets and trucks are conserved, that lift-truck
   work per move matches the analytic model, and that door waits match the Allen–Cunneen formula
   within 30%.
+- **Total cost of ownership (v6)**: build cost (racking, building, docks) plus the lift-truck fleet
+  (price per truck type in `rack_types`), turned into an annual cost with the capital recovery
+  factor over each asset's life (building 30 years, racking and docks 20, trucks 8) at
+  `discount_rate`; plus drivers (every truck crewed for the operating day) and truck running cost
+  per working hour. Reported per year and per pallet move.
+- **Decisions (v6)**: saved scenarios recalculated side by side (best value per row highlighted),
+  share links (`#d=` + the parameters that differ from the defaults), JSON/CSV export; a ±10%
+  tornado and full-range sweeps for any result; and `web/src/optimizer.js`, which tries every rack
+  type (at or above a selectivity target) × levels × building width, sizes aisle, rack and clear
+  height, length and door counts to fit, runs each through `computeAll`, keeps designs that hold
+  the inventory and meet the peak truck-wait target with no critical warning, and ranks them by
+  annual cost with the cost/time Pareto front marked.
 
 Run the tests (Node; the parity test also needs a system Python 3, not FreeCAD):
 
 ```bash
 node warehouse-model/tests/calculations.test.js
 node warehouse-model/tests/simulation.test.js
+node warehouse-model/tests/optimizer.test.js
 node warehouse-model/tests/parity.test.js
 ```
 
@@ -293,11 +310,19 @@ node warehouse-model/tests/parity.test.js
   something changes, and turns shadows off if frames stay slow.
 - **v4** — operations: I-flow/U-flow, mid cross-aisles, ABC slotting with demand skew,
   dual-command trips, Erlang C door queues, an ABC-class 3D view.
-- **v5 (current)** — a discrete-event simulation of the day over an hourly arrival profile, with
+- **v5** — a discrete-event simulation of the day over an hourly arrival profile, with
   30-day Monte Carlo ranges beside the analytic results and a 3D playback. (Fishbone aisles were
   considered and left out: angled aisles don't fit the rectilinear row model every other part of
   the app — FreeCAD included — is built on, and their gain applies mainly to single-command trips
   from one central door.)
-- **v6** — decision support: scenarios, sensitivity, an optimiser, total cost of ownership,
-  automation alternatives.
+- **v6 (current)** — decision support: annual total cost of ownership, scenarios, share links,
+  JSON/CSV export, sensitivity (tornado + sweeps) and an optimiser. (Automated alternatives — unit-load
+  AS/RS cranes, shuttles, AMR goods-to-person — need their own travel and equipment models, e.g.
+  a crane per aisle moving horizontally and vertically at once; they are listed under "Later".)
 - **v7** — CAD/BIM and data: in-browser B-rep geometry, IFC export, SKU/order-line import.
+
+## Later
+
+- Automated storage: unit-load AS/RS (one crane per aisle, simultaneous horizontal and vertical
+  travel, taller buildings), shuttle systems and AMR goods-to-person, each with its own travel,
+  throughput and cost model.

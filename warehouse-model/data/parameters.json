@@ -11,12 +11,12 @@
     "currency": "$"
   },
   "rack_types": {
-    "$comment": "Typical planning values for each storage system (industry rules of thumb, not a specific manufacturer's data). deep = pallets stored one behind the other in a lane on each side of an aisle; selectivity = share of pallets reachable without moving another; min_aisle = narrowest working aisle for the truck that serves it; usable = planning occupancy ceiling (lanes can only hold one SKU, so deep lanes lose more space to part-empty lanes — 'honeycombing').",
-    "selective":   { "label": "Selective (single-deep)", "deep": 1, "selectivity": 1.0,  "min_aisle": 2.7, "usable": 0.90, "truck": "reach truck" },
-    "double_deep": { "label": "Double-deep",             "deep": 2, "selectivity": 0.5,  "min_aisle": 2.9, "usable": 0.85, "truck": "reach truck with telescopic forks" },
-    "vna":         { "label": "Very narrow aisle (VNA)", "deep": 1, "selectivity": 1.0,  "min_aisle": 1.6, "usable": 0.90, "truck": "guided turret truck" },
-    "push_back":   { "label": "Push-back (3 deep)",      "deep": 3, "selectivity": 0.33, "min_aisle": 3.3, "usable": 0.80, "truck": "counterbalance truck" },
-    "drive_in":    { "label": "Drive-in (5 deep)",       "deep": 5, "selectivity": 0.2,  "min_aisle": 3.5, "usable": 0.75, "truck": "counterbalance truck" }
+    "$comment": "Typical planning values for each storage system (industry rules of thumb, not a specific manufacturer's data). deep = pallets stored one behind the other in a lane on each side of an aisle; selectivity = share of pallets reachable without moving another; min_aisle = narrowest working aisle for the truck that serves it; usable = planning occupancy ceiling (lanes can only hold one SKU, so deep lanes lose more space to part-empty lanes — 'honeycombing'); truck_cost = typical price of one truck of that kind, US$ (illustrative).",
+    "selective":   { "label": "Selective (single-deep)", "deep": 1, "selectivity": 1.0,  "min_aisle": 2.7, "usable": 0.90, "truck": "reach truck" , "truck_cost": 45000 },
+    "double_deep": { "label": "Double-deep",             "deep": 2, "selectivity": 0.5,  "min_aisle": 2.9, "usable": 0.85, "truck": "reach truck with telescopic forks" , "truck_cost": 55000 },
+    "vna":         { "label": "Very narrow aisle (VNA)", "deep": 1, "selectivity": 1.0,  "min_aisle": 1.6, "usable": 0.90, "truck": "guided turret truck" , "truck_cost": 150000 },
+    "push_back":   { "label": "Push-back (3 deep)",      "deep": 3, "selectivity": 0.33, "min_aisle": 3.3, "usable": 0.80, "truck": "counterbalance truck" , "truck_cost": 35000 },
+    "drive_in":    { "label": "Drive-in (5 deep)",       "deep": 5, "selectivity": 0.2,  "min_aisle": 3.5, "usable": 0.75, "truck": "counterbalance truck" , "truck_cost": 35000 }
   },
   "parameters": {
     "warehouse_length": {
@@ -208,6 +208,26 @@
       "value": 550, "unit": "$", "minimum": 300, "maximum": 1200,
       "category": "Cost",
       "description": "Shell building cost per square metre of footprint (outside the walls) — illustrative; its growth with clear height is not modeled."
+    },
+    "operating_days_per_year": {
+      "value": 250, "unit": "count", "minimum": 200, "maximum": 365,
+      "category": "Cost",
+      "description": "Days a year the warehouse operates — turns daily work and throughput into annual costs."
+    },
+    "labour_cost_per_hour": {
+      "value": 32, "unit": "$", "minimum": 10, "maximum": 90,
+      "category": "Cost",
+      "description": "Fully loaded cost of one lift-truck driver hour (wages, benefits, supervision). Every truck in the fleet is crewed for the whole operating day."
+    },
+    "truck_running_cost_per_hour": {
+      "value": 4, "unit": "$", "minimum": 1, "maximum": 20,
+      "category": "Cost",
+      "description": "Energy, tyres and maintenance per hour a lift truck is working."
+    },
+    "discount_rate": {
+      "value": 7, "unit": "%", "minimum": 0, "maximum": 15,
+      "category": "Cost",
+      "description": "Cost of capital, used to turn up-front investment into an equivalent annual cost over each asset's life (building 30 years, racking and docks 20, lift trucks 8)."
     },
     "cost_per_dock": {
       "value": 45000, "unit": "$", "minimum": 20000, "maximum": 120000,

@@ -122,6 +122,60 @@
       </div>
     </div>
 
+    <div class="panel decisions-panel">
+      <div class="panel-head">
+        <h2>Decisions</h2>
+        <div class="dtabs" role="tablist" aria-label="Decision tools">
+          <button type="button" role="tab" class="active" aria-selected="true" data-dtab="scenarios">Scenarios</button>
+          <button type="button" role="tab" aria-selected="false" data-dtab="sensitivity">Sensitivity</button>
+          <button type="button" role="tab" aria-selected="false" data-dtab="optimizer">Optimiser</button>
+        </div>
+      </div>
+
+      <div class="dpane" id="dpane-scenarios">
+        <p class="panel-note">Save the current design as a scenario, change things, save again — every scenario is recalculated here side by side (best value in each row highlighted). Scenarios stay in this browser; a share link carries one design to anyone.</p>
+        <div class="dtools">
+          <input type="text" id="scn-name" placeholder="Scenario name" aria-label="Scenario name" maxlength="40" />
+          <button class="btn small" id="scn-save" type="button">Save current design</button>
+          <button class="btn small" id="scn-link" type="button">Copy share link</button>
+          <button class="btn small" id="scn-json" type="button">Export JSON</button>
+          <button class="btn small" id="scn-csv" type="button">Export CSV</button>
+          <span class="dmsg" id="scn-msg" role="status"></span>
+        </div>
+        <p class="hint" id="scn-empty">No saved scenarios yet — the table shows the current design only.</p>
+        <div class="table-scroll"><table class="dtable" id="scn-table"></table></div>
+      </div>
+
+      <div class="dpane" id="dpane-sensitivity" hidden>
+        <p class="panel-note">Which inputs matter most? The tornado moves each input 10% down and up (one at a time) and shows how far the chosen result moves; the sweep runs one input across its whole range.</p>
+        <div class="dtools">
+          <label>Result <select id="sens-kpi" class="choice"></select></label>
+          <label>Sweep input <select id="sens-param" class="choice"></select></label>
+        </div>
+        <div class="sens-grid">
+          <div id="sens-tornado"></div>
+          <div id="sens-sweep"></div>
+        </div>
+      </div>
+
+      <div class="dpane" id="dpane-optimizer" hidden>
+        <p class="panel-note">Finds the cheapest designs (annual cost of ownership) that hold the current inventory within each rack type's planning ceiling and keep the peak-hour truck wait under a target, for the current throughput, peak, flow, slotting and costs. It tries every rack type, number of levels and building width; aisle width, rack and clear height, length and door counts are then sized to fit. Apply any result to explore it.</p>
+        <div class="dtools">
+          <label>Max. truck wait at the peak <input type="number" id="opt-wait" value="15" min="0.5" max="120" step="0.5" aria-label="Maximum truck wait at the peak hour, minutes" /> min</label>
+          <label>Selectivity at least <select id="opt-sel" class="choice">
+            <option value="1">100% (every pallet reachable)</option>
+            <option value="0.5">50% (allows double-deep)</option>
+            <option value="0">any (allows push-back, drive-in)</option>
+          </select></label>
+          <button class="btn small" id="opt-run" type="button">Find designs</button>
+        </div>
+        <div class="opt-progress"><div id="opt-bar"></div></div>
+        <p class="dmsg" id="opt-status" role="status"></p>
+        <div class="table-scroll"><table class="dtable" id="opt-table"></table></div>
+        <div id="opt-plot"></div>
+      </div>
+    </div>
+
     <div class="lower-grid">
       <div class="panel">
         <h2>Visual Analytics</h2>
@@ -205,6 +259,8 @@
             <li><b>Slotting.</b> Switch <code>storage_policy</code> to ABC and open the <b>ABC class</b> view. How much does the time per move drop? Now switch <code>flow_layout</code> to U-flow — why does ABC suddenly save much more?</li>
             <li><b>Dual command.</b> With I-flow, raise <code>dual_command_share</code>: the time per move gets <em>worse</em>. Read the design note, switch to U-flow and try again. Then add two <code>mid_cross_aisles</code> in a 200 m building: what do you gain and what do you give up?</li>
             <li><b>Queues before capacity.</b> Double <code>daily_throughput_pallets</code>. Door utilization is still under 100%, so why does <b>Truck Wait</b> jump? Add one door and watch the wait fall far more than the utilization.</li>
+            <li><b>What should we build?</b> Open <b>Decisions → Optimiser</b> and press <b>Find designs</b>. Why does the cheapest design use tall racks and a small footprint? Allow selectivity down to "any": what wins, and what would you have to know about the products before choosing it?</li>
+            <li><b>What matters most?</b> In <b>Sensitivity</b>, look at annual cost: drivers' wages usually top the tornado — which is why fewer, faster truck trips (slotting, U-flow) are worth more than cheaper racking.</li>
             <li><b>Averages hide queues.</b> Raise <code>peak_hour_factor</code> to 2.5. The daily totals don't change, but look at the <b>Simulated Day</b>: the busiest hour's wait and the yard queue grow. Then set <code>sim_lift_trucks</code> to one fewer than recommended — work spills past closing, and outbound trucks wait at their doors for pallets.</li>
             <li><b>Going up.</b> Add a level (5 levels) without changing the rack height. What warning appears? Raise <code>rack_height</code> until it clears — and watch the cycle time and the clear-height check.</li>
           </ol>
@@ -237,8 +293,9 @@
           <p>
             <code>web/src/simulation.js</code> is a discrete-event simulation of the day that takes every lift-truck task
             time from the same per-slot formulas; its tests check that lift-truck work per pallet matches the analytic model
-            and that door waits match the queueing formula. Next on the roadmap: scenarios with optimisation and total cost
-            of ownership, and CAD/BIM export — see the project README.
+            and that door waits match the queueing formula. <code>web/src/optimizer.js</code> searches designs through the
+            same model; its tests re-check every design it returns. Next on the roadmap: CAD/BIM export and importing real
+            order data — see the project README.
           </p>
         </div>
       </details>
@@ -260,6 +317,8 @@
 <script type="module" src="src/simulation.js"></script>
 <script type="module" src="src/visualization.js"></script>
 <script type="module" src="src/blueprint.js"></script>
+<script type="module" src="src/optimizer.js"></script>
+<script type="module" src="src/decisions.js"></script>
 <script type="module" src="src/app.js"></script>
 </body>
 </html>
