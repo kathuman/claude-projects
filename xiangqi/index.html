@@ -88,6 +88,9 @@
     .brand .mk { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 15px; font-family: var(--font-cjk); font-weight: 700; }
     .brand h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -.01em; white-space: nowrap; }
     .brand .sub { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .brand .sub a { color: var(--ink-2); font-weight: 600; text-decoration: none; }
+    .brand .sub a:hover { color: var(--accent); }
+    .ver { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; letter-spacing: .02em; }
     .hactions { display: flex; align-items: center; gap: 8px; flex: none; }
     .lnk { font-size: 12.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
     .lnk:hover { border-color: var(--accent); color: var(--ink); }
@@ -290,7 +293,7 @@
       .board-wrap { padding: 12px; }
     }
     @media (max-width: 520px) {
-      .brand .sub { display: none; }
+      .brand .sub .sub-rest { display: none; }
       .pc { font-size: min(5.8vw, 30px); }
     }
   </style>
@@ -300,8 +303,8 @@
     <div class="brand">
       <span class="mk">帥</span>
       <div>
-        <h1>Xiangqi</h1>
-        <div class="sub">Chinese chess &middot; vs a friend or Fairy-Stockfish</div>
+        <h1>Xiangqi <span class="ver" id="verBadge" title="App version"></span></h1>
+        <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="sub-rest"> &middot; Chinese chess &middot; vs a friend or Fairy-Stockfish</span></div>
       </div>
     </div>
     <div class="hactions">
@@ -610,13 +613,21 @@
   </main>
 
   <footer class="foot">
-    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span class="consult">Xiangqi <span id="verFooter"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
     Xiangqi (Chinese chess), two players on one screen or against <a href="https://fairy-stockfish.github.io" target="_blank" rel="noopener">Fairy-Stockfish</a> (GPLv3). Classic problems from 《适情雅趣》 and the Four Great Endgames, via <a href="https://www.xiangqiqipu.com" target="_blank" rel="noopener">xiangqiqipu.com</a>. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
   <script>
   (function () {
     "use strict";
+
+    // Bump on every user-visible change.
+    //   1.0.0  launch: full rules, two players or vs Fairy-Stockfish
+    //   1.1.0  Classic problems (适情雅趣 mates + Four Great Endgames)
+    //   1.2.0  author credit + version shown in the header and footer
+    var APP_VERSION = "1.2.0";
+    document.getElementById("verBadge").textContent = "v" + APP_VERSION;
+    document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
     // ========================================================== THEME
     (function initTheme() {
