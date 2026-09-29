@@ -194,6 +194,11 @@ ol.prog select, ol.prog input{min-width:0; font-family:var(--mono); font-size:10
 ol.prog .acts{display:flex; gap:2px;}
 ol.prog .acts button{font-size:11px; line-height:1; color:var(--ink-dim); background:transparent; border:1px solid var(--line); border-radius:4px; padding:3px 4px; cursor:pointer;}
 ol.prog .acts button:hover{color:var(--accent); border-color:var(--accent);}
+.ros-row{display:grid; grid-template-columns:1fr 78px; gap:6px;}
+.ros-row input, .ros-row select{min-width:0; font-family:var(--mono); font-size:11.5px; color:var(--tele); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 7px;}
+.ros-row input:focus, .ros-row select:focus{outline:none; border-color:var(--accent);}
+.note code{font-family:var(--mono); font-size:10.5px; color:var(--ink-dim);}
+#ros-status.ok{color:var(--ok);} #ros-status.bad{color:var(--bad);}
 footer.foot{
   flex:0 0 auto; display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:space-between;
   padding:7px 20px; border-top:1px solid var(--line); background:var(--panel-2);
@@ -312,6 +317,20 @@ footer.foot .consult{color:var(--ink);}
           <button class="btn small" id="prog-share" title="Copy a link that reopens this robot, pose, program and obstacles">Share link</button>
         </div>
         <input type="file" id="prog-file" accept="application/json,.json" hidden>
+      </div>
+
+      <div class="rail-section">
+        <h2>ROS bridge</h2>
+        <div class="ros-row">
+          <input type="text" id="ros-url" value="ws://localhost:9090" spellcheck="false" aria-label="rosbridge WebSocket URL">
+          <select id="ros-ver" aria-label="ROS version"><option value="2">ROS 2</option><option value="1">ROS 1</option></select>
+        </div>
+        <button class="btn" id="ros-connect">Connect</button>
+        <div class="switch-row">
+          <span class="name">Follow joint commands<small>Subscribe to /linkage/joint_command (sensor_msgs/JointState)</small></span>
+          <button class="switch" id="ros-follow" role="switch" aria-checked="false" aria-label="Follow ROS joint commands"><span class="knob"></span></button>
+        </div>
+        <p class="note" id="ros-status">Not connected. Run <code>rosbridge_server</code> and connect to publish /joint_states and /linkage/tcp_pose at 20 Hz.</p>
       </div>
 
       <div class="rail-section">
@@ -485,7 +504,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   //          URScript export; share links; the session is remembered in the browser
   //   5.1.0  rendering on three.js r186 (ES modules via an import map): image-based lighting
   //          from a studio environment, PBR Neutral tone mapping, ground-truth ambient occlusion
-  var APP_VERSION = "5.1.0";
+  //   5.2.0  ROS bridge: rosbridge v2 JSON over WebSocket — publishes /joint_states and
+  //          /linkage/tcp_pose, optionally follows /linkage/joint_command (ROS 1 or ROS 2)
+  var APP_VERSION = "5.2.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -1950,6 +1971,84 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   var saveTimer = 0;
   function saveLater(){ clearTimeout(saveTimer); saveTimer = setTimeout(function(){ try { localStorage.setItem('linkage-session', JSON.stringify(snapshot())); } catch (e) {} }, 300); }
 
+  // ================================================================ ROS BRIDGE
+  // Talks the rosbridge v2 JSON protocol over a WebSocket (no library needed): advertises and
+  // publishes sensor_msgs/JointState on /joint_states (UR joint names; effort = the holding
+  // torques) and geometry_msgs/PoseStamped on /linkage/tcp_pose at 20 Hz, and optionally
+  // follows sensor_msgs/JointState commands on /linkage/joint_command. Commands go through
+  // the same collision-guarded, speed-limited servo as the drag handle.
+  var UR_JOINT_NAMES = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint'];
+  var ros = { ws: null, open: false, ver: 2, timer: 0, follow: false, sent: 0, got: 0, lastQ: null, lastT: 0 };
+  var rosStatus = document.getElementById('ros-status'), rosBtn = document.getElementById('ros-connect');
+  function rosType(t){ return ros.ver === 2 ? t.replace('/', '/msg/') : t; }
+  function rosStamp(){
+    var ms = Date.now();
+    return ros.ver === 2 ? { sec: Math.floor(ms / 1000), nanosec: (ms % 1000) * 1e6 } : { secs: Math.floor(ms / 1000), nsecs: (ms % 1000) * 1e6 };
+  }
+  function rosSay(text, cls){ rosStatus.textContent = text; rosStatus.className = 'note' + (cls ? ' ' + cls : ''); }
+  function rosSend(o){ if (ros.open) ros.ws.send(JSON.stringify(o)); }
+  function rosConnect(){
+    var url = document.getElementById('ros-url').value.trim();
+    ros.ver = +document.getElementById('ros-ver').value;
+    if (location.protocol === 'https:' && /^ws:/.test(url) && !/^ws:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(url)){
+      return rosSay('This page is served over https, so a remote bridge must use wss:// (plain ws:// is only allowed to localhost).', 'bad');
+    }
+    try { ros.ws = new WebSocket(url); } catch (e) { return rosSay('Bad URL: ' + e.message, 'bad'); }
+    rosSay('Connecting to ' + url + '…');
+    ros.ws.onopen = function(){
+      ros.open = true; ros.sent = 0; ros.got = 0;
+      rosBtn.textContent = 'Disconnect';
+      rosSend({ op: 'advertise', id: 'linkage_js', topic: '/joint_states', type: rosType('sensor_msgs/JointState') });
+      rosSend({ op: 'advertise', id: 'linkage_tcp', topic: '/linkage/tcp_pose', type: rosType('geometry_msgs/PoseStamped') });
+      if (ros.follow) rosSubscribe();
+      ros.timer = setInterval(rosPublish, 50);
+      rosSay('Connected to ' + url + ' (ROS ' + ros.ver + ') — publishing /joint_states and /linkage/tcp_pose.', 'ok');
+    };
+    ros.ws.onmessage = function(ev){
+      var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.op === 'publish' && m.topic === '/linkage/joint_command' && m.msg) rosCommand(m.msg);
+    };
+    ros.ws.onerror = function(){ rosSay('Could not reach the bridge at ' + url + '. Is rosbridge_server running?', 'bad'); };
+    ros.ws.onclose = function(){
+      var was = ros.open;
+      ros.open = false; clearInterval(ros.timer); rosBtn.textContent = 'Connect';
+      if (was) rosSay('Disconnected (' + ros.sent + ' messages sent, ' + ros.got + ' commands received).');
+    };
+  }
+  function rosSubscribe(){ rosSend({ op: 'subscribe', id: 'linkage_cmd', topic: '/linkage/joint_command', type: rosType('sensor_msgs/JointState') }); }
+  function rosPublish(){
+    if (!ros.open || !lastFK) return;
+    var now = performance.now() / 1000, q = state.q.slice();
+    var vel = ros.lastQ ? q.map(function(v, i){ return (v - ros.lastQ[i]) / Math.max(1e-3, now - ros.lastT); }) : [0, 0, 0, 0, 0, 0];
+    ros.lastQ = q; ros.lastT = now;
+    var st = rosStamp();
+    rosSend({ op: 'publish', topic: '/joint_states', msg: { header: { stamp: st, frame_id: '' }, name: UR_JOINT_NAMES, position: q, velocity: vel, effort: K.gravityTorques(q, ROBOT, currentPayload()) } });
+    var T = lastFK.tcp, qq = MO.matToQuat(T);
+    rosSend({ op: 'publish', topic: '/linkage/tcp_pose', msg: { header: { stamp: st, frame_id: 'base_link' }, pose: { position: { x: T[3], y: T[7], z: T[11] }, orientation: { x: qq[1], y: qq[2], z: qq[3], w: qq[0] } } } });
+    ros.sent += 2;
+  }
+  // a JointState command: positions matched by joint name (or taken in order if unnamed)
+  function rosCommand(msg){
+    ros.got++;
+    if (!ros.follow || !Array.isArray(msg.position)) return;
+    var q = state.q.slice(), n = 0;
+    if (Array.isArray(msg.name) && msg.name.length){
+      msg.name.forEach(function(nm, i){ var j = UR_JOINT_NAMES.indexOf(nm); if (j >= 0 && isFinite(msg.position[i])){ q[j] = msg.position[i]; n++; } });
+    } else { msg.position.slice(0, 6).forEach(function(v, i){ if (isFinite(v)){ q[i] = v; n++; } }); }
+    if (!n) return;
+    q = q.map(function(v, i){ return clamp(v, ROBOT.lo[i], ROBOT.hi[i]); });
+    var c = checkQ(q);
+    if (!c.ok && state.guard){ rosSay('Command refused: ' + c.hits[0].text + '.', 'bad'); return; }
+    cancelSequence();
+    jogGoal = q;
+  }
+  rosBtn.addEventListener('click', function(){ if (ros.ws && (ros.open || ros.ws.readyState === 0)) ros.ws.close(); else rosConnect(); });
+  document.getElementById('ros-follow').addEventListener('click', function(){
+    ros.follow = !ros.follow;
+    this.classList.toggle('on', ros.follow); this.setAttribute('aria-checked', String(ros.follow));
+    if (ros.open){ if (ros.follow) rosSubscribe(); else rosSend({ op: 'unsubscribe', id: 'linkage_cmd', topic: '/linkage/joint_command' }); }
+  });
+
   // ================================================================ TIP TRACE
   var traceOn = false, TRACE_MAX = 800, tracePos = new Float32Array(TRACE_MAX * 3), traceN = 0, lastTrace = null;
   var traceGeo = new THREE.BufferGeometry();
@@ -2059,7 +2158,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   })();
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+  window.linkageDebug = { ros: function(){ return { open: ros.open, sent: ros.sent, got: ros.got }; }, three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
       var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
       o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
       return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };

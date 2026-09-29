@@ -38,6 +38,15 @@ joint angles in degrees), or export URScript for a real UR controller — joint 
 pose. **Share link** packs the robot, pose, program and obstacles into the URL (`#s=…`); the last
 session is also remembered in the browser.
 
+## ROS bridge
+
+Connect to a `rosbridge_server` (ROS 1 or ROS 2, default `ws://localhost:9090`). Linkage speaks
+the rosbridge v2 JSON protocol directly: it publishes `sensor_msgs/JointState` on
+`/joint_states` (UR joint names; effort = holding torques) and `geometry_msgs/PoseStamped` on
+`/linkage/tcp_pose` at 20 Hz, and with "Follow joint commands" on it subscribes to
+`/linkage/joint_command` (`sensor_msgs/JointState`, radians) and servos the arm there through
+the collision guard. From the https demo, a remote bridge needs `wss://`; `ws://localhost` works.
+
 ## Rendering
 
 Image-based lighting from a prefiltered studio environment, Khronos PBR Neutral tone mapping,
