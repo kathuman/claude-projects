@@ -30,6 +30,14 @@ https://kathuman.github.io/claude-projects/robotic-arm-sim/
 - `kinematics.js` also holds the statics (holding torque per joint from the published UR5e
   link masses and centres of mass, checked against the derivative of potential energy) and
   the tool-velocity ("dexterity") ellipsoid.
+- `tutorial.js` — the guided tutorial (▸ Tutorial in the header): three levels — Basic
+  (moving the arm, the view, the gripper, the guard, pick & place), Intermediate (Move J / L / C,
+  timing and plots, configurations, singularities, programs, share links) and Advanced
+  (collision model, obstacles and planning, physics, motor load, teaching overlays, URDF, ROS).
+  Each step highlights the control it's about and ticks off a small task once you've done it
+  (or press "Do it for me"); progress is kept in the browser, and every level can also be read
+  as a plain written guide. It talks to the app only through the small `tutApp` interface at
+  the end of `index.html`.
 - `tests/` — unit tests for the three cores, no dependencies:
   `node robotic-arm-sim/tests/kinematics.test.js`, `motion.test.js`, `planner.test.js`,
   `urdf.test.js`.
