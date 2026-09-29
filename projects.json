@@ -41,7 +41,7 @@
   },
   {
     "title": "Linkage",
-    "description": "A real-time 3D robotic arm simulator. Drive a 5-axis cobot by hand with per-joint sliders, or run canned Home / Wave / Pick & Place routines with an async tween engine. Live HUD reads the end-effector's actual forward-kinematics position off the joint hierarchy, an optional tip trace draws its path through space, and a cannon.js rigid-body world means anything the gripper releases actually falls, bounces and settles on the floor instead of snapping into place. Drag to orbit, scroll to zoom. Single page, vendored three.js + cannon.js, no runtime CDN dependency.",
+    "description": "A browser simulator of a 6-axis collaborative robot arm with real UR5e proportions (the published Denavit–Hartenberg parameters). The robotics core is a pure, unit-tested kinematics module — forward kinematics, analytic inverse kinematics (all 8 solutions), Jacobian and a manipulability 'dexterity' meter — and the 3D arm is drawn straight from it. A collision guard refuses any pose that would drive the arm into the table or into itself and flashes the offending links red; a capsule view shows exactly what is checked. Live tool-centre-point position and orientation, a tip trace, Home and Wave routines, an orbit/pan/pinch camera with view presets, and a cannon.js physics bench for dropping blocks. Renders only when something moves. Vendored three.js + cannon.js, no runtime CDN dependency.",
     "date": "2026-09-17",
     "tags": ["javascript", "web", "3d", "simulation", "physics", "robotics"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/robotic-arm-sim",
