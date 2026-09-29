@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xiangqi</title>
-  <meta name="description" content="Play Xiangqi (Chinese chess) against a friend on one screen or against the open-source Fairy-Stockfish engine at eight strength levels — full rules including the flying-general rule, hobbled horses, blocked elephants, cannon screens and perpetual check." />
+  <meta name="description" content="Play Xiangqi (Chinese chess) against a friend on one screen or against the open-source Fairy-Stockfish engine at eight strength levels — full rules including the flying-general rule, hobbled horses, blocked elephants, cannon screens and perpetual check — plus classic training problems from the 1570 manual 《适情雅趣》 and the Four Great Endgames." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%23f4e3c1%22 stroke=%22%23b3261e%22 stroke-width=%226%22/><text x=%2250%22 y=%2268%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%23b3261e%22>帥</text></svg>" />
   <!-- The Fairy-Stockfish WASM build is multi-threaded and needs SharedArrayBuffer, which
        browsers only allow on "cross-origin isolated" pages. GitHub Pages can't send the
@@ -204,7 +204,36 @@
     }
     .sel:hover { border-color: var(--accent); }
 
-    .engine-only[hidden] { display: none; }
+    .engine-only[hidden], .play-only[hidden], .puzzle-only[hidden] { display: none; }
+
+    .tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+    .tabs button { flex: 1; padding: 8px 10px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); background: transparent; border: 0; border-radius: 9px; cursor: pointer; }
+    .tabs button:hover { color: var(--ink); }
+    .tabs button.on { background: var(--accent); color: var(--accent-ink); }
+
+    .setblurb { font-size: 12px; color: var(--muted); margin: 7px 0 0; line-height: 1.45; }
+    .pzgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; max-height: 150px; overflow-y: auto; margin-bottom: 14px; padding: 2px; }
+    .pzgrid button { padding: 5px 0; font: inherit; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; cursor: pointer; }
+    .pzgrid button:hover { border-color: var(--accent); color: var(--ink); }
+    .pzgrid button.solved { border-color: #3f9b5a; color: #2f7d47; background: color-mix(in srgb, #3f9b5a 12%, var(--surface)); }
+    .pzgrid button.cur { outline: 2px solid var(--accent); outline-offset: 1px; color: var(--ink); }
+    .pzcard { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+    .pztitle { font-weight: 700; font-size: 14px; }
+    .pztitle .zh { font-family: var(--font-cjk); }
+    .pztitle .en { font-weight: 600; font-size: 13px; }
+    .pztitle .src { font-weight: 500; font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-left: 4px; }
+    .pzgoal { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+    .pzmsg { font-size: 12.5px; font-weight: 600; margin-top: 7px; min-height: 18px; color: var(--ink-2); }
+    .pzmsg.good { color: #2f8a4c; }
+    .pzmsg.bad { color: #c2412f; }
+    .pzbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pzbtns .btn + .btn, .pzview .btn + .btn { margin-top: 0; }
+    .pzview { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; margin-top: 10px; }
+    .pzview[hidden] { display: none; }
+    .pzview .btn { width: auto; padding: 8px 14px; }
+    .pzview span { text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+    .pzview .wide { grid-column: 1 / -1; width: 100%; }
+    .hl.hint { box-shadow: 0 0 0 3px rgba(40, 170, 90, .95), 0 0 16px rgba(40, 170, 90, .7); z-index: 2; animation: pulse 1s ease-in-out infinite; }
     .engine-status { display: flex; align-items: flex-start; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); }
     .engine-status .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; margin-top: 5px; }
     .engine-status.ready .led { background: #3f9b5a; }
@@ -310,7 +339,39 @@
       </section>
 
       <aside>
-        <div class="panel">
+        <div class="tabs" role="tablist" aria-label="Mode">
+          <button type="button" role="tab" id="tabPlay" class="on">Play</button>
+          <button type="button" role="tab" id="tabPuzzles">Classic problems</button>
+        </div>
+
+        <div class="panel puzzle-only" id="panelPuzzle" hidden>
+          <h3>Classic problems</h3>
+          <div class="field">
+            <label for="setSel">Collection</label>
+            <select class="sel" id="setSel"></select>
+            <p class="setblurb" id="setBlurb"></p>
+          </div>
+          <div class="pzgrid" id="pzGrid" aria-label="Problems"></div>
+          <div class="pzcard">
+            <div class="pztitle" id="pzTitle"></div>
+            <div class="pzgoal" id="pzGoal"></div>
+            <div class="pzmsg" id="pzMsg" aria-live="polite"></div>
+          </div>
+          <div class="pzbtns" id="pzBtns">
+            <button class="btn" id="pzHint" type="button">Hint</button>
+            <button class="btn" id="pzRetry" type="button">Retry</button>
+            <button class="btn" id="pzSol" type="button">Show solution</button>
+            <button class="btn primary" id="pzNext" type="button">Next →</button>
+          </div>
+          <div class="pzview" id="pzView" hidden>
+            <button class="btn" id="pzPrev" type="button" aria-label="Previous move">◀</button>
+            <span id="pzViewPos">0 / 0</span>
+            <button class="btn" id="pzFwd" type="button" aria-label="Next move">▶</button>
+            <button class="btn wide" id="pzExitView" type="button">Try it yourself</button>
+          </div>
+        </div>
+
+        <div class="panel play-only">
           <h3>Opponent</h3>
           <div class="field">
             <label for="oppSel">Play against</label>
@@ -342,7 +403,7 @@
           <div class="engine-status engine-only" id="engineStatus"><span class="led"></span><span id="engineText">Engine not loaded</span></div>
         </div>
 
-        <div class="panel">
+        <div class="panel play-only">
           <h3>Game</h3>
           <button class="btn primary" id="newBtn">New game</button>
           <button class="btn" id="undoBtn">Undo</button>
@@ -421,6 +482,18 @@
         file) or the destination file. So <code>C2=5</code> is "cannon on file 2 moves across to file 5"
         — the classic Central Cannon opening. When two identical pieces share a file,
         <code>+</code>/<code>-</code> replace the file number for the front/rear one.
+      </p>
+      <p>
+        <b>Classic problems.</b> The <b>Classic problems</b> tab holds traditional training material.
+        The mating problems come from <span lang="zh">《适情雅趣》</span> (<em>Shiqing Yaqu</em>, 1570), the
+        oldest surviving Xiangqi problem collection, grouped by length. Each asks you to force mate in
+        the stated number of moves; the opponent's replies follow the book. If you find a
+        <em>different</em> winning move, Fairy-Stockfish checks that it still forces mate in time, and then
+        takes over the defence. The <b>Four Great Endgames</b> (<span lang="zh">江湖四大名局</span>) are
+        famous 18th–19th-century studies that street players used to wager on: each looks like an easy
+        win for Red but is a draw with best play. Try to hold the draw against the engine, or step
+        through the book line with <b>Show solution</b>. Hint highlights the piece to move; solved
+        problems get a tick and are remembered.
       </p>
     </details>
 
@@ -501,6 +574,23 @@
           <code>Skill Level</code> and cap its search depth.
         </p>
 
+        <h4>Classic problems: sourced, then verified twice</h4>
+        <p>
+          The problem positions and book solutions were downloaded from
+          <a href="https://www.xiangqiqipu.com/Category/list-103.html" target="_blank" rel="noopener">xiangqiqipu.com</a>
+          in their <code>DhtmlXQ</code> encoding (two digits per piece for the position, four per move),
+          then decoded offline and replayed move by move through this page's own rules. Only problems
+          whose every book move was legal, and whose mating lines really end in mate, were kept. Each one was also
+          given to Fairy-Stockfish to confirm the mate can be forced within the stated number of moves.
+          Of the manual's 247 winning lines, 135 passed. In the rest, Black has a defence the 1570 book missed.
+          Ancient collections are known to contain such "cooked" problems, and for the short ones an
+          exhaustive search in this page's own rules code confirmed the engine's verdict. The
+          results are embedded in the page as a small table (<code>PUZZLE_SETS</code>: a FEN plus the book
+          line in UCI). While you solve, a book move is accepted at once. Any other move is sent to the
+          engine as <code>position fen … moves …</code> / <code>go depth N</code>, and accepted if the reply's
+          score is <code>mate -k</code> with <code>k</code> no more than the moves you have left.
+        </p>
+
         <h4>Board = SVG lines under a CSS grid of points</h4>
         <p>
           The 9×10 grid of clickable points is a CSS grid; the lines, palaces, river and position marks
@@ -521,7 +611,7 @@
 
   <footer class="foot">
     <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Xiangqi (Chinese chess), two players on one screen or against <a href="https://fairy-stockfish.github.io" target="_blank" rel="noopener">Fairy-Stockfish</a> (GPLv3). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    Xiangqi (Chinese chess), two players on one screen or against <a href="https://fairy-stockfish.github.io" target="_blank" rel="noopener">Fairy-Stockfish</a> (GPLv3). Classic problems from 《适情雅趣》 and the Four Great Endgames, via <a href="https://www.xiangqiqipu.com" target="_blank" rel="noopener">xiangqiqipu.com</a>. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
   <script>
@@ -740,6 +830,8 @@
       level: 3,
       thinking: false,
       gameId: 0,
+      startFen: null,       // null = the standard opening position; set by a problem
+      mode: "play",         // "play" | "puzzle"
       _board: "wood",
       _pieces: "chars"
     };
@@ -804,10 +896,14 @@
         setEngineStatus("ready", engineIdleText());
         var q = engine.onReady; engine.onReady = [];
         q.forEach(function (f) { f(); });
+      } else if (line.indexOf("info") === 0 && engine.pending && engine.bestsSeen === engine.pending.id - 1) {
+        // score of the search we're waiting on (older, cancelled searches have all answered by now)
+        var sm = / score (cp|mate) (-?\d+)/.exec(line);
+        if (sm) engine.pending.score = sm[1] === "mate" ? { mate: +sm[2] } : { cp: +sm[2] };
       } else if (line.indexOf("bestmove") === 0) {
         engine.bestsSeen++;
         var p = engine.pending;
-        if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1]); }
+        if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1], p.score || null); }
       }
     }
 
@@ -847,6 +943,10 @@
       engine.sf = null;
       state.thinking = false;
       setEngineStatus("error", typeof msg === "string" ? msg : "Couldn't load the engine — check your connection and reload");
+      if (state.mode === "puzzle") {
+        pz.busy = false;
+        setPz("The engine isn't available here, so only the book solution can be played.", "bad");
+      }
       render();
     }
 
@@ -854,8 +954,34 @@
       var lv = LEVELS[state.level];
       engine.pending = { id: ++engine.gosSent, cb: cb };
       engineSend("setoption name Skill Level value " + lv.skill);
-      engineSend("position startpos" + (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : ""));
+      engineSend(positionCmd());
       engineSend("go " + lv.go);
+    }
+
+    function positionCmd(extra) {
+      var mv = extra ? state.uciMoves.concat([extra]) : state.uciMoves;
+      return "position " + (state.startFen ? "fen " + state.startFen : "startpos") + (mv.length ? " moves " + mv.join(" ") : "");
+    }
+
+    // One full-strength question to the engine about the current position (+ an optional
+    // extra move): cb(bestmove, score) — score is from the side to move, e.g. {mate: -2}.
+    // cb(null, null) if the engine can't be used.
+    function engineAsk(extra, go, cb) {
+      if (engine.status === "error") { cb(null, null); return; }
+      state.thinking = true;
+      var token = engine.searchToken;
+      ensureEngine(function () {
+        if (token !== engine.searchToken) return;
+        engine.pending = { id: ++engine.gosSent, score: null, cb: function (best, score) {
+          if (token !== engine.searchToken) return;
+          state.thinking = false;
+          setEngineStatus("ready", engineIdleText());
+          cb(best, score);
+        } };
+        engineSend("setoption name Skill Level value 20");
+        engineSend(positionCmd(extra));
+        engineSend("go " + go);
+      });
     }
 
     function cancelEngine() {
@@ -867,7 +993,7 @@
     }
 
     function isEngineTurn() {
-      return state.opponent === "engine" && !state.over && state.turn !== state.humanColor;
+      return state.mode === "play" && state.opponent === "engine" && !state.over && state.turn !== state.humanColor;
     }
 
     // Called whenever the position settles: if it's the computer's move, ask for one.
@@ -982,7 +1108,7 @@
       var legalSet = {};
       state.legalTargets.forEach(function (m) { legalSet[m[2] + "," + m[3]] = true; });
       var checked = inCheck(board, state.turn) ? generalPos(board, state.turn) : null;
-      var myTurn = !state.over && !isEngineTurn();
+      var myTurn = !state.over && !isEngineTurn() && (state.mode !== "puzzle" || puzzleCanMove());
 
       for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
         var cell = cells[r][c];
@@ -993,6 +1119,7 @@
         if (piece) cell.appendChild(pieceEl(piece));
         if (checked && checked[0] === r && checked[1] === c) addDiv(cell, "hl check");
         else if (isSel) addDiv(cell, "hl select");
+        else if (pz.hint && pz.hint[0] === r && pz.hint[1] === c) addDiv(cell, "hl hint");
         else if (lm && lm[2] === r && lm[3] === c) addDiv(cell, "hl lastto");
         if (lm && lm[0] === r && lm[1] === c && !piece) addDiv(cell, "lastfrom");
         if (legalSet[r + "," + c]) addDiv(cell, piece ? "ring" : "dot");
@@ -1001,6 +1128,7 @@
       renderStatus();
       renderCaptured();
       renderLog();
+      if (state.mode === "puzzle") renderPuzzleUI();
     }
     function addDiv(parent, cls) { var d = document.createElement("div"); d.className = cls; parent.appendChild(d); }
 
@@ -1012,7 +1140,7 @@
       document.getElementById("stTurn").textContent = turnName;
       document.getElementById("stLast").textContent = state.moveList.length ? state.moveList[state.moveList.length - 1] : "—";
       document.getElementById("undoBtn").disabled = state.history.length === 0 || state.animating;
-      var vs = state.opponent === "engine";
+      var vs = state.opponent === "engine" && state.mode === "play";
       document.getElementById("lblRed").textContent = "Red" + (vs ? (state.humanColor === "w" ? " · you" : " · engine") : "");
       document.getElementById("lblBlack").textContent = "Black" + (vs ? (state.humanColor === "b" ? " · you" : " · engine") : "");
 
@@ -1131,7 +1259,7 @@
         if (rep) { state.over = true; state.overText = rep.text; }
       }
       render();
-      maybeEngineMove();
+      if (state.mode === "puzzle") puzzleAfterMove(); else maybeEngineMove();
     }
 
     function makeMove(move) {
@@ -1178,11 +1306,14 @@
       maybeEngineMove();
     }
 
-    function newGame() {
+    // Fresh game from the opening position, or from a problem's FEN.
+    function resetGame(fen) {
       cancelEngine();
       state.gameId++;
-      state.board = initialBoard();
-      state.turn = "w";
+      var pos = fen ? boardFromFEN(fen) : { board: initialBoard(), turn: "w" };
+      state.startFen = fen || null;
+      state.board = pos.board;
+      state.turn = pos.turn;
       state.history = [];
       state.lastMove = null;
       state.selected = null;
@@ -1195,18 +1326,35 @@
       state.checks = [];
       state.captured = { w: [], b: [] };
       state.legalCache = generateLegalMoves(state.board, state.turn);
+    }
+
+    function newGame() {
+      resetGame(null);
       render();
       maybeEngineMove();
     }
 
+    function boardFromFEN(fen) {
+      var parts = fen.split(" ");
+      var board = parts[0].split("/").map(function (row) {
+        var out = [];
+        row.split("").forEach(function (ch) {
+          if (/\d/.test(ch)) { for (var i = 0; i < +ch; i++) out.push(null); } else out.push(ch);
+        });
+        return out;
+      });
+      return { board: board, turn: parts[1] === "b" ? "b" : "w" };
+    }
+
     function onCellClick() {
       if (state.over || state.animating || isEngineTurn()) return;
+      if (state.mode === "puzzle" && !puzzleCanMove()) return;
       var row = +this.dataset.r, col = +this.dataset.c;
       var piece = state.board[row][col];
 
       if (state.selected) {
         var hit = state.legalTargets.filter(function (m) { return m[2] === row && m[3] === col; })[0];
-        if (hit) { makeMove(hit); return; }
+        if (hit) { if (state.mode === "puzzle") puzzleTry(hit); else makeMove(hit); return; }
       }
       if (piece && colorOf(piece) === state.turn && !(state.selected && state.selected[0] === row && state.selected[1] === col)) {
         state.selected = [row, col];
@@ -1217,6 +1365,433 @@
       }
       render();
     }
+
+    // ========================================================== PUZZLES
+    // Classic problems: mating problems from 《适情雅趣》 (Shiqing Yaqu, 1570) and the four
+    // great "Jianghu" endgame studies. Positions and book lines come from xiangqiqipu.com; each
+    // one was replayed through this page's own rules, and checked by Fairy-Stockfish, when the
+    // data below was generated. f = FEN, m = book line in UCI, n = number in the source.
+    var PUZZLE_SETS = /*PUZZLE_DATA*/[
+      {"id":"sqyq-a","name":"Shiqing Yaqu · mate in 2–4","src":"适情雅趣","kind":"mate","blurb":"From 《适情雅趣》 (1570), the oldest surviving Xiangqi problem book. The shortest of its mating problems — a good place to start.", "items": [
+        {"n":13,"t":"目视横流","f":"4k4/3P2P2/b2N2R2/7r1/2b6/9/9/3n5/4p3r/2R2K3 w - - 0 1","m":"g8e8 c6e8 d9e9 e10e9 c1c9"},
+        {"n":39,"t":"博望烧屯","f":"2bak1b2/4aR2C/6N1n/9/9/9/5c3/4BC3/3p1r1n1/4K2c1 w - - 0 1","m":"i9i10 i8h10 f9f10 e9f10 i10g10 f10e9 g8f10"},
+        {"n":53,"t":"开窗邀月","f":"1n1k1a3/R8/b2ab4/2R6/9/6C2/9/4C4/3pArn1c/4K4 w - - 0 1","m":"c7c10 a8c10 a9d9 d10d9 g5d5 d8e9 e3d3"},
+        {"n":66,"t":"见危致命","f":"1rbak3r/1N1Ra4/cR2b1N2/9/9/9/9/9/5p3/4K4 w - - 0 1","m":"d9d10 e9d10 b8e8 c10e8 b9d8"},
+        {"n":68,"t":"鸿门碎斗","f":"2Ck1a3/2R1aR3/9/5N3/r8/r8/9/3C5/4p1n2/3K5 w - - 0 1","m":"f7d8 a6d6 f9f10 e9f10 d8f9 d10e10 f9d10"},
+        {"n":82,"t":"祸不单行","f":"4k4/4a4/2P5n/5N3/9/5R3/9/9/2p2p2r/C3K4 w - - 0 1","m":"f7d8 e10d10 a1d1 c2d2 f5f10 e9f10 d8f9"},
+        {"n":84,"t":"双蜓点水","f":"1C3k3/1N2P4/1nN1b4/9/9/9/9/4p4/3p1p3/4K4 w - - 0 1","m":"c8d10 e8c10 e9f9 f10e10 d10c8 c10e8 b9d8"},
+        {"n":92,"t":"五丁凿路","f":"2bak4/C2Ra4/N3b3R/1C5n1/9/2Bn5/9/B8/c1rp1p3/4Kc3 w - - 0 1","m":"i8i10 e9f10 d9e9 d10e9 b7b10 e9d10 a8c9"},
+        {"n":103,"t":"双鹭窥鱼","f":"3ak3N/4aP3/8R/1rr5N/9/9/9/9/5p3/4K4 w - - 0 1","m":"f9f10 e10f10 i8f8 e9f8 i7h9 f10f9 i10h8"},
+        {"n":112,"t":"飞鲸吞钓","f":"2bak4/C3a2NR/4b4/9/6p2/1C2c4/9/4B4/1r2A1c2/3RKAr2 w - - 0 1","m":"h9f8 e9f8 d1d10 e10d10 a9a10 c10a8 b5b10"},
+        {"n":126,"t":"叶落归秋","f":"2ba2n2/4ak3/4b4/4R4/4N4/9/9/5C3/3rAp3/c1rAK4 w - - 0 1","m":"e7f7 e9f8 f7g7 f9e9 g7g9 e9e10 e6f8"},
+        {"n":161,"t":"远害全身","f":"9/3k5/R2abN2C/C3P4/2b6/9/9/4p4/2r6/cr1AK4 w - - 0 1","m":"a7d7 d8e9 a8d8 d9d8 e7e8 d8d9 e8d8"},
+        {"n":170,"t":"面缚自首","f":"6b2/3PR1P1c/3P1k3/7c1/2b3p2/2N6/9/2C6/3p1r3/4K4 w - - 0 1","m":"e9f9 i9f9 d8e8 c6e8 c5d7 h7e7 c3c8"},
+        {"n":192,"t":"两地关心","f":"2bak3C/4aP2N/4b4/5C3/9/9/9/3p5/4p2r1/3K5 w - - 0 1","m":"i9g10 h2h10 f9e9 d10e9 g10f8"},
+        {"n":195,"t":"盐车困骥","f":"2bk1a3/9/3a5/7N1/9/9/C7C/1p7/1np2p1r1/4K4 w - - 0 1","m":"i4i10 f10e9 a4d4 d10e10 h7f8 e10f10 d4f4"},
+        {"n":234,"t":"居中反祸","f":"2bk5/r3aR3/n1r1b4/9/9/6R2/9/3n5/4p4/1C3K3 w - - 0 1","m":"g5g10 d10d9 f9e9 d9e9 g10g9 e9e10 b1b10"},
+        {"n":253,"t":"毙马仆途","f":"3a3nC/1R4c2/2C1k2r1/9/9/r6N1/9/9/4p4/3K5 w - - 0 1","m":"h5g7 e8f8 b9f9 h10f9 i10f10"},
+        {"n":265,"t":"入穴取虎","f":"3k1a3/9/3a5/3rRN2C/9/9/9/6n2/5r3/4K4 w - - 0 1","m":"e7e10 d10d9 e10d10 d9d10 i7d7 d8e9 f7d8"},
+        {"n":270,"t":"吐胆倾心","f":"3a1k3/c2P5/2r2a3/6N2/9/6R2/9/4C4/4r4/5K3 w - - 0 1","m":"g7e8 c8e8 g5g10 f10f9 d9e9 e8e9 e3f3"},
+        {"n":273,"t":"辎重塞途","f":"3k1a3/nPR1a4/2Nr5/9/9/9/9/9/5r3/2c1K4 w - - 0 1","m":"c9c10 d10d9 c10d10 e9d10 c8b10 c1c10 b9c9"},
+        {"n":333,"t":"策马入城","f":"2bak1C2/3caP3/4b4/3N1Cn2/9/9/9/8n/4p4/5K3 w - - 0 1","m":"f9f10 e10f10 d7f8 g7f9 f8h9 f10e10 h9f10"},
+        {"n":361,"t":"视死如归","f":"r2k5/9/2P6/9/6bN1/4R4/9/2np1pn2/4K4/9 w - - 0 1","m":"e5e10 d10d9 c8c9 d9d8 e10e8 g6e8 h6f7"}
+      ]},
+      {"id":"sqyq-b","name":"Shiqing Yaqu · mate in 5–6","src":"适情雅趣","kind":"mate","blurb":"Longer combinations from 《适情雅趣》 (1570): sacrifices that strip the palace before the mate.", "items": [
+        {"n":12,"t":"颠猿饮涧","f":"1C2kab2/rN2a2R1/2r1c3b/9/9/5R3/9/7C1/9/3K5 w - - 0 1","m":"f5f10 e10f10 b9d10 c8c10 h9f9 f10e10 h3h10 e9f10 f9f10 e10e9 f10f9"},
+        {"n":15,"t":"妙振兵铃","f":"r1b1k4/c1PPaRc2/r2ab3n/4C4/7RC/9/9/9/4p4/3K5 w - - 0 1","m":"h6h10 i8h10 d9d10 e10d10 f9f10 e9f10 c9d9 d10d9 i6d6 d8e9 e7d7"},
+        {"n":43,"t":"精忠报国","f":"C4kbN1/R2Pa4/4ca3/4rNR2/6b2/6c2/9/4C4/4p3r/5K3 w - - 0 1","m":"g7g10 g5g10 d9d10 f10f9 f7h8 e8h8 a9e9 e7e9 e3f3"},
+        {"n":51,"t":"下车伏谒","f":"R2akab2/3n3P1/1NC1b4/5R3/2p3p2/9/9/5p3/4r3r/5K3 w - - 0 1","m":"c8c10 d10e9 f7f10 e10f10 c10c9 f10f9 h9g9 f9f8 a10f10 e9f10 c9c8"},
+        {"n":52,"t":"担雪填井","f":"3ak3r/4a1R2/b1C1bc3/1N2C3N/9/3p5/2n6/3K5/9/r8 w - - 0 1","m":"c8c10 a8c10 g9g10 i10g10 b7c9 e10f10 i7g8 g10g8 e7f7"},
+        {"n":57,"t":"放弥六合","f":"3ack3/1NR1a1P2/3n2R2/9/2C6/9/9/9/1r2p2r1/3K5 w - - 0 1","m":"g8f8 e9f8 c9f9 d8f9 g9g10 e10g10 c6c10 d10e9 b9d10"},
+        {"n":59,"t":"变现出没","f":"2b1ka1r1/3Pa4/5Rc2/5Nr2/9/9/9/7C1/C2p5/4K4 w - - 0 1","m":"a2a10 c10a8 d9d10 e10d10 f8d8 e9d8 h3d3 d8e9 f7d8 g7d7 d8c10"},
+        {"n":61,"t":"群虎争餐","f":"2bk1a3/1R2a2N1/rCc1b4/9/9/9/9/4C2R1/3r1p3/4K4 w - - 0 1","m":"b9d9 d10d9 h9f10 e9f10 h3h9 f10e9 h9e9 d9d10 b8b10"},
+        {"n":67,"t":"凫罗鱼网","f":"1n1ck3C/2PPa1R2/5a3/9/8N/9/9/3n5/4p2r1/5K3 w - - 0 1","m":"g9g10 e9f10 d9e9 e10e9 g10g9 e9e8 i6g7 e8d8 g9d9 b10d9 i10d10"},
+        {"n":70,"t":"鸢飞泪天","f":"4k3C/5N1rC/5c3/4p4/4N4/9/9/6n2/2r2p3/3RK4 w - - 0 1","m":"f9h10 f8f10 h10f9 e10e9 d1d9 e9d9 f9e7 d9d8 e7c8 d8e8 c8d6"},
+        {"n":75,"t":"豪帅心服","f":"4rc3/4ak3/9/9/9/9/9/2R6/3pA4/cr1AKC3 w - - 0 1","m":"c3f3 e9f8 f3e3 f8e9 e2f3 e9f8 e3e9 e10e9 f3e2"},
+        {"n":93,"t":"鱼骇月钩","f":"3k2b1r/C4R3/P3b4/n2c1R3/9/1N7/9/4BA3/3p1p3/c1BAK4 w - - 0 1","m":"f9f10 d10d9 b5c7 a7c8 f7f9 d9d8 f10d10 c8d10 f9d9 d7d9 c7e6"},
+        {"n":94,"t":"负笈追师","f":"2baka3/1R7/4b2nn/4R2CN/4N4/9/9/5p3/2rc4r/5K3 w - - 0 1","m":"e7e8 f10e9 e6d8 e10f10 e8f8 e9f8 h7f7 f8e9 i7g8"},
+        {"n":99,"t":"偷营劫寨","f":"c2a1k3/3Ra4/4c1P2/7R1/9/9/9/1C2B4/1r7/2BK5 w - - 0 1","m":"b3b10 b2b10 h7h10 f10f9 g8g9 f9f8 h10f10 e9f10 d9f9"},
+        {"n":100,"t":"飞黄结路","f":"2r6/4akN2/C3P2c1/1C4P2/7r1/8R/9/5p3/4p4/5K3 w - - 0 1","m":"i5f5 h8f8 f5f8 e9f8 b7f7 f8e9 e8f8 f9f8 g7g8 f8f9 a8f8"},
+        {"n":102,"t":"金门待漏","f":"3ak4/R3a1P1R/b3b4/1C7/4c4/9/9/9/2r3r2/4K4 w - - 0 1","m":"i9i10 e8g10 b7b10 a8c10 i10g10 e9f10 g10f10 e10f10 g9f9 f10e10 a9e9"},
+        {"n":105,"t":"战如烈火","f":"2b1ka3/4a3c/4b4/6n2/7RN/9/9/3CCR3/2rp1p3/4KAr1c w - - 0 1","m":"f3f10 e10f10 h6h10 f10f9 i6h8 f9f8 h10f10 e9f10 d3d8 e8c6 e3e8"},
+        {"n":111,"t":"兴戎出好","f":"2b1ka3/3Ra4/1c2b3c/N8/R8/6B2/4C1r2/C8/4Ap1n1/3AK4 w - - 0 1","m":"d9d10 e10d10 a6d6 d10e10 d6d10 e10d10 a7b9 d10e10 a3a10"},
+        {"n":120,"t":"龟玉毁椟","f":"R2rk4/4nP3/2n1b4/6N2/9/1r2C4/4c4/4B4/3pN4/4KC3 w - - 0 1","m":"f9f10 e10f10 a10d10 c8d10 g7h9 f10f9 e5f5 e4f4 f5d5 f4e4 d5d9"},
+        {"n":129,"t":"凿壁偷光","f":"2bk1a3/1R2RN3/c3ba3/2n6/9/1C7/9/9/3r1p2r/1Cc1K4 w - - 0 1","m":"b9d9 c7d9 b5b10 d9b10 e9b9 d10e10 b1b10 d2d10 f9d8"},
+        {"n":153,"t":"死敌为忠","f":"N2k1a3/5P3/3a5/9/9/9/9/C3RA3/4Nr3/2p1K1pnc w - - 0 1","m":"e3e10 d10e10 a10c9 e10d10 a3d3 d8e9 e2d4 e9d8 d4c6 d8e9 c6d8"},
+        {"n":158,"t":"暴虎凭河","f":"C3kab2/4a4/N3b4/2N6/9/3C5/9/3A2r2/3K3c1/3A2n1c w - - 0 1","m":"d5d10 e10d10 a8b10 e8c10 b10c8 d10d9 c8a7 d9d8 a7b9"},
+        {"n":159,"t":"前后绝伦","f":"3ak4/4a4/4b4/6N2/9/3rC4/4c4/4BR2C/1n1rA4/4KA3 w - - 0 1","m":"f3f10 e10f10 g7h9 f10e10 h9f8 e10f10 i3f3 e4f4 e5f5 d5f5 f3f5"},
+        {"n":162,"t":"朱云折槛","f":"2bakab2/5RP2/7P1/2N6/9/9/9/4Cp2C/r3p4/5K3 w - - 0 1","m":"c7e8 d10e9 f9f10 e10f10 g9g10 f10f9 e8g7 f9f8 i3i8"},
+        {"n":166,"t":"立倾敌国","f":"4ka3/2R1aR3/3cb4/9/3N5/9/9/C3C4/3p1pnr1/4K4 w - - 0 1","m":"c9c10 d8d10 c10d10 e10d10 f9f10 d10d9 a3d3 e9d8 f10f9 d9d10 d6c8"},
+        {"n":173,"t":"水枯见鱼","f":"4ka3/4aR3/4N4/4p4/9/9/4P4/4C4/c1nrAR3/4KA3 w - - 0 1","m":"f9f10 e9f10 f2f10 e10e9 f10e10 e9d9 e8c7 d9d8 e10d10"},
+        {"n":174,"t":"三气周瑜","f":"2b1ka3/3Pa4/4b1c2/6RC1/3R2c2/8C/9/2n6/3p3r1/4K4 w - - 0 1","m":"i5i10 g8g10 d9d10 e9d10 d6d10 e10d10 g7d7 d10e10 h7e7"},
+        {"n":180,"t":"暮鸟投林","f":"3k5/2R6/3a1nN2/9/9/9/9/5R3/1n1r1C3/2c1KcrN1 w - - 0 1","m":"c9c10 d10d9 g8f10 f8e10 c10c9 d9d10 f10e8 d8e9 f3d3 d2d3 f2f10"},
+        {"n":185,"t":"酸毒道路","f":"5k1n1/c3a4/5aR1b/6N2/2r5C/9/9/9/3p1p3/4K1R2 w - - 0 1","m":"g8g10 i8g10 g7h9 a9h9 g1g10 f10f9 g10g9 f9f10 i6i10 h10f9 g9g10"},
+        {"n":186,"t":"宿鸟惊弹","f":"2b6/1C2k4/n3bR3/6N2/9/9/9/1R7/3p2rr1/1C2K3c w - - 0 1","m":"f8f9 e9e10 b9b10 a8b10 f9e9 e10e9 b3b9 e9e10 b1b10"},
+        {"n":191,"t":"劳问将士","f":"3k1a3/1NR2n3/3a5/1r4CC1/2b6/9/9/9/1c1p3r1/4K4 w - - 0 1","m":"g7g10 f10e9 c9c10 d10d9 h7d7 b7d7 c10c9 d9d10 c9e9"},
+        {"n":196,"t":"雪拥蓝关","f":"2ba1kb2/1P2a1R2/3cnrN2/C8/9/9/9/9/4p4/3K5 w - - 0 1","m":"g9g10 f10f9 g10f10 e9f10 g8h10 f9e9 a7e7 e9d9 b9c9"},
+        {"n":198,"t":"惊鸟藏枝","f":"4kC3/3RaP3/3C2n1c/Nr1R5/9/9/9/4p4/6r2/4K4 w - - 0 1","m":"f9e9 g8e9 d9d10 e10d10 d8e8 b7d7 a7b9 d10d9 f10f9"},
+        {"n":212,"t":"雁惊云网","f":"1R3a3/3k3C1/3a4b/6pN1/9/9/4n3c/5p2C/4r4/5K3 w - - 0 1","m":"h7g9 d8e9 g9e10 e9d8 e10f8 d9e9 b10b9 e9e8 i3i8 e8f8 h9h8"},
+        {"n":224,"t":"随形助胜","f":"3a1k3/1Nc1a1R2/5rN2/9/9/9/9/9/3p5/4K1Rrc w - - 0 1","m":"g9g10 f10f9 g10f10 e9f10 g8h10 h1h10 g1g9 c9g9 b9d10"},
+        {"n":228,"t":"游鱼吞钩","f":"4k1b2/4aPN2/5a3/9/N8/6C2/4c4/9/2nr1p3/4K4 w - - 0 1","m":"f9f10 e10d10 g5g10 d10d9 a6c7 d9d8 g9f7 e4e7 g10g8"},
+        {"n":230,"t":"胡骑迫背","f":"2bak1b2/4aR3/9/3NR4/9/9/9/6n2/r2r1p3/4K4 w - - 0 1","m":"f9f10 e10f10 e7f7 f10e10 d7f8 e10f10 f8h9 f10e10 f7f10"},
+        {"n":237,"t":"长鲸授首","f":"5a1C1/3ka4/4b4/7N1/1Rb6/9/9/5n3/2r1p4/c4K3 w - - 0 1","m":"b6b9 d9d8 b9b8 d8d9 h10h9 e9f8 h7g9 f10e9 b8d8 d9d8 g9f7"},
+        {"n":239,"t":"弃短取长","f":"4kab2/5P3/4b1n2/1N1N5/9/1n4C2/9/3p5/4p4/3K5 w - - 0 1","m":"b7d8 e10d10 d8b9 d10e10 d7c9 e10d10 c9e8 d10d9 e8f10 g8f10 g5g9"},
+        {"n":240,"t":"凭马渡江","f":"2b2a3/C3a4/3kb4/9/9/5RN2/9/1C7/r2r1p3/4K4 w - - 0 1","m":"f5d5 d2d5 g5e6 d8d9 e6c7 d9d10 b3b10 c10a8 a9a10"},
+        {"n":242,"t":"明修栈道","f":"3r1k3/C5P2/b4a3/CR2R4/9/9/9/2n6/5pr2/4K4 w - - 0 1","m":"g9f9 f10f9 b7b9 f9f10 b9f9 f10f9 e7e9 f9f10 e9f9 f10f9 a7f7"},
+        {"n":249,"t":"雁阵排空","f":"6c2/5k3/1N2b4/4C4/2b2C3/3R5/9/6n2/7r1/4K3c w - - 0 1","m":"d5d9 f9f10 d9d10 f10f9 d10f10 f9f10 b8d9 f10f9 d9f8 f9f8 e7f7"},
+        {"n":252,"t":"二龙绕室","f":"3a1kb2/4a4/4b4/5NN2/9/9/9/8C/3r4c/4K1n2 w - - 0 1","m":"g7h9 f10e10 f7g9 e10f10 g9h7 f10e10 i3i10 e9f10 h7f8 e10e9 i10i9"},
+        {"n":263,"t":"跃鲤吞饵","f":"6b2/1N1R5/5k3/9/9/9/9/4p4/2Rp1p2r/4K4 w - - 0 1","m":"c2c8 g10e8 c8e8 f8e8 b9c7 e8f8 c7e6 f8e8 e6g7 e8f8 d9f9"},
+        {"n":264,"t":"巅峰得路","f":"2b1k4/2P6/3Rn1P2/9/4r4/9/9/3R5/4r4/3K5 w - - 0 1","m":"d8e8 e6e8 d3d10 e10e9 c9d9 e9f9 g8g9 f9f8 d10f10"},
+        {"n":266,"t":"脱网逢钩","f":"3C1a1c1/9/C2kbN3/4P4/9/9/9/9/r4p3/4K4 w - - 0 1","m":"e7e8 d8d9 e8e9 d9d8 f8d9 h10d10 d9b8 a2a8 b8c6"},
+        {"n":280,"t":"诳楚救主","f":"3ak4/4aR3/n3N4/4P4/2b6/8C/4c4/N3B1n2/1r2A4/3RKAr2 w - - 0 1","m":"f9f10 e10f10 d1d10 f10f9 e8g7 f9f8 g7h9 f8f9 i5i9"}
+      ]},
+      {"id":"sqyq-c","name":"Shiqing Yaqu · mate in 7–9","src":"适情雅趣","kind":"mate","blurb":"Deep forced mates from 《适情雅趣》 (1570). Every move usually has to be check.", "items": [
+        {"n":3,"t":"羝羊触藩","f":"1rbckaP2/3PaP1r1/1P2b4/1R7/Nn7/CRBp1n3/4C4/9/4p1p2/1c3K3 w - - 0 1","m":"g10f10 d10f10 d9e9 e10d10 e9e10 d10d9 b7d7 b6d7 a6c7 d9d8 b8c8 d8d9 b5b9 b10b9 c8b8 d9d8 a5a8"},
+        {"n":8,"t":"珠藏韫柜","f":"C1bac1RN1/r2Rak3/7n1/1rP6/2N1P1p2/9/9/2n6/5p3/4Kc3 w - - 0 1","m":"g10e10 f9f8 e10f10 e9f10 d9d8 c10e8 d8e8 f8e8 e6e7 e8e9 e7e8 e9d9 e8d8 d9d8 c7c8 d8d9 c8d8"},
+        {"n":10,"t":"鸳鸯戏水","f":"4kab1C/4a4/9/1R7/4P1N2/2N3B2/1n5r1/4n4/4A4/c1BAK4 w - - 0 1","m":"b7b10 e9d10 g6f8 e10e9 b10b9 e9e8 e6e7 e8f8 e7f7 f8e8 f7f8 e8f8 c5d7 f8e8 b9b8"},
+        {"n":11,"t":"群鼠争穴","f":"3k2b2/4P4/crR1b2Rc/9/9/9/9/1C3N1C1/4p1r2/2p2K3 w - - 0 1","m":"c8c10 e8c10 h8d8 a8d8 h3h10 g10e8 b3d3 d8c8 f3d4 c8d8 d4e6 d8c8 e6d8"},
+        {"n":14,"t":"独鹿鸣泽","f":"C3k4/4a1r2/5a3/1N7/1Cp6/1R7/9/3p5/4p3r/3K5 w - - 0 1","m":"b7d8 e9d8 b6b10 e10e9 b5b9 e9e8 a10a8 d8e9 b9b8 e9d8 b8b7 e8e9 b7b9 e9e10 a8a10"},
+        {"n":19,"t":"遁世不见","f":"3k1a3/4a4/2n6/NP1C1P3/9/C8/9/3ABcr1B/3pAp1n1/4K3c w - - 0 1","m":"a7b9 d10d9 a5a9 c8a9 b9d8 d9d8 d7d2 d8e8 f7e7 e8f8 d2f2 f3d3 e2f3"},
+        {"n":30,"t":"国庶兵强","f":"4kaPP1/c2Pa2nR/4b1P1r/6n2/6bN1/9/4C1R2/9/1r1p1p3/4K4 w - - 0 1","m":"g10f10 e10f10 g4f4 e9f8 f4f8 h9f8 i9f9 f10f9 d9e9 f9f10 e4f4 f8e6 h10g10 e8g10 g8f8 e6f4 e9e10"},
+        {"n":31,"t":"兵贵拙速","f":"4k1br1/r3aPRN1/2Rab1P1n/8p/6P2/8C/9/9/3p1p3/4K2c1 w - - 0 1","m":"f9f10 e10f10 c8c10 e8c10 g9f9 f10f9 g8f8 e9f8 i5f5 f8e9 h9f8 f9f8 g6f6"},
+        {"n":35,"t":"龙翻潭底","f":"1Cbaka3/1R7/2n1b4/2N1p4/9/3R5/4P1r2/4C3B/4Ar1n1/2BAK3c w - - 0 1","m":"e3e7 f10e9 b9e9 e10f10 e9e10 f10f9 d5d9 c8e9 e10f10 f9f10 d9d10 f10f9 d10f10"},
+        {"n":44,"t":"近悦远来","f":"4ka3/3P1R3/5P2b/6P1N/1R4b1c/2n6/8C/5A3/4AK3/1r4r2 w - - 0 1","m":"f9f10 e10f10 f8f9 f10f9 b6f6 i6f6 i4f4 f6a6 g7f7 a6f6 f7f8 f9f10 f8f9 f10e10 f9e9"},
+        {"n":91,"t":"六国抗秦","f":"2b1kaR2/3Ra2n1/1n2b4/5N3/2p3p2/1NB3C2/9/4B4/1r1p1r3/c3KC3 w - - 0 1","m":"f7g9 f2f9 g10f10 e9f10 g5e5 f10e9 d9e9 e10d10 e9e10 d10d9 b5c7 d9d8 e10d10 b8d9 c7e6"},
+        {"n":104,"t":"径行自遂","f":"6b2/1N3k2C/5a3/3R5/9/R8/9/4c1n2/3p5/3AKAr1c w - - 0 1","m":"d7d9 f8e9 b9d8 e3e8 d9e9 f9f8 e9e8 g10e8 d8e6 f8f9 e6g7 f9e9 g7h9 e9e10 a5a10"},
+        {"n":108,"t":"争舟走渡","f":"2bak4/4aPP2/4b4/3N5/2r1C4/9/9/C2R2nr1/4Ap3/3AK3c w - - 0 1","m":"f9f10 e10f10 g9f9 f10e10 f9f10 e10f10 d3f3 f10e10 d7f8 e10f10 f8h7 f10e10 h7g9"},
+        {"n":113,"t":"威镇四海","f":"2b2k3/1R2a1P2/3a5/4p1N2/6b2/9/3nP4/4C1C2/3rAp3/c1nAK4 w - - 0 1","m":"g9f9 f10e10 e3e7 g6e8 f9e9 d8e9 b9e9 e10d10 e9e10 d10d9 e10d10 d9d10 g7f9 d10d9 g3g9"},
+        {"n":122,"t":"地富兵强","f":"4kabC1/4a4/4b2N1/5P3/9/9/9/6Cr1/R1pp4r/R3K4 w - - 0 1","m":"a2a10 e9d10 a10d10 e10d10 h8f9 d10e10 a1a10 e10e9 g3g9 e9f9 f7f8 f9e9 f8e8 e9d9 e8d8 d9d8 a10d10"},
+        {"n":123,"t":"逢山开路","f":"1Nba1k1n1/7P1/9/1P2R1n2/5rb2/9/9/C3R4/3p1r3/c3K4 w - - 0 1","m":"e7f7 f6f7 e3e10 f10f9 h9g9 f9f8 e10e8 c10e8 b10d9 d10e9 a3a8 e8c6 d9b8 c6e8 b8d7"},
+        {"n":128,"t":"耿恭拜井","f":"2bak1C2/3Pa1R2/4b1N1N/9/9/9/4Pr3/5C3/3npr3/3K5 w - - 0 1","m":"d9e9 d10e9 g9e9 e10d10 g8f10 e8g10 e9d9 d10e10 i8g9 f4f9 f3e3 e10f10 d9d10"},
+        {"n":131,"t":"入幕之宾","f":"2bak3C/2C1aR2n/2n5N/9/7N1/9/9/1r6B/5p2r/3RK4 w - - 0 1","m":"f9f10 e10f10 h6g8 f10e10 g8h10 i9g10 i8g9 e10f10 h10g8 g10i9 g9e8 f10e10 g8f10 e10f10 d1d10"},
+        {"n":141,"t":"细柳屯兵","f":"2Pak4/CR2a1P2/4b2R1/9/9/1C7/4c4/9/2nr1p3/1r1cK1B2 w - - 0 1","m":"h8h10 e8g10 h10g10 e9f10 g10f10 e10f10 g9f9 f10e10 b9e9 d10e9 b5e5 e9d10 a9e9"},
+        {"n":146,"t":"远猎山林","f":"3a5/1n1ka4/9/5N3/2P6/C8/R8/B2ABA1r1/3pNp3/rc2K4 w - - 0 1","m":"a4d4 b9d8 d4d8 e9d8 a5d5 d8e9 c6d6 e9d8 d6e6 d8e9 f7d8 d9d8 d5d2 d8e8 e6e7 e8f8 d2f2"},
+        {"n":150,"t":"吕帅鹰扬","f":"3aka2R/1R7/c1P2P3/2P1rr3/2N5C/7C1/9/3p5/4p4/1p1K5 w - - 0 1","m":"h5h10 f10e9 h10h9 e9f10 b9e9 e10e9 f8f9 e9f9 i6i9 f9f8 i10f10 f8e8 c8d8 e8d8 c7d7 d8e8 d7d8"},
+        {"n":156,"t":"三献刖足","f":"3k5/1PR1a4/2Nab3b/6C2/9/4n4/9/9/2cp5/1rc1K2R1 w - - 0 1","m":"h1h10 i8g10 h10g10 e8g10 c9c10 d10d9 g7d7 e5d7 c10d10 e9d10 c8b10 c2c10 b9c9"},
+        {"n":163,"t":"选将练兵","f":"c4a3/1r1kaP2C/b1R1b2c1/4CN3/9/9/9/9/4p3r/5K3 w - - 0 1","m":"c8d8 d9d8 e7d7 d8d9 f9e9 d9d10 f7d8 b9d9 e9d9 d10e10 d7e7 e8g10 i9e9 g10e8 d9d10 e10d10 e7d7"},
+        {"n":171,"t":"赢缩无常","f":"3k3C1/2P6/4cN3/9/9/9/4P4/4Bp3/1rrnA2R1/5K1p1 w - - 0 1","m":"f8g10 e8e10 g10e9 e10e4 e9g10 e4e10 g10e9 e10e3 e9g10 e3e10 g10e9 e10e2 e9g10 e2e10 h2d2 c2d2 g10e9"},
+        {"n":184,"t":"蛇龙混海","f":"C2k5/4P4/r2cb1N1b/8C/6r2/9/9/6p2/4p4/5K1R1 w - - 0 1","m":"h1h10 e8g10 h10g10 i8g10 i7i10 g10e8 g8f10 e8g10 f10d9 g10e8 d9b10 a8a10 b10c8"},
+        {"n":188,"t":"载沉载浮","f":"2bak3C/4a4/2P1b4/6RR1/9/9/9/9/c1nr1p3/4K4 w - - 0 1","m":"h7h10 e9f10 h10h9 f10e9 g7g10 e9f10 h9e9 d10e9 g10g9 e8g10 g9e9 e10d10 e9e10 d10d9 c8c9 d9d8 e10d10"},
+        {"n":200,"t":"落花流水","f":"3a1k3/R3a4/4b1P2/3R4C/9/4C1N2/r8/9/2r1p4/3K5 w - - 0 1","m":"d7d10 e9d10 a9f9 f10f9 g8f8 f9f8 g5e6 f8f9 e6g7 f9f10 g7h9 f10f9 i7i9"},
+        {"n":201,"t":"三请诸葛","f":"3ak1P1P/4a4/9/9/4p3C/c3C1R2/9/5p3/2rp5/4K1R2 w - - 0 1","m":"g10f10 e10f10 g5g10 f10f9 g1g9 f9f8 g9g8 f8f9 g10g9 f9f10 g8f8 e9f8 g9f9 f10f9 i6f6 f8e9 e5f5"},
+        {"n":203,"t":"远近惊骇","f":"9/4a4/3k1a3/1NP1p4/9/8C/4P4/cr1AKA3/5r3/2n6 w - - 0 1","m":"c7d7 d8d9 i5d5 e9d8 d7d8 d9e9 d8e8 e9f9 d5f5 f8e9 e8f8 f9f8 f5f2 f8e8 b7c9 e8d8 f2d2"},
+        {"n":205,"t":"四畏廉名","f":"3aka3/9/4b2Rc/4P2N1/6b2/7C1/9/9/2nrA4/4KA3 w - - 0 1","m":"h8e8 d10e9 h7f8 e10d10 h5h10 d10d9 e8d8 d9d8 h10h8 g6e8 e7e8 d8d9 e8d8 d9d10 h8h10"},
+        {"n":206,"t":"孤星坠地","f":"9/4a4/4ka3/1NP1p4/9/9/8C/1p2KA1rc/2c1A4/5p3 w - - 0 1","m":"i4e4 e8d8 c7d7 d8d9 e4d4 e9d8 d7e7 d9e9 e7e8 e9f9 d4f4 f8e9 e8f8 f9f8 f4f1"},
+        {"n":211,"t":"晚鸟争枝","f":"r4Rb2/4k2C1/4b4/9/1N7/1r6R/9/4n4/3p1p3/4K3C w - - 0 1","m":"b6c8 e9d9 i5d5 b5d5 c8e9 d9d8 i1i8 e8g6 f10f8 g10e8 f8e8 d8e8 e9g8 g6i8 h9h8"},
+        {"n":219,"t":"屈突徒薪","f":"cc1a1k3/3Pa1R2/5rNr1/9/6R2/9/9/9/3p5/3AK4 w - - 0 1","m":"g9g10 f10f9 g10f10 b10f10 g8h10 f10g10 g6g9 f9f10 g9g10 f10f9 g10d10 a10h10 d9e9"},
+        {"n":291,"t":"丹山起凤","f":"r1P1k4/5P3/9/1c7/9/2N6/9/9/2p3p2/1p1KCN1rc w - - 0 1","m":"c5e4 b7e7 e4g3 e7d7 g3e2 d7e7 e2g1 e7d7 f1e3 d7e7 e3f5 e7d7 f5e7"},
+        {"n":338,"t":"英略盖世","f":"1nb2kr2/3Pa2R1/3nba3/N3C2C1/6r2/9/9/9/9/5K3 w - - 0 1","m":"h9f9 f10e10 d9e9 f8e9 f9e9 e10d10 a7c8 b10c8 e9d9 d10d9 e7d7 d9e9 h7e7"},
+        {"n":459,"t":"单驹随牝","f":"9/4P4/3k5/2N1n4/9/9/9/9/9/4K4 w - - 0 1","m":"c7b9 d8e8 e9f9 e8f8 b9d8 e7d5 f9g9 d5e7 e1e2 e7c8 d8e10 c8e9 e2e1"},
+        {"n":463,"t":"填塞道路","f":"9/3k5/9/4P4/2b6/9/9/4C4/5K3/9 w - - 0 1","m":"e3b3 d9e9 e7d7 c6a8 d7d8 a8c6 b3b7 e9e10 b7d7 e10e9 f2f1 e9e10 d8d9 c6a8 d7b7 a8c10 b7b9"}
+      ]},
+      {"id":"sqyq-d","name":"Shiqing Yaqu · mate in 10+","src":"适情雅趣","kind":"mate","blurb":"The marathons of 《适情雅趣》 (1570) — long forcing sequences. Hints and the solution viewer are your friends.", "items": [
+        {"n":2,"t":"马蹀阏氏","f":"C3kab2/4a4/n3c1n2/p2Np1p2/1R4P2/1R7/P3P4/4B4/2Cp1p3/c1rAK1N2 w - - 0 1","m":"b6b10 e9d10 b10b9 d10e9 c2c10 a8b10 c10c2 e9d10 b9e9 f10e9 d7c9 e10f10 b5f5 e8f8 f5f8 e9f8 c2f2 f8e9 g1f3 e9f8 f3h4 f8e9 h4f5 e9f8 f5e7 f8e9 e7g8 f10f9 g8e7 f9f10 e7f5 e9f8 f5g7 f8e9 g7h9 f10f9 h9f8 f9f8 g6f6"},
+        {"n":6,"t":"蝇垂骥尾","f":"2b1kabn1/4aR3/3R2N2/4p1p2/5P3/4P4/3N2Pr1/4C1n2/3pAr3/4K3c w - - 0 1","m":"e3e7 e9f8 d8e8 e10d10 f9d9 d10d9 g8f10 d9d10 e8d8 d10e10 f10e8 f8e9 e8g9 e10f10 d8f8 e9f8 e7f7 f8e9 f7f2 e9f8 f6e6 f8e9 d4f5 e9f8 f5g7 f8e9 g7f5 e9f8 f5h6 f8e9 h6f7 e9f8 f7d8 f8e9 g9f7 e9f8 f7h8 f8e9 h8f9 e9f8 f9h10 f8e9 h10g8"},
+        {"n":18,"t":"播弄造化","f":"3a1kbn1/4P4/1c2n1r2/4p4/9/CC5pp/9/9/r1p1p4/3K3RR w - - 0 1","m":"h1f1 g8f8 b5f5 f8g8 f5g5 g8f8 a5f5 f8g8 f5h5 g8f8 g5f5 f8g8 f5i5 g8f8 h5f5 f8g8 f5b5 g8f8 i5f5 f8g8 f5c5 g8f8 f1f8 b8f8 b5b10 d10e9 c5c10 f10f9 i1i9"},
+        {"n":22,"t":"及第思乡","f":"r1N3b2/1c1kaP3/3ab4/8N/9/9/9/4BA3/5p3/C1R1K1Rrc w - - 0 1","m":"c1c9 d9d10 a1d1 d10e10 c9e9 d8e9 f9e9 e10d10 c10d8 b9d9 d8b7 d9b9 b7d6 b9d9 d6e8 d9b9 e8d6 b9d9 d6c4 d9b9 c4d2 b9d9 d2f1 d9b9 g1g10"},
+        {"n":26,"t":"结草衔环","f":"2Pak3C/3Pa4/b5C1N/4p1p2/6b2/5N3/4c4/6n2/5p1r1/1r1cK4 w - - 0 1","m":"i8h10 e9f10 g8g10 f10e9 g10g6 e9f10 h10g8 f10e9 d9d10 e9d10 c10d10 e10d10 g8h10 d10d9 f5e7 d9d8 h10f9 d8e8 g6e6 e8f8 i10f10"},
+        {"n":29,"t":"四面楚歌","f":"2b1R1Nr1/1Nr2k3/9/C2R1P1n1/2bCp1P2/5pc2/9/5n3/2p1p4/3K5 w - - 0 1","m":"d7d9 c9d9 f7f8 h7f8 b9d8 c6e8 a7f7 f8h7 e10e9 d9e9 g10f8 f9f8 d8e6 f8f9 e6f8 f9f8 d6f6 h7f6 f7f5 f6d5 g6f6"},
+        {"n":32,"t":"士马如云","f":"2bakab2/n6P1/9/1R7/4N4/1C7/9/3ABA3/1N1p1p3/2p1KCrc1 w - - 0 1","m":"e6f8 e10e9 b7b9 e9e8 b9b8 e8e9 f8d7 e9e10 b8e8 d10e9 d7f8 e10d10 e8d8 e9d8 b5d5 d8e9 d5d2 e9d8 d3e2 d8e9 b2d3 e9d8 d3b4 d8e9 b4d5 e9d8 d5c7 d8e9 c7b9"},
+        {"n":36,"t":"鹤鸣九皋","f":"4k1b2/4a3n/1C1ab1R2/1NR6/2r1C4/9/9/4BA3/1n1p1p3/c1rAK1N2 w - - 0 1","m":"c7c10 c6c10 b7d8 e10f10 g8f8 e9f8 e6f6 f8e9 f6f2 e9f8 f3e2 f8e9 g1f3 e9f8 f3h4 f8e9 h4f5 e9f8 f5g7 f8e9 g7h9 f10f9 h9f8 f9f8 e2f3"},
+        {"n":49,"t":"独步出营","f":"2b2a3/1P1k1P3/3a5/9/n1b6/9/9/4RA3/2C1Nr3/2p1KA1rc w - - 0 1","m":"b9c9 d9d10 c9c10 d10d9 c2d2 d8e9 e3d3 e9d8 d3b3 d8e9 e2d4 f2d2 b3b9 d9d8 d4c6 a6c7 b9b8 d8d9 c6e7 c7e8 b8b9 d9d8 e7c6"},
+        {"n":54,"t":"五虎靠山","f":"C7r/3kaP3/b1c1ba3/1R3N3/9/C8/9/9/4p1r2/5K3 w - - 0 1","m":"b7d7 c8d8 d7d8 e9d8 a5d5 d8e9 f7d6 e9d8 d6b5 d8e9 b5c7 d9d10 c7b9 d10e10 d5d10 e8c10 b9d8 e9d8 d10d9"},
+        {"n":72,"t":"骏骑追风","f":"4kab1N/4a3C/4b4/N8/9/4C4/9/5p3/2n1p4/5K3 w - - 0 1","m":"i10g9 e10d10 a7b9 d10d9 g9e8 e9f8 b9c7 d9d8 c7e6 d8d9 e8c7 d9d10 c7b9 d10d9 e6f8 g10e8 b9c7 d9d10 i9i10 f10e9 f8g10 e9f10 c7e8 d10d9 e8c7 d9e9 c7e6 e9f9 g10h8"},
+        {"n":73,"t":"鱼跃于渊","f":"4k4/1R5n1/1N7/9/3P1N3/3r1R3/9/4p4/3r1p3/1c2K4 w - - 0 1","m":"b9e9 e10e9 f6d7 e9e10 d7c9 e10d10 c9e8 d10e10 e8g9 e10e9 b8d7 e9d9 f5f9 d9d10 f9f10 d10d9 d7b8 d9e9 g9f7 h9f8 b8d7 e9d9 d7f8 d9e9 f8d7 e9d9 d7b8"},
+        {"n":78,"t":"翻江搅海","f":"1rC2k3/9/n1R6/9/4N4/9/R3c4/4C4/4rn3/3K5 w - - 0 1","m":"c8f8 f10e10 f8e8 e10f10 e8e10 f10e10 e6f8 e10f10 f8h9 f10f9 h9g7 f9f10 g7e8 f10f9 e8d10 e4e10 a4f4 f9e9 d10c8 e9e8 c8d6 e8e9 d6f7 e9e8 f4e4 e8f8 e3f3"},
+        {"n":79,"t":"四七并列","f":"C3ka3/4a2r1/N3b4/3C5/3N5/9/9/5p3/4p4/5K3 w - - 0 1","m":"d7d10 e10d10 a8b10 e8c10 b10c8 d10d9 c8e7 d9d8 e7c6 d8d9 c6b8 d9d8 b8c10 d8d9 c10b8 d9d10 d6c8 d10e10 b8c10 e9d10 c10d8 e10e9 d8c6 e9f9 c6e7 f9f8 a10a8"},
+        {"n":89,"t":"七雄争霸","f":"2bak1b2/1n3P3/3a5/4p1p1N/6P1C/2R6/C1R1Pp1n1/3A5/3K2crc/3Ar4 w - - 0 1","m":"f9f10 e10f10 i7h9 f10e10 i6i10 g10e8 h9f8 e10f10 f8g10 f10f9 c5f5 h4f5 c4c9 d8e9 a4f4 f5h4 g10f8 f9f8 g6f6 h4f5 f6f7 f8f9 f7f8 f9f10 f8f9 f10e10 f9f10"},
+        {"n":106,"t":"兵马出塞","f":"2bak3r/3Ra4/4b4/6P2/7n1/2R3BN1/9/2n1C4/1r7/c3K3C w - - 0 1","m":"d9e9 e10f10 e9e10 f10f9 c5c9 f9f8 g7f7 h6f7 c9f9 f8f9 h5g7 f9f8 e10f10 i10f10 g7h9 f8f9 i1i9 f7g9 h9g7 f9f8 g7e6"},
+        {"n":107,"t":"丹山起凤","f":"1R1c1ab2/5k3/3r1a3/3C5/6b1N/3R5/9/3AB4/2p1p4/3K1N1rc w - - 0 1","m":"b10b9 d10d9 b9d9 d8d9 i6g7 f9e9 d5e5 g6e8 e5e8 g10e8 d7e7 e8c6 e7e2 c6e8 e3g1 e8c6 f1e3 c6e8 e3d5 e8c6 d5e7 c6e8 e7c8"},
+        {"n":130,"t":"鸦鹊争巢","f":"4k3C/c4P3/4N2c1/r6P1/4P2P1/9/4n4/3p5/4p4/3KC2N1 w - - 0 1","m":"e8f10 h8h10 f10h9 h10h7 h9f10 h7h10 f10h9 h10h6 h9f10 h6h10 f10h9 h10h1 e1e4 e10d10 h9f10 h1h10 f10h9 d10d9 h9f8 d9d8 i10i8 h10h8 f8d7 h8h5 e4d4 d8e8 e6e7 e8f8 e7f7 f8f9 d4f4 h5f5 f7f8 f9f10 f8f9 f10e10 f9e9 e10d10 f4d4 f5d5 d7f8 a9d9 e9d9"},
+        {"n":134,"t":"沧海腾蛟","f":"1C1k5/4P4/3N4R/5n2C/9/9/5N3/3ABAr2/1r1p1p3/4K3c w - - 0 1","m":"d8c10 b2b10 i8d8 f7d8 i7d7 d8c10 d7d2 c10d8 d3e2 d8e6 f4d5 e6d8 d5b6 d8b7 b6d7 b7d8 d7f8 d8f9 f8d9"},
+        {"n":147,"t":"烧牛凿城","f":"3akaP2/9/1R7/2pNp4/1C4b2/9/9/3NB4/1n1p1p3/4Kcr1c w - - 0 1","m":"b8e8 d10e9 d7c9 e10d10 e8d8 e9d8 b6d6 d8e9 d6d2 e9d8 d3b2 d8e9 b2d3 e9d8 d3b4 d8e9 b4d5 e9d8 d5c7 d8e9 c7d5 e9d8 d5e7 d8e9 e7d5 e9d8 d5f6 d8e9 f6d7 e9d8 d7f8 d8e9 c9d7 e9d8 d7b6 d8e9 b6c8"},
+        {"n":149,"t":"腾蛟起凤","f":"4R4/3ca4/4ka3/5P3/C1b2R3/9/4P4/3AB1n1r/3p1p3/2N1K4 w - - 0 1","m":"f7e7 e8d8 f6f8 e9f8 e10e8 c6e8 e7d7 d9d7 a6d6 d7e7 d6d2 e7d7 d3e2 d7e7 c1d3 e7d7 d3c5 d7e7 c5d7"},
+        {"n":151,"t":"虏马饮江","f":"3ak1b2/2P2P3/3ac2P1/9/1R7/C5N2/9/3p1A1C1/4p2r1/5K3 w - - 0 1","m":"a5a10 d10e9 b6b10 e9d10 b10b9 d10e9 c9c10 e9d10 f9f10 e10f10 c10d10 e8e10 d10e10 f10e10 b9b10 e10e9 g5f7 e9f9 f7d8 f9f8 a10a8 g10e8 h8g8 f8f9 g8g9 f9f8 d8e10"},
+        {"n":175,"t":"四面旋绕","f":"C2R4c/5k3/b2a1N2b/2R6/9/9/9/4p4/3nr1p2/c4K2C w - - 0 1","m":"c7c9 d8e9 c9e9 f9e9 f8d7 e9e8 d7f6 e8e9 f6g8 e9e8 g8f10 e8e9 d10d9 e9e10 i1i10 i8g10 f10g8 g10e8 d9e9 e10d10 g8f10 e8g10 f10d9 g10e8 d9b10 a1a10 b10c8"},
+        {"n":207,"t":"菱叶穿萍","f":"2ba1k3/2P6/1n1a5/4C1N1R/1n5Cr/9/9/3p5/4p4/3K5 w - - 0 1","m":"g7e8 d10e9 i7f7 f10e10 e8g9 e10d10 f7f10 e9f10 h6h10 f10e9 g9e10 e9f10 e10f8 f10e9 c9d9 b8d9 f8e10 e9f10 e10d8 f10e9 d8b9"},
+        {"n":210,"t":"士马如云","f":"Nr2kc3/4a3n/2R3n2/4RN3/9/9/7C1/9/3p1pr2/4K4 w - - 0 1","m":"e7e9 g8e9 f7d8 e10d10 h4d4 e9d7 d8f9 d7e9 c8d8 d10e10 d4e4 e9f7 d8e8 f7e9 e8e9 e10d10 e9e5 d10d9 e5d5 d9e9 f9e7"},
+        {"n":221,"t":"野马舞风","f":"R4a1C1/3ka4/8b/7N1/6b2/1r7/9/2C6/4p3r/c4K3 w - - 0 1","m":"a10a9 d9d8 a9a8 d8d9 h10h9 e9f8 h7g9 f8e9 a8d8 d9d8 g9f7 d8e8 f7d6 e8d8 c3d3 b5d5 d6f7 d8e8 f7g9"},
+        {"n":225,"t":"循序渐进","f":"3k5/1R2n1P2/2R1b4/9/r2P5/7N1/9/9/4r3C/3K5 w - - 0 1","m":"b9d9 d10d9 c8d8 d9d8 d6d7 d8d9 d7d8 d9d10 d8d9 d10e10 d9d10 e10f10 g9f9 f10f9 h5g7 f9f10 g7h9 f10f9 i2i9"},
+        {"n":350,"t":"管仲随马","f":"C3kanr1/9/1R2ca2c/9/1N7/9/9/9/4p2p1/5K3 w - - 0 1","m":"b8b10 e10e9 b10b9 e9e10 b6c8 e8d8 c8b10 d8d10 b10d9 e10e9 d9b8 e9e8 a10a8 d10d8 b8d7 d8d10 b9b8 d10d8 b8d8 e8e9 d8f8 e9d9 f8d8 d9e9 d8i8 e9d9 i8d8 d9e9 d8g8 e9d9 d7b8 d9e9 b8c10 e9d9 g8d8"},
+        {"n":458,"t":"顾彼失此","f":"3k2b2/4P4/2c6/2N6/9/9/9/9/9/4K4 w - - 0 1","m":"e1e2 g10i8 c7d5 i8g10 d5e7 c8c10 e9d9 d10e10 e2f2 c10c5 e7c8 c5f5 d9e9 e10f10 c8e7 f5f7 f2f3 g10e8 e7d5 e8g10 d5e3 g10e8 e3f1 e8g10 f1g3 g10e8 g3h5 e8g10 h5g7 g10e8 g7h9"}
+      ]},
+      {"id":"jianghu","name":"Four Great Endgames","src":"江湖四大名局","kind":"study","blurb":"The \"Four Great Jianghu Endgames\" (江湖四大名局): Qing-era street-gambling studies that look like easy wins for Red but are draws with best play. Hold the draw against the engine, or study the book line.", "items": [
+        {"n":1,"t":"七星聚会","e":"Seven Stars Gathering","f":"4rk3/3P5/4bP3/9/9/8P/9/1p2p2C1/3p1p3/4K1RR1 w - - 0 1","m":"h3f3 e3f3 f8f9 f10f9 g1g9 f9f10 h1h2 f2e2 h2e2 d2e2 e1e2 f3f2 e2e3 e10c10 d9c9 c10a10 g9g8 f10f9 g8g9 f9f10 g9g7 a10a3 g7f7 f10e10 f7f2 b3c3 f2d2 c3c2 d2d3 a3a5 d3d8 a5e5 e3d3 e5e1 d8d10 e10e9 d10h10 e1a1 d3e3 c2d2 h10d10 a1i1 d10f10 i1i3 f10f3 i3i5 f3f10 i5e5 e3d3 e5d5 d3e3 d5d4 f10h10 d4c4 h10d10 d2c2 d10h10 c2d2 h10d10 e9f9 d10d7 c4f4 e3d3 d2c2 d3e3 c2d2 e3d3 d2e2 d7e7 e2f2 e7h7 f4d4 d3e3 d4c4 e3d3 e8g6 c9d9 f9f8 h7g7 g6i8 g7g8 f8f9 g8i8 c4g4 i8i6"},
+        {"n":2,"t":"蚯蚓降龙","e":"Earthworm Subdues the Dragon","f":"3ak4/4a4/4b4/9/2p6/5R2P/9/9/4p1p2/5K2R w - - 0 1","m":"i5i6 c6c5 i6h6 e8g10 h6g6 c5d5 g6f6 e9f10 f6e6 d10e9 e6e7 d5e5 f5f6 e5e4 e7f7 e4e3 f6f5 e10d10 i1h1 e9d8 f7e7 d8e9 e7f7 g10e8 f5d5 e9d8 d5f5 d8e9 f5d5 e9d8 d5f5 e8g10 f7e7 d8e9 e7f7 g10e8 f5d5 e9d8 d5f5 e8g10 f7e7 d8e9 e7f7 g10i8 f5f4 i8g10 f4f5 g10i8 f5f4 i8g6 f7f8 e9f8 f4f8 f10e9 f8f4 e3d3 f4d4 e9d8 d4f4 d8e9 f4d4 e9d8 d4f4"},
+        {"n":3,"t":"野马操田","e":"Wild Horse Ploughs the Field","f":"2bak4/4a4/4b4/9/6NRR/2B6/1rP1P4/3pB4/4p4/3K5 w - - 0 1","m":"i6i10 e8g10 i10g10 e9f10 g6f8 e10e9 f8d7 e9d9 d7f8 d9e9 f8d7 e9d9 g10g9 d10e9 d7f8 d9d8 f8e6 d8d9 e6c7 d9d10 h6d6 d10e10 e3c1 b4c4 c5a3 e2d2 d1e1 c4e4 e1f1 d2e2 d6f6 e4h4 g9g1 d3d2 c7e6 c10e8 e6d8 e10d10 d8b7 e9d8 f6f10 d10d9 f10f6 h4h10 b7c5 e8g6 g1i1 g6i8 i1g1 d9d10 f6f7 d2d1 c5d3 h10h3 f7f2 e2f2 f1f2 h3d3 g1g5 d3d2 f2f3 d2e2 c1e3 e2e1 g5g1"},
+        {"n":4,"t":"千里独行","e":"Lone Ride of a Thousand Li","f":"4k4/9/3aP3b/p8/9/6n2/2P3p2/4R4/3p1p3/4K4 w - - 0 1","m":"e3h3 g4h4 h3h4 d2e2 e1d1 d8e9 h4h9 g5f7 h9f9 i8g10 c4c5 e9f8 e8e9 f8e9 f9f7 a7a6 f7e7 a6a5 c5c6 a5b5 c6c7 b5c5 c7d7 c5c4 d7d8 e10f10 e7f7 f10e10 f7e7 e10f10 e7f7 f10e10 f7e7 e10f10 e7f7 e9f8 d8e8 f10e10 f7f8 g10e8 f8e8 e10f10 e8c8 c4d4 c8d8 d4c4 d8d3 f10e10 d3e3 e10f10 e3d3 f10f9 d3d9 f9f10 d9d3"}
+      ]}
+    ];
+
+    var pz = {
+      set: 0, idx: 0, item: null, book: [], solver: "w", goal: 0,
+      ply: 0,          // how far along the book line we are
+      made: 0,         // solver moves played so far
+      offBook: false,  // left the book line (engine now defends / judges)
+      solved: false, busy: false, viewing: false, hint: null,
+      praise: false    // keep the "well found" message up through the reply
+    };
+    var solvedSet = {};
+    try { (JSON.parse(readLS("xiangqi-solved", "[]")) || []).forEach(function (k) { solvedSet[k] = true; }); } catch (e) {}
+    function pzKey(si, i) { return PUZZLE_SETS[si].id + ":" + PUZZLE_SETS[si].items[i].n; }
+    function markSolved() {
+      if (pz.viewing) return;
+      solvedSet[pzKey(pz.set, pz.idx)] = true;
+      writeLS("xiangqi-solved", JSON.stringify(Object.keys(solvedSet)));
+    }
+
+    var pzMsg = { text: "", cls: "" };
+    function setPz(text, cls) { pzMsg.text = text || ""; pzMsg.cls = cls || ""; }
+
+    function puzzleCanMove() {
+      return !pz.busy && !pz.viewing && !pz.solved && !state.thinking && state.turn === pz.solver;
+    }
+
+    function startPuzzle(si, i, viewing) {
+      pz.set = si; pz.idx = i;
+      pz.item = PUZZLE_SETS[si].items[i];
+      pz.kind = PUZZLE_SETS[si].kind;
+      pz.book = pz.item.m.split(" ");
+      pz.ply = 0; pz.made = 0; pz.offBook = false;
+      pz.solved = false; pz.busy = false; pz.viewing = !!viewing; pz.hint = null; pz.praise = false;
+      writeLS("xiangqi-pz", si + ":" + i);
+      resetGame(pz.item.f);
+      pz.solver = state.turn;
+      pz.goal = Math.ceil(pz.book.length / 2);
+      state.flipped = pz.solver === "b";
+      setPz(viewing ? "The book solution — step through it with ◀ ▶." : "", "");
+      buildGrid();
+      render();
+    }
+
+    // No legal reply = win (checkmate, or stalemate — which also loses in Xiangqi).
+    function endsGame(move) {
+      var b2 = cloneBoard(state.board);
+      applyMoveTo(b2, move);
+      return generateLegalMoves(b2, opponent(state.turn)).length === 0;
+    }
+
+    function rejectMove(msg) {
+      setPz("✗ " + msg, "bad");
+      render();
+    }
+
+    function puzzleTry(move) {
+      var uci = moveToUCI(move);
+      state.selected = null; state.legalTargets = []; pz.hint = null;
+      if (!pz.offBook && uci === pz.book[pz.ply]) {
+        pz.ply++; pz.made++; setPz("", ""); makeMove(move); return;
+      }
+      if (pz.kind === "mate" && endsGame(move)) {
+        pz.offBook = true; pz.made++; makeMove(move); return;
+      }
+      if (engine.status === "error") {
+        rejectMove(pz.kind === "mate"
+          ? "That's not the book move — and without the engine, other solutions can't be checked."
+          : "Leaving the book line needs the engine, which isn't available here.");
+        return;
+      }
+      if (pz.kind === "study") {
+        pz.offBook = true; pz.made++; setPz("Off the book line — Fairy-Stockfish takes over Black.", ""); makeMove(move); return;
+      }
+      // A different move can still be right: it must keep a forced mate within the moves left.
+      var left = pz.goal - pz.made - 1;
+      if (left < 1) { rejectMove("That doesn't mate, and it's your last move."); return; }
+      pz.busy = true;
+      setPz("Checking that move with Fairy-Stockfish…", "");
+      render();
+      engineAsk(uci, "depth " + Math.min(24, 2 * left + 8) + " movetime 4000", function (best, score) {
+        pz.busy = false;
+        if (score && score.mate != null && score.mate < 0 && -score.mate <= left) {
+          if (!pz.offBook) { setPz("Not the book move, but it still forces mate — well found.", "good"); pz.praise = true; }
+          else setPz("", "");
+          pz.offBook = true; pz.made++;
+          makeMove(move);
+        } else {
+          rejectMove(score || best ? "That lets " + colorName(opponent(pz.solver)) + " escape. Try again."
+                                   : "Couldn't check that move — try the book line.");
+        }
+      });
+    }
+
+    function puzzleAfterMove() {
+      if (pz.viewing) { render(); return; }
+      if (state.over) {
+        var solverWon = state.legalCache.length === 0 && state.turn !== pz.solver;
+        var drawn = /Draw/.test(state.overText);
+        if (solverWon || (pz.kind === "study" && drawn)) {
+          pz.solved = true; markSolved();
+          setPz(pz.kind === "mate"
+            ? "✓ Solved" + (pz.made < pz.goal ? " — and faster than the book!" : "!") + " Press Next for another."
+            : (solverWon ? "✓ You even won it! " : "✓ Draw — you held it. ") + "Press Next for another.", "good");
+        } else {
+          setPz(state.overText + " Press Retry to try again.", "bad");
+        }
+        render();
+        return;
+      }
+      if (state.turn !== pz.solver) {
+        // the defender replies: from the book while we're on it, otherwise the engine
+        if (!pz.offBook && pz.ply < pz.book.length) {
+          var mv = uciToMove(pz.book[pz.ply]), gid = state.gameId;
+          pz.ply++;
+          pz.busy = true;
+          render();
+          setTimeout(function () {
+            if (gid !== state.gameId) return;
+            pz.busy = false;
+            if (mv) makeMove(mv);
+          }, 420);
+          return;
+        }
+        pz.offBook = true;
+        pz.busy = true;
+        render();
+        engineAsk(null, pz.kind === "mate" ? "depth 16 movetime 1500" : "depth 18 movetime 2000", function (best) {
+          pz.busy = false;
+          var reply = uciToMove(best);
+          if (reply) makeMove(reply);
+          else { setPz("The engine couldn't reply — press Retry.", "bad"); render(); }
+        });
+        return;
+      }
+      if (pz.kind === "mate") {
+        var n = pz.goal - pz.made;
+        if (pz.praise) pz.praise = false;
+        else if (pz.made) setPz("Good — keep going. " + n + " move" + (n === 1 ? "" : "s") + " left to mate.", "good");
+      } else if (!pz.offBook && pz.ply >= pz.book.length) {
+        pz.solved = true; markSolved();
+        setPz("✓ You've played the whole book line — the classic drawn ending.", "good");
+      }
+      render();
+    }
+
+    function puzzleHint() {
+      if (!puzzleCanMove()) return;
+      if (!pz.offBook && pz.ply < pz.book.length) { showHint(pz.book[pz.ply]); return; }
+      pz.busy = true;
+      setPz("Asking Fairy-Stockfish for a hint…", "");
+      render();
+      engineAsk(null, "depth 16 movetime 1500", function (best) {
+        pz.busy = false;
+        if (best && uciToMove(best)) showHint(best);
+        else { setPz("No hint available without the engine.", "bad"); render(); }
+      });
+    }
+    function showHint(uci) {
+      var mv = uciToMove(uci);
+      if (!mv) return;
+      pz.hint = [mv[0], mv[1]];
+      setPz("Hint: move the highlighted piece.", "");
+      render();
+    }
+
+    function viewStep(dir) {
+      if (!pz.viewing || state.animating) return;
+      if (dir > 0 && state.uciMoves.length < pz.book.length) {
+        var mv = uciToMove(pz.book[state.uciMoves.length]);
+        if (mv) makeMove(mv);
+      } else if (dir < 0 && state.history.length) {
+        restore(state.history.pop());
+        state.selected = null; state.legalTargets = [];
+        state.legalCache = generateLegalMoves(state.board, state.turn);
+        render();
+      }
+    }
+
+    var setSel = document.getElementById("setSel");
+    function renderPuzzleUI() {
+      var set = PUZZLE_SETS[pz.set], item = pz.item;
+      if (!set || !item) return;
+      document.getElementById("setBlurb").textContent = set.blurb;
+      var grid = document.getElementById("pzGrid");
+      if (grid.dataset.set !== String(pz.set)) {
+        grid.innerHTML = "";
+        set.items.forEach(function (it, i) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.textContent = it.n;
+          b.title = "No. " + it.n + " " + it.t;
+          b.addEventListener("click", function () { startPuzzle(pz.set, i); });
+          grid.appendChild(b);
+        });
+        grid.dataset.set = String(pz.set);
+      }
+      Array.prototype.forEach.call(grid.children, function (b, i) {
+        b.classList.toggle("solved", !!solvedSet[pzKey(pz.set, i)]);
+        b.classList.toggle("cur", i === pz.idx);
+      });
+      document.getElementById("pzTitle").innerHTML =
+        '<span class="zh">' + item.t + "</span>" + (item.e ? ' <span class="en">· ' + item.e + "</span>" : "") +
+        '<span class="src">' + set.src + " No. " + item.n + "</span>";
+      var side = colorName(pz.solver);
+      document.getElementById("pzGoal").textContent = pz.kind === "mate"
+        ? side + " to move — mate in " + pz.goal + "."
+        : side + " to move — hold the draw against Fairy-Stockfish. (The book line runs " + pz.goal + " moves.)";
+      var msg = document.getElementById("pzMsg");
+      var text = pzMsg.text;
+      if (!text && !pz.viewing) text = pz.busy || state.thinking ? "…" : (state.turn === pz.solver ? "Your move." : "");
+      msg.textContent = text;
+      msg.className = "pzmsg" + (pzMsg.cls ? " " + pzMsg.cls : "");
+      document.getElementById("pzBtns").hidden = pz.viewing;
+      document.getElementById("pzView").hidden = !pz.viewing;
+      document.getElementById("pzHint").disabled = !puzzleCanMove();
+      document.getElementById("pzSol").disabled = pz.busy;
+      document.getElementById("pzViewPos").textContent = state.uciMoves.length + " / " + pz.book.length;
+      document.getElementById("pzPrev").disabled = state.uciMoves.length === 0;
+      document.getElementById("pzFwd").disabled = state.uciMoves.length >= pz.book.length;
+    }
+
+    function setMode(mode) {
+      if (!PUZZLE_SETS.length) mode = "play";
+      state.mode = mode;
+      writeLS("xiangqi-mode", mode);
+      document.getElementById("tabPlay").classList.toggle("on", mode === "play");
+      document.getElementById("tabPuzzles").classList.toggle("on", mode === "puzzle");
+      document.getElementById("tabPlay").setAttribute("aria-selected", String(mode === "play"));
+      document.getElementById("tabPuzzles").setAttribute("aria-selected", String(mode === "puzzle"));
+      document.querySelectorAll(".play-only").forEach(function (el) { el.hidden = mode !== "play"; });
+      document.querySelectorAll(".puzzle-only").forEach(function (el) { el.hidden = mode !== "puzzle"; });
+      if (mode === "puzzle") {
+        var saved = readLS("xiangqi-pz", "0:0").split(":"), si = +saved[0] || 0, i = +saved[1] || 0;
+        if (!PUZZLE_SETS[si]) si = 0;
+        if (!PUZZLE_SETS[si].items[i]) i = 0;
+        setSel.value = String(si);
+        startPuzzle(si, i);
+      } else {
+        pz.hint = null;
+        resetGame(null);
+        state.flipped = state.opponent === "engine" && state.humanColor === "b";
+        buildGrid();
+        render();
+        maybeEngineMove();
+      }
+    }
+
+    PUZZLE_SETS.forEach(function (set, i) {
+      var o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = set.name + " (" + set.items.length + ")";
+      setSel.appendChild(o);
+    });
+    setSel.addEventListener("change", function () { startPuzzle(+this.value, 0); });
+    document.getElementById("tabPlay").addEventListener("click", function () { if (state.mode !== "play") setMode("play"); });
+    document.getElementById("tabPuzzles").addEventListener("click", function () { if (state.mode !== "puzzle") setMode("puzzle"); });
+    document.getElementById("pzHint").addEventListener("click", puzzleHint);
+    document.getElementById("pzRetry").addEventListener("click", function () { startPuzzle(pz.set, pz.idx); });
+    document.getElementById("pzSol").addEventListener("click", function () { startPuzzle(pz.set, pz.idx, true); });
+    document.getElementById("pzExitView").addEventListener("click", function () { startPuzzle(pz.set, pz.idx); });
+    document.getElementById("pzPrev").addEventListener("click", function () { viewStep(-1); });
+    document.getElementById("pzFwd").addEventListener("click", function () { viewStep(1); });
+    document.getElementById("pzNext").addEventListener("click", function () {
+      var set = PUZZLE_SETS[pz.set], i = pz.idx + 1;
+      // skip ahead to the next unsolved problem, wrapping around
+      for (var k = 0; k < set.items.length; k++) {
+        var j = (pz.idx + 1 + k) % set.items.length;
+        if (!solvedSet[pzKey(pz.set, j)]) { i = j; break; }
+      }
+      startPuzzle(pz.set, i % set.items.length);
+    });
 
     // ========================================================== CONTROLS
     document.getElementById("newBtn").addEventListener("click", newGame);
@@ -1321,8 +1896,8 @@
     applyLook();
     applyOpponentUI();
     buildGrid();
-    render();
-    maybeEngineMove();
+    if (readLS("xiangqi-mode", "play") === "puzzle" && PUZZLE_SETS.length) setMode("puzzle");
+    else { render(); maybeEngineMove(); }
   })();
   </script>
 </body>
