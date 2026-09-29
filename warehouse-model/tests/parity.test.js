@@ -32,6 +32,8 @@ designs.forEach((q, i) => {
     ["level_pitch", js.layout.levelPitch], ["positions_per_bay", js.capacity.positionsPerBay], ["storage_capacity", js.capacity.storageCapacity]
   ];
   let ok = pairs.every(([k, v]) => near(f[k], v));
+  ok = ok && f.bay_x.length === js.layout.bayX.length && f.bay_x.every((x, j) => near(x, js.layout.bayX[j]));
+  ok = ok && f.segments.length === js.layout.segments.length && f.segments.every((sg, j) => near(sg.x0, js.layout.segments[j].x0) && sg.bays === js.layout.segments[j].bays);
   ok = ok && f.rows.length === js.layout.rows.length && f.rows.every((r, j) => near(r.y, js.layout.rows[j].y) && near(r.depth, js.layout.rows[j].depth) && r.faces === js.layout.rows[j].faces);
   if (ok) pass++; else { fail++; if (fail < 4) console.log("MISMATCH", JSON.stringify(q), JSON.stringify(pairs.filter(([k, v]) => !near(f[k], v)).map(([k, v]) => [k, f[k], v]))); }
 });

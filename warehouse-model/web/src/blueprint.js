@@ -64,34 +64,45 @@
       const cx = X(x + w / 2), cy = Y(WT + p.warehouse_width / 2);
       el(`<text x="${cx}" y="${cy}" fill="${ZONE}" font-size="10" text-anchor="middle" transform="rotate(-90 ${cx} ${cy})">${label}</text>`);
     }
-    zone(WT, p.cross_aisle_width, "RECEIVING STAGING");
-    zone(WT + p.warehouse_length - p.cross_aisle_width, p.cross_aisle_width, "SHIPPING STAGING");
+    const U = p.flow_layout === "u_flow";
+    zone(WT, p.cross_aisle_width, U ? "RECEIVING + SHIPPING STAGING" : "RECEIVING STAGING");
+    zone(WT + p.warehouse_length - p.cross_aisle_width, p.cross_aisle_width, U ? "CROSS-AISLE" : "SHIPPING STAGING");
+    for (let k = 0; k + 1 < layout.segments.length; k++) {
+      const mx = WT + layout.segments[k].x0 + layout.segmentLength;
+      el(`<rect x="${X(mx)}" y="${Y(WT)}" width="${p.mid_cross_aisle_width * PX}" height="${p.warehouse_width * PX}" fill="${DOCK}" fill-opacity="0.06" stroke="${DOCK}" stroke-width="0.6" stroke-dasharray="3,4"/>`);
+    }
 
     // rack rows (with their lanes drawn for deep rack types) and aisle centre lines
     const x0 = WT + p.cross_aisle_width, deep = layout.rackType.deep;
+    const segs = layout.segments.filter(function (sg) { return sg.bays > 0; });
     layout.rows.forEach(function (r) {
       const ry = WT + r.y;
-      el(`<rect x="${X(x0)}" y="${Y(ry)}" width="${layout.rackRowLength * PX}" height="${r.depth * PX}" fill="${RACK_FILL}" stroke="${RACK}" stroke-width="0.9"/>`);
-      for (let k = 1; k < deep; k++) el(`<line x1="${X(x0)}" y1="${Y(ry + k * p.rack_depth)}" x2="${X(x0 + layout.rackRowLength)}" y2="${Y(ry + k * p.rack_depth)}" stroke="${RACK}" stroke-width="0.4" stroke-dasharray="2,3"/>`);
+      segs.forEach(function (sg) {
+        const sx = WT + sg.x0;
+        el(`<rect x="${X(sx)}" y="${Y(ry)}" width="${sg.length * PX}" height="${r.depth * PX}" fill="${RACK_FILL}" stroke="${RACK}" stroke-width="0.9"/>`);
+        for (let k = 1; k < deep; k++) el(`<line x1="${X(sx)}" y1="${Y(ry + k * p.rack_depth)}" x2="${X(sx + sg.length)}" y2="${Y(ry + k * p.rack_depth)}" stroke="${RACK}" stroke-width="0.4" stroke-dasharray="2,3"/>`);
+      });
       if (r.index === 1 || r.index === layout.numRackRows) {
         el(`<text x="${X(x0 + 2)}" y="${Y(ry + r.depth / 2 + 0.3)}" fill="${RACK}" font-size="6.5">R${String(r.index).padStart(2, "0")}</text>`);
       }
     });
     el(`<g stroke="${ACCENT}" stroke-width="0.5" stroke-dasharray="1,4" opacity="0.6">`);
-    layout.aisles.forEach(function (a) { el(`<line x1="${X(x0)}" y1="${Y(WT + a.y)}" x2="${X(x0 + layout.rackRowLength)}" y2="${Y(WT + a.y)}"/>`); });
+    layout.aisles.forEach(function (a) { segs.forEach(function (sg) { el(`<line x1="${X(WT + sg.x0)}" y1="${Y(WT + a.y)}" x2="${X(WT + sg.x0 + sg.length)}" y2="${Y(WT + a.y)}"/>`); }); });
     el(`</g>`);
     if (layout.rows.length) {
-      el(`<text x="${X(x0 + layout.rackRowLength / 2)}" y="${Y(WT + layout.yOffset - 1.2)}" fill="${INK}" font-size="8" text-anchor="middle">${layout.numRackRows} ROWS &#183; ${layout.baysPerRow} BAYS/ROW &#183; ${layout.rackType.label.toUpperCase()} &#183; ${capacity.storageCapacity.toLocaleString("en-US")} POSITIONS</text>`);
+      el(`<text x="${X(WT + p.warehouse_length / 2)}" y="${Y(WT + layout.yOffset - 1.2)}" fill="${INK}" font-size="8" text-anchor="middle">${layout.numRackRows} ROWS &#183; ${layout.baysPerRow} BAYS/ROW${segs.length > 1 ? " IN " + segs.length + " SEGMENTS" : ""} &#183; ${layout.rackType.label.toUpperCase()} &#183; ${capacity.storageCapacity.toLocaleString("en-US")} POSITIONS</text>`);
     }
 
     // dock doors (west = receiving, east = shipping)
-    function doors(xEdge, count, label, anchor, dx) {
-      const y0 = WT + (p.warehouse_width - count * p.dock_bay_width) / 2;
-      for (let i = 0; i < count; i++) el(`<rect x="${X(xEdge) - 3}" y="${Y(y0 + i * p.dock_bay_width) + 1}" width="6" height="${p.dock_bay_width * PX - 2}" fill="${DOCK}"/>`);
-      el(`<text x="${X(xEdge) + dx}" y="${Y(y0 - 0.8)}" fill="${DOCK}" font-size="7" text-anchor="${anchor}">${label}</text>`);
+    function doors(xEdge, centres, label, anchor, dx, color) {
+      if (!centres.length) return;
+      const y0 = WT + centres[0] - p.dock_bay_width / 2;
+      centres.forEach(function (c) { el(`<rect x="${X(xEdge) - 3}" y="${Y(WT + c - p.dock_bay_width / 2) + 1}" width="6" height="${p.dock_bay_width * PX - 2}" fill="${color}"/>`); });
+      el(`<text x="${X(xEdge) + dx}" y="${Y(y0 + p.dock_bay_width * 0.6)}" fill="${color}" font-size="7" text-anchor="${anchor}">${label}</text>`);
     }
-    doors(0, p.num_receiving_docks, p.num_receiving_docks + "× RECEIVING", "end", -6);
-    doors(buildingW, p.num_shipping_docks, p.num_shipping_docks + "× SHIPPING", "start", 6);
+    const D = results.doors || { inY: [], outY: [] };
+    doors(0, D.inY, D.inY.length + "\u00d7 RECEIVING", "end", -6, DOCK);
+    doors(D.u ? 0 : buildingW, D.outY, D.outY.length + "\u00d7 SHIPPING", D.u ? "end" : "start", D.u ? -6 : 6, D.u ? RACK : DOCK);
 
     // dimension lines
     function dimH(y, x1, x2, label) {
@@ -109,7 +120,7 @@
     if (layout.rows.length >= 2 && layout.baysPerRow > 0) {
       // detail dimensions on an aisle in the middle of the block, clear of the row labels
       const a = layout.aisles[Math.floor(layout.aisles.length / 2)];
-      const bx = x0 + Math.floor(layout.baysPerRow / 2) * p.bay_width;
+      const bx = WT + layout.bayX[Math.floor(layout.baysPerRow / 2)];
       dimH(WT + a.y, bx, bx + p.bay_width, "bay " + len(p.bay_width));
       dimV(bx + p.bay_width + 2.5, WT + a.y - p.aisle_width / 2, WT + a.y + p.aisle_width / 2, "aisle " + len(p.aisle_width), true);
     }

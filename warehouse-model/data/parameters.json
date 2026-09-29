@@ -85,10 +85,27 @@
       "category": "Racking",
       "description": "Gap between back-to-back rows (the longitudinal flue), kept clear so sprinkler water and heat can travel up through the racks. Fire codes such as NFPA 13 require at least 150 mm; 300 mm is common practice."
     },
+    "mid_cross_aisles": {
+      "value": 0, "unit": "count", "minimum": 0, "maximum": 4,
+      "category": "Racking",
+      "description": "Cross-aisles through the middle of the racking, splitting every row into equal segments. They cost storage bays, but let a truck change aisles without driving to the end — which shortens dual-command trips."
+    },
+    "mid_cross_aisle_width": {
+      "value": 3.5, "unit": "m", "minimum": 2.5, "maximum": 6,
+      "category": "Racking",
+      "description": "Clear width of each mid cross-aisle — at least the aisle width, so a truck can turn out of an aisle into it."
+    },
     "sprinkler_clearance": {
       "value": 0.46, "unit": "m", "minimum": 0.3, "maximum": 1.0,
       "category": "Racking",
       "description": "Minimum gap between the top of the highest load and the sprinkler deflectors — 0.46 m (18 in) for standard ceiling sprinklers, 0.91 m (36 in) for ESFR under NFPA 13."
+    },
+    "flow_layout": {
+      "value": "i_flow", "type": "choice",
+      "options": ["i_flow", "u_flow"],
+      "labels": { "i_flow": "I-flow: receive west, ship east", "u_flow": "U-flow: receive and ship on the west wall" },
+      "category": "Docks & Flow",
+      "description": "Where the doors are. I-flow (flow-through) receives at one end and ships from the other; U-flow puts both on the same wall, so the doors need more wall but fast-moving pallets can sit close to both."
     },
     "num_receiving_docks": {
       "value": 4, "unit": "count", "minimum": 1, "maximum": 20,
@@ -129,6 +146,23 @@
       "value": 800, "unit": "count", "minimum": 50, "maximum": 5000,
       "category": "Operations",
       "description": "Pallets moved per day, inbound plus outbound (assumed half each) — drives dock loading and lift-truck work."
+    },
+    "storage_policy": {
+      "value": "random", "type": "choice",
+      "options": ["random", "abc"],
+      "labels": { "random": "Random (any free slot)", "abc": "Class-based ABC (fast movers nearest the doors)" },
+      "category": "Operations",
+      "description": "How pallets are assigned to slots. Random uses any free slot; class-based ABC keeps the fastest-moving pallets (class A) in the quickest slots, the next (B) in the next quickest, the rest (C) further away."
+    },
+    "demand_skew": {
+      "value": 80, "unit": "%", "minimum": 20, "maximum": 95,
+      "category": "Operations",
+      "description": "Share of pallet moves that come from the 20% fastest-moving pallets — 80 is the classic Pareto rule, 20 means every pallet moves equally often. Only matters with class-based storage."
+    },
+    "dual_command_share": {
+      "value": 0, "unit": "%", "minimum": 0, "maximum": 100,
+      "category": "Operations",
+      "description": "Share of pallet moves done on dual-command trips: store one pallet and fetch another on the same trip, instead of driving back empty."
     },
     "operating_hours_per_day": {
       "value": 16, "unit": "hr", "minimum": 8, "maximum": 24,

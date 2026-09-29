@@ -248,3 +248,9 @@ select.choice:focus{outline:none; border-color:var(--accent);}
 .heat-legend small{color:var(--ink-faint); font-size:10px; width:100%;}
 [hidden].viewmode-group, .btn[hidden]{display:none !important;}
 
+/* v4: ABC-class legend */
+.heat-legend.classes .heat-bar{display:none;}
+.heat-legend .cls{display:inline-block; width:10px; height:10px; border-radius:2px; margin:0 4px 0 2px; vertical-align:-1px;}
+.heat-legend .cls.a{background:#f2a33a;} .heat-legend .cls.b{background:#33bf9e;} .heat-legend .cls.c{background:#2e6bd9;}
+.choice-note[hidden]{display:none;}
+

@@ -49,6 +49,7 @@
           <div class="viewmode-group" id="color-group" role="group" aria-label="Colour the pallets by">
             <button class="btn small active" data-color="stock" type="button" title="The current inventory, stored at random">Stock</button>
             <button class="btn small" data-color="heat" type="button" title="Every position, coloured by its average lift-truck cycle time">Travel time</button>
+            <button class="btn small" data-color="class" type="button" title="Which positions hold the A, B and C movers (class-based storage)" hidden>ABC class</button>
           </div>
           <button class="btn small active" id="btn-walls" type="button" aria-pressed="true">Walls</button>
           <button class="btn small" id="btn-reset-view" type="button">Reset View</button>
@@ -144,8 +145,18 @@
           <p>
             <b>Docks</b> are sized by trucks, not pallets: each door turns a truck every <code>truck_turn_time</code>
             minutes, receiving and shipping doors are separate (one can be the bottleneck while the other is idle),
-            and they are sized for the <b>peak hour</b>, not the daily average. The lift-truck fleet is sized the same way,
-            allowing for the share of each hour a truck really works.
+            and they are sized for the <b>peak hour</b>, not the daily average. Trucks arrive at random, so they queue well
+            before the doors are 100% busy: the wait comes from the <b>Erlang C</b> queueing formula (M/M/c), corrected for
+            turn times that vary less than purely random ones (Allen–Cunneen). The lift-truck fleet is sized for the peak
+            hour too, allowing for the share of each hour a truck really works.
+          </p>
+          <p>
+            <b>Slotting and flow.</b> With <b>class-based (ABC)</b> storage the fastest-moving pallets live in the quickest
+            positions. How much that saves depends on the demand skew — and on where the doors are. With <b>I-flow</b>
+            (receive at one end, ship from the other) a bay close to the receiving doors is far from the shipping doors, so
+            ABC only gains across the width and in height; with <b>U-flow</b> (both on one wall) it gains along the aisles too.
+            <b>Dual-command</b> trips store one pallet and fetch another on the same trip; <b>mid cross-aisles</b> shorten the
+            drive between the two, at the cost of some bays.
           </p>
           <p>
             <b>Cost</b> uses flat illustrative rates (see the Cost sliders) — it shows how racking, building shell
@@ -164,6 +175,9 @@
             <li><b>A trade-off.</b> Narrow <code>aisle_width</code> to fit more rack rows. Capacity rises — but does <code>Avg. Round Trip</code> rise, fall, or stay flat? Why might a real facility still avoid the narrowest legal aisle?</li>
             <li><b>The bottleneck shifts.</b> Push <code>daily_throughput_pallets</code> up while holding dock count fixed. At what point does <b>Dock Utilization</b> — not storage — become the binding constraint? Now raise <code>peak_hour_factor</code>: the average day hasn't changed, so why do you need more doors?</li>
             <li><b>Rack types.</b> Switch to <b>Double-deep</b>, then <b>Drive-in</b>. Capacity rises — what happens to selectivity and to the practical capacity? Then try <b>VNA</b> and narrow the aisle to 1.8 m: how does it compare with double-deep on capacity, and why would you still pick one over the other?</li>
+            <li><b>Slotting.</b> Switch <code>storage_policy</code> to ABC and open the <b>ABC class</b> view. How much does the time per move drop? Now switch <code>flow_layout</code> to U-flow — why does ABC suddenly save much more?</li>
+            <li><b>Dual command.</b> With I-flow, raise <code>dual_command_share</code>: the time per move gets <em>worse</em>. Read the design note, switch to U-flow and try again. Then add two <code>mid_cross_aisles</code> in a 200 m building: what do you gain and what do you give up?</li>
+            <li><b>Queues before capacity.</b> Double <code>daily_throughput_pallets</code>. Door utilization is still under 100%, so why does <b>Truck Wait</b> jump? Add one door and watch the wait fall far more than the utilization.</li>
             <li><b>Going up.</b> Add a level (5 levels) without changing the rack height. What warning appears? Raise <code>rack_height</code> until it clears — and watch the cycle time and the clear-height check.</li>
           </ol>
         </div>
@@ -193,9 +207,8 @@
             <em>not</em> the GLB — a baked mesh can't resize itself — and the app never implies otherwise.
           </p>
           <p>
-            Next on the roadmap: a detailed 3D view (bays, beams and pallets), class-based slotting and other
-            layouts, queueing at the docks, a discrete-event simulation, scenarios with optimisation and total
-            cost of ownership, and CAD/BIM export — see the project README.
+            Next on the roadmap: a discrete-event simulation of trucks and lift trucks, scenarios with optimisation
+            and total cost of ownership, and CAD/BIM export — see the project README.
           </p>
         </div>
       </details>

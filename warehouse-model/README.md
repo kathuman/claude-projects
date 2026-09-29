@@ -247,6 +247,16 @@ names and order specifically so a side-by-side diff stays easy.
 - **Docks**: truck-based (pallets per truck, minutes per truck at a door), receiving and shipping
   separate, sized for the peak hour. The lift-truck fleet is sized for the peak hour too, divided by
   the share of each hour a truck really works.
+- **Flow and layout (v4)**: I-flow (receive west, ship east) or U-flow (both on the west wall);
+  mid cross-aisles split every row into equal segments.
+- **Slotting (v4)**: random, or class-based ABC — cells ranked by cycle time, A = quickest 20%,
+  B = next 30%, C = the rest, each class getting the share of moves given by the demand-skew curve
+  F(u) = u^k with F(0.2) = `demand_skew`. Single-command times are exact weighted averages.
+- **Dual command (v4)**: receiving door → putaway → retrieval → shipping door → back, with the
+  putaway-to-retrieval leg through the shorter cross-aisle (end or mid); estimated from 4,000
+  sampled pairs and tested against the exact all-pairs value (within 2%).
+- **Door queues (v4)**: Erlang C (M/M/c) for the chance a truck waits and the mean wait, corrected
+  with Allen–Cunneen for turn times less variable than exponential (CV 0.5).
 
 Run the tests (Node; the parity test also needs a system Python 3, not FreeCAD):
 
@@ -260,15 +270,17 @@ node warehouse-model/tests/parity.test.js
 - **v1** — Phase 1: FreeCAD model, analytical model with traceability, live 3D, KPIs, charts.
 - **v2** — trustworthy core: the model above, unit and parity tests, live floor plan,
   typed values, metric/imperial, version badge.
-- **v3 (current)** — a 3D view you can read: three.js r186 with image-based lighting and shadows;
+- **v3** — a 3D view you can read: three.js r186 with image-based lighting and shadows;
   instanced uprights (every frame line and lane), beams (every level) and pallets, filled with the
   current inventory; a travel-time heat map of every position (from `slotTimes()`, whose average over
   all slots is tested to equal the headline cycle time); click a slot for its putaway/retrieval cycle
   and the route from and to the nearest doors; trailers at the busy doors. Renders only when
   something changes, and turns shadows off if frames stay slow.
-- **v4** — operations: ABC slotting, cross-aisles, fishbone and U-flow layouts, dock queueing
-  (Erlang C), hourly profile.
-- **v5** — discrete-event simulation of trucks and lift trucks, animated, with Monte Carlo ranges.
+- **v4 (current)** — operations: I-flow/U-flow, mid cross-aisles, ABC slotting with demand skew,
+  dual-command trips, Erlang C door queues, an ABC-class 3D view. (Fishbone aisles and an hourly
+  arrival profile move to v5, where the simulation can represent them properly.)
+- **v5** — discrete-event simulation of trucks and lift trucks over an hourly arrival profile,
+  animated, with Monte Carlo ranges.
 - **v6** — decision support: scenarios, sensitivity, an optimiser, total cost of ownership,
   automation alternatives.
 - **v7** — CAD/BIM and data: in-browser B-rep geometry, IFC export, SKU/order-line import.

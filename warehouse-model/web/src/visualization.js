@@ -7,8 +7,9 @@
  * drawn the way they're built: uprights at every frame line and lane, beams
  * at every level, and pallets in their positions (instanced, so tens of
  * thousands stay fast). Two colourings: "Stock" shows the current inventory
- * (a fixed random pattern, since storage is random), "Travel time" shows every
- * position coloured by its own average lift-truck cycle time.
+ * (a fixed random pattern), "Travel time" shows every position coloured by
+ * its own average lift-truck cycle time, and "ABC class" (with class-based
+ * storage) shows which positions hold the fast, medium and slow movers.
  *
  * "Reference" view: the real FreeCAD export (web/models/warehouse_baseline.glb)
  * at its baseline values — static on purpose, a baked mesh can't resize.
@@ -51,6 +52,7 @@ function mulberry32(a) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+const CLASS_COLORS = [0xf2a33a, 0x33bf9e, 0x2e6bd9];   // A, B, C
 // blue → teal → amber → red, for the travel-time heat map
 const HEAT = [[0.18, 0.42, 0.85], [0.2, 0.75, 0.62], [0.96, 0.72, 0.2], [0.89, 0.29, 0.28]];
 function heatColor(u, c) {
@@ -180,7 +182,10 @@ Visualization.prototype.clearSelection = function () {
 // indices), draw the inbound and outbound routes to it, report its numbers.
 Visualization.prototype.selectSlot = function (rowIndex, point, bay, level) {
   const p = this._p, res = this._r, L = res.layout, calc = window.WH.calc;
-  if (bay === undefined) bay = Math.floor((point.x - p.cross_aisle_width) / p.bay_width);
+  if (bay === undefined) {                       // the bay under the point (nearest one if it's in a mid cross-aisle)
+    bay = 0;
+    L.bayX.forEach((x, b) => { if (Math.abs(point.x - (x + p.bay_width / 2)) < Math.abs(point.x - (L.bayX[bay] + p.bay_width / 2))) bay = b; });
+  }
   if (level === undefined) {
     level = 0;
     L.levelHeights.forEach((h, k) => { if (point.y >= h - 0.05) level = k; });
@@ -194,14 +199,14 @@ Visualization.prototype.selectSlot = function (rowIndex, point, bay, level) {
 
   // highlight the bay at that level
   const levelTop = level + 1 < L.levelHeights.length ? L.levelHeights[level + 1] : st.z + p.load_height + 0.2;
-  const hl = box(p.bay_width, row.depth, Math.max(0.3, levelTop - st.z), p.cross_aisle_width + bay * p.bay_width, row.y, st.z,
+  const hl = box(p.bay_width, row.depth, Math.max(0.3, levelTop - st.z), L.bayX[bay], row.y, st.z,
     new THREE.MeshBasicMaterial({ color: COLOR.select, transparent: true, opacity: 0.28, depthWrite: false }));
   this.routeGroup.add(hl);
 
   // routes: nearest receiving door → staging → aisle → bay, and on to the nearest shipping door
-  const doorsIn = calc.doorCentres(p.num_receiving_docks, p), doorsOut = calc.doorCentres(p.num_shipping_docks, p);
+  const D = calc.doorSets(p);
   const nearest = (ds) => ds.reduce((b, d) => (Math.abs(d - st.aisleY) < Math.abs(b - st.aisleY) ? d : b), ds[0]);
-  const yin = nearest(doorsIn), yout = nearest(doorsOut), sx = p.cross_aisle_width / 2, ex = p.warehouse_length - p.cross_aisle_width / 2;
+  const yin = nearest(D.inY), yout = nearest(D.outY), sx = p.cross_aisle_width / 2, ex = D.u ? sx : p.warehouse_length - p.cross_aisle_width / 2;
   const seg = (a, b, color) => {
     const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
     if (len < 1e-6) return;
@@ -212,7 +217,7 @@ Visualization.prototype.selectSlot = function (rowIndex, point, bay, level) {
     this.routeGroup.add(m);
   };
   [[[0, yin], [sx, yin]], [[sx, yin], [sx, st.aisleY]], [[sx, st.aisleY], [st.x, st.aisleY]]].forEach((s) => seg(s[0], s[1], COLOR.routeIn));
-  [[[st.x, st.aisleY], [ex, st.aisleY]], [[ex, st.aisleY], [ex, yout]], [[ex, yout], [p.warehouse_length, yout]]].forEach((s) => seg(s[0], s[1], COLOR.routeOut));
+  [[[st.x, st.aisleY], [ex, st.aisleY]], [[ex, st.aisleY], [ex, yout]], [[ex, yout], [D.outX, yout]]].forEach((s) => seg(s[0], s[1], COLOR.routeOut));
   if (st.z > 0) {
     const mast = new THREE.Mesh(new THREE.BoxGeometry(0.18, st.z, 0.18), new THREE.MeshBasicMaterial({ color: COLOR.select, depthTest: false, transparent: true, opacity: 0.9 }));
     mast.position.copy(S(st.x, st.aisleY, st.z / 2));
@@ -220,8 +225,10 @@ Visualization.prototype.selectSlot = function (rowIndex, point, bay, level) {
     this.routeGroup.add(mast);
   }
 
+  const W = res.slots && res.slots.weights, ci = (rowIndex * L.baysPerRow + bay) * L.levelHeights.length + level;
   if (this._onSelect) this._onSelect({
     type: "Storage slot · " + L.rackType.label,
+    ...(W && W.abc ? { "ABC class": "ABC"[W.cls[ci]] + " (" + Math.round(W.shares[W.cls[ci]] * 100) + "% of moves)" } : {}),
     name: "Row " + row.index + " · bay " + (bay + 1) + " · level " + (level + 1),
     "beam height": st.z.toFixed(2) + " m",
     "putaway cycle": Math.round(st.tIn) + " s (in)",
@@ -314,10 +321,16 @@ Visualization.prototype._build = function (p, results) {
   const zoneMat = new THREE.MeshBasicMaterial({ color: COLOR.zone, transparent: true, opacity: 0.18, depthWrite: false });
   G.add(box(p.cross_aisle_width, WW, 0.02, 0, 0, 0.005, zoneMat));
   G.add(box(p.cross_aisle_width, WW, 0.02, WL - p.cross_aisle_width, 0, 0.005, zoneMat.clone()));
+  const segs = L.segments.filter((sg) => sg.bays > 0);
   if (L.baysPerRow > 0 && L.aisles.length) {
-    const marks = instanced(new THREE.MeshBasicMaterial({ color: COLOR.marking }), L.aisles.length * 2);
-    L.aisles.forEach((a, i) => [-1, 1].forEach((s, k) => place(marks, i * 2 + k, p.cross_aisle_width + L.rackRowLength / 2, a.y + s * (a.width / 2 - 0.15), 0.012, L.rackRowLength, 0.08, 0.01)));
+    const marks = instanced(new THREE.MeshBasicMaterial({ color: COLOR.marking }), L.aisles.length * 2 * segs.length);
+    let im = 0;
+    segs.forEach((sg) => L.aisles.forEach((a) => [-1, 1].forEach((s) => place(marks, im++, sg.x0 + sg.length / 2, a.y + s * (a.width / 2 - 0.15), 0.012, sg.length, 0.08, 0.01))));
     marks.receiveShadow = false;
+  }
+  for (let k = 0; k + 1 < L.segments.length; k++) {           // mid cross-aisles
+    const x = L.segments[k].x0 + L.segmentLength;
+    G.add(box(p.mid_cross_aisle_width, WW, 0.02, x, 0, 0.005, new THREE.MeshBasicMaterial({ color: COLOR.routeIn, transparent: true, opacity: 0.1, depthWrite: false })));
   }
 
   // walls (translucent), and the building outline up to the clear height
@@ -334,22 +347,25 @@ Visualization.prototype._build = function (p, results) {
   let nPallets = 0;
   this.heat = null;
   if (nb > 0 && L.rows.length) {
-    const ups = instanced(std(COLOR.upright, { metalness: 0.35, roughness: 0.45 }), L.rows.length * (nb + 1) * (deep + 1), true);
+    const ups = instanced(std(COLOR.upright, { metalness: 0.35, roughness: 0.45 }), L.rows.length * (nb + segs.length) * (deep + 1), true);
     const beams = instanced(std(COLOR.beam, { metalness: 0.3, roughness: 0.45 }), L.rows.length * nb * (nl - 1) * (deep + 1), true);
     let iu = 0, ib = 0;
     L.rows.forEach((row) => {
-      for (let b = 0; b <= nb; b++) for (let d = 0; d <= deep; d++) {
-        place(ups, iu++, x0 + b * p.bay_width, row.y + Math.min(row.depth - 0.04, Math.max(0.04, d * p.rack_depth)), upH / 2, 0.09, 0.09, upH);
-      }
+      segs.forEach((sg) => {
+        for (let b = 0; b <= sg.bays; b++) for (let d = 0; d <= deep; d++) {
+          place(ups, iu++, sg.x0 + b * p.bay_width, row.y + Math.min(row.depth - 0.04, Math.max(0.04, d * p.rack_depth)), upH / 2, 0.09, 0.09, upH);
+        }
+      });
       for (let b = 0; b < nb; b++) for (let k = 1; k < nl; k++) for (let d = 0; d <= deep; d++) {
-        place(beams, ib++, x0 + (b + 0.5) * p.bay_width, row.y + Math.min(row.depth - 0.03, Math.max(0.03, d * p.rack_depth)), L.levelHeights[k] - 0.07, p.bay_width - 0.09, 0.05, 0.13);
+        place(beams, ib++, L.bayX[b] + 0.5 * p.bay_width, row.y + Math.min(row.depth - 0.03, Math.max(0.03, d * p.rack_depth)), L.levelHeights[k] - 0.07, p.bay_width - 0.09, 0.05, 0.13);
       }
     });
 
     // pallets: "stock" = the current inventory in a fixed random pattern; "heat" = every position by travel time
-    const cap = results.capacity.storageCapacity, heat = this.colorMode === "heat";
-    const grid = heat ? window.WH.calc.slotTimeGrid(p, L) : null;
-    this.heat = grid ? { min: grid.min, max: grid.max } : null;
+    const W = results.slots.weights, mode = this.colorMode === "class" && !W.abc ? "stock" : this.colorMode;
+    const cap = results.capacity.storageCapacity, heat = mode !== "stock";
+    const grid = results.slots.grid;
+    this.heat = mode === "heat" ? { min: grid.min, max: grid.max } : null;
     const show = heat ? cap : Math.min(cap, Math.round(p.current_inventory_pallets));
     let occupied = null;
     if (!heat) {                                    // choose `show` of the `cap` positions, same pattern each time
@@ -369,10 +385,12 @@ Visualization.prototype._build = function (p, results) {
     L.rows.forEach((row, ri) => {
       for (let b = 0; b < nb; b++) for (let k = 0; k < nl; k++) {
         const z = L.levelHeights[k] + (k > 0 ? 0.005 : 0);
-        const col = heat ? heatColor((grid.times[(ri * nb + b) * nl + k] - grid.min) / Math.max(1e-6, grid.max - grid.min), c) : null;
+        const ci = (ri * nb + b) * nl + k;
+        const col = mode === "heat" ? heatColor((grid.t[ci] - grid.min) / Math.max(1e-6, grid.max - grid.min), c)
+          : mode === "class" ? c.setHex(CLASS_COLORS[W.cls[ci]]) : null;
         for (let j = 0; j < side; j++) for (let d = 0; d < deep; d++, pos++) {
           if (occupied && !occupied[pos]) continue;
-          const x = x0 + b * p.bay_width + (j + 0.5) * slotW, y = row.y + (d + 0.5) * p.rack_depth;
+          const x = L.bayX[b] + (j + 0.5) * slotW, y = row.y + (d + 0.5) * p.rack_depth;
           if (bases) place(bases, nPallets, x, y, z + 0.075, pw, pd, 0.15);
           place(loads, nPallets, x, y, z + 0.15 + loadH / 2, pw - 0.04, pd - 0.04, loadH * (heat ? 1 : 0.9 + rndC() * 0.1));
           loads.setColorAt(nPallets, heat ? col : c.setHex(LOADS[Math.floor(rndC() * LOADS.length)]));
@@ -385,19 +403,20 @@ Visualization.prototype._build = function (p, results) {
 
     // invisible per-row blocks for picking a bay and level
     const pickMat = new THREE.MeshBasicMaterial({ visible: false });
-    L.rows.forEach((row, ri) => {
-      const m = box(L.rackRowLength, row.depth, p.rack_height + p.load_height, x0, row.y, 0, pickMat);
+    L.rows.forEach((row, ri) => segs.forEach((sg) => {
+      const m = box(sg.length, row.depth, p.rack_height + p.load_height, sg.x0, row.y, 0, pickMat);
       m.userData.row = ri;
       G.add(m); this.selectable.push(m);
-    });
+    }));
   }
 
   // dock doors, and trailers at as many doors as are busy on an average hour
   const util = results.throughput;
-  const doorsFor = (count, xWall, outward, role, utilPct) => {
-    const y0 = (WW - count * p.dock_bay_width) / 2, busy = Math.min(count, Math.round(count * Math.min(1, utilPct / 100 / p.peak_hour_factor)));
+  const D = window.WH.calc.doorSets(p);
+  const doorsFor = (centres, xWall, outward, role, utilPct) => {
+    const count = centres.length, busy = Math.min(count, Math.round(count * Math.min(1, utilPct / 100 / p.peak_hour_factor)));
     for (let i = 0; i < count; i++) {
-      const y = y0 + i * p.dock_bay_width;
+      const y = centres[i] - p.dock_bay_width / 2;
       const door = box(0.25, p.dock_bay_width - 0.7, 3.0, xWall - 0.125, y + 0.35, 0, std(COLOR.dock, { roughness: 0.5 }));
       door.userData.info = { type: "Dock door", name: role + " Dock " + (i + 1), dimensions: p.dock_bay_width.toFixed(1) + " m bay", role: role === "Receiving" ? "Inbound" : "Outbound", "truck turn": p.truck_turn_time + " min" };
       G.add(door); this.selectable.push(door);
@@ -408,8 +427,9 @@ Visualization.prototype._build = function (p, results) {
       }
     }
   };
-  doorsFor(p.num_receiving_docks, -WT / 2, -1, "Receiving", util.inbound.utilizationPct);
-  doorsFor(p.num_shipping_docks, WL + WT / 2, 1, "Shipping", util.outbound.utilizationPct);
+  doorsFor(D.inY, -WT / 2, -1, "Receiving", util.inbound.utilizationPct);
+  if (D.u) doorsFor(D.outY, -WT / 2, -1, "Shipping", util.outbound.utilizationPct);
+  else doorsFor(D.outY, WL + WT / 2, 1, "Shipping", util.outbound.utilizationPct);
 
   // sun and shadow camera sized to the building
   const span = Math.max(WL, WW) / 2 + 20, cx = WL / 2, cz = WW / 2;

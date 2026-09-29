@@ -16,7 +16,9 @@
   //   3.0.0  3D view you can read: three.js r186 (image-based lighting, shadows, orbit/pan),
   //          instanced uprights, beams and pallets filled to the inventory, a travel-time heat
   //          map of every position, click a slot for its route and cycle times, trailers at busy doors
-  const APP_VERSION = "3.0.0";
+  //   4.0.0  operations: I-flow vs U-flow docks, mid cross-aisles, class-based (ABC) slotting with a
+  //          demand-skew curve, dual-command trips, Erlang C truck queueing at the doors; ABC-class view
+  const APP_VERSION = "4.0.0";
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
@@ -203,7 +205,7 @@
     def.options.forEach(function (o) {
       const opt = document.createElement("option");
       opt.value = o;
-      opt.textContent = model.rackTypes[o] ? model.rackTypes[o].label : o;
+      opt.textContent = def.labels && def.labels[o] ? def.labels[o] : model.rackTypes[o] ? model.rackTypes[o].label : o;
       sel.appendChild(opt);
     });
     const note = document.createElement("div");
@@ -213,8 +215,9 @@
     row.appendChild(note);
     function sync() {
       sel.value = model.get(name);
-      const rt = model.rackTypes[model.get(name)];
+      const rt = name === "rack_type" ? model.rackTypes[model.get(name)] : null;
       note.textContent = rt ? rt.deep + " deep · " + Math.round(rt.selectivity * 100) + "% selective · " + rt.truck + ", aisle ≥ " + lenText(rt.min_aisle, 1) : "";
+      note.hidden = !rt;
     }
     sync();
     model.onChange(function (changed) { if (changed === null || changed === name || changed === "__units") sync(); });
@@ -263,10 +266,14 @@
       r.utilization.status, "utilization"));
     kpiEl.appendChild(kpiTile("Rack Rows", r.layout.numRackRows, r.layout.baysPerRow + " bays × " + p.levels_per_rack + " levels", null, "rows"));
     kpiEl.appendChild(kpiTile("Selectivity", Math.round(r.capacity.selectivity * 100) + "%", "pallets reachable directly", r.capacity.selectivity < 0.5 ? "warning" : null, "selectivity"));
-    kpiEl.appendChild(kpiTile("Avg. Cycle Time", Math.round(tr.cycleTime) + " s", lenText(tr.avgRoundTrip, 0) + " round trip + lift", null, "cycle"));
+    kpiEl.appendChild(kpiTile("Time per Move", Math.round(tr.perMove) + " s",
+      tr.dualShare > 0 ? "single " + Math.round(tr.cycleTime) + " s · dual " + Math.round(tr.dcCycle / 2) + " s/pallet" : lenText(tr.avgRoundTrip, 0) + " round trip + lift", null, "cycle"));
     kpiEl.appendChild(kpiTile("Lift Trucks", tr.forkliftsNeeded, "for the peak hour (avg " + tr.trucksAverage.toFixed(1) + ")", null, "trucks"));
     kpiEl.appendChild(kpiTile("Dock Utilization", pct(t.dockUtilizationPct), "peak hour · in " + pct(t.inbound.utilizationPct) + " / out " + pct(t.outbound.utilizationPct), t.status, "docks"));
-    kpiEl.appendChild(kpiTile("Truck Arrivals", (t.inbound.trucksPerDay + t.outbound.trucksPerDay).toFixed(0) + "/day", "peak " + t.inbound.peakTrucksPerHour.toFixed(1) + "/h each way", null, "arrivals"));
+    const wait = t.maxWait;
+    kpiEl.appendChild(kpiTile("Truck Wait (Peak)", isFinite(wait) ? (wait < 1 ? "<1" : Math.round(wait)) + " min" : "no limit",
+      (t.inbound.trucksPerDay + t.outbound.trucksPerDay).toFixed(0) + " trucks/day · " + Math.round(Math.max(t.inbound.pWait, t.outbound.pWait) * 100) + "% wait",
+      !isFinite(wait) || wait > 60 ? "critical" : wait > 30 ? "warning" : null, "wait"));
     kpiEl.appendChild(kpiTile("Total Cost", "$" + (r.cost.totalCost / 1e6).toFixed(1) + "M", "$" + n(r.cost.costPerPosition) + " / position", null, "cost"));
     kpiEl.appendChild(kpiTile("Footprint", areaText(r.cost.footprint), (r.cost.footprint / 10000).toFixed(2) + " hectares", null, "footprint"));
   }
@@ -460,14 +467,26 @@
       updateLegend();
     });
   });
+  const classBtn = document.querySelector('[data-color="class"]');
   function updateLegend() {
-    const heat = viz && viz.colorMode === "heat" && viz.mode === "live";
-    legend.hidden = !heat;
-    if (!heat) return;
-    // the heat range comes from the same per-slot grid the 3D view colours by
-    const g = calc.slotTimeGrid(model.getAll(), results.layout);
-    document.getElementById("heat-min").textContent = isFinite(g.min) ? Math.round(g.min) + " s" : "—";
-    document.getElementById("heat-max").textContent = isFinite(g.max) ? Math.round(g.max) + " s" : "—";
+    const abc = model.get("storage_policy") === "abc";
+    classBtn.hidden = !abc;
+    if (!abc && viz && viz.colorMode === "class") { colorBtns.forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-color") === "stock"); }); viz.setColorMode("stock"); }
+    const mode = viz && viz.mode === "live" ? viz.colorMode : "stock";
+    legend.hidden = mode === "stock";
+    legend.classList.toggle("classes", mode === "class");
+    if (mode === "heat") {
+      // the range comes from the same per-slot grid the 3D view colours by
+      const g = results.slots.grid;
+      document.getElementById("heat-min").textContent = isFinite(g.min) ? Math.round(g.min) + " s" : "—";
+      document.getElementById("heat-max").textContent = isFinite(g.max) ? Math.round(g.max) + " s" : "—";
+      legend.querySelector("small").textContent = "average cycle time per position";
+    } else if (mode === "class") {
+      const sh = results.slots.weights.shares || [0, 0, 0];
+      document.getElementById("heat-min").textContent = "";
+      document.getElementById("heat-max").textContent = "";
+      legend.querySelector("small").innerHTML = '<span class="cls a"></span>A ' + Math.round(sh[0] * 100) + '% of moves · <span class="cls b"></span>B ' + Math.round(sh[1] * 100) + '% · <span class="cls c"></span>C ' + Math.round(sh[2] * 100) + "% — A = the quickest 20% of positions";
+    }
   }
   model.onChange(function () { updateLegend(); });
   const wallsBtn = document.getElementById("btn-walls");

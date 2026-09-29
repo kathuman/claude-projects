@@ -124,13 +124,13 @@ def create_wall(doc, sheet, name, label, length_expr, width_expr, x, y, z, group
     )
 
 
-def create_rack_row(doc, sheet, index, x0, y0, bays_per_row, deep, group):
+def create_rack_row(doc, sheet, index, x0, y0, bays_per_row, deep, group, segment=None):
     """One rack row, modeled as a single envelope block (facility-layout
     scale, not pallet-level detail — see README for why). Its depth is
     `deep` pallet positions (set by the rack type) of rack_depth each."""
-    name = "RackRow_%03d" % index
+    name = "RackRow_%03d" % index + ("" if segment is None else "_S%d" % (segment + 1))
     obj = doc.addObject("Part::Box", name)
-    obj.Label = "Rack Row %d" % index
+    obj.Label = "Rack Row %d" % index + ("" if segment is None else " (segment %d)" % (segment + 1))
     # bays_per_row is a derived, generation-time quantity (see module
     # docstring) so Length is set as a plain value here, not an expression
     # -- bay_width itself still is live via the spreadsheet elsewhere.
@@ -172,7 +172,18 @@ def create_zone_marker(doc, name, label, x, y, length, width, group):
 def derive_layout(p, rack_types):
     rt = rack_types[p["rack_type"]]
     usable_length = p["warehouse_length"] - 2 * p["cross_aisle_width"]
-    bays_per_row = max(0, int(math.floor(usable_length / p["bay_width"] + 1e-9)))
+
+    # along the length: end cross-aisles, and mid cross-aisles splitting the rows into equal segments
+    mids = max(0, int(round(p.get("mid_cross_aisles", 0))))
+    mid_w = p.get("mid_cross_aisle_width", 0)
+    segment_length = (usable_length - mids * mid_w) / (mids + 1)
+    bays_per_segment = max(0, int(math.floor(segment_length / p["bay_width"] + 1e-9))) if segment_length > 0 else 0
+    segments, bay_x = [], []
+    for k in range(mids + 1):
+        x0 = p["cross_aisle_width"] + k * (segment_length + mid_w)
+        segments.append({"index": k, "x0": x0, "bays": bays_per_segment, "length": bays_per_segment * p["bay_width"]})
+        bay_x.extend(x0 + b * p["bay_width"] for b in range(bays_per_segment))
+    bays_per_row = len(bay_x)
     rack_row_length = bays_per_row * p["bay_width"]
 
     # across the width: row | aisle | row  per unit, flue gap between units
@@ -198,6 +209,9 @@ def derive_layout(p, rack_types):
 
     return {
         "usable_length": usable_length,
+        "segment_length": segment_length,
+        "segments": segments,
+        "bay_x": bay_x,
         "bays_per_row": bays_per_row,
         "rack_row_length": rack_row_length,
         "row_depth": row_depth,
@@ -277,9 +291,13 @@ def build_model(values, raw, rack_types):
     grp_structure.addObject(roof)
 
     # --- Equipment: rack rows -----------------------------------------
-    x0 = p["cross_aisle_width"] * M
+    multi = len(layout["segments"]) > 1
     for row in layout["rows"]:
-        create_rack_row(doc, sheet, row["index"], x0, row["y"] * M, layout["bays_per_row"], layout["deep"], grp_equipment)
+        for seg in layout["segments"]:
+            if seg["bays"] < 1:
+                continue
+            create_rack_row(doc, sheet, row["index"], seg["x0"] * M, row["y"] * M, seg["bays"], layout["deep"], grp_equipment,
+                            seg["index"] if multi else None)
 
     # --- Flow: staging zones + dock markers ---------------------------
     create_zone_marker(
@@ -291,20 +309,21 @@ def build_model(values, raw, rack_types):
         WL - p["cross_aisle_width"] * M, 0, p["cross_aisle_width"] * M, WW, grp_flow,
     )
 
-    recv_total = p["num_receiving_docks"] * p["dock_bay_width"] * M
-    recv_y0 = (WW - recv_total) / 2.0
-    for i in range(int(p["num_receiving_docks"])):
+    # I-flow: receiving on the west wall, shipping on the east; U-flow: both on the west wall
+    dbw = p["dock_bay_width"] * M
+    nr, ns = int(p["num_receiving_docks"]), int(p["num_shipping_docks"])
+    u_flow = p.get("flow_layout") == "u_flow"
+    recv_y0 = (WW - (nr + ns) * dbw) / 2.0 if u_flow else (WW - nr * dbw) / 2.0
+    for i in range(nr):
         create_dock_marker(
             doc, sheet, "Dock_Receiving_%02d" % (i + 1), "Receiving Dock %d" % (i + 1),
-            -300, recv_y0 + i * p["dock_bay_width"] * M, grp_flow,
+            -300, recv_y0 + i * dbw, grp_flow,
         )
-
-    ship_total = p["num_shipping_docks"] * p["dock_bay_width"] * M
-    ship_y0 = (WW - ship_total) / 2.0
-    for i in range(int(p["num_shipping_docks"])):
+    ship_y0 = recv_y0 + nr * dbw if u_flow else (WW - ns * dbw) / 2.0
+    for i in range(ns):
         create_dock_marker(
             doc, sheet, "Dock_Shipping_%02d" % (i + 1), "Shipping Dock %d" % (i + 1),
-            WL, ship_y0 + i * p["dock_bay_width"] * M, grp_flow,
+            -300 if u_flow else WL, ship_y0 + i * dbw, grp_flow,
         )
 
     doc.recompute()
