@@ -83,13 +83,12 @@ warehouse-model/
     ├── src/
     │   ├── model.js              parameter state management (load/get/set/reset)
     │   ├── calculations.js       the analytical model — pure functions, no DOM
-    │   ├── visualization.js      Three.js: live procedural geometry + reference GLB loader
+    │   ├── visualization.js      three.js 3D view: instanced racks and pallets, heat map, routes,
+    │   │                         and the reference GLB loader
     │   ├── blueprint.js          the dimensioned floor plan as SVG (browser + Node)
     │   └── app.js                wires them together; owns the DOM
-    └── vendor/
-        ├── three.min.js          vendored (r128), no CDN dependency
-        ├── GLTFLoader.js         vendored addon, matching r128
-        └── LICENSE-three
+    └── vendor/three/             three.js r186 (ES modules, via the page's import map) with the
+                                  few add-ons used: GLTFLoader, OrbitControls, RoomEnvironment
 ```
 
 **Deliberate deviations from a generic project template**, and why:
@@ -259,10 +258,14 @@ node warehouse-model/tests/parity.test.js
 ## Roadmap
 
 - **v1** — Phase 1: FreeCAD model, analytical model with traceability, live 3D, KPIs, charts.
-- **v2 (current)** — trustworthy core: the model above, unit and parity tests, live floor plan,
+- **v2** — trustworthy core: the model above, unit and parity tests, live floor plan,
   typed values, metric/imperial, version badge.
-- **v3** — a 3D view you can read: three.js r186, instanced uprights, beams and pallets filled to the
-  utilization, pick-frequency heat map, travel-path overlay.
+- **v3 (current)** — a 3D view you can read: three.js r186 with image-based lighting and shadows;
+  instanced uprights (every frame line and lane), beams (every level) and pallets, filled with the
+  current inventory; a travel-time heat map of every position (from `slotTimes()`, whose average over
+  all slots is tested to equal the headline cycle time); click a slot for its putaway/retrieval cycle
+  and the route from and to the nearest doors; trailers at the busy doors. Renders only when
+  something changes, and turns shadows off if frames stay slow.
 - **v4** — operations: ABC slotting, cross-aisles, fishbone and U-flow layouts, dock queueing
   (Erlang C), hourly profile.
 - **v5** — discrete-event simulation of trucks and lift trucks, animated, with Monte Carlo ranges.

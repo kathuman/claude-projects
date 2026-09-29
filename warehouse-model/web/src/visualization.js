@@ -1,360 +1,491 @@
 /*
- * visualization.js — the 3D visualization model.
+ * visualization.js — the 3D view (three.js r186, ES module).
  *
- * This is explicitly NOT the FreeCAD geometry. A GLB is a baked, static
- * mesh: it cannot resize itself when a slider moves. So the live 3D view
- * you drag/zoom while dragging sliders is procedural geometry built
- * straight from the same parameters.json values and the same layout
- * numbers calculations.js just computed — same source of truth, different
- * (necessarily live) representation.
+ * "Live" view: procedural geometry built from the same parameters and the
+ * same calculations.js layout (row positions, level heights, per-slot cycle
+ * times) as the KPIs and the floor plan — rebuilt on every change. Racks are
+ * drawn the way they're built: uprights at every frame line and lane, beams
+ * at every level, and pallets in their positions (instanced, so tens of
+ * thousands stay fast). Two colourings: "Stock" shows the current inventory
+ * (a fixed random pattern, since storage is random), "Travel time" shows every
+ * position coloured by its own average lift-truck cycle time.
  *
- * The real FreeCAD-derived geometry is still here and still real: switch
- * to "Reference Model" to load web/models/warehouse_baseline.glb, the
- * actual tessellated export of freecad/warehouse_model.FCStd at its
- * baseline (default) parameter values. It doesn't move when you drag a
- * slider — that's the honest limit of a baked mesh — but it's proof the
- * two layers describe the same building.
+ * "Reference" view: the real FreeCAD export (web/models/warehouse_baseline.glb)
+ * at its baseline values — static on purpose, a baked mesh can't resize.
  */
-(function (global) {
-  "use strict";
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-  const M = 1; // scene units are metres, 1:1 with the engineering model
+const COLOR = {
+  bg: 0x0a2f52,
+  structure: 0x2a4258,
+  outline: 0x5b86ad,
+  slab: 0x33475c,
+  apron: 0x16263a,
+  upright: 0x2f6fd0,
+  beam: 0xf07a1a,
+  wood: 0xa7804d,
+  dock: 0x199e70,
+  trailer: 0xdfe6ee,
+  zone: 0xc98500,
+  marking: 0xf2c230,
+  routeIn: 0x7be0c4,
+  routeOut: 0xffb27a,
+  select: 0x7dd3fc
+};
+// stretch-wrapped / cardboard loads, so the stock doesn't read as one solid block
+const LOADS = [0xc9a46a, 0xd9cbb1, 0xb58b52, 0xa9bfd0, 0xcfb58a, 0xe2dccf];
+const MAX_WITH_BASES = 120000;   // above this many pallets, draw loads only (no pallet bases)
+const MAX_SHADOW_CASTERS = 40000; // bigger instanced sets don't cast shadows (the shadow pass would double their cost)
 
-  // Palette (single-hue categorical slots from the project's standard
-  // dataviz palette, reused here as material colors, not chart colors).
-  const COLOR = {
-    structure: 0x2a4258,
-    structureWire: 0x3a5570,
-    rack: 0xd95926,
-    rackSelected: 0xffb27a,
-    dock: 0x199e70,
-    zone: 0xc98500,
-    highlight: 0x7dd3fc
+// engineering coords (x = length, y = width, z = up) → scene (X, Y up, Z)
+function S(x, y, z) { return new THREE.Vector3(x, z, y); }
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+// blue → teal → amber → red, for the travel-time heat map
+const HEAT = [[0.18, 0.42, 0.85], [0.2, 0.75, 0.62], [0.96, 0.72, 0.2], [0.89, 0.29, 0.28]];
+function heatColor(u, c) {
+  u = Math.max(0, Math.min(1, u)) * (HEAT.length - 1);
+  const i = Math.min(HEAT.length - 2, Math.floor(u)), f = u - i, a = HEAT[i], b = HEAT[i + 1];
+  return c.setRGB(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, THREE.SRGBColorSpace);
+}
 
-  function Visualization(stageEl) {
-    this.stageEl = stageEl;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    if (this.renderer.outputEncoding !== undefined) this.renderer.outputEncoding = THREE.sRGBEncoding;
-    stageEl.appendChild(this.renderer.domElement);
+function disposeGroup(group) {
+  for (let i = group.children.length - 1; i >= 0; i--) {
+    const obj = group.children[i];
+    group.remove(obj);
+    if (obj.children && obj.children.length) disposeGroup(obj);
+    if (obj.geometry && obj.geometry !== unitBox) obj.geometry.dispose();
+    if (obj.material) (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach((m) => m.dispose());
+    if (obj.isInstancedMesh) obj.dispose();
+  }
+}
 
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a2f52);
-    this.scene.fog = new THREE.Fog(0x0a2f52, 120, 420);
+const unitBox = new THREE.BoxGeometry(1, 1, 1);
+function std(color, opts) { return new THREE.MeshStandardMaterial(Object.assign({ color: color, roughness: 0.7, metalness: 0.05 }, opts || {})); }
+// an axis-aligned box in engineering coords: origin corner (x, y, z), size (w along x, d along y, h up)
+function box(w, d, h, x, y, z, material) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  mesh.position.copy(S(x + w / 2, y + d / 2, z + h / 2));
+  return mesh;
+}
 
-    this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
+export function Visualization(stageEl) {
+  this.stageEl = stageEl;
+  const r = this.renderer = new THREE.WebGLRenderer({ antialias: true });
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  r.toneMapping = THREE.NeutralToneMapping;
+  r.toneMappingExposure = 1.0;
+  r.shadowMap.enabled = true;
+  r.shadowMap.type = THREE.PCFShadowMap;
+  stageEl.appendChild(r.domElement);
 
-    const hemi = new THREE.HemisphereLight(0x9fc7ff, 0x0a2f52, 0.7);
-    this.scene.add(hemi);
-    const key = new THREE.DirectionalLight(0xfff2e0, 1.0);
-    key.position.set(80, 140, 60);
-    this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x7dd3fc, 0.25);
-    rim.position.set(-60, 40, -80);
-    this.scene.add(rim);
+  this.scene = new THREE.Scene();
+  this.scene.background = new THREE.Color(COLOR.bg);
+  this.scene.fog = new THREE.Fog(COLOR.bg, 250, 900);
+  const pmrem = new THREE.PMREMGenerator(r);
+  this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  this.scene.environmentIntensity = 0.55;
 
-    this.liveGroup = new THREE.Group();
-    this.scene.add(this.liveGroup);
+  this.camera = new THREE.PerspectiveCamera(42, 1, 0.3, 3000);
+  this.controls = new OrbitControls(this.camera, r.domElement);
+  this.controls.enableDamping = true;
+  this.controls.dampingFactor = 0.08;
+  this.controls.maxPolarAngle = 1.52;
+  this.controls.minDistance = 5;
+  this.controls.maxDistance = 900;
+  this.controls.screenSpacePanning = false;
 
-    this.referenceGroup = new THREE.Group();
-    this.referenceGroup.visible = false;
-    this.scene.add(this.referenceGroup);
-    this.referenceLoaded = false;
-    this.referenceLoadFailed = false;
+  this.scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x1a2a3a, 0.55));
+  const sun = this.sun = new THREE.DirectionalLight(0xfff2e0, 1.5);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.03;
+  this.scene.add(sun, sun.target);
 
-    this.selectable = []; // meshes with userData.info, for raycasting
-    this.selectedMesh = null;
+  this.liveGroup = new THREE.Group();
+  this.scene.add(this.liveGroup);
+  this.routeGroup = new THREE.Group();
+  this.scene.add(this.routeGroup);
+  this.referenceGroup = new THREE.Group();
+  this.referenceGroup.visible = false;
+  this.scene.add(this.referenceGroup);
+  this.referenceLoaded = false;
+  this.referenceLoadFailed = false;
 
-    this._setupCamera();
-    this._setupInput();
-    this.mode = "live";
+  this.selectable = [];
+  this.colorMode = "stock";
+  this.showWalls = true;
+  this.mode = "live";
+  this.stats = {};
+  this.heat = null;
+  this._pending = null;
+  this._onSelect = null;
+  this._home = null;
+  this._dirty = true;            // render on demand: only when something changed
+  this._lastFrame = 0;
+  this._slow = 0;                // consecutive slow frames (adaptive quality)
+  this.quality = "high";
+  this.controls.addEventListener("change", () => { this._dirty = true; });
+  this._setupInput();
+}
 
-    this._onSelect = null; // callback(info|null) set by app.js
+Visualization.prototype._setupInput = function () {
+  const dom = this.renderer.domElement;
+  dom.style.touchAction = "none";
+  let down = null;
+  dom.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY }; });
+  dom.addEventListener("pointerup", (e) => {
+    if (down && Math.abs(e.clientX - down.x) < 4 && Math.abs(e.clientY - down.y) < 4) this._handleClick(e);
+    down = null;
+  });
+};
+
+Visualization.prototype._handleClick = function (e) {
+  const rect = this.renderer.domElement.getBoundingClientRect();
+  const mouse = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  const ray = new THREE.Raycaster();
+  ray.setFromCamera(mouse, this.camera);
+  const hits = this.mode === "live" ? ray.intersectObjects(this.selectable, false) : [];
+  this.clearSelection();
+  if (!hits.length) { if (this._onSelect) this._onSelect(null); return; }
+  const hit = hits[0], obj = hit.object;
+  if (obj.userData.row !== undefined) this.selectSlot(obj.userData.row, hit.point);
+  else {
+    obj.material.emissive.setHex(0x0e4a66); this._dirty = true;
+    this._selectedMesh = obj;
+    if (this._onSelect) this._onSelect(obj.userData.info);
+  }
+};
+
+Visualization.prototype.clearSelection = function () {
+  disposeGroup(this.routeGroup);
+  this._dirty = true;
+  if (this._selectedMesh) { this._selectedMesh.material.emissive.setHex(0x000000); this._selectedMesh = null; }
+  this.selectedSlot = null;
+};
+
+// Select the bay/level of a rack row under a scene-space point (or explicit
+// indices), draw the inbound and outbound routes to it, report its numbers.
+Visualization.prototype.selectSlot = function (rowIndex, point, bay, level) {
+  const p = this._p, res = this._r, L = res.layout, calc = window.WH.calc;
+  if (bay === undefined) bay = Math.floor((point.x - p.cross_aisle_width) / p.bay_width);
+  if (level === undefined) {
+    level = 0;
+    L.levelHeights.forEach((h, k) => { if (point.y >= h - 0.05) level = k; });
+  }
+  bay = Math.max(0, Math.min(L.baysPerRow - 1, bay));
+  level = Math.max(0, Math.min(L.levelHeights.length - 1, level));
+  const row = L.rows[rowIndex], st = calc.slotTimes(p, L, rowIndex, bay, level);
+  this.clearSelection();
+  this._dirty = true;
+  this.selectedSlot = { row: rowIndex, bay: bay, level: level, times: st };
+
+  // highlight the bay at that level
+  const levelTop = level + 1 < L.levelHeights.length ? L.levelHeights[level + 1] : st.z + p.load_height + 0.2;
+  const hl = box(p.bay_width, row.depth, Math.max(0.3, levelTop - st.z), p.cross_aisle_width + bay * p.bay_width, row.y, st.z,
+    new THREE.MeshBasicMaterial({ color: COLOR.select, transparent: true, opacity: 0.28, depthWrite: false }));
+  this.routeGroup.add(hl);
+
+  // routes: nearest receiving door → staging → aisle → bay, and on to the nearest shipping door
+  const doorsIn = calc.doorCentres(p.num_receiving_docks, p), doorsOut = calc.doorCentres(p.num_shipping_docks, p);
+  const nearest = (ds) => ds.reduce((b, d) => (Math.abs(d - st.aisleY) < Math.abs(b - st.aisleY) ? d : b), ds[0]);
+  const yin = nearest(doorsIn), yout = nearest(doorsOut), sx = p.cross_aisle_width / 2, ex = p.warehouse_length - p.cross_aisle_width / 2;
+  const seg = (a, b, color) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy);
+    if (len < 1e-6) return;
+    // drawn over everything (no depth test), or the racks would hide most of the route
+    const m = new THREE.Mesh(new THREE.BoxGeometry(dx ? len + 0.5 : 0.5, 0.06, dy ? len + 0.5 : 0.5), new THREE.MeshBasicMaterial({ color: color, depthTest: false, transparent: true, opacity: 0.9 }));
+    m.position.copy(S((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 0.08));
+    m.renderOrder = 10;
+    this.routeGroup.add(m);
+  };
+  [[[0, yin], [sx, yin]], [[sx, yin], [sx, st.aisleY]], [[sx, st.aisleY], [st.x, st.aisleY]]].forEach((s) => seg(s[0], s[1], COLOR.routeIn));
+  [[[st.x, st.aisleY], [ex, st.aisleY]], [[ex, st.aisleY], [ex, yout]], [[ex, yout], [p.warehouse_length, yout]]].forEach((s) => seg(s[0], s[1], COLOR.routeOut));
+  if (st.z > 0) {
+    const mast = new THREE.Mesh(new THREE.BoxGeometry(0.18, st.z, 0.18), new THREE.MeshBasicMaterial({ color: COLOR.select, depthTest: false, transparent: true, opacity: 0.9 }));
+    mast.position.copy(S(st.x, st.aisleY, st.z / 2));
+    mast.renderOrder = 10;
+    this.routeGroup.add(mast);
   }
 
-  Visualization.prototype._setupCamera = function () {
-    this.target = new THREE.Vector3(50, 0, 30);
-    this.spherical = { theta: 0.55, phi: 1.0, radius: 170 };
-    this.defaultSpherical = { theta: 0.55, phi: 1.0, radius: 170 };
-    this._updateCamera();
+  if (this._onSelect) this._onSelect({
+    type: "Storage slot · " + L.rackType.label,
+    name: "Row " + row.index + " · bay " + (bay + 1) + " · level " + (level + 1),
+    "beam height": st.z.toFixed(2) + " m",
+    "putaway cycle": Math.round(st.tIn) + " s (in)",
+    "retrieval cycle": Math.round(st.tOut) + " s (out)",
+    "vs. average": (st.t >= res.travel.cycleTime ? "+" : "−") + Math.abs(Math.round(st.t - res.travel.cycleTime)) + " s",
+    "route shown": "from/to the nearest doors",
+    "positions here": p.positions_per_level_per_bay * L.rackType.deep,
+    "served by": L.rackType.truck
+  });
+};
+
+Visualization.prototype.onSelect = function (cb) { this._onSelect = cb; };
+
+Visualization.prototype.resize = function () {
+  const w = this.stageEl.clientWidth, h = this.stageEl.clientHeight;
+  if (w === 0 || h === 0) return;
+  this.renderer.setSize(w, h);
+  this.camera.aspect = w / h;
+  this.camera.updateProjectionMatrix();
+  this._dirty = true;
+};
+
+// Called every animation frame; draws only when the scene or the camera changed.
+// If frames keep coming slowly while drawing (a weak GPU, a huge design), shadows
+// are switched off to keep orbiting responsive.
+Visualization.prototype.render = function () {
+  if (this._pending && this.mode === "live") { const q = this._pending; this._pending = null; this._build(q.p, q.results); this._dirty = true; }
+  this.controls.update();
+  const now = performance.now();
+  if (!this._dirty) { this._lastFrame = 0; return; }
+  this._dirty = false;
+  this.renderer.render(this.scene, this.camera);
+  if (this._lastFrame) {
+    this._slow = now - this._lastFrame > 60 ? this._slow + 1 : 0;
+    if (this._slow >= 12 && this.quality === "high") this.setQuality("low");
+  }
+  this._lastFrame = now;
+};
+Visualization.prototype.setQuality = function (q) {
+  this.quality = q;
+  this.renderer.shadowMap.enabled = q === "high";
+  this.scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });
+  this._dirty = true;
+  if (this._onQuality) this._onQuality(q);
+};
+Visualization.prototype.invalidate = function () { this._dirty = true; };
+
+Visualization.prototype.resetView = function () {
+  if (!this._home) return;
+  this.camera.position.copy(this._home.pos);
+  this.controls.target.copy(this._home.target);
+  this.controls.update();
+  this._dirty = true;
+};
+
+Visualization.prototype.setColorMode = function (mode) { this.colorMode = mode; if (this._p) this.rebuildLive(this._p, this._r); };
+Visualization.prototype.setWalls = function (on) { this.showWalls = on; this.liveGroup.traverse((o) => { if (o.userData.wall) o.visible = on; }); this._dirty = true; };
+
+// Rebuilds are coalesced to one per frame, so dragging a slider stays smooth.
+Visualization.prototype.rebuildLive = function (p, results) {
+  this._p = p; this._r = results;
+  this._pending = { p: p, results: results };
+};
+
+Visualization.prototype._build = function (p, results) {
+  const sel = this.selectedSlot, hadSelection = !!(sel || this._selectedMesh);
+  this.clearSelection();
+  disposeGroup(this.liveGroup);
+  this.selectable.length = 0;
+  const L = results.layout, rt = L.rackType;
+  const WL = p.warehouse_length, WW = p.warehouse_width, WT = p.wall_thickness / 1000, CH = p.clear_height;
+  const G = this.liveGroup;
+  const dummy = new THREE.Object3D();
+  const place = (im, i, x, y, z, sx, sy, sz) => {      // centre (x, y, z) in engineering coords, size along x, y, up
+    dummy.position.set(x, z, y); dummy.scale.set(sx, sz, sy); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix);
+  };
+  const instanced = (mat, count, shadow) => {
+    const im = new THREE.InstancedMesh(unitBox, mat, Math.max(1, count));
+    im.count = count; im.castShadow = !!shadow && count <= MAX_SHADOW_CASTERS; im.receiveShadow = true; im.frustumCulled = false;
+    G.add(im); return im;
   };
 
-  Visualization.prototype._updateCamera = function () {
-    const s = this.spherical, t = this.target;
-    this.camera.position.set(
-      t.x + s.radius * Math.sin(s.phi) * Math.sin(s.theta),
-      t.y + s.radius * Math.cos(s.phi),
-      t.z + s.radius * Math.sin(s.phi) * Math.cos(s.theta)
-    );
-    this.camera.lookAt(t);
-  };
+  // ground, apron and floor slab
+  const apron = box(WL + 2 * WT + 70, WW + 2 * WT + 40, 0.05, -WT - 35, -WT - 20, -0.25, std(COLOR.apron, { roughness: 0.95 }));
+  apron.receiveShadow = true; G.add(apron);
+  const slab = box(WL + 2 * WT, WW + 2 * WT, 0.2, -WT, -WT, -0.2, std(COLOR.slab, { roughness: 0.85 }));
+  slab.receiveShadow = true; G.add(slab);
 
-  Visualization.prototype.resetView = function () {
-    this.spherical.theta = this.defaultSpherical.theta;
-    this.spherical.phi = this.defaultSpherical.phi;
-    this.spherical.radius = this.defaultSpherical.radius;
-    this._updateCamera();
-  };
-
-  Visualization.prototype._setupInput = function () {
-    const dom = this.renderer.domElement;
-    dom.style.touchAction = "none";
-    let dragging = false, lastX = 0, lastY = 0, moved = false;
-    const self = this;
-
-    dom.addEventListener("pointerdown", function (e) {
-      dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
-      dom.setPointerCapture(e.pointerId);
-    });
-    dom.addEventListener("pointerup", function (e) {
-      dragging = false;
-      if (!moved) self._handleClick(e);
-    });
-    dom.addEventListener("pointercancel", function () { dragging = false; });
-    dom.addEventListener("pointermove", function (e) {
-      if (!dragging) return;
-      const dx = e.clientX - lastX, dy = e.clientY - lastY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-      lastX = e.clientX; lastY = e.clientY;
-      self.spherical.theta -= dx * 0.005;
-      self.spherical.phi -= dy * 0.005;
-      self.spherical.phi = Math.max(0.15, Math.min(1.5, self.spherical.phi));
-      self._updateCamera();
-    });
-    dom.addEventListener("wheel", function (e) {
-      e.preventDefault();
-      self.spherical.radius *= (1 + e.deltaY * 0.0012);
-      self.spherical.radius = Math.max(20, Math.min(500, self.spherical.radius));
-      self._updateCamera();
-    }, { passive: false });
-  };
-
-  Visualization.prototype._handleClick = function (e) {
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    const mouse = new THREE.Vector2(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.clientY - rect.top) / rect.height) * 2 + 1
-    );
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, this.camera);
-    const targets = this.mode === "live" ? this.selectable : [];
-    const hits = raycaster.intersectObjects(targets, false);
-
-    if (this.selectedMesh) {
-      this.selectedMesh.material.emissive.setHex(0x000000);
-      this.selectedMesh = null;
-    }
-    if (hits.length) {
-      const mesh = hits[0].object;
-      mesh.material.emissive.setHex(0x0e4a66);
-      this.selectedMesh = mesh;
-      if (this._onSelect) this._onSelect(mesh.userData.info);
-    } else if (this._onSelect) {
-      this._onSelect(null);
-    }
-  };
-
-  Visualization.prototype.onSelect = function (cb) { this._onSelect = cb; };
-
-  Visualization.prototype.resize = function () {
-    const w = this.stageEl.clientWidth, h = this.stageEl.clientHeight;
-    if (w === 0 || h === 0) return;
-    this.renderer.setSize(w, h);
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
-  };
-
-  Visualization.prototype.render = function () {
-    this.renderer.render(this.scene, this.camera);
-  };
-
-  // -------------------------------------------------------------------
-  // Live procedural geometry — rebuilt whenever parameters change
-  // -------------------------------------------------------------------
-  function disposeGroup(group) {
-    for (let i = group.children.length - 1; i >= 0; i--) {
-      const obj = group.children[i];
-      group.remove(obj);
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) obj.material.dispose();
-    }
+  // staging zones and aisle edge markings
+  const zoneMat = new THREE.MeshBasicMaterial({ color: COLOR.zone, transparent: true, opacity: 0.18, depthWrite: false });
+  G.add(box(p.cross_aisle_width, WW, 0.02, 0, 0, 0.005, zoneMat));
+  G.add(box(p.cross_aisle_width, WW, 0.02, WL - p.cross_aisle_width, 0, 0.005, zoneMat.clone()));
+  if (L.baysPerRow > 0 && L.aisles.length) {
+    const marks = instanced(new THREE.MeshBasicMaterial({ color: COLOR.marking }), L.aisles.length * 2);
+    L.aisles.forEach((a, i) => [-1, 1].forEach((s, k) => place(marks, i * 2 + k, p.cross_aisle_width + L.rackRowLength / 2, a.y + s * (a.width / 2 - 0.15), 0.012, L.rackRowLength, 0.08, 0.01)));
+    marks.receiveShadow = false;
   }
 
-  function box(w, d, h, x, y, z, color, opacity) {
-    const geo = new THREE.BoxGeometry(w, h, d); // three.js Y-up: h maps to Y
-    const mat = new THREE.MeshStandardMaterial({
-      color: color, transparent: opacity < 1, opacity: opacity,
-      roughness: 0.6, metalness: 0.1, depthWrite: opacity >= 0.9
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    // engineering coords: x=length, y=width, z=height(up) -> scene: X, Z, Y(up)
-    mesh.position.set(x + w / 2, z + h / 2, y + d / 2);
-    return mesh;
-  }
+  // walls (translucent), and the building outline up to the clear height
+  const wallMat = std(COLOR.structure, { transparent: true, opacity: 0.18, depthWrite: false, roughness: 0.9 });
+  [[WT, WW, -WT, 0], [WT, WW, WL, 0], [WL + 2 * WT, WT, -WT, -WT], [WL + 2 * WT, WT, -WT, WW]].forEach((w) => {
+    const m = box(w[0], w[1], CH, w[2], w[3], 0, wallMat); m.userData.wall = true; m.visible = this.showWalls; G.add(m);
+  });
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(WL + 2 * WT, CH, WW + 2 * WT)), new THREE.LineBasicMaterial({ color: COLOR.outline, transparent: true, opacity: 0.6 }));
+  outline.position.copy(S(WL / 2, WW / 2, CH / 2)); G.add(outline);
 
-  Visualization.prototype.rebuildLive = function (p, results) {
-    disposeGroup(this.liveGroup);
-    this.selectable.length = 0;
-    this.selectedMesh = null;
-
-    const layout = results.layout;
-    const WL = p.warehouse_length, WW = p.warehouse_width, WT = p.wall_thickness / 1000;
-    const CH = p.clear_height;
-
-    // Floor
-    const floor = box(WL + 2 * WT, WW + 2 * WT, 0.2, -WT, -WT, -0.2, 0x11161d, 1);
-    this.liveGroup.add(floor);
-
-    // Walls (semi-transparent so interior stays visible)
-    const wallOpacity = 0.16;
-    this.liveGroup.add(box(WT, WW, CH, -WT, 0, 0, COLOR.structure, wallOpacity));
-    this.liveGroup.add(box(WT, WW, CH, WL, 0, 0, COLOR.structure, wallOpacity));
-    this.liveGroup.add(box(WL + 2 * WT, WT, CH, -WT, -WT, 0, COLOR.structure, wallOpacity));
-    this.liveGroup.add(box(WL + 2 * WT, WT, CH, -WT, WW, 0, COLOR.structure, wallOpacity));
-    this.liveGroup.add(box(WL + 2 * WT, WW + 2 * WT, 0.3, -WT, -WT, CH, COLOR.structure, 0.08));
-
-    // Rack rows — positions come straight from calculations.js (layout.rows),
-    // the same numbers the floor plan and the FreeCAD model use
-    const x0 = p.cross_aisle_width;
-    if (layout.baysPerRow > 0) layout.rows.forEach((row) => {
-      const mesh = box(layout.rackRowLength, row.depth, p.rack_height, x0, row.y, 0, COLOR.rack, 0.92);
-      mesh.userData.info = {
-        type: "Rack row · " + layout.rackType.label,
-        name: "Rack Row " + row.index,
-        dimensions: layout.rackRowLength.toFixed(1) + " × " + row.depth.toFixed(2) + " × " + p.rack_height.toFixed(1) + " m",
-        "pallets deep": layout.rackType.deep,
-        levels: p.levels_per_rack + " (every " + layout.levelPitch.toFixed(2) + " m)",
-        bays: layout.baysPerRow,
-        positions: layout.baysPerRow * results.capacity.positionsPerBay,
-        "served by": layout.rackType.truck,
-        material: "Steel"
-      };
-      this.liveGroup.add(mesh);
-      this.selectable.push(mesh);
-    });
-
-    // Staging zones (flat floor decals)
-    this.liveGroup.add(box(p.cross_aisle_width, WW, 0.05, 0, 0, 0.01, COLOR.zone, 0.22));
-    this.liveGroup.add(box(p.cross_aisle_width, WW, 0.05, WL - p.cross_aisle_width, 0, 0.01, COLOR.zone, 0.22));
-
-    // Dock markers
-    const recvTotal = p.num_receiving_docks * p.dock_bay_width;
-    const recvY0 = (WW - recvTotal) / 2;
-    for (let i = 0; i < p.num_receiving_docks; i++) {
-      const mesh = box(0.3, p.dock_bay_width, 3, -0.3, recvY0 + i * p.dock_bay_width, 0, COLOR.dock, 1);
-      mesh.userData.info = { type: "Dock door", name: "Receiving Dock " + (i + 1), dimensions: p.dock_bay_width.toFixed(1) + " m wide", role: "Inbound" };
-      this.liveGroup.add(mesh);
-      this.selectable.push(mesh);
-    }
-    const shipTotal = p.num_shipping_docks * p.dock_bay_width;
-    const shipY0 = (WW - shipTotal) / 2;
-    for (let i = 0; i < p.num_shipping_docks; i++) {
-      const mesh = box(0.3, p.dock_bay_width, 3, WL, shipY0 + i * p.dock_bay_width, 0, COLOR.dock, 1);
-      mesh.userData.info = { type: "Dock door", name: "Shipping Dock " + (i + 1), dimensions: p.dock_bay_width.toFixed(1) + " m wide", role: "Outbound" };
-      this.liveGroup.add(mesh);
-      this.selectable.push(mesh);
-    }
-
-    // Recenter camera target on the building. Only auto-fit the zoom
-    // distance when the footprint has changed substantially (e.g. the
-    // building got much longer) -- otherwise every minor slider nudge
-    // (cost, inventory...) would yank a manually-set zoom back to "fit".
-    this.target.set(WL / 2, 0, WW / 2);
-    const diag = Math.sqrt(WL * WL + WW * WW);
-    if (this._lastFitDiag === undefined || Math.abs(diag - this._lastFitDiag) / this._lastFitDiag > 0.15) {
-      this.spherical.radius = Math.max(20, diag * 1.05);
-      this.defaultSpherical.radius = this.spherical.radius;
-      this._lastFitDiag = diag;
-    }
-    this._updateCamera();
-  };
-
-  // -------------------------------------------------------------------
-  // Reference model — the real FreeCAD GLB export, loaded once
-  // -------------------------------------------------------------------
-  Visualization.prototype.loadReferenceModel = function (url, onDone) {
-    if (this.referenceLoaded || this.referenceLoadFailed) { onDone(this.referenceLoaded); return; }
-    const loader = new THREE.GLTFLoader();
-    const self = this;
-    loader.load(
-      url,
-      function (gltf) {
-        // FreeCAD's exporter (Import.export -> RWGltf_CafWriter) already
-        // converts internal mm to metres AND FreeCAD's Z-up to glTF's
-        // Y-up, per the glTF spec's conventions -- verified empirically
-        // (an explicit extra scale/rotation here double-applied both and
-        // left the building 1000x too small with width where height
-        // should be). No unit/axis transform needed.
-        //
-        // What IS still needed: the axis swap leaves the width axis
-        // running negative (bbox Z came out [-60, 0] for a 60 m wide
-        // baseline) where the live view's convention is [0, +width].
-        // Shift the loaded scene so its bbox starts at Z=0 too, so both
-        // views frame the same way under one shared camera target.
-        const box = new THREE.Box3().setFromObject(gltf.scene);
-        gltf.scene.position.z -= box.min.z;
-
-        // FreeCAD's exporter also gives every face of every box its own
-        // opaque mesh/material (an "envelope block" export, not a
-        // rendering-optimized one) -- fine for a handful of objects, but
-        // it means the roof and walls are solid and hide everything
-        // inside. Recolor by the same names FreeCAD gave the objects
-        // (preserved through the export) so the reference view reads the
-        // same way the live view does: structure translucent, racks
-        // opaque and orange, docks distinct.
-        gltf.scene.traverse(function (node) {
-          if (!node.isMesh || !node.material) return;
-          const n = node.name;
-          node.material = node.material.clone();
-          if (n.indexOf("Roof") === 0 || n.indexOf("Wall") >= 0) {
-            node.material.transparent = true;
-            node.material.opacity = n.indexOf("Roof") === 0 ? 0.08 : 0.16;
-            node.material.depthWrite = false;
-            node.material.color.setHex(COLOR.structure);
-          } else if (n.indexOf("Rack_Row") === 0) {
-            node.material.color.setHex(COLOR.rack);
-          } else if (n.indexOf("Dock") >= 0) {
-            node.material.color.setHex(COLOR.dock);
-          } else if (n.indexOf("Zone") >= 0) {
-            node.material.transparent = true;
-            node.material.opacity = 0.25;
-            node.material.color.setHex(COLOR.zone);
-          } else if (n.indexOf("Floor") === 0) {
-            node.material.color.setHex(0x11161d);
-          }
-        });
-
-        self.referenceGroup.add(gltf.scene);
-        self.referenceLoaded = true;
-
-        // The reference model is always the FreeCAD baseline export, which
-        // may not match whatever the live sliders currently say -- frame
-        // the camera on the model's own actual bounding box, not on
-        // whatever the live view last centered on.
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        self.target.set(size.x / 2, size.y / 2, size.z / 2);
-        self.spherical.radius = Math.max(20, Math.sqrt(size.x * size.x + size.z * size.z) * 1.1);
-        self._updateCamera();
-
-        onDone(true);
-      },
-      undefined,
-      function (err) {
-        console.error("Reference GLB failed to load:", err);
-        self.referenceLoadFailed = true;
-        onDone(false);
+  // racks: uprights at every frame line and lane boundary, beams at every level above the floor
+  const nb = L.baysPerRow, nl = L.levelHeights.length, deep = rt.deep, side = p.positions_per_level_per_bay;
+  const x0 = p.cross_aisle_width, upH = Math.min(p.rack_height + 0.35, CH);
+  let nPallets = 0;
+  this.heat = null;
+  if (nb > 0 && L.rows.length) {
+    const ups = instanced(std(COLOR.upright, { metalness: 0.35, roughness: 0.45 }), L.rows.length * (nb + 1) * (deep + 1), true);
+    const beams = instanced(std(COLOR.beam, { metalness: 0.3, roughness: 0.45 }), L.rows.length * nb * (nl - 1) * (deep + 1), true);
+    let iu = 0, ib = 0;
+    L.rows.forEach((row) => {
+      for (let b = 0; b <= nb; b++) for (let d = 0; d <= deep; d++) {
+        place(ups, iu++, x0 + b * p.bay_width, row.y + Math.min(row.depth - 0.04, Math.max(0.04, d * p.rack_depth)), upH / 2, 0.09, 0.09, upH);
       }
-    );
-  };
+      for (let b = 0; b < nb; b++) for (let k = 1; k < nl; k++) for (let d = 0; d <= deep; d++) {
+        place(beams, ib++, x0 + (b + 0.5) * p.bay_width, row.y + Math.min(row.depth - 0.03, Math.max(0.03, d * p.rack_depth)), L.levelHeights[k] - 0.07, p.bay_width - 0.09, 0.05, 0.13);
+      }
+    });
 
-  Visualization.prototype.setMode = function (mode) {
-    this.mode = mode;
-    this.liveGroup.visible = mode === "live";
-    this.referenceGroup.visible = mode === "reference";
-  };
+    // pallets: "stock" = the current inventory in a fixed random pattern; "heat" = every position by travel time
+    const cap = results.capacity.storageCapacity, heat = this.colorMode === "heat";
+    const grid = heat ? window.WH.calc.slotTimeGrid(p, L) : null;
+    this.heat = grid ? { min: grid.min, max: grid.max } : null;
+    const show = heat ? cap : Math.min(cap, Math.round(p.current_inventory_pallets));
+    let occupied = null;
+    if (!heat) {                                    // choose `show` of the `cap` positions, same pattern each time
+      const idx = new Uint32Array(cap);
+      for (let i = 0; i < cap; i++) idx[i] = i;
+      const rnd = mulberry32(12345);
+      for (let i = 0; i < show; i++) { const j = i + Math.floor(rnd() * (cap - i)); const t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
+      occupied = new Uint8Array(cap);
+      for (let i = 0; i < show; i++) occupied[idx[i]] = 1;
+    }
+    const withBases = show <= MAX_WITH_BASES;
+    const loads = instanced(std(0xffffff, { roughness: 0.8 }), show, true);
+    const bases = withBases ? instanced(std(COLOR.wood, { roughness: 0.9 }), show, true) : null;
+    const slotW = p.bay_width / side, pw = Math.max(0.3, slotW - 0.14), pd = Math.max(0.3, p.rack_depth - 0.12);
+    const loadH = Math.max(0.2, p.load_height - 0.15), c = new THREE.Color(), rndC = mulberry32(777);
+    let pos = 0;
+    L.rows.forEach((row, ri) => {
+      for (let b = 0; b < nb; b++) for (let k = 0; k < nl; k++) {
+        const z = L.levelHeights[k] + (k > 0 ? 0.005 : 0);
+        const col = heat ? heatColor((grid.times[(ri * nb + b) * nl + k] - grid.min) / Math.max(1e-6, grid.max - grid.min), c) : null;
+        for (let j = 0; j < side; j++) for (let d = 0; d < deep; d++, pos++) {
+          if (occupied && !occupied[pos]) continue;
+          const x = x0 + b * p.bay_width + (j + 0.5) * slotW, y = row.y + (d + 0.5) * p.rack_depth;
+          if (bases) place(bases, nPallets, x, y, z + 0.075, pw, pd, 0.15);
+          place(loads, nPallets, x, y, z + 0.15 + loadH / 2, pw - 0.04, pd - 0.04, loadH * (heat ? 1 : 0.9 + rndC() * 0.1));
+          loads.setColorAt(nPallets, heat ? col : c.setHex(LOADS[Math.floor(rndC() * LOADS.length)]));
+          nPallets++;
+        }
+      }
+    });
+    loads.count = nPallets; if (bases) bases.count = nPallets;
+    if (loads.instanceColor) loads.instanceColor.needsUpdate = true;
 
-  global.WH = global.WH || {};
-  global.WH.Visualization = Visualization;
-})(window);
+    // invisible per-row blocks for picking a bay and level
+    const pickMat = new THREE.MeshBasicMaterial({ visible: false });
+    L.rows.forEach((row, ri) => {
+      const m = box(L.rackRowLength, row.depth, p.rack_height + p.load_height, x0, row.y, 0, pickMat);
+      m.userData.row = ri;
+      G.add(m); this.selectable.push(m);
+    });
+  }
+
+  // dock doors, and trailers at as many doors as are busy on an average hour
+  const util = results.throughput;
+  const doorsFor = (count, xWall, outward, role, utilPct) => {
+    const y0 = (WW - count * p.dock_bay_width) / 2, busy = Math.min(count, Math.round(count * Math.min(1, utilPct / 100 / p.peak_hour_factor)));
+    for (let i = 0; i < count; i++) {
+      const y = y0 + i * p.dock_bay_width;
+      const door = box(0.25, p.dock_bay_width - 0.7, 3.0, xWall - 0.125, y + 0.35, 0, std(COLOR.dock, { roughness: 0.5 }));
+      door.userData.info = { type: "Dock door", name: role + " Dock " + (i + 1), dimensions: p.dock_bay_width.toFixed(1) + " m bay", role: role === "Receiving" ? "Inbound" : "Outbound", "truck turn": p.truck_turn_time + " min" };
+      G.add(door); this.selectable.push(door);
+      if (i < busy) {
+        const tx = outward < 0 ? xWall - WT - 13.8 : xWall + WT + 0.2;
+        const tr = box(13.6, 2.5, 2.7, tx, y + (p.dock_bay_width - 2.5) / 2, 1.1, std(COLOR.trailer, { roughness: 0.6 }));
+        tr.castShadow = true; G.add(tr);
+      }
+    }
+  };
+  doorsFor(p.num_receiving_docks, -WT / 2, -1, "Receiving", util.inbound.utilizationPct);
+  doorsFor(p.num_shipping_docks, WL + WT / 2, 1, "Shipping", util.outbound.utilizationPct);
+
+  // sun and shadow camera sized to the building
+  const span = Math.max(WL, WW) / 2 + 20, cx = WL / 2, cz = WW / 2;
+  this.sun.position.set(cx + span * 0.6, span * 1.4, cz + span * 0.9);
+  this.sun.target.position.set(cx, 0, cz);
+  const sc = this.sun.shadow.camera;
+  sc.left = -span * 1.2; sc.right = span * 1.2; sc.top = span * 1.2; sc.bottom = -span * 1.2; sc.near = 1; sc.far = span * 5;
+  sc.updateProjectionMatrix();
+
+  // camera: frame the building when the footprint changes a lot, otherwise leave the user's view alone
+  const diag = Math.hypot(WL, WW), target = new THREE.Vector3(cx, 0, cz);
+  if (this._lastFitDiag === undefined || Math.abs(diag - this._lastFitDiag) / this._lastFitDiag > 0.15) {
+    const dist = Math.max(30, diag * 1.0);
+    const pos = new THREE.Vector3(cx + dist * 0.5, dist * 0.62, cz + dist * 0.72);
+    this.camera.position.copy(pos); this.controls.target.copy(target);
+    this._home = { pos: pos.clone(), target: target.clone() };
+    this._lastFitDiag = diag;
+  }
+  this.stats = { pallets: nPallets, rows: L.rows.length, withBases: nPallets <= MAX_WITH_BASES };
+
+  // keep a selected slot selected across rebuilds while it still exists
+  if (sel && sel.row < L.rows.length && sel.bay < L.baysPerRow && sel.level < L.levelHeights.length) this.selectSlot(sel.row, null, sel.bay, sel.level);
+  else if (hadSelection && this._onSelect) this._onSelect(null);
+};
+
+// ---------------------------------------------------------------------------
+// Reference model — the real FreeCAD GLB export, loaded once
+// ---------------------------------------------------------------------------
+Visualization.prototype.loadReferenceModel = function (url, onDone) {
+  if (this.referenceLoaded || this.referenceLoadFailed) { if (this.referenceLoaded) this._frameReference(); onDone(this.referenceLoaded); return; }
+  new GLTFLoader().load(url, (gltf) => {
+    // FreeCAD's exporter already converts mm → m and Z-up → Y-up (glTF convention); only the
+    // width axis comes out negative, so shift it to start at 0 like the live view.
+    const bb = new THREE.Box3().setFromObject(gltf.scene);
+    gltf.scene.position.z -= bb.min.z;
+    gltf.scene.traverse((node) => {
+      if (!node.isMesh || !node.material) return;
+      const n = node.name;
+      node.material = node.material.clone();
+      node.castShadow = true; node.receiveShadow = true;
+      if (n.indexOf("Roof") === 0 || n.indexOf("Wall") >= 0) {
+        Object.assign(node.material, { transparent: true, opacity: n.indexOf("Roof") === 0 ? 0.08 : 0.16, depthWrite: false });
+        node.material.color.setHex(COLOR.structure); node.castShadow = false;
+      } else if (n.indexOf("Rack_Row") === 0 || n.indexOf("RackRow") === 0) node.material.color.setHex(COLOR.beam);
+      else if (n.indexOf("Dock") >= 0) node.material.color.setHex(COLOR.dock);
+      else if (n.indexOf("Zone") >= 0) { Object.assign(node.material, { transparent: true, opacity: 0.25 }); node.material.color.setHex(COLOR.zone); }
+      else if (n.indexOf("Floor") === 0) node.material.color.setHex(COLOR.slab);
+    });
+    this.referenceGroup.add(gltf.scene);
+    this.referenceLoaded = true;
+    this._refBox = new THREE.Box3().setFromObject(gltf.scene);
+    this._frameReference();
+    onDone(true);
+  }, undefined, (err) => {
+    console.error("Reference GLB failed to load:", err);
+    this.referenceLoadFailed = true;
+    onDone(false);
+  });
+};
+Visualization.prototype._frameReference = function () {
+  const size = new THREE.Vector3(), c = new THREE.Vector3();
+  this._refBox.getSize(size); this._refBox.getCenter(c);
+  const dist = Math.max(30, Math.hypot(size.x, size.z));
+  this.controls.target.set(c.x, 0, c.z);
+  this.camera.position.set(c.x + dist * 0.5, dist * 0.62, c.z + dist * 0.72);
+  this._dirty = true;
+};
+
+Visualization.prototype.setMode = function (mode) {
+  this.mode = mode;
+  this.liveGroup.visible = mode === "live";
+  this.routeGroup.visible = mode === "live";
+  this.referenceGroup.visible = mode === "reference";
+  this._dirty = true;
+  if (mode === "live" && this._home) this.resetView();
+};
+
+window.WH = window.WH || {};
+window.WH.Visualization = Visualization;

@@ -13,7 +13,10 @@
   //          selectivity, exact travel + lift cycle time over the real layout, truck-based
   //          inbound/outbound docks with a peak-hour factor, fleet efficiency; unit tests and a
   //          FreeCAD/web parity test; live floor plan; typed values; metric/imperial
-  const APP_VERSION = "2.0.0";
+  //   3.0.0  3D view you can read: three.js r186 (image-based lighting, shadows, orbit/pan),
+  //          instanced uprights, beams and pallets filled to the inventory, a travel-time heat
+  //          map of every position, click a slot for its route and cycle times, trailers at busy doors
+  const APP_VERSION = "3.0.0";
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
@@ -60,6 +63,9 @@
     buildRail();
     viz = new window.WH.Visualization(stageEl);
     viz.onSelect(renderInspector);
+    viz._onQuality = function (q) {
+      if (q === "low") document.querySelector(".caption").textContent = "Shadows switched off to keep the view smooth on this device · drag to orbit · right-drag to pan · scroll to zoom";
+    };
     recompute();
     window.addEventListener("resize", function () { viz.resize(); });
     viz.resize();
@@ -407,7 +413,7 @@
   // Inspector (click a component in the 3D view)
   // -------------------------------------------------------------------
   function renderInspector(info) {
-    if (!info) { inspectorEl.innerHTML = '<p class="hint">Click a rack row or dock door in the 3D view to inspect it.</p>'; return; }
+    if (!info) { inspectorEl.innerHTML = '<p class="hint">Click a rack in the 3D view to see that slot\'s route and cycle time, or a dock door to inspect it.</p>'; return; }
     let rows = "";
     for (const k in info) {
       if (k === "name" || k === "type") continue;
@@ -425,6 +431,8 @@
       modeButtons.forEach(function (b) { b.classList.remove("active"); });
       btn.classList.add("active");
       document.getElementById("reference-note").hidden = mode !== "reference";
+      document.getElementById("color-group").hidden = mode !== "live";
+      wallsBtn.hidden = mode !== "live";
       if (mode === "reference") {
         viz.setMode("reference");
         viz.loadReferenceModel("models/warehouse_baseline.glb", function (ok) {
@@ -436,10 +444,38 @@
         viz.setMode("live");
         viz.rebuildLive(model.getAll(), results);
       }
+      updateLegend();
     });
   });
 
   document.getElementById("btn-reset-params").addEventListener("click", function () { model.resetAll(); });
+
+  // pallet colouring and walls
+  const colorBtns = document.querySelectorAll("[data-color]");
+  const legend = document.getElementById("heat-legend");
+  colorBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      colorBtns.forEach(function (b) { b.classList.toggle("active", b === btn); });
+      viz.setColorMode(btn.getAttribute("data-color"));
+      updateLegend();
+    });
+  });
+  function updateLegend() {
+    const heat = viz && viz.colorMode === "heat" && viz.mode === "live";
+    legend.hidden = !heat;
+    if (!heat) return;
+    // the heat range comes from the same per-slot grid the 3D view colours by
+    const g = calc.slotTimeGrid(model.getAll(), results.layout);
+    document.getElementById("heat-min").textContent = isFinite(g.min) ? Math.round(g.min) + " s" : "—";
+    document.getElementById("heat-max").textContent = isFinite(g.max) ? Math.round(g.max) + " s" : "—";
+  }
+  model.onChange(function () { updateLegend(); });
+  const wallsBtn = document.getElementById("btn-walls");
+  wallsBtn.addEventListener("click", function () {
+    const on = !viz.showWalls;
+    viz.setWalls(on);
+    wallsBtn.classList.toggle("active", on); wallsBtn.setAttribute("aria-pressed", String(on));
+  });
   document.getElementById("btn-reset-view").addEventListener("click", function () { if (viz) viz.resetView(); });
 
   const unitsBtn = document.getElementById("btn-units");

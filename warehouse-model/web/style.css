@@ -236,3 +236,15 @@ select.choice:focus{outline:none; border-color:var(--accent);}
   #btn-units .long{display:none;}
 }
 .back-link{white-space:nowrap;}
+
+/* v3: stage tools and heat-map legend */
+.stage-tools{display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;}
+.stage-tools > .btn{background:rgba(10,47,82,.72);}
+.stage-tools > .btn.active{background:rgba(125,211,252,.16); color:var(--accent); border-color:var(--accent);}
+.heat-legend{position:absolute; left:14px; bottom:42px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; max-width:calc(100% - 28px);
+  background:rgba(10,47,82,.82); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-family:var(--mono); font-size:11px; color:var(--ink-dim);}
+.heat-legend[hidden]{display:none;}
+.heat-bar{display:inline-block; width:140px; height:10px; border-radius:3px; background:linear-gradient(90deg,#2e6bd9,#33bf9e,#f5b833,#e34a47);}
+.heat-legend small{color:var(--ink-faint); font-size:10px; width:100%;}
+[hidden].viewmode-group, .btn[hidden]{display:none !important;}
+

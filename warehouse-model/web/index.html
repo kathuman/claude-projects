@@ -45,12 +45,24 @@
           <button class="btn small active" data-viewmode="live">Live Parametric View</button>
           <button class="btn small" data-viewmode="reference">Reference Model (FreeCAD)</button>
         </div>
-        <button class="btn small" id="btn-reset-view">Reset View</button>
+        <div class="stage-tools">
+          <div class="viewmode-group" id="color-group" role="group" aria-label="Colour the pallets by">
+            <button class="btn small active" data-color="stock" type="button" title="The current inventory, stored at random">Stock</button>
+            <button class="btn small" data-color="heat" type="button" title="Every position, coloured by its average lift-truck cycle time">Travel time</button>
+          </div>
+          <button class="btn small active" id="btn-walls" type="button" aria-pressed="true">Walls</button>
+          <button class="btn small" id="btn-reset-view" type="button">Reset View</button>
+        </div>
+      </div>
+
+      <div class="heat-legend" id="heat-legend" hidden>
+        <span id="heat-min"></span><span class="heat-bar"></span><span id="heat-max"></span>
+        <small>average cycle time per position</small>
       </div>
 
       <p class="reference-note" id="reference-note" hidden></p>
 
-      <div class="caption">Drag to orbit · scroll to zoom · click a rack row or dock door to inspect it</div>
+      <div class="caption">Drag to orbit · right-drag to pan · scroll to zoom · click a rack to see that slot's route and cycle time</div>
     </section>
 
     <aside class="side-panel">
@@ -196,12 +208,14 @@
   </footer>
 </div>
 
-<script src="vendor/three.min.js"></script>
-<script src="vendor/GLTFLoader.js"></script>
-<script src="src/model.js"></script>
-<script src="src/calculations.js"></script>
-<script src="src/visualization.js"></script>
-<script src="src/blueprint.js"></script>
-<script src="src/app.js"></script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<!-- all modules, so they run in this order after the page is parsed -->
+<script type="module" src="src/model.js"></script>
+<script type="module" src="src/calculations.js"></script>
+<script type="module" src="src/visualization.js"></script>
+<script type="module" src="src/blueprint.js"></script>
+<script type="module" src="src/app.js"></script>
 </body>
 </html>

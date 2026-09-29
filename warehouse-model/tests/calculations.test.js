@@ -117,6 +117,28 @@ for (let n = 0; n < 300; n++) {
 }
 check("travel formula matches brute force over every door/slot/level (300 designs)", travelOK === 300, "worst error " + worst);
 
+// ---------------------------------------------------------------- per-slot times average to the headline cycle time
+let slotOK = 0;
+for (let n = 0; n < 200; n++) {
+  const q = randomP(); q.warehouse_length = rnd(40, 150); q.warehouse_width = rnd(20, 80);
+  const r = calc.computeAll(q, RT);
+  if (!r.layout.numRackRows || !r.layout.baysPerRow) { slotOK++; continue; }
+  const g = calc.slotTimeGrid(q, r.layout);
+  let sum = 0; for (let i = 0; i < g.times.length; i++) sum += g.times[i];
+  const okMean = Math.abs(sum / g.times.length - r.travel.cycleTime) < 1e-3 * r.travel.cycleTime;
+  const okLen = g.times.length === r.layout.numRackRows * r.layout.baysPerRow * q.levels_per_rack && g.min <= g.max;
+  if (okMean && okLen) slotOK++; else if (slotOK + 3 > n) console.log("  slot mean", sum / g.times.length, "vs", r.travel.cycleTime);
+}
+check("per-slot cycle times average to the headline cycle time (200 designs)", slotOK === 200, slotOK);
+{
+  const r = calc.computeAll(base, RT), L = r.layout;
+  const near0 = calc.slotTimes(base, L, 0, 0, 0), far = calc.slotTimes(base, L, 0, L.baysPerRow - 1, 0), high = calc.slotTimes(base, L, 0, 0, base.levels_per_rack - 1);
+  check("slot near receiving: faster in than out", near0.tIn < near0.tOut);
+  check("slot near shipping: faster out than in", far.tOut < far.tIn);
+  check("top level slower than floor level", high.t > near0.t && near(high.t - near0.t, 2 * base.rack_height / base.lift_speed, 1e-9));
+  check("aisle of a row lies inside the building", L.rows.every((row) => { const y = calc.aisleOf(row, base); return y > 0 && y < base.warehouse_width; }));
+}
+
 // ---------------------------------------------------------------- behaviour
 {
   const a = calc.computeAll(base, RT), b = calc.computeAll(withP({ warehouse_length: 200 }), RT);

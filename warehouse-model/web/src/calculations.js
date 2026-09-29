@@ -223,6 +223,38 @@
     };
   }
 
+  // One storage slot's own averages (over all doors): the heat map and the
+  // route overlay use these. Averaged over every slot they give exactly
+  // computeTravel's cycle time (checked in the tests).
+  function aisleOf(row, p) {
+    return row.faces > 0 ? row.y + row.depth + p.aisle_width / 2 : row.y - p.aisle_width / 2;
+  }
+  function slotTimes(p, layout, rowIndex, bay, level) {
+    const row = layout.rows[rowIndex];
+    const aisleY = aisleOf(row, p);
+    const x = p.cross_aisle_width + (bay + 0.5) * p.bay_width;
+    const z = layout.levelHeights[level];
+    const lat = function (doors) { return doors.length ? mean(doors.map(function (d) { return Math.abs(d - aisleY); })) : 0; };
+    const hIn = lat(doorCentres(p.num_receiving_docks, p)) + x;
+    const hOut = lat(doorCentres(p.num_shipping_docks, p)) + (p.warehouse_length - x);
+    const lift = 2 * z / p.lift_speed;
+    const tIn = 2 * hIn / p.forklift_speed + lift + p.forklift_cycle_overhead;
+    const tOut = 2 * hOut / p.forklift_speed + lift + p.forklift_cycle_overhead;
+    return { aisleY: aisleY, x: x, z: z, hIn: hIn, hOut: hOut, tIn: tIn, tOut: tOut, t: (tIn + tOut) / 2 };
+  }
+  // slot times for every row × bay × level, as a flat Float32Array (row-major)
+  function slotTimeGrid(p, layout) {
+    const nr = layout.rows.length, nb = layout.baysPerRow, nl = layout.levelHeights.length;
+    const out = new Float32Array(nr * nb * nl);
+    let min = Infinity, max = -Infinity;
+    for (let r = 0; r < nr; r++) for (let b = 0; b < nb; b++) for (let l = 0; l < nl; l++) {
+      const t = slotTimes(p, layout, r, b, l).t;
+      out[(r * nb + b) * nl + l] = t;
+      if (t < min) min = t; if (t > max) max = t;
+    }
+    return { times: out, min: min, max: max, rows: nr, bays: nb, levels: nl };
+  }
+
   // ---------------------------------------------------------------------
   // 5. Docks — trucks, not pallets; inbound and outbound doors separately
   // ---------------------------------------------------------------------
@@ -307,5 +339,5 @@
     return { layout, capacity, utilization, travel, throughput, cost, warnings };
   }
 
-  return { computeLayout, computeCapacity, computeUtilization, computeTravel, computeThroughput, computeCost, computeAll, doorCentres, BEAM_ALLOWANCE };
+  return { computeLayout, computeCapacity, computeUtilization, computeTravel, computeThroughput, computeCost, computeAll, doorCentres, aisleOf, slotTimes, slotTimeGrid, BEAM_ALLOWANCE };
 });
