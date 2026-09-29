@@ -88,7 +88,7 @@
   };
 
   // Ordered category list — drives the order rail sections render in.
-  ParameterModel.CATEGORY_ORDER = ["Building", "Racking", "Docks & Flow", "Operations", "Cost"];
+  ParameterModel.CATEGORY_ORDER = ["Building", "Racking", "Docks & Flow", "Operations", "Simulation", "Cost"];
 
   global.WH = global.WH || {};
   global.WH.ParameterModel = ParameterModel;

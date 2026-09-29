@@ -257,6 +257,7 @@ Visualization.prototype.resize = function () {
 Visualization.prototype.render = function () {
   if (this._pending && this.mode === "live") { const q = this._pending; this._pending = null; this._build(q.p, q.results); this._dirty = true; }
   this.controls.update();
+  if (this.anim) { this._animFrame(); this._dirty = true; }
   const now = performance.now();
   if (!this._dirty) { this._lastFrame = 0; return; }
   this._dirty = false;
@@ -423,7 +424,7 @@ Visualization.prototype._build = function (p, results) {
       if (i < busy) {
         const tx = outward < 0 ? xWall - WT - 13.8 : xWall + WT + 0.2;
         const tr = box(13.6, 2.5, 2.7, tx, y + (p.dock_bay_width - 2.5) / 2, 1.1, std(COLOR.trailer, { roughness: 0.6 }));
-        tr.castShadow = true; G.add(tr);
+        tr.castShadow = true; tr.userData.staticTrailer = true; tr.visible = !this.anim; G.add(tr);
       }
     }
   };
@@ -496,6 +497,136 @@ Visualization.prototype._frameReference = function () {
   this.controls.target.set(c.x, 0, c.z);
   this.camera.position.set(c.x + dist * 0.5, dist * 0.62, c.z + dist * 0.72);
   this._dirty = true;
+};
+
+// ---------------------------------------------------------------------------
+// Day playback — replays one simulated day (simulation.js event log):
+// trailers queue in the yard and dock at their doors, lift trucks drive each
+// task's route (door → staging → aisle → bay, and for dual-command trips on to
+// the retrieval bay and the shipping door) in proportion to its duration.
+// ---------------------------------------------------------------------------
+const LIFT_COLOR = 0xffd23f;
+Visualization.prototype.playDay = function (day, p, results, secondsPerDay) {
+  this.stopDay();
+  if (!day || !day.log) return;
+  const log = day.log, L = results.layout, grid = results.slots.grid, D = window.WH.calc.doorSets(p);
+  const WT = p.wall_thickness / 1000, WL = p.warehouse_length;
+  const g = this.animGroup = new THREE.Group();
+  this.scene.add(g);
+  // lift trucks: drawn larger than life and through the racks (like the routes), or they'd vanish in the aisles
+  const lifts = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: LIFT_COLOR, depthTest: false, transparent: true, opacity: 0.95 }), log.lifts);
+  lifts.renderOrder = 11; lifts.frustumCulled = false; g.add(lifts);
+  const trailers = new THREE.InstancedMesh(unitBox, std(COLOR.trailer, { roughness: 0.6 }), Math.max(1, log.trucks.length));
+  trailers.castShadow = true; trailers.frustumCulled = false; g.add(trailers);
+  let end = log.close;
+  log.tasks.forEach((t) => { if (t.t1 > end) end = t.t1; });
+  log.trucks.forEach((t) => { if ((t.left || 0) > end) end = t.left; });
+  const tasksByLift = [];
+  for (let i = 0; i < log.lifts; i++) tasksByLift.push([]);
+  log.tasks.forEach((t) => tasksByLift[t.lift].push(t));
+  tasksByLift.forEach((a) => a.sort((x, y) => x.t0 - y.t0));
+  this.anim = { day, p, L, grid, D, WT, WL, lifts, trailers, tasksByLift, ptr: new Array(log.lifts).fill(0), end,
+    rate: end / (secondsPerDay || 60), start: performance.now(), paused: false, pausedAt: 0 };
+  this.liveGroup.traverse((o) => { if (o.userData.staticTrailer) o.visible = false; });
+  this.clearSelection();
+  // pull back a little so the yard queue outside the doors is in the frame
+  if (this._home) {
+    const dir = this.camera.position.clone().sub(this.controls.target);
+    this.controls.target.x -= 12;
+    this.camera.position.copy(this.controls.target).add(dir.multiplyScalar(1.15));
+  }
+  this._dirty = true;
+};
+Visualization.prototype.stopDay = function () {
+  if (!this.anim) return;
+  if (this.animGroup) { disposeGroup(this.animGroup); this.scene.remove(this.animGroup); this.animGroup = null; }
+  this.anim = null;
+  this.liveGroup.traverse((o) => { if (o.userData.staticTrailer) o.visible = true; });
+  this._dirty = true;
+  if (this._onTick) this._onTick(null);
+};
+Visualization.prototype.setDaySpeed = function (secondsPerDay) {
+  const a = this.anim; if (!a) return;
+  const t = this._animTime();
+  a.rate = a.end / secondsPerDay; a.start = performance.now() - t / a.rate * 1000;
+};
+Visualization.prototype._animTime = function () {
+  const a = this.anim;
+  return Math.min(a.end, (performance.now() - a.start) / 1000 * a.rate);
+};
+// the route of one task as a polyline in engineering (x, y) coordinates
+Visualization.prototype._taskPath = function (task) {
+  const a = this.anim, p = a.p, L = a.L, G = a.grid, D = a.D, nbl = G.nb * G.nl;
+  const cell = (c) => ({ x: G.bayCx[Math.floor(c / G.nl) % G.nb], y: G.rowAisleY[Math.floor(c / nbl)], aisle: L.rows[Math.floor(c / nbl)].aisle });
+  const near = (ds, y) => ds.reduce((b, d) => (Math.abs(d - y) < Math.abs(b - y) ? d : b), ds[0]);
+  const sx = p.cross_aisle_width / 2, ex = D.u ? sx : p.warehouse_length - p.cross_aisle_width / 2;
+  const outDoorY = (y) => (task.door !== null && task.door !== undefined && D.outY[task.door] !== undefined ? D.outY[task.door] : near(D.outY, y));
+  let pts;
+  if (task.a === undefined && task.b === undefined) pts = [[0, D.inY[0] || 0], [sx, D.inY[0] || 0]];
+  else if (task.kind === "P") { const A = cell(task.a), yin = near(D.inY, A.y); pts = [[0, yin], [sx, yin], [sx, A.y], [A.x, A.y]]; pts = pts.concat(pts.slice(0, -1).reverse()); }
+  else if (task.kind === "R") { const B = cell(task.b), yo = outDoorY(B.y); pts = [[D.outX, yo], [ex, yo], [ex, B.y], [B.x, B.y]]; pts = pts.concat(pts.slice(0, -1).reverse()); }
+  else {
+    const A = cell(task.a), B = cell(task.b), yin = near(D.inY, A.y), yo = outDoorY(B.y);
+    pts = [[0, yin], [sx, yin], [sx, A.y], [A.x, A.y]];
+    if (A.aisle === B.aisle) pts.push([B.x, B.y]);
+    else {
+      const c = L.crossAisleX.reduce((best, x) => (Math.abs(A.x - x) + Math.abs(B.x - x) < Math.abs(A.x - best) + Math.abs(B.x - best) ? x : best), L.crossAisleX[0]);
+      pts.push([c, A.y], [c, B.y], [B.x, B.y]);
+    }
+    pts.push([ex, B.y], [ex, yo], [D.outX, yo]);
+    if (D.u) pts.push([0, yin]);
+    else { const ay = L.aisles.length ? L.aisles[0].y : yin; pts.push([ex, ay], [sx, ay], [sx, yin], [0, yin]); }
+  }
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.abs(pts[i][0] - pts[i - 1][0]) + Math.abs(pts[i][1] - pts[i - 1][1]));
+  return { pts, cum };
+};
+Visualization.prototype._animFrame = function () {
+  const a = this.anim, t = this._animTime(), p = a.p, dummy = new THREE.Object3D(), log = a.day.log;
+  const set = (im, i, x, y, z, sx, sy, sz) => { dummy.position.set(x, z, y); dummy.scale.set(sx, sz, sy); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); };
+  // lift trucks
+  let busy = 0;
+  for (let i = 0; i < log.lifts; i++) {
+    const list = a.tasksByLift[i];
+    while (a.ptr[i] < list.length && list[a.ptr[i]].t1 <= t) a.ptr[i]++;
+    const task = list[a.ptr[i]];
+    let x = p.cross_aisle_width * 0.3, y = 2 + i * 2.2 % Math.max(4, p.warehouse_width - 4);      // parked in the staging zone
+    if (task && task.t0 <= t) {
+      busy++;
+      if (!task.path) task.path = this._taskPath(task);
+      const P = task.path, total = P.cum[P.cum.length - 1], d = total * Math.min(1, (t - task.t0) / Math.max(1e-6, task.t1 - task.t0));
+      let k = 1; while (k < P.cum.length - 1 && P.cum[k] < d) k++;
+      const seg = Math.max(1e-9, P.cum[k] - P.cum[k - 1]), u = Math.min(1, (d - P.cum[k - 1]) / seg);
+      x = P.pts[k - 1][0] + (P.pts[k][0] - P.pts[k - 1][0]) * u;
+      y = P.pts[k - 1][1] + (P.pts[k][1] - P.pts[k - 1][1]) * u;
+    }
+    set(a.lifts, i, x, y, 1.4, 2.2, 2.2, 2.8);
+  }
+  a.lifts.instanceMatrix.needsUpdate = true;
+  // trailers: in the yard (queued in arrival order), at their door, or gone
+  const yard = { in: [], out: [] };
+  let n = 0;
+  log.trucks.forEach((tr) => {
+    let shown = false;
+    if (tr.arrived <= t && (tr.docked === undefined || t < tr.docked)) { yard[tr.side].push(tr); }
+    else if (tr.docked !== undefined && tr.docked <= t && (tr.left === undefined || t < tr.left)) {
+      const ys = tr.side === "in" ? a.D.inY : a.D.outY, west = tr.side === "in" || a.D.u;
+      const y = ys[tr.door];
+      if (y !== undefined) { set(a.trailers, n++, west ? -a.WT - 6.9 : a.WL + a.WT + 6.9, y, 2.45, 13.6, 2.5, 2.7); shown = true; }
+    }
+    return shown;
+  });
+  ["in", "out"].forEach((side) => {
+    const west = side === "in" || a.D.u, x0 = west ? -a.WT - 22 - (side === "out" ? 32 : 0) : a.WL + a.WT + 22;
+    yard[side].forEach((tr, k) => {
+      const col = Math.floor(k / 12), row = k % 12;
+      set(a.trailers, n++, x0 + (west ? -1 : 1) * col * 16, 1.5 + row * 3.4, 2.45, 13.6, 2.5, 2.7);
+    });
+  });
+  a.trailers.count = n;
+  a.trailers.instanceMatrix.needsUpdate = true;
+  if (this._onTick) this._onTick({ t: t, end: a.end, close: log.close, yard: yard.in.length + yard.out.length, busy: busy, lifts: log.lifts, done: t >= a.end });
+  if (t >= a.end && !a.finished) { a.finished = true; }
 };
 
 Visualization.prototype.setMode = function (mode) {

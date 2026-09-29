@@ -283,6 +283,37 @@
     return { w, cls, abc: true, shares, k, counts };
   }
 
+  // Draw cell indices in proportion to their move weights (inverse CDF).
+  function sampler(w) {
+    const n = w.length, cum = new Float64Array(n); let acc = 0;
+    for (let i = 0; i < n; i++) { acc += w[i]; cum[i] = acc; }
+    return function (u) { let lo = 0, hi = n - 1; u *= acc; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < u) lo = m + 1; else hi = m; } return lo; };
+  }
+  // One dual-command trip: receiving side → putaway cell a → retrieval cell b →
+  // shipping door → back to the receiving side. Used by the analytic estimate
+  // and by the simulation, so the two can't drift apart.
+  function dcContext(p, layout, grid) {
+    const doors = grid.doors;
+    let ret = 0;
+    doors.outY.forEach(function (yo) { doors.inY.forEach(function (yi) { ret += Math.abs(yo - yi); }); });
+    ret = ret / Math.max(1, doors.outY.length * doors.inY.length) + (doors.u ? 0 : p.warehouse_length);
+    return { ret: ret, cx: layout.crossAisleX, nbl: grid.nb * grid.nl };
+  }
+  function dcPair(p, layout, grid, ctx, a, b) {
+    const ra = Math.floor(a / ctx.nbl), rb = Math.floor(b / ctx.nbl), ba = Math.floor(a / grid.nl) % grid.nb, bb = Math.floor(b / grid.nl) % grid.nb;
+    const xa = grid.bayCx[ba], xb = grid.bayCx[bb], cx = ctx.cx;
+    let between;
+    if (layout.rows[ra].aisle === layout.rows[rb].aisle) between = Math.abs(xa - xb);
+    else {
+      let best = Infinity;
+      for (let c = 0; c < cx.length; c++) best = Math.min(best, Math.abs(xa - cx[c]) + Math.abs(xb - cx[c]));
+      between = Math.abs(grid.rowAisleY[ra] - grid.rowAisleY[rb]) + best;
+    }
+    const dist = grid.latIn[ra] + xa + between + grid.latOut[rb] + Math.abs(grid.doors.outX - xb) + ctx.ret;
+    const z = layout.levelHeights[a % grid.nl] + layout.levelHeights[b % grid.nl];
+    return { dist: dist, time: dist / p.forklift_speed + 2 * z / p.lift_speed + 2 * p.forklift_cycle_overhead };
+  }
+
   // ---------------------------------------------------------------------
   // 6. Lift-truck travel and fleet
   // ---------------------------------------------------------------------
@@ -305,31 +336,14 @@
     const share = Math.max(0, Math.min(1, (p.dual_command_share || 0) / 100));
     let dcCycle = 0, dcTravel = 0;
     if (n > 0) {
-      const cum = new Float64Array(n); let acc = 0;
-      for (let i = 0; i < n; i++) { acc += w[i]; cum[i] = acc; }
-      const pick = function (u) { let lo = 0, hi = n - 1; u *= acc; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < u) lo = m + 1; else hi = m; } return lo; };
-      const doors = grid.doors;
-      let ret = 0;
-      doors.outY.forEach(function (yo) { doors.inY.forEach(function (yi) { ret += Math.abs(yo - yi); }); });
-      ret = ret / Math.max(1, doors.outY.length * doors.inY.length) + (doors.u ? 0 : p.warehouse_length);
-      const rnd = mulberry32(20260929), cx = layout.crossAisleX, nbl = grid.nb * grid.nl;
-      let sumD = 0, sumZ = 0;
+      const pick = sampler(w), rnd = mulberry32(20260929), ctx = dcContext(p, layout, grid);
+      let sumD = 0, sumT = 0;
       for (let s = 0; s < DC_SAMPLES; s++) {
-        const a = pick(rnd()), b = pick(rnd());
-        const ra = Math.floor(a / nbl), rb = Math.floor(b / nbl), ba = Math.floor(a / grid.nl) % grid.nb, bb = Math.floor(b / grid.nl) % grid.nb;
-        const xa = grid.bayCx[ba], xb = grid.bayCx[bb];
-        let between;
-        if (layout.rows[ra].aisle === layout.rows[rb].aisle) between = Math.abs(xa - xb);
-        else {
-          let best = Infinity;
-          for (let c = 0; c < cx.length; c++) best = Math.min(best, Math.abs(xa - cx[c]) + Math.abs(xb - cx[c]));
-          between = Math.abs(grid.rowAisleY[ra] - grid.rowAisleY[rb]) + best;
-        }
-        sumD += grid.latIn[ra] + xa + between + grid.latOut[rb] + Math.abs(grid.doors.outX - xb) + ret;
-        sumZ += layout.levelHeights[a % grid.nl] + layout.levelHeights[b % grid.nl];
+        const d = dcPair(p, layout, grid, ctx, pick(rnd()), pick(rnd()));
+        sumD += d.dist; sumT += d.time;
       }
       dcTravel = sumD / DC_SAMPLES;
-      dcCycle = dcTravel / p.forklift_speed + 2 * (sumZ / DC_SAMPLES) / p.lift_speed + 2 * p.forklift_cycle_overhead;
+      dcCycle = sumT / DC_SAMPLES;
     }
 
     const moves = p.daily_throughput_pallets;
@@ -475,6 +489,7 @@
 
   return {
     computeLayout, computeCapacity, computeUtilization, computeTravel, computeThroughput, computeCost, computeAll,
-    doorSets, aisleOf, slotGrid, slotTimes, slotTimeGrid, moveWeights, erlangC, BEAM_ALLOWANCE, ABC_BOUNDS, DC_SAMPLES
+    doorSets, aisleOf, slotGrid, slotTimes, slotTimeGrid, moveWeights, sampler, dcContext, dcPair, erlangC, mulberry32,
+    BEAM_ALLOWANCE, ABC_BOUNDS, DC_SAMPLES, TURN_CS2
   };
 });

@@ -51,9 +51,19 @@
             <button class="btn small" data-color="heat" type="button" title="Every position, coloured by its average lift-truck cycle time">Travel time</button>
             <button class="btn small" data-color="class" type="button" title="Which positions hold the A, B and C movers (class-based storage)" hidden>ABC class</button>
           </div>
+          <button class="btn small play" id="btn-play" type="button" title="Replay one simulated day in the 3D view">▶ Play a day</button>
           <button class="btn small active" id="btn-walls" type="button" aria-pressed="true">Walls</button>
           <button class="btn small" id="btn-reset-view" type="button">Reset View</button>
         </div>
+      </div>
+
+      <div class="sim-clock" id="sim-clock" hidden>
+        <b id="clock-time">06:00</b>
+        <span id="clock-info"></span>
+        <span class="clock-speed" role="group" aria-label="Playback speed">
+          <button type="button" data-speed="120">½×</button><button type="button" data-speed="60" class="active">1×</button><button type="button" data-speed="20">3×</button>
+        </span>
+        <button type="button" id="btn-stop" aria-label="Stop playback">■</button>
       </div>
 
       <div class="heat-legend" id="heat-legend" hidden>
@@ -93,6 +103,23 @@
         centre lines.
       </p>
       <div class="blueprint-live" id="blueprint"></div>
+    </div>
+
+    <div class="panel sim-panel">
+      <div class="panel-head">
+        <h2>Simulated Day</h2>
+        <span class="sim-meta" id="sim-meta"></span>
+      </div>
+      <p class="panel-note">
+        The key results above are averages and a steady-state queueing formula. This runs the day event by event —
+        trucks arriving at random through the day (busiest hour = the peak-hour factor), queueing for doors, lift
+        trucks fetching and storing every pallet — <span id="sim-reps">30</span> times with different random arrivals, and
+        shows the average and the range across those days. Press <b>▶ Play a day</b> above the 3D view to watch one.
+      </p>
+      <div class="sim-grid">
+        <table class="sim-table" id="sim-table"></table>
+        <div class="sim-chart" id="sim-chart"></div>
+      </div>
     </div>
 
     <div class="lower-grid">
@@ -178,6 +205,7 @@
             <li><b>Slotting.</b> Switch <code>storage_policy</code> to ABC and open the <b>ABC class</b> view. How much does the time per move drop? Now switch <code>flow_layout</code> to U-flow — why does ABC suddenly save much more?</li>
             <li><b>Dual command.</b> With I-flow, raise <code>dual_command_share</code>: the time per move gets <em>worse</em>. Read the design note, switch to U-flow and try again. Then add two <code>mid_cross_aisles</code> in a 200 m building: what do you gain and what do you give up?</li>
             <li><b>Queues before capacity.</b> Double <code>daily_throughput_pallets</code>. Door utilization is still under 100%, so why does <b>Truck Wait</b> jump? Add one door and watch the wait fall far more than the utilization.</li>
+            <li><b>Averages hide queues.</b> Raise <code>peak_hour_factor</code> to 2.5. The daily totals don't change, but look at the <b>Simulated Day</b>: the busiest hour's wait and the yard queue grow. Then set <code>sim_lift_trucks</code> to one fewer than recommended — work spills past closing, and outbound trucks wait at their doors for pallets.</li>
             <li><b>Going up.</b> Add a level (5 levels) without changing the rack height. What warning appears? Raise <code>rack_height</code> until it clears — and watch the cycle time and the clear-height check.</li>
           </ol>
         </div>
@@ -207,8 +235,10 @@
             <em>not</em> the GLB — a baked mesh can't resize itself — and the app never implies otherwise.
           </p>
           <p>
-            Next on the roadmap: a discrete-event simulation of trucks and lift trucks, scenarios with optimisation
-            and total cost of ownership, and CAD/BIM export — see the project README.
+            <code>web/src/simulation.js</code> is a discrete-event simulation of the day that takes every lift-truck task
+            time from the same per-slot formulas; its tests check that lift-truck work per pallet matches the analytic model
+            and that door waits match the queueing formula. Next on the roadmap: scenarios with optimisation and total cost
+            of ownership, and CAD/BIM export — see the project README.
           </p>
         </div>
       </details>
@@ -227,6 +257,7 @@
 <!-- all modules, so they run in this order after the page is parsed -->
 <script type="module" src="src/model.js"></script>
 <script type="module" src="src/calculations.js"></script>
+<script type="module" src="src/simulation.js"></script>
 <script type="module" src="src/visualization.js"></script>
 <script type="module" src="src/blueprint.js"></script>
 <script type="module" src="src/app.js"></script>

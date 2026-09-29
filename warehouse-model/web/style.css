@@ -254,3 +254,23 @@ select.choice:focus{outline:none; border-color:var(--accent);}
 .heat-legend .cls.a{background:#f2a33a;} .heat-legend .cls.b{background:#33bf9e;} .heat-legend .cls.c{background:#2e6bd9;}
 .choice-note[hidden]{display:none;}
 
+/* v5: simulated day */
+.sim-panel{margin-bottom:20px;}
+.sim-meta{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);}
+.sim-grid{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:20px; align-items:start;}
+.sim-table{width:100%; border-collapse:collapse; font-size:12px;}
+.sim-table th, .sim-table td{padding:5px 6px; border-bottom:1px dashed var(--line-soft); text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink);}
+.sim-table thead th{font-family:var(--head); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); font-weight:600;}
+.sim-table tbody th{text-align:left; font-family:var(--body); font-weight:500; color:var(--ink-dim);}
+.sim-table td:nth-child(3){color:var(--tele);}
+.sim-table td:nth-child(4){color:var(--ink-faint);}
+.stage-tools > .btn.play{color:var(--tele); border-color:rgba(123,224,196,.5);}
+.sim-clock{position:absolute; left:50%; top:62px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;
+  background:rgba(10,47,82,.88); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font-family:var(--mono); font-size:11.5px; color:var(--ink-dim); max-width:calc(100% - 28px);}
+.sim-clock[hidden]{display:none;}
+.sim-clock b{font-family:var(--head); font-size:17px; color:var(--ink); letter-spacing:.04em;}
+.sim-clock button{background:transparent; border:1px solid var(--line); border-radius:5px; color:var(--ink-dim); font-family:var(--mono); font-size:11px; padding:2px 7px; cursor:pointer;}
+.sim-clock button.active, .sim-clock button:hover{border-color:var(--accent); color:var(--accent);}
+.clock-speed{display:inline-flex; gap:3px;}
+@media (max-width:900px){ .sim-grid{grid-template-columns:1fr;} .sim-table{font-size:11px;} }
+

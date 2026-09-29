@@ -18,7 +18,10 @@
   //          map of every position, click a slot for its route and cycle times, trailers at busy doors
   //   4.0.0  operations: I-flow vs U-flow docks, mid cross-aisles, class-based (ABC) slotting with a
   //          demand-skew curve, dual-command trips, Erlang C truck queueing at the doors; ABC-class view
-  const APP_VERSION = "4.0.0";
+  //   5.0.0  discrete-event simulation of the day (random truck arrivals over an hourly profile, yard
+  //          queues, doors held by slow loading, lift-truck tasks from the per-slot times), 30 days of
+  //          Monte Carlo with ranges beside the analytic results, hourly chart, 3D playback of a day
+  const APP_VERSION = "5.0.0";
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
@@ -238,8 +241,106 @@
     renderTrace(results);
     renderCharts(results, p);
     renderBlueprint(results, p);
+    if (viz) viz.stopDay();
     if (viz && viz.mode === "live") viz.rebuildLive(p, results);
+    scheduleSimulation();
   }
+
+  // -------------------------------------------------------------------
+  // Simulated day — Monte Carlo over many random days, re-run shortly
+  // after the last change (30 days take a few tens of milliseconds)
+  // -------------------------------------------------------------------
+  const sim = window.WH.sim;
+  let simTimer = null, simResult = null;
+  function scheduleSimulation() {
+    clearTimeout(simTimer);
+    simTimer = setTimeout(runSimulation, 180);
+  }
+  function simLifts() { return model.get("sim_lift_trucks") || results.travel.forkliftsNeeded; }
+  function runSimulation() {
+    const p = model.getAll(), t0 = performance.now();
+    simResult = sim.runMonteCarlo(p, results, { liftTrucks: simLifts() });
+    renderSimulation(simResult, p, results, performance.now() - t0);
+  }
+  function renderSimulation(mc, p, r, ms) {
+    const S = mc.summary, t = r.throughput, tr = r.travel;
+    const f0 = function (v) { return isFinite(v) ? Math.round(v).toLocaleString("en-US") : "—"; };
+    const f1 = function (v) { return isFinite(v) ? v.toFixed(1) : "—"; };
+    const pc = function (v) { return isFinite(v) ? Math.round(v * 100) + "%" : "—"; };
+    const range = function (m, f) { return f(S[m].p10) === f(S[m].p90) ? "" : f(S[m].p10) + " – " + f(S[m].p90); };
+    const lifts = mc.lifts, hours = p.operating_hours_per_day;
+    const rows = [
+      ["Truck wait in the peak hour (min)", isFinite(t.maxWait) ? f1(t.maxWait) : "no limit", f1(S.peakHourWait.mean), range("peakHourWait", f1)],
+      ["Truck wait, whole day (min)", "—", f1(S.meanWait.mean), range("meanWait", f1)],
+      ["Trucks waiting over 30 min", "—", pc(S.shareWaitingOver30.mean), range("shareWaitingOver30", pc)],
+      ["Longest yard queue (trucks)", "—", f1(S.maxYard.mean), range("maxYard", f0)],
+      ["Door utilization, day (in / out)", pc(t.inbound.utilizationPct / 100 / p.peak_hour_factor) + " / " + pc(t.outbound.utilizationPct / 100 / p.peak_hour_factor), pc(S.doorUtilIn.mean) + " / " + pc(S.doorUtilOut.mean), ""],
+      ["Lift-truck utilization (" + lifts + " trucks)", pc(tr.dailyWorkHours / p.truck_efficiency / (lifts * hours)), pc(S.liftUtil.mean), range("liftUtil", pc)],
+      ["Dual-command share", pc(tr.dualShare), pc(S.dualShareAchieved.mean), ""],
+      ["Most pallets waiting in staging", "—", f0(S.maxStaging.mean), range("maxStaging", f0)],
+      ["Tasks left at closing", "—", f0(S.backlogAtClose.mean), range("backlogAtClose", f0)],
+      ["Work finishes after closing (min)", "—", f0(S.overtime.mean), range("overtime", f0)]
+    ];
+    document.getElementById("sim-table").innerHTML = "<thead><tr><th></th><th>Analytic</th><th>Simulated (mean)</th><th>10–90% of days</th></tr></thead><tbody>" +
+      rows.map(function (rw) { return "<tr><th>" + rw[0] + "</th><td>" + rw[1] + "</td><td>" + rw[2] + "</td><td>" + rw[3] + "</td></tr>"; }).join("") + "</tbody>";
+    document.getElementById("sim-meta").textContent = mc.replications + " simulated days · " + Math.round(ms) + " ms";
+    document.getElementById("sim-reps").textContent = mc.replications;
+    renderSimChart(mc, p, r);
+  }
+  function renderSimChart(mc, p, r) {
+    const el = document.getElementById("sim-chart"), H = mc.hourly.length, close = Math.round(p.operating_hours_per_day);
+    const Wd = 460, Ht = 190, pad = { l: 34, r: 34, t: 14, b: 26 }, iw = Wd - pad.l - pad.r, ih = Ht - pad.t - pad.b;
+    const arr = mc.hourly.map(function (h) { return h.arrIn + h.arrOut; });
+    const cap = (r.throughput.inbound.capacityTrucksPerHour + r.throughput.outbound.capacityTrucksPerHour);
+    const yMax = Math.max(1, Math.max.apply(null, arr) * 1.15, cap * 0.6);
+    const yard = mc.hourly.map(function (h) { return h.yard; }), lifts = mc.hourly.map(function (h) { return h.lifts / mc.lifts; });
+    const y2Max = Math.max(1, Math.max.apply(null, yard) * 1.2);
+    const bw = iw / H, X = function (h) { return pad.l + h * bw; }, Y = function (v) { return pad.t + ih - v / yMax * ih; };
+    const Y2 = function (v) { return pad.t + ih - v / y2Max * ih; }, Y3 = function (v) { return pad.t + ih - v * ih; };
+    const start = close >= 24 ? 0 : 6;
+    let s = '<svg viewBox="0 0 ' + Wd + " " + Ht + '" width="100%" role="img" aria-label="Average truck arrivals, yard queue and lift-truck use per hour over the simulated days">';
+    s += '<rect x="' + X(close) + '" y="' + pad.t + '" width="' + Math.max(0, X(H) - X(close)) + '" height="' + ih + '" fill="rgba(227,73,72,.08)"/>';
+    arr.forEach(function (v, h) { s += '<rect x="' + (X(h) + bw * 0.15) + '" y="' + Y(v) + '" width="' + bw * 0.7 + '" height="' + (pad.t + ih - Y(v)) + '" fill="#3987e5" opacity="0.85"><title>' + v.toFixed(1) + " trucks</title></rect>"; });
+    const line = function (vals, Yf, color, dash) { return '<polyline fill="none" stroke="' + color + '" stroke-width="2"' + (dash ? ' stroke-dasharray="4,3"' : "") + ' points="' + vals.map(function (v, h) { return (X(h) + bw / 2) + "," + Yf(v); }).join(" ") + '"/>'; };
+    s += line(yard, Y2, "#eda100") + line(lifts, Y3, "#7be0c4", true);
+    for (let h = 0; h <= H; h += Math.max(1, Math.round(H / 8))) s += '<text x="' + X(h) + '" y="' + (Ht - 8) + '" fill="#6fa8c9" font-size="9" text-anchor="middle">' + String((start + h) % 24).padStart(2, "0") + ":00</text>";
+    s += '<text x="' + (pad.l - 4) + '" y="' + (pad.t + 8) + '" fill="#3987e5" font-size="9" text-anchor="end">' + Math.round(yMax) + "</text>";
+    s += '<text x="' + (Wd - pad.r + 4) + '" y="' + (pad.t + 8) + '" fill="#eda100" font-size="9">' + y2Max.toFixed(1) + "</text>";
+    s += '<line x1="' + pad.l + '" y1="' + (pad.t + ih) + '" x2="' + (Wd - pad.r) + '" y2="' + (pad.t + ih) + '" stroke="#2a5580"/>';
+    if (H > close) s += '<text x="' + (X(close) + 4) + '" y="' + (pad.t + 10) + '" fill="#e34948" font-size="9">after closing</text>';
+    s += "</svg>";
+    s += '<div class="chart-legend"><span class="legend-item"><span class="swatch" style="background:#3987e5"></span>trucks arriving / h (left axis)</span>' +
+      '<span class="legend-item"><span class="swatch" style="background:#eda100"></span>trucks waiting in the yard (right axis)</span>' +
+      '<span class="legend-item"><span class="swatch" style="background:#7be0c4"></span>lift trucks busy (0–100%)</span></div>';
+    el.innerHTML = s;
+  }
+
+  // -------------------------------------------------------------------
+  // Day playback in the 3D view
+  // -------------------------------------------------------------------
+  const clockEl = document.getElementById("sim-clock");
+  let daySpeed = 60;
+  document.getElementById("btn-play").addEventListener("click", function () {
+    if (viz.mode !== "live") return;
+    const p = model.getAll();
+    const day = sim.simulateDay(p, results, { seed: 1000, liftTrucks: simLifts(), log: true });
+    viz._onTick = function (info) {
+      clockEl.hidden = !info;
+      if (!info) return;
+      const start = p.operating_hours_per_day >= 24 ? 0 : 6, mins = Math.floor(info.t / 60) + start * 60;
+      document.getElementById("clock-time").textContent = String(Math.floor(mins / 60) % 24).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0") + (info.t > info.close ? " (after closing)" : "");
+      document.getElementById("clock-info").textContent = info.yard + " truck" + (info.yard === 1 ? "" : "s") + " waiting · " + info.busy + " of " + info.lifts + " lift trucks busy" + (info.done ? " · day complete" : "");
+    };
+    viz.playDay(day, p, results, daySpeed);
+  });
+  document.getElementById("btn-stop").addEventListener("click", function () { viz.stopDay(); });
+  clockEl.querySelectorAll("[data-speed]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      daySpeed = +b.getAttribute("data-speed");
+      clockEl.querySelectorAll("[data-speed]").forEach(function (x) { x.classList.toggle("active", x === b); });
+      viz.setDaySpeed(daySpeed);
+    });
+  });
 
   // -------------------------------------------------------------------
   // KPI dashboard
@@ -440,6 +541,8 @@
       document.getElementById("reference-note").hidden = mode !== "reference";
       document.getElementById("color-group").hidden = mode !== "live";
       wallsBtn.hidden = mode !== "live";
+      document.getElementById("btn-play").hidden = mode !== "live";
+      viz.stopDay();
       if (mode === "reference") {
         viz.setMode("reference");
         viz.loadReferenceModel("models/warehouse_baseline.glb", function (ok) {
@@ -508,5 +611,5 @@
   });
 
   // test hook (headless browser tests)
-  window.warehouseDebug = { model: model, results: function () { return results; }, version: APP_VERSION, viz: function () { return viz; } };
+  window.warehouseDebug = { model: model, results: function () { return results; }, version: APP_VERSION, viz: function () { return viz; }, sim: function () { return simResult; } };
 })();

@@ -66,6 +66,8 @@ warehouse-model/
 │   ├── calculations.test.js     unit tests: hand-checked baseline, geometry invariants over
 │   │                             3,000 random designs, cycle time vs a brute-force walk over
 │   │                             every door/slot/level, behaviour and warning checks
+│   ├── simulation.test.js       the simulated day: conservation, determinism, lift-truck work
+│   │                             and door waits vs the analytic model
 │   ├── parity.test.js           runs create_model.py's layout code and calculations.js on
 │   └── parity_layout.py           the same 400 random designs and requires identical rows
 │
@@ -86,6 +88,7 @@ warehouse-model/
     │   ├── visualization.js      three.js 3D view: instanced racks and pallets, heat map, routes,
     │   │                         and the reference GLB loader
     │   ├── blueprint.js          the dimensioned floor plan as SVG (browser + Node)
+    │   ├── simulation.js         discrete-event simulation of a day + Monte Carlo (browser + Node)
     │   └── app.js                wires them together; owns the DOM
     └── vendor/three/             three.js r186 (ES modules, via the page's import map) with the
                                   few add-ons used: GLTFLoader, OrbitControls, RoomEnvironment
@@ -257,11 +260,23 @@ names and order specifically so a side-by-side diff stays easy.
   sampled pairs and tested against the exact all-pairs value (within 2%).
 - **Door queues (v4)**: Erlang C (M/M/c) for the chance a truck waits and the mean wait, corrected
   with Allen–Cunneen for turn times less variable than exponential (CV 0.5).
+- **Simulated day (v5, `web/src/simulation.js`)**: a discrete-event simulation. Trucks arrive as a
+  Poisson process following an hourly profile (mean 1, busiest hour = `peak_hour_factor`), queue in
+  the yard, and hold a door for a gamma-distributed turn time (CV 0.5). Unloaded pallets become
+  putaway tasks; an outbound truck can't leave until its turn time is over *and* its pallets have
+  been fetched. Lift trucks take tasks first-come first-served (retrievals first), pairing a putaway
+  with a retrieval when both are waiting, and every task takes its storage cell's own cycle time from
+  `calculations.js` — the same formulas as the analytic model. 30 days are simulated with different
+  arrivals, and the page shows mean and 10–90% range beside the analytic figures, an hourly chart,
+  and a 3D playback of one day. Tests check that pallets and trucks are conserved, that lift-truck
+  work per move matches the analytic model, and that door waits match the Allen–Cunneen formula
+  within 30%.
 
 Run the tests (Node; the parity test also needs a system Python 3, not FreeCAD):
 
 ```bash
 node warehouse-model/tests/calculations.test.js
+node warehouse-model/tests/simulation.test.js
 node warehouse-model/tests/parity.test.js
 ```
 
@@ -276,11 +291,13 @@ node warehouse-model/tests/parity.test.js
   all slots is tested to equal the headline cycle time); click a slot for its putaway/retrieval cycle
   and the route from and to the nearest doors; trailers at the busy doors. Renders only when
   something changes, and turns shadows off if frames stay slow.
-- **v4 (current)** — operations: I-flow/U-flow, mid cross-aisles, ABC slotting with demand skew,
-  dual-command trips, Erlang C door queues, an ABC-class 3D view. (Fishbone aisles and an hourly
-  arrival profile move to v5, where the simulation can represent them properly.)
-- **v5** — discrete-event simulation of trucks and lift trucks over an hourly arrival profile,
-  animated, with Monte Carlo ranges.
+- **v4** — operations: I-flow/U-flow, mid cross-aisles, ABC slotting with demand skew,
+  dual-command trips, Erlang C door queues, an ABC-class 3D view.
+- **v5 (current)** — a discrete-event simulation of the day over an hourly arrival profile, with
+  30-day Monte Carlo ranges beside the analytic results and a 3D playback. (Fishbone aisles were
+  considered and left out: angled aisles don't fit the rectilinear row model every other part of
+  the app — FreeCAD included — is built on, and their gain applies mainly to single-command trips
+  from one central door.)
 - **v6** — decision support: scenarios, sensitivity, an optimiser, total cost of ownership,
   automation alternatives.
 - **v7** — CAD/BIM and data: in-browser B-rep geometry, IFC export, SKU/order-line import.

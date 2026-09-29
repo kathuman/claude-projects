@@ -194,6 +194,11 @@
       "category": "Operations",
       "description": "Share of each operating hour a lift truck is actually working (breaks, battery changes, congestion and waiting take the rest)."
     },
+    "sim_lift_trucks": {
+      "value": 0, "unit": "count", "minimum": 0, "maximum": 60,
+      "category": "Simulation",
+      "description": "Lift trucks in the simulated day. 0 uses the fleet the analytic model recommends (Lift Trucks in Key Results) — set a number to see what happens with fewer or more."
+    },
     "cost_per_rack_position": {
       "value": 65, "unit": "$", "minimum": 30, "maximum": 150,
       "category": "Cost",
