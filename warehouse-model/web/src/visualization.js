@@ -214,28 +214,25 @@
     this.liveGroup.add(box(WL + 2 * WT, WT, CH, -WT, WW, 0, COLOR.structure, wallOpacity));
     this.liveGroup.add(box(WL + 2 * WT, WW + 2 * WT, 0.3, -WT, -WT, CH, COLOR.structure, 0.08));
 
-    // Rack rows
-    const yOffset = (WW - layout.rackingWidthUsed) / 2;
+    // Rack rows — positions come straight from calculations.js (layout.rows),
+    // the same numbers the floor plan and the FreeCAD model use
     const x0 = p.cross_aisle_width;
-    let rowIndex = 1;
-    for (let i = 0; i < layout.numAisleUnits; i++) {
-      const unitY0 = yOffset + i * layout.widthPerAisleUnit;
-      [unitY0, unitY0 + p.rack_depth + p.aisle_width].forEach((rowY) => {
-        const mesh = box(layout.rackRowLength, p.rack_depth, p.rack_height, x0, rowY, 0, COLOR.rack, 0.92);
-        mesh.userData.info = {
-          type: "Rack row",
-          name: "Rack Row " + rowIndex,
-          dimensions: layout.rackRowLength.toFixed(1) + " × " + p.rack_depth.toFixed(2) + " × " + p.rack_height.toFixed(1) + " m",
-          levels: p.levels_per_rack,
-          bays: layout.baysPerRow,
-          positions: layout.baysPerRow * results.capacity.positionsPerBay,
-          material: "Steel"
-        };
-        this.liveGroup.add(mesh);
-        this.selectable.push(mesh);
-        rowIndex++;
-      });
-    }
+    if (layout.baysPerRow > 0) layout.rows.forEach((row) => {
+      const mesh = box(layout.rackRowLength, row.depth, p.rack_height, x0, row.y, 0, COLOR.rack, 0.92);
+      mesh.userData.info = {
+        type: "Rack row · " + layout.rackType.label,
+        name: "Rack Row " + row.index,
+        dimensions: layout.rackRowLength.toFixed(1) + " × " + row.depth.toFixed(2) + " × " + p.rack_height.toFixed(1) + " m",
+        "pallets deep": layout.rackType.deep,
+        levels: p.levels_per_rack + " (every " + layout.levelPitch.toFixed(2) + " m)",
+        bays: layout.baysPerRow,
+        positions: layout.baysPerRow * results.capacity.positionsPerBay,
+        "served by": layout.rackType.truck,
+        material: "Steel"
+      };
+      this.liveGroup.add(mesh);
+      this.selectable.push(mesh);
+    });
 
     // Staging zones (flat floor decals)
     this.liveGroup.add(box(p.cross_aisle_width, WW, 0.05, 0, 0, 0.01, COLOR.zone, 0.22));

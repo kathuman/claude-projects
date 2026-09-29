@@ -205,3 +205,34 @@ footer.foot .consult a{color:var(--accent);}
 @media (min-width:1101px){
   .stage-wrap{height:78vh; min-height:560px; max-height:820px;}
 }
+
+/* v2: version badge, credit, typed values, rack-type choice, warning levels, live floor plan */
+.brand .ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:5px; padding:1px 6px; letter-spacing:.02em;}
+.brand .sub a{color:var(--ink-dim); text-decoration:none; font-weight:600;}
+.brand .sub a:hover{color:var(--accent);}
+.header-actions{display:flex; align-items:center; gap:8px;}
+button.back-link{background:transparent; cursor:pointer;}
+.ctrl-row .row-head button.val{background:none; border:1px dashed transparent; border-radius:4px; padding:0 3px; cursor:text; font-family:var(--mono); font-size:12px; color:var(--tele);}
+.ctrl-row .row-head button.val:hover, .ctrl-row .row-head button.val:focus-visible{border-color:var(--line); outline:none;}
+.val-edit{width:92px; font-family:var(--mono); font-size:12px; background:var(--panel-2); color:var(--ink); border:1px solid var(--accent); border-radius:4px; padding:1px 4px; text-align:right;}
+select.choice{width:100%; font-family:var(--body); font-size:13px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 8px;}
+select.choice:focus{outline:none; border-color:var(--accent);}
+.choice-note{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); line-height:1.45;}
+.warnings.level-warning{background:rgba(237,161,0,.09); border-bottom-color:rgba(237,161,0,.4); color:#ffd88a;}
+.warnings.level-warning .warn-title{color:var(--warn);}
+.warnings.level-info{background:rgba(125,211,252,.07); border-bottom-color:var(--line); color:var(--ink-dim);}
+.warnings.level-info .warn-title{color:var(--accent);}
+.warn-line.critical:before{content:"● "; color:var(--bad);}
+.warn-line.warning:before{content:"● "; color:var(--warn);}
+.warn-line.info:before{content:"○ "; color:var(--accent);}
+.panel-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.panel-head h2{margin-bottom:10px;}
+.blueprint-live{border-radius:8px; overflow:hidden; border:1px solid var(--line); line-height:0;}
+.blueprint-live svg{display:block; width:100%; height:auto;}
+@media (max-width:700px){
+  .brand{flex-wrap:wrap; row-gap:2px;}
+  .brand .sub .rest{display:none;}
+  .topbar{padding:10px 14px;}
+  #btn-units .long{display:none;}
+}
+.back-link{white-space:nowrap;}

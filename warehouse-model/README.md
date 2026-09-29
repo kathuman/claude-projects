@@ -58,12 +58,20 @@ warehouse-model/
 │
 ├── data/
 │   └── parameters.json          single source of truth: every parameter, unit, range,
-│                                 description — read by BOTH create_model.py and the web app
+│                                 description, plus the rack-type table (depth, selectivity,
+│                                 minimum aisle, planning ceiling, truck) — read by BOTH
+│                                 create_model.py and the web app
+│
+├── tests/
+│   ├── calculations.test.js     unit tests: hand-checked baseline, geometry invariants over
+│   │                             3,000 random designs, cycle time vs a brute-force walk over
+│   │                             every door/slot/level, behaviour and warning checks
+│   ├── parity.test.js           runs create_model.py's layout code and calculations.js on
+│   └── parity_layout.py           the same 400 random designs and requires identical rows
 │
 ├── tools/
-│   └── render_blueprint.js      generates web/assets/blueprint.svg from the SAME
-│                                 calculations.js layout arithmetic (no FreeCAD needed —
-│                                 pure Node, run `node tools/render_blueprint.js`)
+│   └── render_blueprint.js      writes web/assets/blueprint.svg (baseline) with the same
+│                                 web/src/blueprint.js the page uses to draw the live plan
 │
 └── web/
     ├── index.html
@@ -76,7 +84,8 @@ warehouse-model/
     │   ├── model.js              parameter state management (load/get/set/reset)
     │   ├── calculations.js       the analytical model — pure functions, no DOM
     │   ├── visualization.js      Three.js: live procedural geometry + reference GLB loader
-    │   └── app.js                wires the three together; owns the DOM
+    │   ├── blueprint.js          the dimensioned floor plan as SVG (browser + Node)
+    │   └── app.js                wires them together; owns the DOM
     └── vendor/
         ├── three.min.js          vendored (r128), no CDN dependency
         ├── GLTFLoader.js         vendored addon, matching r128
@@ -118,7 +127,7 @@ and exports `web/models/warehouse_baseline.glb`. Override any parameter for a on
 regeneration without editing the JSON:
 
 ```bash
-freecadcmd freecad/create_model.py --set warehouse_length=200 --set aisle_width=2.4
+freecadcmd freecad/create_model.py --set warehouse_length=200 --set rack_type=double_deep
 ```
 
 Open `warehouse_model.FCStd` in the FreeCAD GUI and expand **Parameters** to see the live
@@ -179,14 +188,14 @@ names and order specifically so a side-by-side diff stays easy.
 **VERIFIED** (actually run, output inspected, not assumed):
 
 - FreeCAD 1.1.3 generation: ran `create_model.py` headlessly via `freecadcmd`, confirmed the
-  object hierarchy (Structure / Equipment / Flow groups, 22 named rack rows, 8 dock markers,
+  object hierarchy (Structure / Equipment / Flow groups, 20 named rack rows (v2 baseline), 8 dock markers,
   floor/walls/roof), confirmed the Spreadsheet's aliased cells read back correctly, and
-  confirmed the printed layout numbers (`storage_capacity = 5808` at baseline) match
+  confirmed the printed layout numbers (`storage_capacity = 5280` at the v2 baseline; `tests/parity.test.js` now checks this automatically on 400 random designs) match
   `calculations.js`'s own console output for the same default parameters — the CAD model and
   the analytical model are not just claimed to agree, they were checked to agree.
-- Live re-parametrization: re-ran the generator with `--set warehouse_length=200 --set
-  aisle_width=2.4` and confirmed the object count and capacity changed correctly
-  (`storage_capacity = 14560`).
+- Live re-parametrization: re-ran the generator with `--set rack_type=double_deep --set
+  aisle_width=3.0` and confirmed rows and capacity match the web app for the same design
+  (14 rows, `storage_capacity = 7392`).
 - Real spreadsheet-expression binding: confirmed headlessly that editing a spreadsheet cell
   and recomputing resizes dependent geometry (not just Python variables masquerading as
   "parametric").
@@ -220,24 +229,43 @@ names and order specifically so a side-by-side diff stays easy.
   pipeline is proven by every other sub-app already live there, but this one hasn't
   round-tripped through an actual push+Pages-rebuild+reload yet as of writing).
 
-## What's here (Phase 1) vs. what's next (Phase 2)
+## The engineering model (v2)
 
-Phase 1 — built, tested, working: the parametric FreeCAD model, the analytical model with
-full formula traceability, the live 3D visualization (plus the real FreeCAD reference view),
-the KPI dashboard, two charts, engineering warnings, component inspection, and inline
-explanations + guided experiment prompts.
+- **Rack types** (`rack_types` in `parameters.json`): selective, double-deep, VNA, push-back and
+  drive-in, each with lane depth, selectivity, the narrowest aisle its truck needs, and a planning
+  ceiling (deep lanes hold one product each, so part-empty lanes waste space). Values are typical
+  planning figures, not a specific manufacturer's.
+- **Geometry**: rows stand `row | aisle | row` with a flue gap between back-to-back rows
+  (NFPA 13 needs at least 150 mm). Dimensions are inside the walls; the footprint and its cost
+  include the walls.
+- **Vertical fit**: each level must hold `load_height` plus 0.25 m for the beam and lift-off gap,
+  and the top load must stay `sprinkler_clearance` below the clear height (0.46 m standard,
+  0.91 m ESFR).
+- **Cycle time**: single-command trips under random storage, averaged exactly over every door,
+  aisle, bay and level of the layout (rectilinear route: door → staging zone → aisle → bay).
+  Lift time adds to driving because trucks lift after stopping. Checked against a brute-force walk
+  over every slot in the tests.
+- **Docks**: truck-based (pallets per truck, minutes per truck at a door), receiving and shipping
+  separate, sized for the peak hour. The lift-truck fleet is sized for the peak hour too, divided by
+  the share of each hour a truck really works.
 
-Phase 2 — scoped out, not yet built, same architecture ready to receive it:
+Run the tests (Node; the parity test also needs a system Python 3, not FreeCAD):
 
-- **Lessons** — a progressive sequence gating later lessons behind earlier ones, built on
-  top of the existing explanation panels.
-- **Exercises** — multiple-choice questions with explained answers, likely living beside the
-  existing "Guided experiments" panel.
-- **Scenarios** — named, saved parameter snapshots (`model.getAll()` already returns exactly
-  the payload a scenario needs) with a side-by-side comparison table.
-- **Sensitivity analysis** — sweep one parameter, chart the effect on a chosen KPI; the
-  `compute*` functions are already pure and cheap enough to call in a loop.
-- **Before/after mode** — two scenarios' `computeAll()` results and two `Visualization`
-  instances side by side.
-- **CSV/JSON export** — `results` and `model.getAll()` are already plain serializable
-  objects; this is close to a one-function addition.
+```bash
+node warehouse-model/tests/calculations.test.js
+node warehouse-model/tests/parity.test.js
+```
+
+## Roadmap
+
+- **v1** — Phase 1: FreeCAD model, analytical model with traceability, live 3D, KPIs, charts.
+- **v2 (current)** — trustworthy core: the model above, unit and parity tests, live floor plan,
+  typed values, metric/imperial, version badge.
+- **v3** — a 3D view you can read: three.js r186, instanced uprights, beams and pallets filled to the
+  utilization, pick-frequency heat map, travel-path overlay.
+- **v4** — operations: ABC slotting, cross-aisles, fishbone and U-flow layouts, dock queueing
+  (Erlang C), hourly profile.
+- **v5** — discrete-event simulation of trucks and lift trucks, animated, with Monte Carlo ranges.
+- **v6** — decision support: scenarios, sensitivity, an optimiser, total cost of ownership,
+  automation alternatives.
+- **v7** — CAD/BIM and data: in-browser B-rep geometry, IFC export, SKU/order-line import.

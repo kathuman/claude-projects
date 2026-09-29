@@ -14,6 +14,7 @@
     this.schema = null;      // raw parameters.json .parameters
     this.values = {};        // name -> current numeric value
     this.defaults = {};      // name -> original default value
+    this.rackTypes = null;   // parameters.json "rack_types" table (passed to calculations.js)
     this.listeners = [];
   }
 
@@ -31,6 +32,8 @@
         const data = JSON.parse(xhr.responseText);
         self.schema = data.parameters;
         self.units = data.units;
+        self.rackTypes = {};
+        for (const k in data.rack_types) if (k.charAt(0) !== "$") self.rackTypes[k] = data.rack_types[k];
         for (const name in self.schema) {
           self.values[name] = self.schema[name].value;
           self.defaults[name] = self.schema[name].value;
@@ -56,6 +59,13 @@
   ParameterModel.prototype.set = function (name, value) {
     const def = this.schema[name];
     if (!def) throw new Error("Unknown parameter: " + name);
+    if (def.type === "choice") {
+      if (def.options.indexOf(value) < 0 || this.values[name] === value) return;
+      this.values[name] = value;
+      this._notify(name);
+      return;
+    }
+    if (!isFinite(value)) return;
     const clamped = Math.max(def.minimum, Math.min(def.maximum, value));
     if (this.values[name] === clamped) return;
     this.values[name] = clamped;

@@ -39,6 +39,7 @@ and creates that many objects) — FreeCAD's expression engine binds property
 
 import argparse
 import json
+import math
 import os
 import sys
 
@@ -64,14 +65,16 @@ M = 1000.0  # 1 m in the document's internal mm units
 # ---------------------------------------------------------------------------
 def load_parameters(overrides=None):
     with open(PARAMETERS_PATH, "r", encoding="utf-8") as f:
-        raw = json.load(f)["parameters"]
+        data = json.load(f)
+    raw = data["parameters"]
+    rack_types = {k: v for k, v in data["rack_types"].items() if not k.startswith("$")}
     values = {name: entry["value"] for name, entry in raw.items()}
     if overrides:
         for k, v in overrides.items():
             if k not in values:
                 raise KeyError("Unknown parameter override: " + k)
             values[k] = v
-    return values, raw
+    return values, raw, rack_types
 
 
 # ---------------------------------------------------------------------------
@@ -121,9 +124,10 @@ def create_wall(doc, sheet, name, label, length_expr, width_expr, x, y, z, group
     )
 
 
-def create_rack_row(doc, sheet, index, x0, y0, bays_per_row, group):
+def create_rack_row(doc, sheet, index, x0, y0, bays_per_row, deep, group):
     """One rack row, modeled as a single envelope block (facility-layout
-    scale, not pallet-level detail — see README for why)."""
+    scale, not pallet-level detail — see README for why). Its depth is
+    `deep` pallet positions (set by the rack type) of rack_depth each."""
     name = "RackRow_%03d" % index
     obj = doc.addObject("Part::Box", name)
     obj.Label = "Rack Row %d" % index
@@ -131,7 +135,7 @@ def create_rack_row(doc, sheet, index, x0, y0, bays_per_row, group):
     # docstring) so Length is set as a plain value here, not an expression
     # -- bay_width itself still is live via the spreadsheet elsewhere.
     obj.Length = bays_per_row * (doc.Parameters.bay_width * M)
-    obj.setExpression("Width", expr_mm("Parameters", "rack_depth"))
+    obj.setExpression("Width", "%s * %d" % (expr_mm("Parameters", "rack_depth"), deep))
     obj.setExpression("Height", expr_mm("Parameters", "rack_height"))
     obj.Placement = FreeCAD.Placement(FreeCAD.Vector(x0, y0, 0), FreeCAD.Rotation())
     group.addObject(obj)
@@ -163,18 +167,32 @@ def create_zone_marker(doc, name, label, x, y, length, width, group):
 
 # ---------------------------------------------------------------------------
 # Layout derivation — MUST mirror web/src/calculations.js computeLayout()
+# (tests/parity.test.js runs both on random designs and compares them)
 # ---------------------------------------------------------------------------
-def derive_layout(p):
+def derive_layout(p, rack_types):
+    rt = rack_types[p["rack_type"]]
     usable_length = p["warehouse_length"] - 2 * p["cross_aisle_width"]
-    bays_per_row = max(0, int(usable_length // p["bay_width"]))
+    bays_per_row = max(0, int(math.floor(usable_length / p["bay_width"] + 1e-9)))
     rack_row_length = bays_per_row * p["bay_width"]
 
-    width_per_aisle_unit = 2 * p["rack_depth"] + p["aisle_width"]
-    num_aisle_units = max(0, int(p["warehouse_width"] // width_per_aisle_unit))
+    # across the width: row | aisle | row  per unit, flue gap between units
+    row_depth = rt["deep"] * p["rack_depth"]
+    width_per_aisle_unit = 2 * row_depth + p["aisle_width"]
+    num_aisle_units = max(0, int(math.floor((p["warehouse_width"] + p["flue_space"]) / (width_per_aisle_unit + p["flue_space"]) + 1e-9)))
     num_rack_rows = num_aisle_units * 2
-    racking_width_used = num_aisle_units * width_per_aisle_unit
+    racking_width_used = (num_aisle_units * width_per_aisle_unit + (num_aisle_units - 1) * p["flue_space"]) if num_aisle_units > 0 else 0
 
-    positions_per_bay = p["levels_per_rack"] * p["positions_per_level_per_bay"]
+    y_offset = (p["warehouse_width"] - racking_width_used) / 2.0
+    rows = []
+    for i in range(num_aisle_units):
+        y0 = y_offset + i * (width_per_aisle_unit + p["flue_space"])
+        rows.append({"index": len(rows) + 1, "y": y0, "depth": row_depth, "faces": 1})
+        rows.append({"index": len(rows) + 1, "y": y0 + row_depth + p["aisle_width"], "depth": row_depth, "faces": -1})
+
+    levels = int(p["levels_per_rack"])
+    level_pitch = p["rack_height"] / (levels - 1) if levels > 1 else p["rack_height"]
+
+    positions_per_bay = levels * int(p["positions_per_level_per_bay"]) * rt["deep"]
     total_bays = num_rack_rows * bays_per_row
     storage_capacity = total_bays * positions_per_bay
 
@@ -182,22 +200,26 @@ def derive_layout(p):
         "usable_length": usable_length,
         "bays_per_row": bays_per_row,
         "rack_row_length": rack_row_length,
+        "row_depth": row_depth,
         "width_per_aisle_unit": width_per_aisle_unit,
         "num_aisle_units": num_aisle_units,
         "num_rack_rows": num_rack_rows,
         "racking_width_used": racking_width_used,
+        "rows": rows,
+        "level_pitch": level_pitch,
         "positions_per_bay": positions_per_bay,
         "total_bays": total_bays,
         "storage_capacity": storage_capacity,
+        "deep": rt["deep"],
     }
 
 
 # ---------------------------------------------------------------------------
 # Model assembly
 # ---------------------------------------------------------------------------
-def build_model(values, raw):
+def build_model(values, raw, rack_types):
     p = values
-    layout = derive_layout(p)
+    layout = derive_layout(p, rack_types)
 
     doc = FreeCAD.newDocument("warehouse_model")
     sheet = build_spreadsheet(doc, values, raw)
@@ -255,18 +277,9 @@ def build_model(values, raw):
     grp_structure.addObject(roof)
 
     # --- Equipment: rack rows -----------------------------------------
-    y_offset = (p["warehouse_width"] - layout["racking_width_used"]) * M / 2.0
     x0 = p["cross_aisle_width"] * M
-    row_index = 1
-    for unit_i in range(layout["num_aisle_units"]):
-        unit_y0 = y_offset + unit_i * layout["width_per_aisle_unit"] * M
-        # Row A of the back-to-back pair
-        create_rack_row(doc, sheet, row_index, x0, unit_y0, layout["bays_per_row"], grp_equipment)
-        row_index += 1
-        # Row B, offset by rack_depth + aisle_width
-        row_b_y = unit_y0 + (p["rack_depth"] + p["aisle_width"]) * M
-        create_rack_row(doc, sheet, row_index, x0, row_b_y, layout["bays_per_row"], grp_equipment)
-        row_index += 1
+    for row in layout["rows"]:
+        create_rack_row(doc, sheet, row["index"], x0, row["y"] * M, layout["bays_per_row"], layout["deep"], grp_equipment)
 
     # --- Flow: staging zones + dock markers ---------------------------
     create_zone_marker(
@@ -324,10 +337,13 @@ def main():
     overrides = {}
     for item in args.set:
         k, _, v = item.partition("=")
-        overrides[k] = float(v)
+        try:
+            overrides[k] = float(v)
+        except ValueError:
+            overrides[k] = v          # e.g. --set rack_type=double_deep
 
-    values, raw = load_parameters(overrides)
-    doc, layout = build_model(values, raw)
+    values, raw, rack_types = load_parameters(overrides)
+    doc, layout = build_model(values, raw, rack_types)
 
     doc.saveAs(FCSTD_PATH)
     n_exported = export_glb(doc, GLB_PATH)
@@ -340,7 +356,7 @@ def main():
     print("Exported GLB: %s (%d objects, %d bytes)" % (GLB_PATH, n_exported, os.path.getsize(GLB_PATH)))
     print("")
     print("Layout (must match web/src/calculations.js computeLayout/computeCapacity):")
-    for k in ("usable_length", "bays_per_row", "rack_row_length", "width_per_aisle_unit",
+    for k in ("usable_length", "bays_per_row", "rack_row_length", "row_depth", "width_per_aisle_unit",
               "num_aisle_units", "num_rack_rows", "racking_width_used",
               "positions_per_bay", "total_bays", "storage_capacity"):
         print("  %-22s = %s" % (k, layout[k]))
