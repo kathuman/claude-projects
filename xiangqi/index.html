@@ -130,6 +130,44 @@
     .side-score .cap .b { color: var(--ink-2); }
 
     .board-frame { width: min(82vw, 540px); }
+
+    /* ---- 3D view: the same DOM board, tilted and spun with CSS 3D transforms.
+       preserve-3d has to run unbroken from the frame down to each piece (no overflow,
+       filter or opacity on the way), so pieces can stand up off the board. ---- */
+    .stage { display: flex; justify-content: center; width: 100%; perspective: 1500px; perspective-origin: 50% 35%; }
+    .view-toggle { display: inline-flex; padding: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+    .view-toggle button { font: inherit; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); background: transparent; border: 0; border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+    .view-toggle button.on { background: var(--accent); color: var(--accent-ink); }
+    .board .edge { display: none; }
+    :root[data-view="3d"] .board-wrap { overflow: hidden; }
+    :root[data-view="3d"] .stage { touch-action: none; padding: 26px 0 34px; cursor: grab; }
+    :root[data-view="3d"] .stage.dragging { cursor: grabbing; }
+    :root[data-view="3d"] .board-frame { transform-style: preserve-3d; transition: transform .45s cubic-bezier(.2,.7,.2,1), margin .45s cubic-bezier(.2,.7,.2,1); }
+    :root[data-view="3d"] .stage.dragging .board-frame { transition: margin .45s cubic-bezier(.2,.7,.2,1); }
+    :root[data-view="3d"] .board,
+    :root[data-view="3d"] .pt,
+    :root[data-view="3d"] .anim-piece { transform-style: preserve-3d; }
+    :root[data-view="3d"] .pt { transform: translateZ(.4px); }
+    :root[data-view="3d"] .pc { transform: translateZ(7px); transform-style: preserve-3d; pointer-events: auto; }
+    /* the disc's side: two darker layers underneath the face, plus a contact shadow */
+    :root[data-view="3d"] .pc::before,
+    :root[data-view="3d"] .pc::after {
+      content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+      background: color-mix(in srgb, var(--pc-face) 62%, #5a3d1e);
+    }
+    :root[data-view="3d"] .pc::after { transform: translateZ(-3.5px); }
+    :root[data-view="3d"] .pc::before { transform: translateZ(-6.6px); box-shadow: 0 0 6px 2px rgba(0,0,0,.28); background: color-mix(in srgb, var(--pc-face) 50%, #3d2812); }
+    :root[data-view="3d"] .anim-piece { transform: translateZ(14px); }
+    :root[data-view="3d"] .board .edge { display: block; position: absolute; background: var(--bd-edge); pointer-events: none; }
+    :root[data-view="3d"] .edge.s { left: -4px; right: -4px; top: calc(100% + 4px); height: 16px; transform-origin: top; transform: rotateX(-90deg); background: color-mix(in srgb, var(--bd-edge) 80%, #000); }
+    :root[data-view="3d"] .edge.n { left: -4px; right: -4px; bottom: calc(100% + 4px); height: 16px; transform-origin: bottom; transform: rotateX(90deg); background: color-mix(in srgb, var(--bd-edge) 80%, #000); }
+    :root[data-view="3d"] .edge.w { top: -4px; bottom: -4px; right: calc(100% + 4px); width: 16px; transform-origin: right; transform: rotateY(-90deg); background: color-mix(in srgb, var(--bd-edge) 65%, #000); }
+    :root[data-view="3d"] .edge.e { top: -4px; bottom: -4px; left: calc(100% + 4px); width: 16px; transform-origin: left; transform: rotateY(90deg); background: color-mix(in srgb, var(--bd-edge) 65%, #000); }
+    .range-row { display: grid; grid-template-columns: 52px 1fr 40px; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+    .range-row input { width: 100%; accent-color: var(--accent); }
+    .range-row output { font-family: var(--font-mono); font-size: 11px; text-align: right; color: var(--muted); }
+    .view3d-only[hidden] { display: none; }
+    .fieldnote { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
     .files { display: grid; grid-template-columns: repeat(9, 1fr); font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--muted); text-align: center; line-height: 1; }
     .files.top { margin-bottom: 5px; }
     .files.bot { margin-top: 5px; }
@@ -330,12 +368,18 @@
             <span class="lbl" id="lblBlack">Black</span>
             <span class="cap" id="capBlack"></span>
           </div>
+          <div class="view-toggle" role="group" aria-label="Board view">
+            <button type="button" data-view="2d">2D</button>
+            <button type="button" data-view="3d">3D</button>
+          </div>
         </div>
 
-        <div class="board-frame">
-          <div class="files top" id="filesTop"></div>
-          <div class="board" id="board" role="grid" aria-label="Xiangqi board"></div>
-          <div class="files bot" id="filesBot"></div>
+        <div class="stage" id="stage">
+          <div class="board-frame" id="boardFrame">
+            <div class="files top" id="filesTop"></div>
+            <div class="board" id="board" role="grid" aria-label="Xiangqi board"></div>
+            <div class="files bot" id="filesBot"></div>
+          </div>
         </div>
 
         <div class="banner" id="banner">Red to move</div>
@@ -432,6 +476,19 @@
               <option value="letters">Western letters (K A E H R C P)</option>
             </select>
           </div>
+          <div class="field">
+            <label>View</label>
+            <div class="view-toggle" role="group" aria-label="Board view">
+              <button type="button" data-view="2d">2D</button>
+              <button type="button" data-view="3d">3D</button>
+            </div>
+          </div>
+          <div class="field view3d-only" id="view3dCtl">
+            <div class="range-row"><span>Tilt</span><input type="range" id="tiltRange" min="0" max="75" step="1" aria-label="Tilt" /><output id="tiltOut"></output></div>
+            <div class="range-row"><span>Rotate</span><input type="range" id="spinRange" min="-180" max="180" step="1" aria-label="Rotate" /><output id="spinOut"></output></div>
+            <button class="btn" id="viewReset" type="button">Reset view</button>
+            <p class="fieldnote">Drag the board to turn it around. Click (without dragging) to move pieces as usual.</p>
+          </div>
         </div>
 
         <div class="panel">
@@ -497,6 +554,11 @@
         win for Red but is a draw with best play. Try to hold the draw against the engine, or step
         through the book line with <b>Show solution</b>. Hint highlights the piece to move; solved
         problems get a tick and are remembered.
+      </p>
+      <p>
+        <b>3D view.</b> Press <b>3D</b> (above the board, or under Look) to see the board in perspective.
+        Drag anywhere on it to turn it around and tilt it — or use the Tilt and Rotate sliders, and
+        Reset view to go back. Everything else works the same: click a piece, click where it goes.
       </p>
     </details>
 
@@ -594,6 +656,20 @@
           score is <code>mate -k</code> with <code>k</code> no more than the moves you have left.
         </p>
 
+        <h4>The 3D view is the same board, transformed</h4>
+        <p>
+          Switching to 3D doesn't swap in a separate 3D engine. The very same board — CSS grid, SVG lines,
+          piece discs — gets a CSS <code>perspective</code> and a
+          <code>rotateX(tilt) rotateZ(rotation)</code> transform, with <code>transform-style: preserve-3d</code>
+          carried down to each piece so the discs can sit 7&nbsp;px above the board
+          (<code>translateZ</code>). Two darker layers under each disc give it a visible side, and four
+          faces folded down with <code>rotateX/Y(±90°)</code> make the board's wooden edges. Because it's
+          still the same DOM, the browser maps clicks through the transform onto the right point, so
+          moves, highlights, animation, puzzles and the engine all work unchanged. A pointer drag longer
+          than a few pixels turns the board; the click at the end of a drag is swallowed in the capture phase
+          so it can't also move a piece.
+        </p>
+
         <h4>Board = SVG lines under a CSS grid of points</h4>
         <p>
           The 9×10 grid of clickable points is a CSS grid; the lines, palaces, river and position marks
@@ -625,7 +701,8 @@
     //   1.0.0  launch: full rules, two players or vs Fairy-Stockfish
     //   1.1.0  Classic problems (适情雅趣 mates + Four Great Endgames)
     //   1.2.0  author credit + version shown in the header and footer
-    var APP_VERSION = "1.2.0";
+    //   1.3.0  3D board view: tilt and rotate by dragging or with sliders
+    var APP_VERSION = "1.3.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -1073,7 +1150,8 @@
     }
 
     function buildGrid() {
-      boardEl.innerHTML = drawLines();
+      // the four .edge faces are the board's wooden sides, only shown in 3D
+      boardEl.innerHTML = drawLines() + '<div class="edge n"></div><div class="edge s"></div><div class="edge w"></div><div class="edge e"></div>';
       cells = [];
       for (var r = 0; r < ROWS; r++) cells.push(new Array(COLS));
       for (var vr = 0; vr < ROWS; vr++) {
@@ -1856,6 +1934,106 @@
       if (state._board === "wood") root.removeAttribute("data-board"); else root.setAttribute("data-board", state._board);
       if (state._pieces === "chars") root.removeAttribute("data-pieces"); else root.setAttribute("data-pieces", state._pieces);
     }
+    // ---- 3D view ----
+    // The board keeps working exactly as in 2D: it's the same DOM, just transformed, and the
+    // browser maps clicks through the transform. A pointer drag of more than a few pixels
+    // turns the board instead, and the click that ends the drag is swallowed.
+    var VIEW_DEFAULT = { tilt: 50, spin: 0 };
+    var view = { mode: readLS("xiangqi-view", "2d") === "3d" ? "3d" : "2d", tilt: VIEW_DEFAULT.tilt, spin: VIEW_DEFAULT.spin };
+    (function () {
+      var t = parseFloat(readLS("xiangqi-tilt", "")), sp = parseFloat(readLS("xiangqi-spin", ""));
+      if (isFinite(t)) view.tilt = Math.max(0, Math.min(75, t));
+      if (isFinite(sp)) view.spin = sp;
+    })();
+    var stage = document.getElementById("stage");
+    var frame = document.getElementById("boardFrame");
+    var tiltRange = document.getElementById("tiltRange");
+    var spinRange = document.getElementById("spinRange");
+
+    function normSpin(a) { a = ((a + 180) % 360 + 360) % 360 - 180; return Math.round(a); }
+    function applyView(persist) {
+      var is3d = view.mode === "3d";
+      var root = document.documentElement;
+      if (is3d) root.setAttribute("data-view", "3d"); else root.removeAttribute("data-view");
+      frame.style.transform = "";
+      frame.style.margin = "";
+      if (is3d) {
+        // Keep the turned board inside its panel: shrink only when the rotated board's bounding
+        // width wouldn't fit, and a little more as tilting brings the near edge closer.
+        var w = frame.offsetWidth, h = frame.offsetHeight;
+        var t = view.tilt * Math.PI / 180, a = view.spin * Math.PI / 180;
+        var bound = Math.abs(Math.cos(a)) * w + Math.abs(Math.sin(a)) * h;
+        var avail = stage.clientWidth - 8;
+        var k = Math.min(1, avail / bound) * (1 - 0.14 * Math.sin(t));
+        frame.style.transform = "scale(" + k.toFixed(3) + ") rotateX(" + view.tilt + "deg) rotateZ(" + view.spin + "deg)";
+        // tilting makes the board shorter on screen; give the freed-up height back to the page
+        var projected = (Math.abs(Math.sin(a)) * w + Math.abs(Math.cos(a)) * h) * Math.cos(t) * k;
+        var spare = Math.max(0, (h - projected) / 2 - 18);
+        frame.style.margin = (-spare).toFixed(0) + "px 0";
+      }
+      document.querySelectorAll(".view-toggle button").forEach(function (b) {
+        b.classList.toggle("on", b.dataset.view === view.mode);
+        b.setAttribute("aria-pressed", String(b.dataset.view === view.mode));
+      });
+      document.getElementById("view3dCtl").hidden = !is3d;
+      tiltRange.value = String(view.tilt);
+      spinRange.value = String(normSpin(view.spin));
+      document.getElementById("tiltOut").textContent = Math.round(view.tilt) + "°";
+      document.getElementById("spinOut").textContent = normSpin(view.spin) + "°";
+      if (persist) {
+        writeLS("xiangqi-view", view.mode);
+        writeLS("xiangqi-tilt", String(Math.round(view.tilt)));
+        writeLS("xiangqi-spin", String(normSpin(view.spin)));
+      }
+    }
+    document.querySelectorAll(".view-toggle button").forEach(function (b) {
+      b.addEventListener("click", function () { view.mode = this.dataset.view; applyView(true); });
+    });
+    tiltRange.addEventListener("input", function () { view.tilt = +this.value; applyView(true); });
+    spinRange.addEventListener("input", function () { view.spin = +this.value; applyView(true); });
+    document.getElementById("viewReset").addEventListener("click", function () {
+      view.tilt = VIEW_DEFAULT.tilt; view.spin = VIEW_DEFAULT.spin; applyView(true);
+    });
+
+    window.addEventListener("resize", function () { if (view.mode === "3d") applyView(false); });
+
+    (function wireDrag() {
+      var drag = null, swallowClick = false;
+      stage.addEventListener("pointerdown", function (e) {
+        if (view.mode !== "3d" || (e.pointerType === "mouse" && e.button !== 0)) return;
+        drag = { id: e.pointerId, x: e.clientX, y: e.clientY, tilt: view.tilt, spin: view.spin, moved: false };
+      });
+      stage.addEventListener("pointermove", function (e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (!drag.moved) {
+          if (Math.abs(dx) + Math.abs(dy) < 7) return;
+          drag.moved = true;
+          stage.classList.add("dragging");
+          try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+        view.spin = drag.spin + dx * 0.45;
+        view.tilt = Math.max(0, Math.min(75, drag.tilt - dy * 0.35));
+        applyView(false);
+      });
+      function end(e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        if (drag.moved) {
+          swallowClick = true;
+          setTimeout(function () { swallowClick = false; }, 0);
+          stage.classList.remove("dragging");
+          applyView(true);
+        }
+        drag = null;
+      }
+      stage.addEventListener("pointerup", end);
+      stage.addEventListener("pointercancel", end);
+      // capture phase: runs before the board point's own click handler
+      stage.addEventListener("click", function (e) {
+        if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; }
+      }, true);
+    })();
+
     var boardSel = document.getElementById("boardSel");
     var pieceSel = document.getElementById("pieceSel");
     boardSel.value = state._board;
@@ -1905,6 +2083,7 @@
 
     // ========================================================== GO
     applyLook();
+    applyView(false);
     applyOpponentUI();
     buildGrid();
     if (readLS("xiangqi-mode", "play") === "puzzle" && PUZZLE_SETS.length) setMode("puzzle");
