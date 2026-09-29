@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<!-- A generic 6-axis industrial-style arm with a spherical wrist (the last three axes meet
+     at one point), unlike the UR's offset wrist. Made up for Linkage as a demonstration of URDF
+     import with numerical inverse kinematics; not a model of any specific product. The two
+     prismatic finger joints show that a gripper branch after the wrist is ignored.
+     Written for Linkage (https://github.com/kathuman/claude-projects). -->
+<robot name="spherical_wrist_6r">
+  <link name="base"><inertial><origin xyz="0 0 0.05"/><mass value="10"/></inertial></link>
+  <link name="turret"><inertial><origin xyz="0.05 0 0.22"/><mass value="6"/></inertial></link>
+  <link name="upper_arm"><inertial><origin xyz="0 0 0.27"/><mass value="7"/></inertial></link>
+  <link name="forearm"><inertial><origin xyz="0.14 0 0.02"/><mass value="4"/></inertial></link>
+  <link name="wrist_roll"><inertial><origin xyz="0.17 0 0"/><mass value="2"/></inertial></link>
+  <link name="wrist_pitch"><inertial><origin xyz="0.03 0 0"/><mass value="1"/></inertial></link>
+  <link name="flange_link"><inertial><origin xyz="0.01 0 0"/><mass value="0.3"/></inertial></link>
+  <link name="tool0"/>
+  <link name="finger_left"/>
+  <link name="finger_right"/>
+
+  <joint name="j1_base" type="revolute">
+    <parent link="base"/><child link="turret"/>
+    <origin xyz="0 0 0.02"/><axis xyz="0 0 1"/>
+    <limit lower="-2.97" upper="2.97" effort="220" velocity="2.6"/>
+  </joint>
+  <joint name="j2_shoulder" type="revolute">
+    <parent link="turret"/><child link="upper_arm"/>
+    <origin xyz="0.15 0 0.38"/><axis xyz="0 1 0"/>
+    <limit lower="-1.6" upper="1.9" effort="220" velocity="2.6"/>
+  </joint>
+  <joint name="j3_elbow" type="revolute">
+    <parent link="upper_arm"/><child link="forearm"/>
+    <origin xyz="0 0 0.55"/><axis xyz="0 1 0"/>
+    <limit lower="-2.5" upper="2.5" effort="130" velocity="3.0"/>
+  </joint>
+  <joint name="j4_forearm_roll" type="revolute">
+    <parent link="forearm"/><child link="wrist_roll"/>
+    <origin xyz="0.2 0 0.1"/><axis xyz="1 0 0"/>
+    <limit lower="-3.1" upper="3.1" effort="40" velocity="5.0"/>
+  </joint>
+  <joint name="j5_wrist_pitch" type="revolute">
+    <parent link="wrist_roll"/><child link="wrist_pitch"/>
+    <origin xyz="0.35 0 0"/><axis xyz="0 1 0"/>
+    <limit lower="-2.1" upper="2.1" effort="40" velocity="5.0"/>
+  </joint>
+  <joint name="j6_flange_roll" type="revolute">
+    <parent link="wrist_pitch"/><child link="flange_link"/>
+    <origin xyz="0.08 0 0"/><axis xyz="1 0 0"/>
+    <limit lower="-3.1" upper="3.1" effort="30" velocity="6.0"/>
+  </joint>
+  <!-- tool frame: z out of the flange (the flange roll axis is x, so turn +90° about y) -->
+  <joint name="flange-tool0" type="fixed">
+    <parent link="flange_link"/><child link="tool0"/>
+    <origin xyz="0.01 0 0" rpy="0 1.5707963267948966 0"/>
+  </joint>
+  <joint name="finger_left_joint" type="prismatic">
+    <parent link="flange_link"/><child link="finger_left"/>
+    <origin xyz="0.05 0 0.02"/><axis xyz="0 0 1"/>
+    <limit lower="0" upper="0.04" effort="20" velocity="0.1"/>
+  </joint>
+  <joint name="finger_right_joint" type="prismatic">
+    <parent link="flange_link"/><child link="finger_right"/>
+    <origin xyz="0.05 0 -0.02"/><axis xyz="0 0 -1"/>
+    <limit lower="0" upper="0.04" effort="20" velocity="0.1"/>
+  </joint>
+</robot>

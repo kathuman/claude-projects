@@ -246,7 +246,13 @@ footer.foot .consult{color:var(--ink);}
           <option value="UR5e" selected>UR5e — 850 mm reach</option>
           <option value="UR16e">UR16e — 900 mm reach</option>
           <option value="UR10e">UR10e — 1300 mm reach</option>
+          <optgroup label="URDF (6 revolute joints)">
+            <option value="urdf:spherical_wrist_6r.urdf">Spherical-wrist 6R (sample URDF)</option>
+            <option value="urdf:ur5e_from_dh.urdf">UR5e written as URDF (check)</option>
+            <option value="urdf-file">Load a URDF file…</option>
+          </optgroup>
         </select>
+        <input type="file" id="urdf-file" accept=".urdf,.xml,text/xml,application/xml" hidden>
         <p class="note" id="model-note"></p>
       </div>
 
@@ -476,6 +482,7 @@ footer.foot .consult{color:var(--ink);}
 <script src="kinematics.js"></script>
 <script src="motion.js"></script>
 <script src="planner.js"></script>
+<script src="urdf.js"></script>
 <script type="module">
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -506,12 +513,15 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   //          from a studio environment, PBR Neutral tone mapping, ground-truth ambient occlusion
   //   5.2.0  ROS bridge: rosbridge v2 JSON over WebSocket — publishes /joint_states and
   //          /linkage/tcp_pose, optionally follows /linkage/joint_command (ROS 1 or ROS 2)
-  var APP_VERSION = "5.2.0";
+  //   5.3.0  URDF import for 6-revolute-joint arms: generic chain kinematics, numerical IK
+  //          (damped least squares), capsule drawing/collisions, masses from <inertial>; two
+  //          sample URDFs (a spherical-wrist arm, and the UR5e written from its DH table)
+  var APP_VERSION = "5.3.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
   var K = window.LinkageKin, MO = window.LinkageMotion, PL = window.LinkagePlanner, ROBOT = K.UR5E;
-  function modelScale(){ return ROBOT.viz.r[0] / 0.075; }      // 1 for the UR5e
+  function modelScale(){ return ROBOT.chain ? (ROBOT.capR || 0.045) / 0.045 : ROBOT.viz.r[0] / 0.075; }   // 1 for the UR5e
   function reachScale(){ return ROBOT.reach / 0.85; }          // work-cell layout scales with reach
   var DEG = Math.PI / 180;
 
@@ -526,6 +536,32 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   ];
   // "ready" pose: arm raised, tool pointing straight down (a classic UR home)
   var HOME = [0, -90, 90, -90, -90, 0].map(function(d){ return d * DEG; });
+  var UR_HOME = HOME.slice();
+  // Work-cell layout (sites, obstacles, camera) is designed in front of a UR arm; other arms
+  // get it turned to face whichever way their home pose points.
+  var UR_AZ = Math.atan2(-0.133, -0.492);
+  function layoutAngle(){
+    if (!ROBOT.chain) return 0;
+    var T = K.fk(HOME, ROBOT).tcp;
+    return Math.atan2(T[7], T[3]) - UR_AZ;
+  }
+  function rot2(v, a){ var c = Math.cos(a), s = Math.sin(a); return [v[0] * c - v[1] * s, v[0] * s + v[1] * c]; }
+  // a home pose for an imported arm: collision-free, tool pointing down if possible
+  function findHome(model){
+    var pi = Math.PI, cands = [[0, 0, 0, 0, pi / 2, 0], [0, 0, 0, 0, -pi / 2, 0], [0, 0, 0, 0, 0, 0], model.lo.map(function(lo, i){ return (lo + model.hi[i]) / 2; })];
+    cands = cands.map(function(q){ return q.map(function(v, i){ return Math.min(model.hi[i], Math.max(model.lo[i], v)); }); });
+    var free = cands.filter(function(q){ return K.checkCollision(q, model).ok; });
+    var down = free.filter(function(q){ return K.axis(K.fk(q, model).tcp, 2)[2] < -0.9; });
+    if (down.length) return down[0];
+    if (free.length) return free[0];
+    var rnd = PL.rng(5), best = null, bd = Infinity;
+    for (var k = 0; k < 600; k++){
+      var q = model.lo.map(function(lo, i){ return (lo + rnd() * (model.hi[i] - lo)) * 0.6; });
+      var d = q.reduce(function(a, v){ return a + Math.abs(v); }, 0);
+      if (d < bd && K.checkCollision(q, model).ok){ bd = d; best = q; }
+    }
+    return best || cands[2];
+  }
   var state = { q: HOME.slice(), gripper: 60, guard: true, follow: true, speed: 0.6, plan: true };
 
   // ================================================================ RENDERER & SCENE
@@ -642,6 +678,27 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     flange: mk(M.steel)
   };
 
+  // imported (URDF) arms: links drawn as capsules between the joints, a dark housing along each
+  // joint axis — the same shapes the collision checker and the physics use
+  var urMeshes = [baseBody].concat(Object.keys(V).map(function(k){ return V[k]; }));
+  var genLinks = [], genCaps = [], genHousings = [];
+  for (var gi = 0; gi < 7; gi++){ genLinks.push(mk(M.body)); genCaps.push(mkSph(M.body)); }
+  for (var gh = 0; gh < 6; gh++) genHousings.push(mk(M.joint));
+  var genMeshes = genLinks.concat(genCaps, genHousings);
+  genMeshes.forEach(function(m){ m.visible = false; });
+  function drawChain(f){
+    var caps = K.capsules(null, ROBOT, f);
+    for (var i = 0; i < 7; i++){
+      var c = caps[i], r = c.r * (i === 0 ? 1 : 0.9);
+      placeBetween(genLinks[i], c.a, c.b, r);
+      genCaps[i].position.set(c.b[0], c.b[1], c.b[2]); genCaps[i].scale.setScalar(r);
+    }
+    for (var j = 0; j < 6; j++){
+      var o = f.origins[j], ax = f.axes[j], rj = (j < 3 ? caps[j + 1].r * 1.25 : caps[Math.min(j + 1, 6)].r * 1.3);
+      placeBetween(genHousings[j], along(o, ax, -rj), along(o, ax, rj), rj);
+    }
+  }
+
   // gripper: built in flange coordinates (z out of the flange), its matrix is the flange frame
   var gripper = new THREE.Group();
   gripper.matrixAutoUpdate = false;
@@ -692,6 +749,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     lastFK = f;
     // shoulder / elbow offsets along the joint axes (as in the collision model); every size
     // below scales with the model (sc = 1 for the UR5e)
+    urMeshes.forEach(function(m){ m.visible = !ROBOT.chain; });
+    genMeshes.forEach(function(m){ m.visible = !!ROBOT.chain; });
+    if (ROBOT.chain) drawChain(f); else {
     var SO = ROBOT.viz.so, EO = ROBOT.viz.eo, sc = modelScale();
     placeBetween(baseBody, [0, 0, 0.02], [0, 0, ROBOT.d[0] - 0.045 * sc], 0.075 * sc);
     placeBetween(V.j1, along(o[1], z[0], -0.05 * sc), along(o[1], z[0], 0.0), 0.075 * sc);
@@ -716,6 +776,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     placeBetween(V.w2, o[4], o[5], 0.04 * sc);
     placeBetween(V.j6, along(o[5], z[5], -0.046 * sc), along(o[6], z[5], -0.012), 0.044 * sc);
     placeBetween(V.flange, along(o[6], z[6], -0.012), o[6], 0.041 * sc);
+    }
 
     // gripper follows the flange frame; fingers spread by the opening
     var m = new THREE.Matrix4();
@@ -754,8 +815,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     top:   { target: [-0.2, 0.0, 0], theta: -Math.PI / 2, phi: 0.02, radius: 2.3 }
   };
   function setView(name){
-    var v = BASE_VIEWS[name], k = reachScale();
-    v = { target: v.target.map(function(x){ return x * k; }), theta: v.theta, phi: v.phi, radius: v.radius * k };
+    var v = BASE_VIEWS[name], k = reachScale(), a = layoutAngle();
+    var tr = rot2([v.target[0], -v.target[2]], a);          // three (x, z) -> robot (x, y), turn, back
+    v = { target: [tr[0] * k, v.target[1] * k, -tr[1] * k], theta: v.theta + a, phi: v.phi, radius: v.radius * k };
     camGoal.target.set(v.target[0], v.target[1], v.target[2]);
     // turn the short way round
     var d = v.theta - camGoal.theta;
@@ -929,7 +991,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
       poseRobot();
       return false;
     }
-    state.q = q.map(function(v){ return clamp(v, ROBOT.lo[0], ROBOT.hi[0]); });
+    state.q = q.map(function(v, i){ return clamp(v, ROBOT.lo[i], ROBOT.hi[i]); });
     poseRobot();
     syncUI();
     // anything other than the live jog moves the target along with the tool
@@ -987,13 +1049,15 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   // Joint move. If a straight joint move would hit an obstacle and planning is on, RRT-Connect
   // finds a collision-free route and the arm follows it waypoint by waypoint.
   var PLAN_LO = [-Math.PI, -Math.PI, -Math.PI * 0.95, -Math.PI, -Math.PI, -Math.PI], PLAN_HI = [Math.PI, 0, Math.PI * 0.95, Math.PI, Math.PI, Math.PI], planSeed = 1;
+  function planLo(){ return ROBOT.chain ? ROBOT.lo : PLAN_LO; }
+  function planHi(){ return ROBOT.chain ? ROBOT.hi : PLAN_HI; }
   function freeQ(q){ return checkQ(q).ok; }
   function moveJ(qGoal, token, speed){
     var sp = speed || state.speed;
     if (!obstacles.length || !state.plan || PL.edgeFree(state.q, qGoal, freeQ, 0.02)){
       return execute(MO.planJoint(state.q, qGoal, ROBOT, { speed: sp }), token);
     }
-    var t0 = performance.now(), r = PL.rrtConnect(state.q, qGoal, freeQ, { lo: PLAN_LO, hi: PLAN_HI, seed: planSeed++ });
+    var t0 = performance.now(), r = PL.rrtConnect(state.q, qGoal, freeQ, { lo: planLo(), hi: planHi(), seed: planSeed++ });
     if (!r.ok){ showAlert('No collision-free path found (' + r.reason + ')'); return Promise.resolve(false); }
     showPlannedPath(r.path);
     showAlert('Planned around obstacles: ' + (r.path.length - 1) + ' segment' + (r.path.length > 2 ? 's' : '') + ' in ' + Math.round(performance.now() - t0) + ' ms');
@@ -1011,6 +1075,15 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     return r + (err.reason !== 'unreachable' && err.at > 0 ? ' (' + Math.round(err.at * 100) + '% along)' : '') + (err.text ? ': ' + err.text : '');
   }
   function collideFn(q){ var c = checkQ(q); return c.ok ? null : c.hits[0].text; }
+  // Lifting away from a site: a straight line if possible, otherwise a planned joint move
+  // (precision only matters on the way down to the part)
+  function liftTo(Tgoal, token){
+    var tr = MO.planLinear(state.q, Tgoal, ROBOT, { speed: state.speed, collide: state.guard ? collideFn : null });
+    if (tr.ok) return execute(tr, token);
+    var q = K.ik(Tgoal, state.q, ROBOT);
+    if (!q){ showAlert('Cannot lift clear of the site'); return Promise.resolve(false); }
+    return moveJ(q, token);
+  }
   function moveL(Tgoal, token, speed){
     var tr = MO.planLinear(state.q, Tgoal, ROBOT, { speed: speed || state.speed, collide: state.guard ? collideFn : null });
     if (!tr.ok){ showAlert('Move L not possible: ' + explain(tr.error)); return Promise.resolve(false); }
@@ -1144,8 +1217,14 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     if (n < 1) return;
     phys.acc -= n / 60;
     var cur = armTargets();
-    for (var k = 1; k <= n; k++){
-      var u = k / n;
+    // split the same elapsed time into more, smaller steps when the arm moved far this frame
+    // (at most ~4 mm of arm travel per step), so contacts register even on very slow frames
+    var travel = 0;
+    if (prevArm) cur.forEach(function(x, i){ if (prevArm[i] && prevArm[i].body === x.body) travel = Math.max(travel, x.p.distanceTo(prevArm[i].p)); });
+    var steps = Math.max(n, Math.min(60, Math.ceil(travel / 0.004)));
+    phys.world.timestep = (n / 60) / steps;
+    for (var k = 1; k <= steps; k++){
+      var u = k / steps;
       cur.forEach(function(x, i){
         var pr = prevArm && prevArm[i] && prevArm[i].body === x.body ? prevArm[i] : null;
         var p = pr ? pr.p.clone().lerp(x.p, u) : x.p, q = pr ? pr.q.clone().slerp(x.q, u) : x.q;
@@ -1153,6 +1232,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
       });
       phys.world.step();
     }
+    phys.world.timestep = 1 / 60;
     prevArm = cur;
   }
 
@@ -1197,9 +1277,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   var siteRings = [ringLine(0.045, 0x4fe0ff, 0.7), ringLine(0.045, 0xffcf4a, 0.7)];
   siteRings.forEach(function(r){ scene.add(r); });
   function layoutSites(){
-    var k = reachScale();
-    SITE_A = BASE_SITE_A.map(function(v){ return v * k; });
-    SITE_B = BASE_SITE_B.map(function(v){ return v * k; });
+    var k = reachScale(), a = layoutAngle();
+    SITE_A = rot2(BASE_SITE_A, a).map(function(v){ return v * k; });
+    SITE_B = rot2(BASE_SITE_B, a).map(function(v){ return v * k; });
     [SITE_A, SITE_B].forEach(function(site, i){ var c = r2t(site[0], site[1], 0); siteRings[i].position.set(c.x, 0.001, c.z); });
   }
   layoutSites();
@@ -1251,8 +1331,13 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   ];
   var OBSTACLE_PRESETS;
   function layoutObstaclePresets(){
-    var k = reachScale();
-    OBSTACLE_PRESETS = BASE_OBSTACLES.map(function(b, i){ return { id: i, name: b.name, min: b.min.map(function(v){ return v * k; }), max: b.max.map(function(v){ return v * k; }) }; });
+    var k = reachScale(), a = layoutAngle();
+    OBSTACLE_PRESETS = BASE_OBSTACLES.map(function(b, i){
+      // turn the box's corners with the layout, then take the axis-aligned box around them
+      var xs = [], ys = [];
+      [[b.min[0], b.min[1]], [b.min[0], b.max[1]], [b.max[0], b.min[1]], [b.max[0], b.max[1]]].forEach(function(c){ var r = rot2(c, a); xs.push(r[0] * k); ys.push(r[1] * k); });
+      return { id: i, name: b.name, min: [Math.min.apply(null, xs), Math.min.apply(null, ys), b.min[2] * k], max: [Math.max.apply(null, xs), Math.max.apply(null, ys), b.max[2] * k] };
+    });
   }
   layoutObstaclePresets();
   var obstacles = [];
@@ -1526,6 +1611,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   // same tool pose, the next of the (up to 8) arm configurations that reach it
   var configIdx = 0;
   document.getElementById('btn-config').addEventListener('click', function(){
+    if (ROBOT.chain) return showAlert('Alternative configurations need the closed-form UR solver — imported URDF arms use numerical IK');
     var T = lastFK.flange, sols = K.ikFlange(T, ROBOT).filter(function(s){ return checkQ(s).ok; });
     if (sols.length < 2) return showAlert('No other collision-free configuration reaches this tool pose');
     // order solutions by distance from the current one and step through them
@@ -1582,7 +1668,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     run('PICK & PLACE', async function(tk){
       var bp = blockPoseRobot(workpiece);
       if (!bp.upright) return showAlert('The workpiece has tipped over — press Reset workpiece');
-      if (Math.hypot(bp.x, bp.y) > 0.8) return showAlert('The workpiece is out of reach');
+      if (Math.hypot(bp.x, bp.y) > ROBOT.reach * 0.94) return showAlert('The workpiece is out of reach');
       var dA = Math.hypot(bp.x - SITE_A[0], bp.y - SITE_A[1]), dB = Math.hypot(bp.x - SITE_B[0], bp.y - SITE_B[1]);
       var dest = dA < dB ? SITE_B : SITE_A;
       var yaw = bestYaw(bp.yaw), zGrasp = bp.z, hover = 0.15;
@@ -1597,16 +1683,17 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
       var tcp = K.pos(lastFK.tcp), nowP = blockPoseRobot(workpiece);
       if (Math.hypot(nowP.x - tcp[0], nowP.y - tcp[1], nowP.z - tcp[2]) > 0.015){ showAlert('Missed the grasp — the workpiece moved'); return; }
       takeGrasp(workpiece);
-      if (!(await moveL(above, tk))) { releaseGrasp(); return; }
+      if (!(await liftTo(above, tk))) { releaseGrasp(); return; }
       var dyaw = bestYaw(0);
       var aboveD = graspPose(dest[0], dest[1], BLOCK / 2 + hover, dyaw), atD = graspPose(dest[0], dest[1], BLOCK / 2 + 0.003, dyaw);
       var qd = K.ik(aboveD, state.q, ROBOT);
       if (!qd){ releaseGrasp(); return showAlert('Cannot reach the place position'); }
       if (!(await moveJ(qd, tk))) { releaseGrasp(); return; }
-      if (!(await moveL(atD, tk, state.speed * 0.6))) { releaseGrasp(); return; }
+      // a refused descent keeps holding the part (the reason is already on screen) rather than dropping it
+      if (!(await moveL(atD, tk, state.speed * 0.6))) return;
       releaseGrasp();
       if (!(await gripTo(90, 300, tk))) return;
-      if (!(await moveL(aboveD, tk))) return;
+      if (!(await liftTo(aboveD, tk))) return;
       await moveJ(HOME, tk);
     });
   });
@@ -1741,7 +1828,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   function buildWorkspace(){
     var N = 6000, pos = [], col = [], rnd = PL.rng(20260929), c = new THREE.Color();
     for (var n = 0; n < N * 3 && pos.length < N * 3; n++){
-      var q = [0, 1, 2, 3, 4, 5].map(function(i){ return PLAN_LO[i] + rnd() * (PLAN_HI[i] - PLAN_LO[i]); });
+      var lo = planLo(), hi = planHi();
+      var q = [0, 1, 2, 3, 4, 5].map(function(i){ return lo[i] + rnd() * (hi[i] - lo[i]); });
       if (!K.checkCollision(q, ROBOT).ok) continue;
       var T = K.fk(q, ROBOT).tcp, m = Math.min(1, K.manipulability(q, ROBOT) / MANIP_REF);
       pos.push(T[3], T[7], T[11]);
@@ -1771,10 +1859,21 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
   // DH table (θ is live)
   var dhBody = document.getElementById('dh-body'), dhLive = [];
+  var dhHead = document.querySelector('table.dh thead');
   function buildDH(){
-    dhBody.innerHTML = JOINTS.map(function(j, i){
-      return '<tr><td>' + j.sub + '</td><td class="live"></td><td>' + ROBOT.d[i].toFixed(4) + '</td><td>' + ROBOT.a[i].toFixed(4) + '</td><td>' + Math.round(ROBOT.alpha[i] / DEG) + '°</td></tr>';
-    }).join('');
+    if (ROBOT.chain){
+      // imported arm: the joint origins (relative to the previous link) and axes from the URDF
+      dhHead.innerHTML = '<tr><th>Joint</th><th>θ (live)</th><th>origin x y z (m)</th><th>axis</th></tr>';
+      dhBody.innerHTML = ROBOT.chain.joints.map(function(j, i){
+        var T = j.origin;
+        return '<tr><td title="' + j.name + '">J' + (i + 1) + '</td><td class="live"></td><td>' + [T[3], T[7], T[11]].map(function(v){ return v.toFixed(3); }).join(' ') + '</td><td>' + j.axis.map(function(v){ return Math.round(v * 100) / 100; }).join(' ') + '</td></tr>';
+      }).join('');
+    } else {
+      dhHead.innerHTML = '<tr><th>Joint</th><th>θ (live)</th><th>d m</th><th>a m</th><th>α</th></tr>';
+      dhBody.innerHTML = JOINTS.map(function(j, i){
+        return '<tr><td>' + j.sub + '</td><td class="live"></td><td>' + ROBOT.d[i].toFixed(4) + '</td><td>' + ROBOT.a[i].toFixed(4) + '</td><td>' + Math.round(ROBOT.alpha[i] / DEG) + '°</td></tr>';
+      }).join('');
+    }
     dhLive = dhBody.querySelectorAll('td.live');
   }
   buildDH();
@@ -1784,16 +1883,58 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   var modelSel = document.getElementById('model-sel'), modelNote = document.getElementById('model-note');
   var PAYLOAD = { UR3e: 3, UR5e: 5, UR10e: 12.5, UR16e: 16 };
   function describeModel(){
-    modelNote.textContent = ROBOT.name + ': reach ' + Math.round(ROBOT.reach * 1000) + ' mm, payload ' + PAYLOAD[ROBOT.name] + ' kg, arm ' + ROBOT.mass.reduce(function(a, b){ return a + b; }, 0).toFixed(1) +
+    var mass = ROBOT.mass.reduce(function(a, b){ return a + b; }, 0).toFixed(1);
+    if (ROBOT.chain){
+      modelNote.textContent = ROBOT.name + ' (URDF): reach ' + Math.round(ROBOT.reach * 1000) + ' mm, 6 revolute joints, numerical IK (damped least squares). ' +
+        (ROBOT.inertiaFromFile ? 'Masses from the file (' + mass + ' kg).' : 'No inertial data in the file — default masses.') +
+        ' Meshes aren\'t loaded: links are drawn as the capsules used for collisions.' + (ROBOT.toolFrameFound ? '' : ' No tool0/flange link found — the tool frame is the last link\'s frame.');
+      return;
+    }
+    modelNote.textContent = ROBOT.name + ': reach ' + Math.round(ROBOT.reach * 1000) + ' mm, payload ' + PAYLOAD[ROBOT.name] + ' kg, arm ' + mass +
       ' kg. Published DH parameters and dynamics; rated torques ' + ROBOT.tauMax[1] + ' / ' + ROBOT.tauMax[5] + ' N·m (shoulder / wrist).';
   }
+  var modelKey = 'UR5e';
+  // UR presets switch at once; URDF samples are fetched; "Load a URDF file…" asks for one
   function setModel(name, keepPose){
-    if (!K.MODELS[name]) return;
+    if (K.MODELS[name]) return applyModel(K.MODELS[name], name, keepPose);
+    if (name === 'urdf-file'){ modelSel.value = modelKey; urdfInput.click(); return; }
+    if (/^urdf:/.test(name)) return loadUrdfSample(name.slice(5), keepPose);
+  }
+  function loadUrdfSample(file, keepPose){
+    return fetch('urdf/' + file).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function(t){ return applyURDF(t, 'urdf:' + file, keepPose); })
+      .catch(function(e){ modelSel.value = modelKey; showAlert('Could not load ' + file + ': ' + e.message); return false; });
+  }
+  function applyURDF(text, key, keepPose){
+    var m;
+    try { m = window.LinkageURDF.parseURDF(text); } catch (e) { modelSel.value = modelKey; showAlert('URDF not loaded: ' + e.message); return false; }
+    if (key === 'urdf-upload'){
+      var opt = modelSel.querySelector('option[value="urdf-upload"]');
+      if (!opt){ opt = document.createElement('option'); opt.value = 'urdf-upload'; modelSel.querySelector('optgroup').appendChild(opt); }
+      opt.textContent = 'Uploaded: ' + m.name;
+    }
+    applyModel(m, key, keepPose);
+    showAlert('Loaded ' + m.name + ' — ' + m.jointNames.length + ' joints, reach ' + Math.round(m.reach * 1000) + ' mm');
+    return true;
+  }
+  var urdfInput = document.getElementById('urdf-file');
+  urdfInput.addEventListener('change', function(){
+    var f = this.files[0]; if (!f) return;
+    f.text().then(function(t){ applyURDF(t, 'urdf-upload'); });
+    this.value = '';
+  });
+  function applyModel(model, key, keepPose){
     cancelSequence(); jogGoal = null;
     if (grasp) releaseGrasp();
     clearObstacles();
-    ROBOT = K.MODELS[name];
-    modelSel.value = name;
+    ROBOT = model; ROBOT.key = key; modelKey = key;
+    modelSel.value = key;
+    HOME = ROBOT.chain ? findHome(ROBOT) : UR_HOME.slice();
+    // sliders: each joint's own limits and (for URDF arms) its name from the file
+    for (var si = 0; si < 6; si++){
+      sliders[si].min = (ROBOT.lo[si] / DEG).toFixed(1); sliders[si].max = (ROBOT.hi[si] / DEG).toFixed(1);
+      rows[si].querySelector('.name').innerHTML = (ROBOT.chain ? ROBOT.jointNames[si].replace(/_joint$/, '').replace(/_/g, ' ') : JOINTS[si].name) + '<small>' + JOINTS[si].sub + '</small>';
+    }
     var sc = modelScale(), k = reachScale();
     placeBetween(basePlate, [0, 0, 0], [0, 0, 0.02], 0.1 * sc);
     placeBetween(baseRing, [0, 0, 0.02], [0, 0, 0.028], 0.082 * sc);
@@ -1811,6 +1952,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     saveLater();
   }
   modelSel.addEventListener('change', function(){ setModel(this.value); });
+  // the reach ring and base parts follow the model (drawn at UR5e size, scaled)
 
   // ================================================================ PROGRAM (teach pendant)
   // A program is a list of waypoints: a joint pose, how to get there (MoveJ or MoveL), a speed,
@@ -1931,6 +2073,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   function toURScript(){
     var L = ['def linkage_program():', '  # Exported from Linkage ' + APP_VERSION + ' for a ' + ROBOT.name + ' — ' + prog.length + ' waypoints.',
       '  # Speeds are scaled from the program. Replace the gripper comments with your gripper\'s URCap calls.'];
+    if (ROBOT.chain) L.splice(2, 0, '  # NOTE: this program was made for an imported URDF arm, not a UR — check the joint values suit your controller.');
     prog.forEach(function(w, i){
       var q = '[' + w.q.map(function(v){ return v.toFixed(5); }).join(', ') + ']', sp = w.speed / 100;
       if (w.kind === 'L') L.push('  movel(get_forward_kin(' + q + '), a=' + (1.2 * sp).toFixed(2) + ', v=' + (0.25 * sp).toFixed(3) + ')  # P' + (i + 1));
@@ -1948,14 +2091,22 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
   // ---- share links: robot, pose, program and obstacles packed into the URL (#s=…)
   function snapshot(){
-    return { m: ROBOT.name, q: state.q.map(function(v){ return +(v / DEG).toFixed(2); }),
+    return { m: ROBOT.key || ROBOT.name, q: state.q.map(function(v){ return +(v / DEG).toFixed(2); }),
       p: prog.map(function(w){ return [w.q.map(function(v){ return +(v / DEG).toFixed(2); }), w.kind, w.grip, w.speed]; }),
       o: obstacles.map(function(o){ return o.id; }) };
   }
   function b64url(str){ return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function unb64url(str){ str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '='; return decodeURIComponent(escape(atob(str))); }
   function applySnapshot(o){
+    if (o.m && /^urdf:/.test(o.m)){
+      // a sample URDF: fetch it, then apply the rest
+      return loadUrdfSample(o.m.slice(5), false).then(function(){ applySnapshotRest(o); });
+    }
+    if (o.m === 'urdf-upload') showAlert('That link used an uploaded URDF, which isn\'t part of the link — showing the UR5e instead');
     if (o.m && K.MODELS[o.m]) setModel(o.m, false);
+    applySnapshotRest(o);
+  }
+  function applySnapshotRest(o){
     if (Array.isArray(o.p)) prog = o.p.map(function(w){ return { q: w[0].map(function(d){ return d * DEG; }), kind: w[1] === 'L' ? 'L' : 'J', grip: w[2] || '', speed: clamp(+w[3] || 60, 10, 100) }; });
     renderProg();
     if (Array.isArray(o.q) && o.q.length === 6) setJoints(o.q.map(function(d){ return d * DEG; }), 'slider');
@@ -2022,7 +2173,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     var vel = ros.lastQ ? q.map(function(v, i){ return (v - ros.lastQ[i]) / Math.max(1e-3, now - ros.lastT); }) : [0, 0, 0, 0, 0, 0];
     ros.lastQ = q; ros.lastT = now;
     var st = rosStamp();
-    rosSend({ op: 'publish', topic: '/joint_states', msg: { header: { stamp: st, frame_id: '' }, name: UR_JOINT_NAMES, position: q, velocity: vel, effort: K.gravityTorques(q, ROBOT, currentPayload()) } });
+    rosSend({ op: 'publish', topic: '/joint_states', msg: { header: { stamp: st, frame_id: '' }, name: ROBOT.jointNames || UR_JOINT_NAMES, position: q, velocity: vel, effort: K.gravityTorques(q, ROBOT, currentPayload()) } });
     var T = lastFK.tcp, qq = MO.matToQuat(T);
     rosSend({ op: 'publish', topic: '/linkage/tcp_pose', msg: { header: { stamp: st, frame_id: 'base_link' }, pose: { position: { x: T[3], y: T[7], z: T[11] }, orientation: { x: qq[1], y: qq[2], z: qq[3], w: qq[0] } } } });
     ros.sent += 2;
@@ -2033,7 +2184,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     if (!ros.follow || !Array.isArray(msg.position)) return;
     var q = state.q.slice(), n = 0;
     if (Array.isArray(msg.name) && msg.name.length){
-      msg.name.forEach(function(nm, i){ var j = UR_JOINT_NAMES.indexOf(nm); if (j >= 0 && isFinite(msg.position[i])){ q[j] = msg.position[i]; n++; } });
+      msg.name.forEach(function(nm, i){ var j = (ROBOT.jointNames || UR_JOINT_NAMES).indexOf(nm); if (j >= 0 && isFinite(msg.position[i])){ q[j] = msg.position[i]; n++; } });
     } else { msg.position.slice(0, 6).forEach(function(v, i){ if (isFinite(v)){ q[i] = v; n++; } }); }
     if (!n) return;
     q = q.map(function(v, i){ return clamp(v, ROBOT.lo[i], ROBOT.hi[i]); });
@@ -2091,7 +2242,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
     H.rx.textContent = (rpy[0] / DEG).toFixed(1) + '°';
     H.ry.textContent = (rpy[1] / DEG).toFixed(1) + '°';
     H.rz.textContent = (rpy[2] / DEG).toFixed(1) + '°';
-    H.reach.textContent = Math.hypot(p[0], p[1], p[2] - ROBOT.d[0]).toFixed(3) + ' m';
+    var shoulderZ = ROBOT.chain ? lastFK.origins[1][2] : ROBOT.d[0];   // reach is measured from the shoulder
+    H.reach.textContent = Math.hypot(p[0], p[1], p[2] - shoulderZ).toFixed(3) + ' m';
     var mnp = K.manipulability(state.q, ROBOT), frac = clamp(mnp / MANIP_REF, 0, 1);
     H.manip.textContent = (frac * 100).toFixed(0) + '%';
     H.meter.style.width = (frac * 100).toFixed(1) + '%';
@@ -2158,7 +2310,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   })();
 
   // For automated tests: read-only view of the state.
-  window.linkageDebug = { ros: function(){ return { open: ros.open, sent: ros.sent, got: ros.got }; }, three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
+  window.linkageDebug = { loadURDFText: function(t){ return applyURDF(t, 'urdf-upload'); }, home: function(){ return HOME.slice(); }, sites: function(){ return [SITE_A, SITE_B]; }, ros: function(){ return { open: ros.open, sent: ros.sent, got: ros.got }; }, three: function(){ return THREE.REVISION; }, ao: function(){ return aoOn; }, model: function(){ return ROBOT.name; }, prog: function(){ return prog; }, urscript: function(){ return toURScript(); }, progJSON: function(){ return progToJSON(); }, shareHash: function(){ return '#s=' + b64url(JSON.stringify(snapshot())); }, spawnAt: function(x, y, z){ var t = r2t(x, y, z); var o = spawnBody(t, new THREE.Quaternion()); o.mesh = makeBlockMesh(0x4fe0ff); blocks.push(o); markDirty(); }, phys: function(){ return phys.ready; }, obstacles: function(){ return obstacles.map(function(o){ return o.name; }); }, planned: function(){ return !!plannedLine; }, blocks: function(){ return blocks.map(function(b){ var t = b.body.translation(); return [t.x, -t.z, t.y]; }); }, loads: function(){ return K.gravityTorques(state.q, ROBOT, currentPayload()); }, wsPoints: function(){ return wsCloud ? wsCloud.geometry.attributes.position.count : 0; }, target: function(){ return target; }, workpiece: function(){ return workpiece && blockPoseRobot(workpiece); }, grasped: function(){ return !!grasp; }, gizmoScreen: function(axis){
       var o = gzPick.filter(function(p){ return p.userData.axis === axis; })[0], v = new THREE.Vector3();
       o.getWorldPosition(v); v.project(camera); var r = dom.getBoundingClientRect();
       return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };

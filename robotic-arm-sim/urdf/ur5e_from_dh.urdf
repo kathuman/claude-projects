@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!-- A UR5e written as URDF straight from Universal Robots' published DH parameters and
+     dynamics values (not the official ROS description, which has meshes). Each joint's
+     origin is the previous DH link's fixed part Tz(d)·Tx(a)·Rx(alpha); every joint turns about
+     its local z. The published centres of mass are given in DH link frames (at the far end of
+     each link); here they are transformed into the URDF link frames (at the joint) by that same
+     fixed part, c_urdf = Tz(d)·Tx(a)·Rx(alpha)·c_dh. Linkage uses it to check that its generic URDF path reproduces the analytic
+     UR5e model exactly. Written for Linkage (https://github.com/kathuman/claude-projects). -->
+<robot name="ur5e_from_dh">
+  <link name="base_link"/>
+  <link name="shoulder_link"><inertial><origin xyz="0 -0.00193 0.13689"/><mass value="3.761"/></inertial></link>
+  <link name="upper_arm_link"><inertial><origin xyz="-0.2125 0 0.11336"/><mass value="8.058"/></inertial></link>
+  <link name="forearm_link"><inertial><origin xyz="-0.2422 0 0.0265"/><mass value="2.846"/></inertial></link>
+  <link name="wrist_1_link"><inertial><origin xyz="0 -0.01634 0.1315"/><mass value="1.37"/></inertial></link>
+  <link name="wrist_2_link"><inertial><origin xyz="0 0.01634 0.0979"/><mass value="1.3"/></inertial></link>
+  <link name="wrist_3_link"><inertial><origin xyz="0 0 0.098441"/><mass value="0.365"/></inertial></link>
+  <link name="tool0"/>
+
+  <joint name="shoulder_pan_joint" type="revolute">
+    <parent link="base_link"/><child link="shoulder_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="150" velocity="3.1416"/>
+  </joint>
+  <joint name="shoulder_lift_joint" type="revolute">
+    <parent link="shoulder_link"/><child link="upper_arm_link"/>
+    <origin xyz="0 0 0.1625" rpy="1.5707963267948966 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="150" velocity="3.1416"/>
+  </joint>
+  <joint name="elbow_joint" type="revolute">
+    <parent link="upper_arm_link"/><child link="forearm_link"/>
+    <origin xyz="-0.425 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-3.1416" upper="3.1416" effort="150" velocity="3.1416"/>
+  </joint>
+  <joint name="wrist_1_joint" type="revolute">
+    <parent link="forearm_link"/><child link="wrist_1_link"/>
+    <origin xyz="-0.3922 0 0" rpy="0 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="28" velocity="3.1416"/>
+  </joint>
+  <joint name="wrist_2_joint" type="revolute">
+    <parent link="wrist_1_link"/><child link="wrist_2_link"/>
+    <origin xyz="0 0 0.1333" rpy="1.5707963267948966 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="28" velocity="3.1416"/>
+  </joint>
+  <joint name="wrist_3_joint" type="revolute">
+    <parent link="wrist_2_link"/><child link="wrist_3_link"/>
+    <origin xyz="0 0 0.0997" rpy="-1.5707963267948966 0 0"/><axis xyz="0 0 1"/>
+    <limit lower="-6.2832" upper="6.2832" effort="28" velocity="3.1416"/>
+  </joint>
+  <joint name="wrist_3-tool0" type="fixed">
+    <parent link="wrist_3_link"/><child link="tool0"/>
+    <origin xyz="0 0 0.0996" rpy="0 0 0"/>
+  </joint>
+</robot>

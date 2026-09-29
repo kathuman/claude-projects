@@ -117,14 +117,38 @@
 
   // ---------------------------------------------------------------- forward kinematics
   // Returns frames[0..6] (frames[0] = base, frames[6] = flange) and tcp.
+  // Every result also lists each joint's world axis and origin (axes[i], origins[i]), which is
+  // all the Jacobian and the statics need, so DH arms and URDF chains share that code.
   function fk(q, robot) {
     robot = robot || UR5E;
-    var frames = [I4()], T = I4();
+    if (robot.chain) return fkChain(q, robot);
+    var frames = [I4()], T = I4(), axes = [], origins = [];
     for (var i = 0; i < 6; i++) {
+      axes.push(axis(T, 2)); origins.push(pos(T));
       T = mul(T, dh(q[i], robot.d[i], robot.a[i], robot.alpha[i]));
       frames.push(T);
     }
-    return { frames: frames, flange: T, tcp: mul(T, transl(0, 0, robot.tool)) };
+    return { frames: frames, flange: T, tcp: mul(T, transl(0, 0, robot.tool)), axes: axes, origins: origins };
+  }
+  // generic chain (URDF): T = product of origin_i * Rot(axis_i, q_i), then the fixed flange transform
+  function rotAxis(u, t) {
+    var c = Math.cos(t), s = Math.sin(t), C = 1 - c, x = u[0], y = u[1], z = u[2];
+    return [c + x * x * C, x * y * C - z * s, x * z * C + y * s, 0,
+            y * x * C + z * s, c + y * y * C, y * z * C - x * s, 0,
+            z * x * C - y * s, z * y * C + x * s, c + z * z * C, 0, 0, 0, 0, 1];
+  }
+  function fkChain(q, robot) {
+    var J = robot.chain.joints, frames = [I4()], T = I4(), axes = [], origins = [];
+    for (var i = 0; i < 6; i++) {
+      T = mul(T, J[i].origin);
+      var a = J[i].axis;
+      axes.push([T[0] * a[0] + T[1] * a[1] + T[2] * a[2], T[4] * a[0] + T[5] * a[1] + T[6] * a[2], T[8] * a[0] + T[9] * a[1] + T[10] * a[2]]);
+      origins.push(pos(T));
+      T = mul(T, rotAxis(a, q[i]));
+      frames.push(T);
+    }
+    var fl = mul(T, robot.chain.flange);
+    return { frames: frames, flange: fl, tcp: mul(fl, transl(0, 0, robot.tool)), axes: axes, origins: origins };
   }
 
   function wrap(a) { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; }
@@ -136,6 +160,7 @@
   // θ2, θ3 then solve a planar two-link problem.
   function ikFlange(T, robot) {
     robot = robot || UR5E;
+    if (robot.chain) return [];                                   // no closed form for arbitrary chains
     var d1 = robot.d[0], a2 = robot.a[1], a3 = robot.a[2], d4 = robot.d[3], d5 = robot.d[4], d6 = robot.d[5];
     var sols = [];
     var p05 = [T[3] - d6 * T[2], T[7] - d6 * T[6], T[11] - d6 * T[10]];
@@ -182,6 +207,7 @@
   // joint limits (angles unwrapped to the branch nearest the seed), or null.
   function ik(Ttcp, seed, robot) {
     robot = robot || UR5E;
+    if (robot.chain) return ikNumeric(Ttcp, seed, robot);
     var T = mul(Ttcp, transl(0, 0, -robot.tool));
     var sols = ikFlange(T, robot), best = null, bestD = Infinity;
     sols.forEach(function (s) {
@@ -203,6 +229,58 @@
     });
     return best;
   }
+  // Numerical IK for any 6-joint chain: damped least squares on the pose error (position +
+  // orientation), from the seed first and then a few deterministic restarts; the answer must
+  // converge to 1e-7 inside the joint limits.
+  function ikNumeric(Ttcp, seed, robot, opts) {
+    opts = opts || {};
+    var starts = [], s0 = 777;
+    function rnd() { s0 = (s0 * 16807) % 2147483647; return s0 / 2147483647; }
+    if (seed) starts.push(seed.slice());
+    starts.push(robot.lo.map(function (lo, i) { return (lo + robot.hi[i]) / 2; }));
+    for (var r = 0; r < (opts.restarts || 12); r++) starts.push(robot.lo.map(function (lo, i) { return lo + rnd() * (robot.hi[i] - lo); }));
+    var pd = pos(Ttcp), xd = axis(Ttcp, 0), yd = axis(Ttcp, 1), zd = axis(Ttcp, 2);
+    for (var st = 0; st < starts.length; st++) {
+      var q = starts[st].slice(), lambda = 0.05;
+      for (var it = 0; it < 150; it++) {
+        var f = fk(q, robot), T = f.tcp, p = pos(T);
+        var ep = sub(pd, p), x = axis(T, 0), y = axis(T, 1), z = axis(T, 2);
+        var eo = scale3(add3(add3(cross3(x, xd), cross3(y, yd)), cross3(z, zd)), 0.5);
+        var e = ep.concat(eo), en = Math.sqrt(dot(ep, ep) + dot(eo, eo));
+        if (en < 1e-7) {
+          var inLim = q.every(function (v, i) { return v >= robot.lo[i] - 1e-9 && v <= robot.hi[i] + 1e-9; });
+          if (inLim) return q;
+          break;
+        }
+        var J = jacobian(q, robot, f), A = [];
+        for (var a = 0; a < 6; a++) { A.push([]); for (var b = 0; b < 6; b++) { var sm = 0; for (var k = 0; k < 6; k++) sm += J[a][k] * J[b][k]; A[a].push(sm + (a === b ? lambda * lambda : 0)); } }
+        var w = solve6(A, e);
+        if (!w) break;
+        var dq = [0, 0, 0, 0, 0, 0];
+        for (var i = 0; i < 6; i++) for (var j = 0; j < 6; j++) dq[i] += J[j][i] * w[j];
+        var mx = Math.max.apply(null, dq.map(Math.abs));
+        if (mx > 0.3) dq = dq.map(function (v) { return v * 0.3 / mx; });
+        for (var i2 = 0; i2 < 6; i2++) q[i2] = clamp(q[i2] + dq[i2], robot.lo[i2], robot.hi[i2]);
+        lambda = en < 1e-3 ? 1e-4 : 0.05;
+      }
+    }
+    return null;
+  }
+  function solve6(A, b) {
+    var M = A.map(function (r, i) { return r.concat([b[i]]); }), n = 6;
+    for (var c = 0; c < n; c++) {
+      var p = c;
+      for (var r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      if (Math.abs(M[p][c]) < 1e-14) return null;
+      var t = M[p]; M[p] = M[c]; M[c] = t;
+      for (var r2 = 0; r2 < n; r2++) if (r2 !== c) { var fct = M[r2][c] / M[c][c]; for (var k = c; k <= n; k++) M[r2][k] -= fct * M[c][k]; }
+    }
+    return M.map(function (r, i) { return r[n] / r[i]; });
+  }
+  function cross3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+  function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+  function scale3(a, s) { return [a[0] * s, a[1] * s, a[2] * s]; }
+
   function nearestBranch(v, ref) {
     while (v - ref > Math.PI) v -= 2 * Math.PI;
     while (ref - v > Math.PI) v += 2 * Math.PI;
@@ -211,11 +289,11 @@
 
   // ---------------------------------------------------------------- Jacobian & manipulability
   // Geometric Jacobian (6×6) of the TCP: rows vx vy vz wx wy wz.
-  function jacobian(q, robot) {
+  function jacobian(q, robot, fkr) {
     robot = robot || UR5E;
-    var f = fk(q, robot), pe = pos(f.tcp), J = [[], [], [], [], [], []];
+    var f = fkr || fk(q, robot), pe = pos(f.tcp), J = [[], [], [], [], [], []];
     for (var i = 0; i < 6; i++) {
-      var z = axis(f.frames[i], 2), o = pos(f.frames[i]);
+      var z = f.axes[i], o = f.origins[i];
       var d = [pe[0] - o[0], pe[1] - o[1], pe[2] - o[2]];
       var v = [z[1] * d[2] - z[2] * d[1], z[2] * d[0] - z[0] * d[2], z[0] * d[1] - z[1] * d[0]];
       J[0][i] = v[0]; J[1][i] = v[1]; J[2][i] = v[2]; J[3][i] = z[0]; J[4][i] = z[1]; J[5][i] = z[2];
@@ -249,6 +327,7 @@
   function add(a, b, s) { return [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]; }
   function capsules(q, robot, fkr) {
     robot = robot || UR5E;
+    if (robot.chain) return capsulesChain(q, robot, fkr);
     var f = fkr || fk(q, robot), F = f.frames, V = robot.viz || UR5E.viz;
     var SHOULDER_OFF = V.so, ELBOW_OFF = V.eo, rr = V.r;
     var o0 = pos(F[0]), o1 = pos(F[1]), o2 = pos(F[2]), o3 = pos(F[3]), o4 = pos(F[4]), o5 = pos(F[5]), o6 = pos(F[6]);
@@ -267,6 +346,21 @@
       { name: "fingers", a: add(o6, z6, 0.07), b: pos(f.tcp), r: 0.018 }
     ];
   }
+  // generic chain: base post, one capsule between each pair of consecutive joint origins,
+  // the last link to the flange, then the same gripper body + fingers as the UR models
+  function capsulesChain(q, robot, fkr) {
+    var f = fkr || fk(q, robot), o = f.origins, fl = pos(f.flange), z6 = axis(f.flange, 2), r = robot.capR || 0.045;
+    var caps = [{ name: "base", a: [0, 0, 0], b: [0, 0, Math.max(0.02, o[1][2])], r: r * 1.5 }];
+    for (var i = 0; i < 5; i++) caps.push({ name: "link " + (i + 1), a: o[i], b: o[i + 1], r: r * (i < 3 ? 1.1 : 0.85) });
+    caps.push({ name: "link 6", a: o[5], b: fl, r: r * 0.8 });
+    caps.push({ name: "gripper", a: fl, b: add(fl, z6, 0.07), r: 0.045 });
+    caps.push({ name: "fingers", a: add(fl, z6, 0.07), b: pos(f.tcp), r: 0.018 });
+    return caps;
+  }
+  var CHAIN_PAIRS = [];
+  // (at least four apart: with short wrist offsets, links three apart can touch legitimately)
+  for (var ci = 0; ci < 9; ci++) for (var cj = ci + 4; cj < 9; cj++) CHAIN_PAIRS.push([ci, cj]);
+
   // pairs far enough apart in the chain that touching means a real collision
   var SELF_PAIRS = [[0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [0, 9], [1, 5], [1, 6], [1, 7], [1, 8], [1, 9], [2, 6], [2, 7], [2, 8], [2, 9], [4, 8], [4, 9]];
 
@@ -298,11 +392,12 @@
     robot = robot || UR5E;
     opts = opts || {};
     var caps = capsules(q, robot), hits = [], margin = opts.margin || 0;
+    var pairs = robot.chain ? CHAIN_PAIRS : SELF_PAIRS;
     for (var i = 3; i < caps.length; i++) {   // links from the elbow out can reach the table
       var zmin = Math.min(caps[i].a[2], caps[i].b[2]) - caps[i].r;
       if (zmin < margin - 0.0005) hits.push({ kind: "floor", links: [i], text: caps[i].name + " would hit the table" });
     }
-    SELF_PAIRS.forEach(function (pr) {
+    pairs.forEach(function (pr) {
       var A = caps[pr[0]], B = caps[pr[1]];
       if (segDist(A.a, A.b, B.a, B.b) < A.r + B.r + margin) hits.push({ kind: "self", links: pr, text: A.name + " would hit the " + B.name });
     });
@@ -346,7 +441,7 @@
     robot = robot || UR5E;
     var f = fk(q, robot), masses = comPositions(q, robot, payload, f), tau = [0, 0, 0, 0, 0, 0];
     for (var j = 0; j < 6; j++) {
-      var z = axis(f.frames[j], 2), o = pos(f.frames[j]);
+      var z = f.axes[j], o = f.origins[j];
       masses.forEach(function (ms) {
         if (ms.link < j) return;                          // masses before joint j don't move with it
         var r = sub(ms.p, o);
@@ -388,7 +483,7 @@
 
   var api = {
     gravityTorques: gravityTorques, potentialEnergy: potentialEnergy, comPositions: comPositions, velocityEllipsoid: velocityEllipsoid, eig3: eig3,
-    UR5E: UR5E, MODELS: MODELS, fk: fk, ik: ik, ikFlange: ikFlange, jacobian: jacobian, manipulability: manipulability,
+    UR5E: UR5E, MODELS: MODELS, fk: fk, ikNumeric: ikNumeric, rotAxis: rotAxis, ik: ik, ikFlange: ikFlange, jacobian: jacobian, manipulability: manipulability,
     capsules: capsules, checkCollision: checkCollision, segDist: segDist,
     mul: mul, inv: inv, pos: pos, axis: axis, transl: transl, dh: dh, wrap: wrap, nearestBranch: nearestBranch,
     poseFromRPY: poseFromRPY, rpyFromPose: rpyFromPose, I4: I4
