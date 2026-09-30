@@ -70,6 +70,9 @@ warehouse-model/
 │   │                             and door waits vs the analytic model
 │   ├── optimizer.test.js        every design the optimiser returns re-checked as feasible,
 │   │                             just long enough, Pareto front, targets respected
+│   ├── dataimport.test.js       CSV parsing, hand-checked derivations, the sample data set
+│   ├── exporters.test.js        IFC/DXF structure; IfcOpenShell + FreeCAD read them back
+│   ├── ifc_check.py, dxf_check.py   the independent checks (run with freecadcmd)
 │   ├── parity.test.js           runs create_model.py's layout code and calculations.js on
 │   └── parity_layout.py           the same 400 random designs and requires identical rows
 │
@@ -93,6 +96,9 @@ warehouse-model/
     │   ├── simulation.js         discrete-event simulation of a day + Monte Carlo (browser + Node)
     │   ├── optimizer.js          search for the cheapest designs meeting the targets (browser + Node)
     │   ├── decisions.js          the Decisions panel: scenarios, sensitivity, optimiser
+    │   ├── exporters.js          IFC4, DXF and FreeCAD-command export (browser + Node)
+    │   ├── dataimport.js         movement/inventory CSV analysis + sample data (browser + Node)
+    │   ├── datapanel.js          the Data & Files panel
     │   └── app.js                wires them together; owns the DOM
     └── vendor/three/             three.js r186 (ES modules, via the page's import map) with the
                                   few add-ons used: GLTFLoader, OrbitControls, RoomEnvironment
@@ -287,6 +293,19 @@ names and order specifically so a side-by-side diff stays easy.
   height, length and door counts to fit, runs each through `computeAll`, keeps designs that hold
   the inventory and meet the peak truck-wait target with no critical warning, and ranks them by
   annual cost with the cost/time Pareto front marked.
+- **Files (v7, `web/src/exporters.js`)**: IFC4 (site ▸ building ▸ storey; slabs, walls, one
+  `IfcFurniture` per rack row segment, `IfcDoor` per dock door, `IfcSpace` for staging and
+  cross-aisles; inputs, results and per-rack numbers as property sets), a DXF R12 floor plan on
+  named layers, a glTF of the live 3D model (instancing kept), and the `freecadcmd` line that
+  regenerates the current design as a real FreeCAD model. The IFC is validated against the IFC4
+  schema by IfcOpenShell (bundled with FreeCAD) and its geometry rebuilt and measured; the DXF is
+  read back by FreeCAD's DXF importer.
+- **Data import (v7, `web/src/dataimport.js`)**: movement and inventory CSVs (column names matched
+  loosely; comma, semicolon or tab) → pallet moves per day, in/out split, operating hours and
+  peak-hour factor (from time stamps), pallets on hand, and demand skew in the model's own terms
+  (share of moves from the fastest-moving 20% of pallets, SKUs ranked by moves per pallet), plus
+  how much stock could fill deep lanes. A deterministic sample data set (600 SKUs, 20 days) is
+  built in. Files are read in the browser; nothing is uploaded.
 
 Run the tests (Node; the parity test also needs a system Python 3, not FreeCAD):
 
@@ -294,6 +313,8 @@ Run the tests (Node; the parity test also needs a system Python 3, not FreeCAD):
 node warehouse-model/tests/calculations.test.js
 node warehouse-model/tests/simulation.test.js
 node warehouse-model/tests/optimizer.test.js
+node warehouse-model/tests/dataimport.test.js
+node warehouse-model/tests/exporters.test.js   # also runs IfcOpenShell / FreeCAD checks if freecadcmd is found
 node warehouse-model/tests/parity.test.js
 ```
 
@@ -315,11 +336,14 @@ node warehouse-model/tests/parity.test.js
   considered and left out: angled aisles don't fit the rectilinear row model every other part of
   the app — FreeCAD included — is built on, and their gain applies mainly to single-command trips
   from one central door.)
-- **v6 (current)** — decision support: annual total cost of ownership, scenarios, share links,
+- **v6** — decision support: annual total cost of ownership, scenarios, share links,
   JSON/CSV export, sensitivity (tornado + sweeps) and an optimiser. (Automated alternatives — unit-load
   AS/RS cranes, shuttles, AMR goods-to-person — need their own travel and equipment models, e.g.
   a crane per aisle moving horizontally and vertically at once; they are listed under "Later".)
-- **v7** — CAD/BIM and data: in-browser B-rep geometry, IFC export, SKU/order-line import.
+- **v7 (current)** — CAD/BIM and data: IFC4, DXF, glTF and FreeCAD-command export, and
+  movement/inventory data import. (An in-browser B-rep kernel — OpenCascade.js — was considered
+  and left out: it is tens of megabytes of WebAssembly, and the FreeCAD command plus IFC/DXF
+  export give CAD users the real model without it.)
 
 ## Later
 

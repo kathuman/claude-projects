@@ -176,6 +176,43 @@
       </div>
     </div>
 
+    <div class="panel data-panel">
+      <h2>Data &amp; Files</h2>
+      <div class="data-grid">
+        <div>
+          <h3 class="sub-h">Import your data</h3>
+          <p class="panel-note">A movements CSV (one row per pallet movement or order line: date and time, SKU, pallets, and in/out if you have it)
+            and, optionally, an inventory CSV (SKU, pallets on hand). Column names are matched loosely. The files are read in your browser — nothing is uploaded.</p>
+          <div class="dtools">
+            <label class="file-btn">Movements CSV<input type="file" id="imp-mv" accept=".csv,.txt,text/csv" /></label>
+            <span class="file-name" id="imp-mv-name">none</span>
+          </div>
+          <div class="dtools">
+            <label class="file-btn">Inventory CSV<input type="file" id="imp-inv" accept=".csv,.txt,text/csv" /></label>
+            <span class="file-name" id="imp-inv-name">none (optional)</span>
+          </div>
+          <div class="dtools">
+            <button class="btn small" id="imp-sample" type="button">Try the sample data</button>
+            <button class="btn small" id="imp-sample-dl" type="button">Download the sample CSVs</button>
+          </div>
+          <div id="imp-result"></div>
+        </div>
+        <div>
+          <h3 class="sub-h">Export the design</h3>
+          <p class="panel-note">The current design, in formats CAD and BIM tools open. All geometry comes from the same layout as the 3D view and the plan.</p>
+          <div class="exp-list">
+            <button class="btn small" id="exp-ifc" type="button">IFC 4 (BIM)</button><span>Building, walls, slabs, one element per rack row, dock doors and spaces, with every input and key result as property sets. Checked against the IFC4 schema with IfcOpenShell.</span>
+            <button class="btn small" id="exp-dxf" type="button">DXF (CAD plan)</button><span>The floor plan in metres on named layers (walls, racks with bay lines, aisles, docks, zones, notes) — AutoCAD R12, opens almost anywhere.</span>
+            <button class="btn small" id="exp-glb" type="button">glTF (3D model)</button><span>The live 3D model as a .glb file — racks, pallets, building and trailers.</span>
+            <button class="btn small" id="exp-svg" type="button">SVG (plan drawing)</button><span>The dimensioned floor plan above.</span>
+          </div>
+          <p class="panel-note fc-note">Regenerate this exact design as a real, parametric FreeCAD model (run from the <code>warehouse-model</code> folder):</p>
+          <div class="fc-cmd"><code id="exp-fc"></code><button class="btn small" id="exp-fc-copy" type="button">Copy</button></div>
+          <p class="dmsg" id="exp-msg" role="status"></p>
+        </div>
+      </div>
+    </div>
+
     <div class="lower-grid">
       <div class="panel">
         <h2>Visual Analytics</h2>
@@ -294,8 +331,9 @@
             <code>web/src/simulation.js</code> is a discrete-event simulation of the day that takes every lift-truck task
             time from the same per-slot formulas; its tests check that lift-truck work per pallet matches the analytic model
             and that door waits match the queueing formula. <code>web/src/optimizer.js</code> searches designs through the
-            same model; its tests re-check every design it returns. Next on the roadmap: CAD/BIM export and importing real
-            order data — see the project README.
+            same model; its tests re-check every design it returns. <code>web/src/exporters.js</code> writes the IFC and DXF
+            files (tested by opening them in IfcOpenShell and FreeCAD), and <code>web/src/dataimport.js</code> turns movement and
+            inventory data into model inputs.
           </p>
         </div>
       </details>
@@ -319,6 +357,9 @@
 <script type="module" src="src/blueprint.js"></script>
 <script type="module" src="src/optimizer.js"></script>
 <script type="module" src="src/decisions.js"></script>
+<script type="module" src="src/exporters.js"></script>
+<script type="module" src="src/dataimport.js"></script>
+<script type="module" src="src/datapanel.js"></script>
 <script type="module" src="src/app.js"></script>
 </body>
 </html>

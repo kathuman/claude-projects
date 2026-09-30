@@ -24,7 +24,10 @@
   //   6.0.0  decision support: annual total cost of ownership (capital recovery, drivers, running
   //          cost), saved scenarios compared side by side, share links, JSON/CSV export, a ±10%
   //          tornado and parameter sweeps, and an optimiser for the cheapest design meeting targets
-  const APP_VERSION = "6.0.0";
+  //   7.0.0  CAD/BIM and data: IFC4 building model (validated with IfcOpenShell), DXF floor plan,
+  //          glTF 3D model and the FreeCAD command for the current design; import of real movement and
+  //          inventory CSVs to derive throughput, peak factor, operating hours, inventory and demand skew
+  const APP_VERSION = "7.0.0";
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
@@ -87,6 +90,7 @@
     };
     recompute();
     if (window.WH.initDecisions) window.WH.initDecisions();
+    if (window.WH.initDataPanel) window.WH.initDataPanel();
     window.addEventListener("resize", function () { viz.resize(); });
     viz.resize();
     requestAnimationFrame(tick);
@@ -643,7 +647,7 @@
 
   // test hook (headless browser tests)
   // the interface decisions.js works through
-  window.WH.app = { model: model, results: function () { return results; }, onRecompute: function (f) { recomputeHooks.push(f); }, version: APP_VERSION };
+  window.WH.app = { model: model, results: function () { return results; }, onRecompute: function (f) { recomputeHooks.push(f); }, version: APP_VERSION, viz: function () { return viz; } };
 
   window.warehouseDebug = { model: model, results: function () { return results; }, version: APP_VERSION, viz: function () { return viz; }, sim: function () { return simResult; } };
 })();

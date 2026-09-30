@@ -18,6 +18,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 
 const COLOR = {
   bg: 0x0a2f52,
@@ -627,6 +628,18 @@ Visualization.prototype._animFrame = function () {
   a.trailers.instanceMatrix.needsUpdate = true;
   if (this._onTick) this._onTick({ t: t, end: a.end, close: log.close, yard: yard.in.length + yard.out.length, busy: busy, lifts: log.lifts, done: t >= a.end });
   if (t >= a.end && !a.finished) { a.finished = true; }
+};
+
+// The live design as a binary glTF file (metres, Y up) — racks and pallets stay instanced
+// (EXT_mesh_gpu_instancing), so even big designs stay a manageable size.
+Visualization.prototype.exportGLB = function (done) {
+  const hidden = [];
+  // leave out the invisible pick boxes and the outline (lines have no surface material in glTF)
+  this.liveGroup.traverse((o) => { if (o.visible && ((o.isMesh && o.material && o.material.visible === false) || o.isLine)) { o.visible = false; hidden.push(o); } });
+  const restore = () => hidden.forEach((o) => { o.visible = true; });
+  try {
+    new GLTFExporter().parse(this.liveGroup, (glb) => { restore(); done(glb); }, (err) => { restore(); done(null, String(err)); }, { binary: true, onlyVisible: true });
+  } catch (e) { restore(); done(null, String(e)); }
 };
 
 Visualization.prototype.setMode = function (mode) {
