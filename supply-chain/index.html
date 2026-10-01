@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chokepoint</title>
+  <meta name="description" content="A 3D globe view of a global supply chain that flags trade lanes crossing active risk zones and proposes rerouting alternatives with time, cost and emissions trade-offs." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* -------------------------------------------------------------------
+       Identity: an operations console with admiralty-chart DNA.
+       Deep prussian ground, lit-parchment landmasses, a fine graticule;
+       one hazard-red for risk, one ochre for proposed reroutes.
+       Dark-first; the light theme is the paper-chart inversion.
+       ---------------------------------------------------------------- */
+    :root {
+      --bg: #e7ddc4;
+      --panel: #f1e9d5;
+      --panel-2: #f7f0df;
+      --ink: #292418;
+      --ink-2: #6a5f45;
+      --ink-3: #94886a;
+      --line: #cabd98;
+      --line-strong: #b3a37d;
+      --ocean: #d5ddd8;
+      --ocean-edge: #c2cdc6;
+      --land: #ddcca4;
+      --land-line: #a9966a;
+      --graticule: rgba(80, 100, 110, 0.22);
+      --route: #1f6f7d;
+      --route-dim: rgba(31, 111, 125, 0.28);
+      --risk: #b23a2c;
+      --alt: #a86a12;
+      --nominal: #3f7d54;
+      --accent: #1f6f7d;
+      --accent-ink: #f4f1e6;
+      --shadow: 0 1px 2px rgba(40, 34, 20, 0.06), 0 14px 40px -16px rgba(40, 34, 20, 0.24);
+      color-scheme: light;
+    }
+    :root[data-theme="dark"] {
+      --bg: #091219;
+      --panel: #0e1c25;
+      --panel-2: #122430;
+      --ink: #e9e1cd;
+      --ink-2: #94a2a9;
+      --ink-3: #5d6d76;
+      --line: #223038;
+      --line-strong: #33454f;
+      --ocean: #0b1e2b;
+      --ocean-edge: #0f2c3e;
+      --land: #b8a97f;
+      --land-line: #8a7a52;
+      --graticule: rgba(140, 175, 190, 0.15);
+      --route: #45c5cf;
+      --route-dim: rgba(69, 197, 207, 0.22);
+      --risk: #ef5b4f;
+      --alt: #f0a836;
+      --nominal: #5bc584;
+      --accent: #45c5cf;
+      --accent-ink: #06222a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 20px 48px -18px rgba(0, 0, 0, 0.65);
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #091219;
+        --panel: #0e1c25;
+        --panel-2: #122430;
+        --ink: #e9e1cd;
+        --ink-2: #94a2a9;
+        --ink-3: #5d6d76;
+        --line: #223038;
+        --line-strong: #33454f;
+        --ocean: #0b1e2b;
+        --ocean-edge: #0f2c3e;
+        --land: #b8a97f;
+        --land-line: #8a7a52;
+        --graticule: rgba(140, 175, 190, 0.15);
+        --route: #45c5cf;
+        --route-dim: rgba(69, 197, 207, 0.22);
+        --risk: #ef5b4f;
+        --alt: #f0a836;
+        --nominal: #5bc584;
+        --accent: #45c5cf;
+        --accent-ink: #06222a;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 20px 48px -18px rgba(0, 0, 0, 0.65);
+        color-scheme: dark;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--ink); }
+    body {
+      font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    h1, h2, h3 { font-family: "Spectral", Georgia, serif; font-weight: 600; margin: 0; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+
+    /* ---- masthead ---- */
+    header.bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .brand { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .brand h1 { font-size: 19px; letter-spacing: 0.02em; }
+    .brand .sub {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .bar-actions { display: flex; gap: 8px; align-items: center; }
+    .ghost {
+      appearance: none;
+      font: inherit;
+      font-size: 12px;
+      background: transparent;
+      border: 1px solid var(--line-strong);
+      color: var(--ink-2);
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+    .ghost:hover { color: var(--ink); border-color: var(--ink-2); }
+
+    /* ---- layout ---- */
+    .shell {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      min-height: 0;
+    }
+    @media (max-width: 940px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    .globe-wrap {
+      position: relative;
+      min-height: 0;
+      background:
+        radial-gradient(130% 100% at 50% 0%, var(--panel-2), var(--bg) 70%);
+      overflow: hidden;
+    }
+    @media (max-width: 940px) { .globe-wrap { aspect-ratio: 1 / 1; } }
+    #globe { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+    #globe:active { cursor: grabbing; }
+
+    .globe-hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10.5px;
+      color: var(--ink-2);
+    }
+    .hud-coords { position: absolute; left: 12px; bottom: 10px; letter-spacing: 0.05em; }
+    .hud-legend {
+      position: absolute; left: 12px; top: 12px;
+      display: flex; flex-direction: column; gap: 4px;
+      background: color-mix(in srgb, var(--panel) 82%, transparent);
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      border-radius: 3px;
+      backdrop-filter: blur(3px);
+    }
+    .hud-legend .row { display: flex; align-items: center; gap: 7px; }
+    .hud-legend .sw { width: 16px; height: 0; border-top: 2px solid currentColor; }
+    .hud-legend .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .hud-legend .sq { width: 8px; height: 8px; background: currentColor; transform: rotate(45deg); }
+
+    .globe-tip {
+      position: absolute;
+      pointer-events: none;
+      background: var(--panel);
+      border: 1px solid var(--line-strong);
+      border-radius: 3px;
+      padding: 7px 9px;
+      max-width: 220px;
+      box-shadow: var(--shadow);
+      font-size: 11.5px;
+      transform: translate(-50%, calc(-100% - 12px));
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+    .globe-tip.on { opacity: 1; }
+    .globe-tip b { font-family: "Spectral", serif; font-size: 12.5px; display: block; }
+    .globe-tip .k { color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; font-size: 9.5px; }
+
+    /* ---- rail ---- */
+    .rail {
+      border-left: 1px solid var(--line);
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    @media (max-width: 940px) { .rail { border-left: 0; border-top: 1px solid var(--line); } }
+
+    .summary {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-2);
+    }
+    .summary .headline { display: flex; align-items: baseline; gap: 8px; }
+    .summary .headline .n { font-family: "Spectral", serif; font-size: 26px; font-weight: 700; color: var(--risk); font-variant-numeric: tabular-nums; }
+    .summary .headline .t { font-size: 12.5px; color: var(--ink-2); }
+    .summary .metrics {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 10px;
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .summary .metrics div { border: 1px solid var(--line); padding: 6px 7px; border-radius: 2px; }
+    .summary .metrics .v { font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .summary .metrics .l { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-top: 1px; }
+    .summary .cta { display: flex; gap: 6px; margin-top: 10px; }
+    .btn {
+      appearance: none; font: inherit; font-size: 12px; font-weight: 600;
+      flex: 1; padding: 8px 8px; cursor: pointer; border-radius: 2px;
+      border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink);
+    }
+    .btn:hover:not(:disabled) { border-color: var(--ink-2); }
+    .btn.primary { background: var(--alt); border-color: var(--alt); color: #1c1403; }
+    .btn.primary:hover:not(:disabled) { filter: brightness(1.05); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .section-label {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3);
+      padding: 12px 14px 6px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 9px 14px;
+      border-top: 1px solid var(--line);
+      cursor: pointer;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      appearance: none;
+    }
+    .lane:hover { background: var(--panel-2); }
+    .lane[aria-current="true"] { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+    .lane .rail-stripe { width: 3px; height: 30px; border-radius: 2px; background: var(--nominal); justify-self: center; }
+    .lane.risk .rail-stripe { background: var(--risk); }
+    .lane.rerouted .rail-stripe { background: var(--alt); }
+    .lane .ends { font-size: 12.5px; font-weight: 600; }
+    .lane .meta { font-size: 10.5px; color: var(--ink-2); font-family: "IBM Plex Mono", monospace; }
+    .lane .stat {
+      font-family: "IBM Plex Mono", monospace; font-size: 9.5px; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 2px 6px; border-radius: 2px; border: 1px solid currentColor; white-space: nowrap;
+    }
+    .lane.risk .stat { color: var(--risk); }
+    .lane.rerouted .stat { color: var(--alt); }
+    .lane.nominal .stat { color: var(--nominal); }
+
+    /* ---- detail ---- */
+    .detail { border-top: 1px solid var(--line); padding: 12px 14px 16px; background: var(--panel-2); }
+    .detail h2 { font-size: 15px; }
+    .detail .dline { font-size: 11px; color: var(--ink-2); font-family: "IBM Plex Mono", monospace; margin-top: 2px; }
+    .detail .zones { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .zone-chip {
+      font-family: "IBM Plex Mono", monospace; font-size: 10px;
+      padding: 2px 7px; border-radius: 2px;
+      border: 1px solid var(--risk); color: var(--risk);
+    }
+    .routes { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .route-card {
+      border: 1px solid var(--line-strong);
+      border-radius: 3px;
+      padding: 9px 10px;
+      cursor: pointer;
+      background: var(--panel);
+    }
+    .route-card:hover { border-color: var(--ink-2); }
+    .route-card[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+    .route-card .rc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .route-card .rc-name { font-weight: 600; font-size: 12.5px; }
+    .route-card .rc-tag {
+      font-family: "IBM Plex Mono", monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 1px 5px; border: 1px solid currentColor; border-radius: 2px;
+    }
+    .route-card .rc-tag.clear { color: var(--nominal); }
+    .route-card .rc-tag.crosses { color: var(--risk); }
+    .route-card .rc-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 7px;
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .route-card .rc-grid .v { font-size: 12.5px; font-variant-numeric: tabular-nums; }
+    .route-card .rc-grid .v .d { font-size: 10px; }
+    .route-card .rc-grid .l { font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+    .up { color: var(--risk); }
+    .down { color: var(--nominal); }
+    .route-card .rc-note { font-size: 10.5px; color: var(--ink-2); margin-top: 6px; }
+
+    .empty-hint { padding: 14px; font-size: 12px; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+
+    footer.credits {
+      padding: 10px 18px;
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 10px;
+      color: var(--ink-3);
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    footer.credits a { color: var(--ink-2); }
+    footer.credits a:hover { color: var(--ink); }
+    footer.credits .consult { color: var(--ink); font-weight: 600; }
+    footer.credits .consult a { color: var(--accent); }
+
+    :where(button, [tabindex], input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <h1>Chokepoint</h1>
+      <span class="sub">supply-chain risk &middot; illustrative scenario</span>
+    </div>
+    <div class="bar-actions">
+      <button class="ghost" id="resetView" type="button">Reset view</button>
+      <button class="ghost" id="themeBtn" type="button">Theme</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <div class="globe-wrap">
+      <canvas id="globe"></canvas>
+      <div class="globe-hud">
+        <div class="hud-legend" id="legend"></div>
+        <div class="hud-coords mono" id="coords">-- , --</div>
+      </div>
+      <div class="globe-tip" id="tip"></div>
+    </div>
+
+    <aside class="rail">
+      <div class="summary">
+        <div class="headline">
+          <span class="n" id="sumAtRisk">0</span>
+          <span class="t" id="sumHeadline">lanes crossing an active risk zone</span>
+        </div>
+        <div class="metrics">
+          <div><div class="v" id="mLanes">0</div><div class="l">lanes modelled</div></div>
+          <div><div class="v" id="mDays">+0d</div><div class="l">added transit</div></div>
+          <div><div class="v" id="mCost">+0%</div><div class="l">added lane cost</div></div>
+        </div>
+        <div class="cta">
+          <button class="btn primary" id="rerouteAll" type="button">Reroute at-risk lanes</button>
+          <button class="btn" id="restoreAll" type="button" disabled>Restore primary</button>
+        </div>
+      </div>
+
+      <div class="section-label">Trade lanes</div>
+      <div id="laneList"></div>
+
+      <div id="detail"></div>
+
+      <div class="section-label">Risk zones</div>
+      <div id="zoneList"></div>
+    </aside>
+  </div>
+
+  <footer class="credits">
+    <span class="consult">Open to consulting engagements &mdash; <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span>Part of <a href="../">Claude Projects</a> &middot; built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></span>
+    <span>Coastlines: Natural Earth 110m (public domain) &middot; scenario data is illustrative, not operational intelligence</span>
+  </footer>
+
+  <script>
+  (function () {
+    "use strict";
+    var D2R = Math.PI / 180, R2D = 180 / Math.PI, EARTH_KM = 6371;
+
+    // =================================================================
+    // Scenario data  (illustrative — a consumer-electronics network)
+    // positions are [lat, lon]
+    // =================================================================
+    var NODES = [
+      { id: "SZX", name: "Shenzhen", kind: "factory", pos: [22.5, 114.1], role: "Final assembly", note: "Handsets & wearables" },
+      { id: "SGN", name: "Ho Chi Minh City", kind: "factory", pos: [10.8, 106.7], role: "Final assembly", note: "Laptops, accessories" },
+      { id: "HSZ", name: "Hsinchu", kind: "factory", pos: [24.8, 120.9], role: "Semiconductors", note: "Logic wafers, packaging" },
+      { id: "MAA", name: "Chennai", kind: "factory", pos: [13.1, 80.3], role: "Final assembly", note: "Handsets for EU/IN" },
+      { id: "SIN", name: "Singapore", kind: "hub", pos: [1.35, 103.8], role: "Transhipment hub", note: "Consolidation & feeder" },
+      { id: "DXB", name: "Jebel Ali", kind: "hub", pos: [25.0, 55.1], role: "Gulf DC", note: "MEA distribution, buffer stock" },
+      { id: "RTM", name: "Rotterdam", kind: "hub", pos: [51.95, 4.1], role: "Europe DC", note: "Gateway for EU markets" },
+      { id: "LAX", name: "Los Angeles", kind: "hub", pos: [33.7, -118.2], role: "US West DC", note: "Serves US & Canada west" },
+      { id: "SSZ", name: "Santos", kind: "market", pos: [-23.95, -46.3], role: "South America market", note: "Brazil & Southern Cone" },
+      { id: "FRA", name: "Frankfurt", kind: "market", pos: [50.1, 8.7], role: "Central EU market", note: "" },
+      // chokepoints / canals (kind: choke). `toll` marks a fee point.
+      { id: "ck_malacca", name: "Malacca Strait", kind: "choke", pos: [2.4, 100.9] },
+      { id: "ck_bab", name: "Bab-el-Mandeb", kind: "choke", pos: [12.6, 43.4] },
+      { id: "ck_suez", name: "Suez Canal", kind: "choke", pos: [30.4, 32.35], toll: "≈ $700k–$1M / large containership" },
+      { id: "ck_hormuz", name: "Strait of Hormuz", kind: "choke", pos: [26.6, 56.5] },
+      { id: "ck_gib", name: "Strait of Gibraltar", kind: "choke", pos: [35.95, -5.6] },
+      { id: "ck_goodhope", name: "Cape of Good Hope", kind: "choke", pos: [-34.6, 19.2] },
+      { id: "ck_taiwan", name: "Taiwan Strait", kind: "choke", pos: [24.5, 119.4] },
+      { id: "ck_panama", name: "Panama Canal", kind: "choke", pos: [9.1, -79.7], toll: "≈ $500k / large containership" }
+    ];
+    var NODE = {}; NODES.forEach(function (n) { NODE[n.id] = n; });
+
+    var ZONES = [
+      { id: "z_redsea", name: "Red Sea / Bab-el-Mandeb", center: [15.5, 41.5], radiusKm: 900, level: "high",
+        summary: "Attacks on merchant shipping have pushed most container lines off the Suez routing." },
+      { id: "z_hormuz", name: "Strait of Hormuz", center: [26.6, 56.4], radiusKm: 320, level: "elevated",
+        summary: "Periodic seizures and GPS interference; ~20% of global oil trade transits here." },
+      { id: "z_scs", name: "South China Sea", center: [13.5, 115.5], radiusKm: 1050, level: "elevated",
+        summary: "Contested waters and maritime-militia activity along key East Asia approaches." },
+      { id: "z_taiwan", name: "Taiwan Strait", center: [24.5, 119.6], radiusKm: 300, level: "elevated",
+        summary: "Military exercises intermittently close portions of the strait to commercial traffic." },
+      { id: "z_blacksea", name: "Black Sea approaches", center: [44.5, 33.5], radiusKm: 650, level: "elevated",
+        summary: "War-risk insurance surcharges and mining affect northern Black Sea routes." }
+    ];
+    var ZONE = {}; ZONES.forEach(function (z) { ZONE[z.id] = z; });
+
+    // helper for building paths from named points
+    function P(id) { return NODE[id].pos; }
+    // sea waypoints [lat, lon]
+    var W = {
+      scs_n: [26, 122], scs_s: [6, 111], luzon: [20.5, 121.5],
+      malN: [4.5, 98], sri: [5.2, 80.5], arab: [13, 62], arabN: [16, 66],
+      redM: [20, 38], eMed: [33.5, 26], bisc: [45, -8.5],
+      io_s: [-9, 86], io_sw: [-31, 66], cape_app: [-35, 40], cape_w: [-33, 8],
+      atl_gulf: [-16, 2], atl_eq: [4, -13], atl_n: [26, -18],
+      pac_w: [30, 140], pac_m: [42, 175], pac_e: [46, -158],
+      tw_e1: [22, 123], tw_e2: [26, 128],
+      gib_w: [35.9, -9.5], atl_s1: [12, -22], atl_s2: [-6, -25], atl_s3: [-16, -30],
+      hormuz_out: [24.5, 58], gulf_m: [26, 52]
+    };
+
+    var LANES = [
+      {
+        id: "L1", from: "SZX", to: "RTM", mode: "sea", cargo: "Finished devices → EU",
+        routes: [
+          { id: "L1a", name: "Suez transit", kind: "primary", days: 32, cost: 100, co2: 100,
+            note: "Standard Far East–Europe headhaul via the Canal.",
+            path: [P("SZX"), W.scs_s, P("ck_malacca"), W.sri, W.arab, P("ck_bab"), W.redM, P("ck_suez"), W.eMed, P("ck_gib"), W.bisc, P("RTM")] },
+          { id: "L1b", name: "Cape of Good Hope", kind: "alt", days: 43, cost: 128, co2: 141,
+            note: "≈ +3,400 nm, no canal toll, but higher bunker + charter cost.",
+            path: [P("SZX"), W.scs_s, P("ck_malacca"), W.io_s, W.io_sw, W.cape_app, P("ck_goodhope"), W.cape_w, W.atl_gulf, W.atl_eq, W.atl_n, P("ck_gib"), W.bisc, P("RTM")] },
+          { id: "L1c", name: "Sea–air via Jebel Ali", kind: "alt", days: 17, cost: 380, co2: 610,
+            note: "Ocean to the Gulf, airfreight to Europe — priority SKUs only.",
+            path: [P("SZX"), W.scs_s, P("ck_malacca"), W.sri, W.arab, P("DXB"), W.gulf_m, [30, 40], [40, 22], P("RTM")], airFrom: 4 }
+        ]
+      },
+      {
+        id: "L2", from: "SGN", to: "RTM", mode: "sea", cargo: "Laptops → EU",
+        routes: [
+          { id: "L2a", name: "Suez transit", kind: "primary", days: 30, cost: 100, co2: 100,
+            note: "Vietnam–Europe via Singapore feeder then the Canal.",
+            path: [P("SGN"), [4, 105], P("ck_malacca"), W.sri, W.arab, P("ck_bab"), W.redM, P("ck_suez"), W.eMed, P("ck_gib"), W.bisc, P("RTM")] },
+          { id: "L2b", name: "Cape of Good Hope", kind: "alt", days: 41, cost: 126, co2: 138,
+            note: "Adds ~11 days; used by most lines while the Red Sea stays closed.",
+            path: [P("SGN"), [4, 105], P("ck_malacca"), W.io_s, W.io_sw, W.cape_app, P("ck_goodhope"), W.cape_w, W.atl_gulf, W.atl_eq, W.atl_n, P("ck_gib"), W.bisc, P("RTM")] }
+        ]
+      },
+      {
+        id: "L3", from: "SIN", to: "RTM", mode: "sea", cargo: "Consolidated freight → EU",
+        routes: [
+          { id: "L3a", name: "Suez transit", kind: "primary", days: 27, cost: 100, co2: 100,
+            note: "Hub-to-gateway backbone lane.",
+            path: [P("SIN"), [5, 92], W.sri, W.arab, P("ck_bab"), W.redM, P("ck_suez"), W.eMed, P("ck_gib"), W.bisc, P("RTM")] },
+          { id: "L3b", name: "Cape of Good Hope", kind: "alt", days: 38, cost: 125, co2: 137,
+            note: "+11 days, +€ per TEU; no exposure to the Red Sea corridor.",
+            path: [P("SIN"), [-4, 82], W.io_sw, W.cape_app, P("ck_goodhope"), W.cape_w, W.atl_gulf, W.atl_eq, W.atl_n, P("ck_gib"), W.bisc, P("RTM")] }
+        ]
+      },
+      {
+        id: "L4", from: "HSZ", to: "LAX", mode: "sea", cargo: "Semiconductors → US",
+        routes: [
+          { id: "L4a", name: "Taiwan Strait", kind: "primary", days: 15, cost: 100, co2: 100,
+            note: "Coastal transit hugging the mainland side of the strait.",
+            path: [P("HSZ"), P("ck_taiwan"), [27, 122], W.pac_w, W.pac_m, W.pac_e, P("LAX")] },
+          { id: "L4b", name: "East-of-Taiwan routing", kind: "alt", days: 16.5, cost: 106, co2: 107,
+            note: "Rounds the north-east tip, keeping 60+ nm off the strait centreline.",
+            path: [P("HSZ"), [26, 122.4], W.tw_e2, [30, 134], W.pac_w, W.pac_m, W.pac_e, P("LAX")] }
+        ]
+      },
+      {
+        id: "L5", from: "MAA", to: "RTM", mode: "sea", cargo: "Handsets → EU (via Gulf DC)",
+        routes: [
+          { id: "L5a", name: "Jebel Ali + Suez", kind: "primary", days: 33, cost: 100, co2: 100,
+            note: "Consolidates at the Gulf DC, then the Canal to Europe.",
+            path: [P("MAA"), W.arabN, W.hormuz_out, P("DXB"), W.gulf_m, [14, 52], P("ck_bab"), W.redM, P("ck_suez"), W.eMed, P("ck_gib"), W.bisc, P("RTM")] },
+          { id: "L5b", name: "Direct Cape routing", kind: "alt", days: 44, cost: 121, co2: 134,
+            note: "Skips the Jebel Ali consolidation; needs a larger EU safety stock.",
+            path: [P("MAA"), [6, 74], W.io_sw, W.cape_app, P("ck_goodhope"), W.cape_w, W.atl_gulf, W.atl_eq, W.atl_n, P("ck_gib"), W.bisc, P("RTM")] }
+        ]
+      },
+      {
+        id: "L6", from: "SZX", to: "LAX", mode: "sea", cargo: "Finished devices → US",
+        routes: [
+          { id: "L6a", name: "North Pacific great circle", kind: "primary", days: 15, cost: 100, co2: 100,
+            note: "Open-ocean Kuroshio routing; no chokepoint exposure.",
+            path: [P("SZX"), W.scs_n, [30, 128], W.pac_w, W.pac_m, W.pac_e, P("LAX")] }
+        ]
+      },
+      {
+        id: "L7", from: "RTM", to: "SSZ", mode: "sea", cargo: "EU exports → South America",
+        routes: [
+          { id: "L7a", name: "South Atlantic", kind: "primary", days: 18, cost: 100, co2: 100,
+            note: "Straightforward North–South Atlantic run.",
+            path: [P("RTM"), W.bisc, W.gib_w, W.atl_s1, W.atl_s2, W.atl_s3, P("SSZ")] }
+        ]
+      }
+    ];
+    var LANE = {}; LANES.forEach(function (l) { LANE[l.id] = l; });
+
+    // =================================================================
+    // Geo maths
+    // =================================================================
+    function toVec(lat, lon) {
+      var la = lat * D2R, lo = lon * D2R;
+      return [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)];
+    }
+    function toLatLon(v) {
+      return [Math.asin(Math.max(-1, Math.min(1, v[2]))) * R2D, Math.atan2(v[1], v[0]) * R2D];
+    }
+    function angBetween(a, b) {
+      var d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+      return Math.acos(Math.max(-1, Math.min(1, d)));
+    }
+    function slerp(a, b, t) {
+      var o = angBetween(a, b);
+      if (o < 1e-6) return a.slice();
+      var s = Math.sin(o), f1 = Math.sin((1 - t) * o) / s, f2 = Math.sin(t * o) / s;
+      return [a[0] * f1 + b[0] * f2, a[1] * f1 + b[1] * f2, a[2] * f1 + b[2] * f2];
+    }
+    // densify a path ([lat,lon]...) into great-circle vector samples
+    function arcSamples(path) {
+      var out = [];
+      for (var i = 0; i < path.length - 1; i++) {
+        var a = toVec(path[i][0], path[i][1]), b = toVec(path[i + 1][0], path[i + 1][1]);
+        var seg = Math.max(6, Math.round(angBetween(a, b) / (4 * D2R)));
+        for (var s = 0; s < seg; s++) out.push(slerp(a, b, s / seg));
+      }
+      out.push(toVec(path[path.length - 1][0], path[path.length - 1][1]));
+      return out;
+    }
+    // min angular distance (rad) from a set of vector samples to a lat/lon centre
+    function minAngTo(samples, centreVec) {
+      var m = Infinity;
+      for (var i = 0; i < samples.length; i++) { var a = angBetween(samples[i], centreVec); if (a < m) m = a; }
+      return m;
+    }
+
+    // which zones does a route cross?
+    function routeZones(route) {
+      if (route._zones) return route._zones;
+      var samples = route._samples || (route._samples = arcSamples(route.path));
+      var hit = [];
+      ZONES.forEach(function (z) {
+        var cv = toVec(z.center[0], z.center[1]);
+        var rr = z.radiusKm / EARTH_KM;
+        if (minAngTo(samples, cv) < rr) hit.push(z.id);
+      });
+      route._zones = hit;
+      return hit;
+    }
+
+    // =================================================================
+    // State
+    // =================================================================
+    var choice = {};                       // laneId -> routeId
+    LANES.forEach(function (l) { choice[l.id] = l.routes[0].id; });
+    var selectedLane = null, selectedZone = null, hoverNode = null;
+    var view = { yaw: -35, pitch: 18, zoom: 1 };  // yaw = centre longitude, pitch = centre latitude
+    var idleSpin = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function activeRoute(laneId) {
+      var l = LANE[laneId];
+      return l.routes.filter(function (r) { return r.id === choice[laneId]; })[0] || l.routes[0];
+    }
+    function laneStatus(laneId) {
+      var r = activeRoute(laneId);
+      var z = routeZones(r);
+      if (z.length) return "risk";
+      return r.kind === "primary" ? "nominal" : "rerouted";
+    }
+    function bestClearAlt(lane) {
+      var clear = lane.routes.filter(function (r) { return routeZones(r).length === 0; });
+      if (!clear.length) return null;
+      clear.sort(function (a, b) { return a.days - b.days || a.cost - b.cost; });
+      return clear[0];
+    }
+
+    // =================================================================
+    // Canvas globe
+    // =================================================================
+    var canvas = document.getElementById("globe");
+    var ctx = canvas.getContext("2d");
+    var LAND = { rings: [] };
+    var css = {};
+    function readColors() {
+      var s = getComputedStyle(document.documentElement);
+      ["--ocean", "--ocean-edge", "--land", "--land-line", "--graticule", "--route", "--route-dim",
+        "--risk", "--alt", "--nominal", "--ink", "--ink-2", "--panel", "--line-strong"].forEach(function (k) {
+        css[k] = s.getPropertyValue(k).trim();
+      });
+    }
+
+    var W_px = 0, H_px = 0, cx = 0, cy = 0, Rg = 0, dpr = 1;
+    function resize() {
+      var wrap = canvas.parentElement;
+      W_px = wrap.clientWidth; H_px = wrap.clientHeight;
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = W_px * dpr; canvas.height = H_px * dpr;
+      canvas.style.width = W_px + "px"; canvas.style.height = H_px + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cx = W_px / 2; cy = H_px / 2;
+      Rg = Math.min(W_px, H_px) / 2 * 0.9 * view.zoom;
+    }
+
+    // project [lat,lon] -> {x,y,vis,depth}
+    var cosP = 1, sinP = 0, yawR = 0;
+    function refreshRot() { cosP = Math.cos(view.pitch * D2R); sinP = Math.sin(view.pitch * D2R); yawR = view.yaw * D2R; }
+    function projVec(v) {
+      // rotate by -yaw about z
+      var cy2 = Math.cos(yawR), sy2 = Math.sin(yawR);
+      var x = v[0] * cy2 + v[1] * sy2;
+      var y = -v[0] * sy2 + v[1] * cy2;
+      var z = v[2];
+      // tilt by pitch about y
+      var x2 = x * cosP + z * sinP;
+      var z2 = -x * sinP + z * cosP;
+      return { x: cx + Rg * y, y: cy - Rg * z2, vis: x2 > 0.0, depth: x2 };
+    }
+    function proj(lat, lon) { return projVec(toVec(lat, lon)); }
+    function limbPoint(p) {
+      var dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1;
+      return { x: cx + dx / d * Rg, y: cy + dy / d * Rg, vis: false };
+    }
+    function unproject(sx, sy) {
+      var y2 = (sx - cx) / Rg, z2 = (cy - sy) / Rg;
+      var q = y2 * y2 + z2 * z2;
+      if (q > 1) return null;
+      var x2 = Math.sqrt(1 - q);
+      var x = x2 * cosP - z2 * sinP;
+      var z = x2 * sinP + z2 * cosP;
+      var y = y2;
+      var cy2 = Math.cos(yawR), sy2 = Math.sin(yawR);
+      var vx = x * cy2 - y * sy2, vy = x * sy2 + y * cy2, vz = z;
+      return toLatLon([vx, vy, vz]);
+    }
+
+    function strokePolyline(pts, opts) {
+      ctx.beginPath();
+      var started = false;
+      for (var i = 0; i < pts.length; i++) {
+        var p = pts[i];
+        if (opts && opts.clampLimb && !p.vis) p = limbPoint(p);
+        else if (!p.vis) { started = false; continue; }
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; } else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+
+    function drawOcean() {
+      var g = ctx.createRadialGradient(cx - Rg * 0.3, cy - Rg * 0.35, Rg * 0.2, cx, cy, Rg);
+      g.addColorStop(0, css["--ocean-edge"]);
+      g.addColorStop(1, css["--ocean"]);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, Rg, 0, 7); ctx.fill();
+      ctx.strokeStyle = css["--line-strong"]; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(cx, cy, Rg, 0, 7); ctx.stroke();
+    }
+    function drawGraticule() {
+      ctx.strokeStyle = css["--graticule"]; ctx.lineWidth = 1;
+      for (var lon = -180; lon < 180; lon += 20) {
+        var pts = [];
+        for (var lat = -80; lat <= 80; lat += 4) pts.push(proj(lat, lon));
+        strokePolyline(pts);
+      }
+      for (var la = -60; la <= 60; la += 20) {
+        var pp = [];
+        for (var lo = -180; lo <= 180; lo += 4) pp.push(proj(la, lo));
+        strokePolyline(pp);
+      }
+    }
+    function drawLand() {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, Rg, 0, 7); ctx.clip();
+      ctx.fillStyle = css["--land"];
+      ctx.strokeStyle = css["--land-line"];
+      ctx.lineWidth = 0.8;
+      LAND.rings.forEach(function (ring) {
+        // ring is [lon,lat]
+        var anyVis = false, pts = [];
+        for (var i = 0; i < ring.length; i++) {
+          var p = proj(ring[i][1], ring[i][0]);
+          if (p.vis) anyVis = true;
+          pts.push(p);
+        }
+        if (!anyVis) return;
+        ctx.beginPath();
+        for (var j = 0; j < pts.length; j++) {
+          var q = pts[j].vis ? pts[j] : limbPoint(pts[j]);
+          if (j === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    function destPoint(centreVec, angRad, bearingRad) {
+      // centre lat/lon
+      var ll = toLatLon(centreVec), la1 = ll[0] * D2R, lo1 = ll[1] * D2R;
+      var la2 = Math.asin(Math.sin(la1) * Math.cos(angRad) + Math.cos(la1) * Math.sin(angRad) * Math.cos(bearingRad));
+      var lo2 = lo1 + Math.atan2(Math.sin(bearingRad) * Math.sin(angRad) * Math.cos(la1),
+        Math.cos(angRad) - Math.sin(la1) * Math.sin(la2));
+      return [la2 * R2D, lo2 * R2D];
+    }
+    function drawZones(t) {
+      ZONES.forEach(function (z) {
+        var cv = toVec(z.center[0], z.center[1]);
+        var ang = z.radiusKm / EARTH_KM;
+        var ring = [];
+        for (var b = 0; b <= 360; b += 8) {
+          var d = destPoint(cv, ang, b * D2R);
+          ring.push(proj(d[0], d[1]));
+        }
+        var centreP = projVec(cv);
+        var sel = selectedZone === z.id;
+        var pulse = 0.5 + 0.5 * Math.sin(t / 620 + z.center[1]);
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, Rg, 0, 7); ctx.clip();
+        ctx.beginPath();
+        var started = false;
+        for (var i = 0; i < ring.length; i++) {
+          var p = ring[i].vis ? ring[i] : limbPoint(ring[i]);
+          if (!started) { ctx.moveTo(p.x, p.y); started = true; } else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = hexA(css["--risk"], centreP.vis ? (sel ? 0.26 : 0.13 + 0.05 * pulse) : 0.05);
+        ctx.fill();
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = sel ? 2 : 1.2;
+        ctx.strokeStyle = hexA(css["--risk"], centreP.vis ? (0.6 + 0.35 * pulse) : 0.25);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        if (centreP.vis) {
+          ctx.fillStyle = css["--risk"];
+          ctx.font = '600 10px "IBM Plex Mono", monospace';
+          ctx.textAlign = "center";
+          ctx.fillText("▲ " + z.name.toUpperCase(), centreP.x, centreP.y - (sel ? 8 : 4));
+        }
+      });
+    }
+
+    function drawLanes(t) {
+      var anySel = !!selectedLane;
+      LANES.forEach(function (lane) {
+        var r = activeRoute(lane.id);
+        var samples = r._samples || (r._samples = arcSamples(r.path));
+        var pts = samples.map(projVec);
+        var status = laneStatus(lane.id);
+        var isSel = selectedLane === lane.id;
+        var col = status === "risk" ? css["--risk"] : status === "rerouted" ? css["--alt"] : css["--route"];
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, Rg, 0, 7); ctx.clip();
+        ctx.lineCap = "round";
+        ctx.lineWidth = isSel ? 2.6 : anySel ? 1 : 1.6;
+        ctx.strokeStyle = anySel && !isSel ? css["--route-dim"] : col;
+        if (isSel && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          ctx.setLineDash([2, 6]);
+          ctx.lineDashOffset = -(t / 24) % 8;
+        }
+        strokePolyline(pts, { clampLimb: false });
+        ctx.setLineDash([]);
+        ctx.restore();
+      });
+    }
+
+    function markerPath(kind) { return kind === "factory" ? "sq" : kind === "hub" ? "dot" : kind === "market" ? "tri" : "tick"; }
+    function drawNodes() {
+      // chokepoints first (subtle)
+      NODES.forEach(function (n) {
+        if (n.kind !== "choke") return;
+        var p = proj(n.pos[0], n.pos[1]);
+        if (!p.vis) return;
+        ctx.strokeStyle = css["--ink-2"]; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(p.x - 3, p.y - 3); ctx.lineTo(p.x + 3, p.y + 3);
+        ctx.moveTo(p.x + 3, p.y - 3); ctx.lineTo(p.x - 3, p.y + 3); ctx.stroke();
+      });
+      NODES.forEach(function (n) {
+        if (n.kind === "choke") return;
+        var p = proj(n.pos[0], n.pos[1]);
+        if (!p.vis) return;
+        var involved = selectedLane && (LANE[selectedLane].from === n.id || LANE[selectedLane].to === n.id);
+        var col = css["--ink"];
+        ctx.fillStyle = col; ctx.strokeStyle = css["--panel"]; ctx.lineWidth = 1.5;
+        var s = involved ? 5 : 3.6;
+        ctx.beginPath();
+        if (n.kind === "factory") { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.PI / 4); ctx.rect(-s, -s, 2 * s, 2 * s); ctx.restore(); }
+        else if (n.kind === "hub") { ctx.arc(p.x, p.y, s, 0, 7); }
+        else { ctx.moveTo(p.x, p.y - s); ctx.lineTo(p.x + s, p.y + s); ctx.lineTo(p.x - s, p.y + s); ctx.closePath(); }
+        ctx.fill(); ctx.stroke();
+        if (involved || hoverNode === n.id) {
+          ctx.fillStyle = css["--ink"];
+          ctx.font = '600 11px "Spectral", serif';
+          ctx.textAlign = "left";
+          var tx = p.x + 9, ty = p.y + 3;
+          var w = ctx.measureText(n.name).width;
+          ctx.fillStyle = hexA(css["--panel"], 0.85);
+          ctx.fillRect(tx - 3, ty - 10, w + 6, 14);
+          ctx.fillStyle = css["--ink"];
+          ctx.fillText(n.name, tx, ty);
+        }
+      });
+    }
+
+    function drawCrosshair() {
+      ctx.strokeStyle = hexA(css["--ink-2"], 0.4); ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx - 9, cy); ctx.lineTo(cx - 3, cy); ctx.moveTo(cx + 3, cy); ctx.lineTo(cx + 9, cy);
+      ctx.moveTo(cx, cy - 9); ctx.lineTo(cx, cy - 3); ctx.moveTo(cx, cy + 3); ctx.lineTo(cx, cy + 9);
+      ctx.stroke();
+    }
+
+    function hexA(c, a) {
+      c = c.trim();
+      if (c[0] === "#") {
+        var n = c.length === 4
+          ? [parseInt(c[1] + c[1], 16), parseInt(c[2] + c[2], 16), parseInt(c[3] + c[3], 16)]
+          : [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+        return "rgba(" + n[0] + "," + n[1] + "," + n[2] + "," + a + ")";
+      }
+      if (c.indexOf("rgb") === 0) return c.replace(/rgba?\(([^)]+)\)/, function (_, inner) {
+        var parts = inner.split(",").slice(0, 3).map(function (x) { return x.trim(); });
+        return "rgba(" + parts.join(",") + "," + a + ")";
+      });
+      return c;
+    }
+
+    var raf = 0;
+    function frame(t) {
+      if (idleSpin && !dragging && !selectedLane && !selectedZone) view.yaw += 0.05;
+      refreshRot();
+      ctx.clearRect(0, 0, W_px, H_px);
+      drawOcean();
+      drawGraticule();
+      drawLand();
+      drawZones(t);
+      drawLanes(t);
+      drawNodes();
+      drawCrosshair();
+      raf = requestAnimationFrame(frame);
+    }
+
+    // =================================================================
+    // Interaction
+    // =================================================================
+    var dragging = false, moved = false, lastX = 0, lastY = 0;
+    canvas.addEventListener("pointerdown", function (e) {
+      dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", function (e) {
+      var rect = canvas.getBoundingClientRect();
+      var ll = unproject(e.clientX - rect.left, e.clientY - rect.top);
+      document.getElementById("coords").textContent = ll
+        ? fmtLat(ll[0]) + "  " + fmtLon(ll[1]) : "-- , --";
+      if (dragging) {
+        var dx = e.clientX - lastX, dy = e.clientY - lastY;
+        if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+        view.yaw -= dx * 0.25 / view.zoom;
+        view.pitch = Math.max(-89, Math.min(89, view.pitch + dy * 0.25 / view.zoom));
+        lastX = e.clientX; lastY = e.clientY;
+        hideTip();
+      } else {
+        hoverTest(e.clientX - rect.left, e.clientY - rect.top);
+      }
+    });
+    canvas.addEventListener("pointerup", function (e) {
+      dragging = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (x) {}
+      if (!moved) {
+        var rect = canvas.getBoundingClientRect();
+        clickTest(e.clientX - rect.left, e.clientY - rect.top);
+      }
+    });
+    canvas.addEventListener("wheel", function (e) {
+      e.preventDefault();
+      view.zoom = Math.max(0.8, Math.min(3.6, view.zoom * (e.deltaY > 0 ? 0.9 : 1.111)));
+      resize();
+    }, { passive: false });
+
+    function nearestNode(sx, sy, maxPx) {
+      var best = null, bd = maxPx;
+      NODES.forEach(function (n) {
+        if (n.kind === "choke") return;
+        var p = proj(n.pos[0], n.pos[1]);
+        if (!p.vis) return;
+        var d = Math.hypot(p.x - sx, p.y - sy);
+        if (d < bd) { bd = d; best = n; }
+      });
+      return best;
+    }
+    function hoverTest(sx, sy) {
+      var n = nearestNode(sx, sy, 16);
+      hoverNode = n ? n.id : null;
+      if (n) showTip(sx, sy, "<span class='k'>" + n.role + "</span><b>" + n.name + "</b>" + (n.note ? n.note : ""));
+      else hideTip();
+    }
+    function clickTest(sx, sy) {
+      var n = nearestNode(sx, sy, 16);
+      if (n) { focusLatLon(n.pos[0], n.pos[1]); return; }
+      // lane hit
+      var hitLane = null, hbd = 7;
+      LANES.forEach(function (lane) {
+        var r = activeRoute(lane.id);
+        var pts = (r._samples || (r._samples = arcSamples(r.path))).map(projVec);
+        for (var i = 0; i < pts.length; i++) {
+          if (!pts[i].vis) continue;
+          var d = Math.hypot(pts[i].x - sx, pts[i].y - sy);
+          if (d < hbd) { hbd = d; hitLane = lane.id; }
+        }
+      });
+      if (hitLane) { selectLane(hitLane); return; }
+      // zone hit
+      var ll = unproject(sx, sy);
+      if (ll) {
+        var cvClick = toVec(ll[0], ll[1]);
+        var zb = null, zbd = Infinity;
+        ZONES.forEach(function (z) {
+          var a = angBetween(cvClick, toVec(z.center[0], z.center[1]));
+          if (a < z.radiusKm / EARTH_KM * 1.15 && a < zbd) { zbd = a; zb = z.id; }
+        });
+        if (zb) { selectZone(zb); return; }
+      }
+      selectLane(null); selectZone(null);
+    }
+
+    var tip = document.getElementById("tip");
+    function showTip(x, y, html) { tip.innerHTML = html; tip.style.left = x + "px"; tip.style.top = y + "px"; tip.classList.add("on"); }
+    function hideTip() { tip.classList.remove("on"); }
+
+    function fmtLat(v) { return Math.abs(v).toFixed(1) + "°" + (v >= 0 ? "N" : "S"); }
+    function fmtLon(v) { v = ((v + 540) % 360) - 180; return Math.abs(v).toFixed(1) + "°" + (v >= 0 ? "E" : "W"); }
+
+    function focusLatLon(lat, lon) {
+      animateView(lon, Math.max(-70, Math.min(70, lat)), view.zoom);
+    }
+    var viewAnim = null;
+    function animateView(yaw, pitch, zoom) {
+      var from = { yaw: view.yaw, pitch: view.pitch, zoom: view.zoom };
+      // shortest yaw path
+      var dyaw = ((yaw - from.yaw + 540) % 360) - 180;
+      var t0 = performance.now();
+      cancelAnimationFrame(viewAnim);
+      (function step(now) {
+        var k = Math.min(1, (now - t0) / 520);
+        var e = 1 - Math.pow(1 - k, 3);
+        view.yaw = from.yaw + dyaw * e;
+        view.pitch = from.pitch + (pitch - from.pitch) * e;
+        view.zoom = from.zoom + (zoom - from.zoom) * e;
+        resize();
+        if (k < 1) viewAnim = requestAnimationFrame(step);
+      })(t0);
+    }
+
+    // =================================================================
+    // UI — rail
+    // =================================================================
+    var laneList = document.getElementById("laneList");
+    var zoneList = document.getElementById("zoneList");
+    var detail = document.getElementById("detail");
+
+    function fmtDelta(cur, base, unit, invert) {
+      var d = cur - base;
+      if (Math.abs(d) < 0.05) return '<span class="l">' + unit + '</span>';
+      var cls = (d > 0) ? (invert ? "down" : "up") : (invert ? "up" : "down");
+      return '<span class="' + cls + ' d">' + (d > 0 ? "+" : "") + (unit === "d" ? d.toFixed(1) + "d" : Math.round(d) + "%") + "</span>";
+    }
+
+    function buildLaneList() {
+      laneList.innerHTML = "";
+      LANES.forEach(function (lane) {
+        var st = laneStatus(lane.id);
+        var r = activeRoute(lane.id);
+        var btn = document.createElement("button");
+        btn.className = "lane " + st;
+        btn.type = "button";
+        if (selectedLane === lane.id) btn.setAttribute("aria-current", "true");
+        var statusText = st === "risk" ? "at risk" : st === "rerouted" ? "rerouted" : "nominal";
+        btn.innerHTML =
+          '<span class="rail-stripe"></span>' +
+          '<span><span class="ends">' + NODE[lane.from].name + " → " + NODE[lane.to].name + "</span><br>" +
+          '<span class="meta">' + lane.mode + " · " + r.name + " · " + r.days.toFixed(0) + "d</span></span>" +
+          '<span class="stat">' + statusText + "</span>";
+        btn.addEventListener("click", function () { selectLane(lane.id); });
+        laneList.appendChild(btn);
+      });
+    }
+
+    function buildZoneList() {
+      zoneList.innerHTML = "";
+      ZONES.forEach(function (z) {
+        var affected = LANES.filter(function (l) { return routeZones(activeRoute(l.id)).indexOf(z.id) >= 0; }).length;
+        var btn = document.createElement("button");
+        btn.className = "lane " + (affected ? "risk" : "nominal");
+        btn.type = "button";
+        if (selectedZone === z.id) btn.setAttribute("aria-current", "true");
+        btn.innerHTML =
+          '<span class="rail-stripe"></span>' +
+          '<span><span class="ends">' + z.name + "</span><br>" +
+          '<span class="meta">' + z.level + " · " + z.radiusKm + " km radius</span></span>" +
+          '<span class="stat">' + (affected ? affected + " lane" + (affected > 1 ? "s" : "") : "clear") + "</span>";
+        btn.addEventListener("click", function () { selectZone(z.id); });
+        zoneList.appendChild(btn);
+      });
+    }
+
+    function buildDetail() {
+      if (selectedZone) { buildZoneDetail(); return; }
+      if (!selectedLane) {
+        detail.innerHTML = '<div class="empty-hint">Select a lane or a risk zone — on the globe or in the lists — to see routing options.</div>';
+        return;
+      }
+      var lane = LANE[selectedLane];
+      var base = lane.routes[0];
+      var cur = activeRoute(lane.id);
+      var curZones = routeZones(cur);
+      var h = '<h2>' + NODE[lane.from].name + " → " + NODE[lane.to].name + "</h2>";
+      h += '<div class="dline">' + lane.cargo + " · " + lane.mode + " · base transit " + base.days.toFixed(0) + "d</div>";
+      if (curZones.length) {
+        h += '<div class="zones">' + curZones.map(function (id) { return '<span class="zone-chip">crosses ' + ZONE[id].name + "</span>"; }).join("") + "</div>";
+      }
+      h += '<div class="routes">';
+      lane.routes.forEach(function (r) {
+        var z = routeZones(r);
+        var sel = choice[lane.id] === r.id;
+        var tolls = tollsOn(r);
+        h += '<div class="route-card" role="button" tabindex="0" data-route="' + r.id + '"' + (sel ? ' aria-current="true"' : "") + ">";
+        h += '<div class="rc-top"><span class="rc-name">' + r.name + (r.kind === "primary" ? "  ·  primary" : "") + "</span>";
+        h += '<span class="rc-tag ' + (z.length ? "crosses" : "clear") + '">' + (z.length ? "crosses " + z.length : "clear") + "</span></div>";
+        h += '<div class="rc-grid">';
+        h += '<div><div class="v">' + r.days.toFixed(1) + "d " + fmtDelta(r.days, base.days, "d") + '</div><div class="l">transit</div></div>';
+        h += '<div><div class="v">' + r.cost + " " + fmtDelta(r.cost, base.cost, "%") + '</div><div class="l">cost index</div></div>';
+        h += '<div><div class="v">' + r.co2 + " " + fmtDelta(r.co2, base.co2, "%") + '</div><div class="l">CO₂ index</div></div>';
+        h += "</div>";
+        h += '<div class="rc-note">' + r.note + (tolls ? " · toll: " + tolls : "") + "</div>";
+        h += "</div>";
+      });
+      h += "</div>";
+      detail.innerHTML = h;
+      detail.querySelectorAll(".route-card").forEach(function (el) {
+        var pick = function () { setChoice(selectedLane, el.dataset.route); };
+        el.addEventListener("click", pick);
+        el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+      });
+    }
+
+    function buildZoneDetail() {
+      var z = ZONE[selectedZone];
+      var affected = LANES.filter(function (l) { return routeZones(activeRoute(l.id)).indexOf(z.id) >= 0; });
+      var h = '<h2>' + z.name + "</h2>";
+      h += '<div class="dline">' + z.level + " risk · " + z.radiusKm + " km radius · " + affected.length + " lane" + (affected.length === 1 ? "" : "s") + " exposed</div>";
+      h += '<div class="rc-note" style="margin-top:8px">' + z.summary + "</div>";
+      if (affected.length) {
+        h += '<div class="routes">';
+        affected.forEach(function (l) {
+          var alt = bestClearAlt(l);
+          h += '<div class="route-card"><div class="rc-top"><span class="rc-name">' + NODE[l.from].name + " → " + NODE[l.to].name + '</span></div>';
+          h += '<div class="rc-note">' + (alt
+            ? "clear alternative: <b>" + alt.name + "</b> (+" + (alt.days - l.routes[0].days).toFixed(1) + "d, +" + (alt.cost - l.routes[0].cost) + "% cost)"
+            : "no fully clear alternative in model") + "</div></div>";
+        });
+        h += "</div>";
+        h += '<div class="cta" style="margin-top:10px"><button class="btn primary" id="zoneReroute" type="button">Reroute these ' + affected.length + " lane" + (affected.length === 1 ? "" : "s") + "</button></div>";
+      }
+      detail.innerHTML = h;
+      var zr = document.getElementById("zoneReroute");
+      if (zr) zr.addEventListener("click", function () {
+        affected.forEach(function (l) { var a = bestClearAlt(l); if (a) choice[l.id] = a.id; });
+        afterChange();
+      });
+    }
+
+    function tollsOn(route) {
+      var names = [];
+      route.path.forEach(function (pt) {
+        NODES.forEach(function (n) {
+          if (n.toll && Math.abs(n.pos[0] - pt[0]) < 0.5 && Math.abs(n.pos[1] - pt[1]) < 0.5 && names.indexOf(n.toll) < 0) names.push(n.toll);
+        });
+      });
+      return names.join("; ");
+    }
+
+    function updateSummary() {
+      var atRisk = LANES.filter(function (l) { return laneStatus(l.id) === "risk"; }).length;
+      var addedDays = 0, addedCost = 0;
+      LANES.forEach(function (l) {
+        var base = l.routes[0], cur = activeRoute(l.id);
+        addedDays += cur.days - base.days;
+        addedCost += cur.cost - base.cost;
+      });
+      document.getElementById("sumAtRisk").textContent = atRisk;
+      document.getElementById("sumHeadline").textContent = atRisk === 1
+        ? "lane still crossing an active risk zone" : "lanes crossing an active risk zone";
+      document.getElementById("mLanes").textContent = LANES.length;
+      document.getElementById("mDays").textContent = (addedDays >= 0 ? "+" : "") + addedDays.toFixed(1) + "d";
+      document.getElementById("mCost").textContent = (addedCost >= 0 ? "+" : "") + Math.round(addedCost) + "%";
+      document.getElementById("mDays").className = "v " + (addedDays > 0.05 ? "up" : "");
+      var reroutable = LANES.some(function (l) {
+        return laneStatus(l.id) === "risk" && bestClearAlt(l);
+      });
+      document.getElementById("rerouteAll").disabled = !reroutable;
+      var anyAlt = LANES.some(function (l) { return choice[l.id] !== l.routes[0].id; });
+      document.getElementById("restoreAll").disabled = !anyAlt;
+    }
+
+    function afterChange() { buildLaneList(); buildZoneList(); buildDetail(); updateSummary(); }
+    function setChoice(laneId, routeId) { choice[laneId] = routeId; afterChange(); }
+
+    function selectLane(id) {
+      selectedLane = id; selectedZone = null;
+      if (id) { var l = LANE[id]; var m = midOfPath(activeRoute(id).path); animateView(m[1], Math.max(-60, Math.min(60, m[0])), Math.max(view.zoom, 1.15)); }
+      afterChange();
+    }
+    function selectZone(id) {
+      selectedZone = id; selectedLane = null;
+      if (id) { var z = ZONE[id]; animateView(z.center[1], z.center[0], 1.7); }
+      afterChange();
+    }
+    function midOfPath(path) { return path[Math.floor(path.length / 2)]; }
+
+    document.getElementById("rerouteAll").addEventListener("click", function () {
+      LANES.forEach(function (l) {
+        if (laneStatus(l.id) === "risk") { var a = bestClearAlt(l); if (a) choice[l.id] = a.id; }
+      });
+      afterChange();
+    });
+    document.getElementById("restoreAll").addEventListener("click", function () {
+      LANES.forEach(function (l) { choice[l.id] = l.routes[0].id; });
+      selectedLane = selectedLane; afterChange();
+    });
+    document.getElementById("resetView").addEventListener("click", function () {
+      selectedLane = null; selectedZone = null;
+      animateView(-35, 18, 1);
+      afterChange();
+    });
+
+    // theme
+    var themeBtn = document.getElementById("themeBtn");
+    function applyTheme(t) {
+      if (t) document.documentElement.setAttribute("data-theme", t);
+      else document.documentElement.removeAttribute("data-theme");
+      try { localStorage.setItem("cp-theme", t || ""); } catch (e) {}
+      readColors();
+    }
+    themeBtn.addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme");
+      var sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+      var now = cur || (sysDark ? "dark" : "light");
+      applyTheme(now === "dark" ? "light" : "dark");
+    });
+    try { var sv = localStorage.getItem("cp-theme"); if (sv) applyTheme(sv); } catch (e) {}
+
+    // legend
+    document.getElementById("legend").innerHTML =
+      '<div class="row" style="color:var(--route)"><span class="sw"></span>nominal lane</div>' +
+      '<div class="row" style="color:var(--risk)"><span class="sw"></span>crosses risk zone</div>' +
+      '<div class="row" style="color:var(--alt)"><span class="sw"></span>rerouted</div>' +
+      '<div class="row" style="color:var(--ink-2)"><span class="sq"></span>factory &nbsp; <span class="dot"></span>hub</div>';
+
+    // =================================================================
+    // Boot
+    // =================================================================
+    readColors();
+    resize();
+    window.addEventListener("resize", resize);
+
+    fetch("assets/land.json")
+      .then(function (r) { return r.json(); })
+      .then(function (d) { LAND.rings = d.rings || []; })
+      .catch(function () { /* globe still works without coastlines */ });
+
+    afterChange();
+    raf = requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>

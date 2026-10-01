@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warehouse Model — Interactive Engineering Reasoning Environment</title>
+  <meta name="description" content="A parametric warehouse model connecting a real FreeCAD engineering model, an analytical capacity/utilization/travel/cost model, and a live interactive 3D visualization — change a parameter and see the physical, mathematical and financial consequences together. By kathuman." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">WAREHOUSE<span>MODEL</span></div>
+      <span class="ver" id="ver" title="App version"></span>
+      <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"> · FREECAD · ANALYTICAL MODEL · LIVE 3D — ONE SOURCE OF TRUTH</span></div>
+    </div>
+    <div class="header-actions">
+      <button class="back-link" id="btn-units" type="button" title="Switch the displayed units (the model always calculates in metric)"><span class="long">Units: </span>metric</button>
+      <a class="back-link" href="../../">← Projects</a>
+    </div>
+  </header>
+
+  <div id="warnings" class="warnings" hidden></div>
+
+  <main class="layout">
+    <aside class="rail" id="rail-params">
+      <div class="rail-header">
+        <h1 class="rail-h1">Parameters</h1>
+        <button class="btn small" id="btn-reset-params">Reset all</button>
+      </div>
+      <p class="rail-note">Every slider here is read straight from <code>data/parameters.json</code> — the same file <code>freecad/create_model.py</code> reads. Nothing in this UI is a separate, hand-typed copy of a number that lives somewhere else.</p>
+    </aside>
+
+    <section class="stage-wrap">
+      <div id="stage"></div>
+
+      <div class="stage-toolbar">
+        <div class="viewmode-group">
+          <button class="btn small active" data-viewmode="live">Live Parametric View</button>
+          <button class="btn small" data-viewmode="reference">Reference Model (FreeCAD)</button>
+        </div>
+        <div class="stage-tools">
+          <div class="viewmode-group" id="color-group" role="group" aria-label="Colour the pallets by">
+            <button class="btn small active" data-color="stock" type="button" title="The current inventory, stored at random">Stock</button>
+            <button class="btn small" data-color="heat" type="button" title="Every position, coloured by its average lift-truck cycle time">Travel time</button>
+            <button class="btn small" data-color="class" type="button" title="Which positions hold the A, B and C movers (class-based storage)" hidden>ABC class</button>
+          </div>
+          <button class="btn small play" id="btn-play" type="button" title="Replay one simulated day in the 3D view">▶ Play a day</button>
+          <button class="btn small active" id="btn-walls" type="button" aria-pressed="true">Walls</button>
+          <button class="btn small" id="btn-reset-view" type="button">Reset View</button>
+        </div>
+      </div>
+
+      <div class="sim-clock" id="sim-clock" hidden>
+        <b id="clock-time">06:00</b>
+        <span id="clock-info"></span>
+        <span class="clock-speed" role="group" aria-label="Playback speed">
+          <button type="button" data-speed="120">½×</button><button type="button" data-speed="60" class="active">1×</button><button type="button" data-speed="20">3×</button>
+        </span>
+        <button type="button" id="btn-stop" aria-label="Stop playback">■</button>
+      </div>
+
+      <div class="heat-legend" id="heat-legend" hidden>
+        <span id="heat-min"></span><span class="heat-bar"></span><span id="heat-max"></span>
+        <small>average cycle time per position</small>
+      </div>
+
+      <p class="reference-note" id="reference-note" hidden></p>
+
+      <div class="caption">Drag to orbit · right-drag to pan · scroll to zoom · click a rack to see that slot's route and cycle time</div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="rail-section">
+        <h2>Key Results</h2>
+        <div class="kpi-grid" id="kpi-grid"></div>
+      </div>
+      <div class="rail-section">
+        <h2>Inspector</h2>
+        <div class="inspector" id="inspector">
+          <p class="hint">Click a rack row or dock door in the 3D view to inspect it.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="lower">
+    <div class="panel blueprint-panel">
+      <div class="panel-head">
+        <h2>Floor Plan (Blueprint)</h2>
+        <button class="btn small" id="btn-svg" type="button">Download SVG</button>
+      </div>
+      <p class="panel-note">
+        A dimensioned plan drawn from the same <code>calculations.js</code> results as everything else on
+        this page — the same row and aisle positions the 3D view and the FreeCAD model use — and redrawn
+        on every change. Dashed lines inside a row are the lanes of deep rack types; dotted lines are aisle
+        centre lines.
+      </p>
+      <div class="blueprint-live" id="blueprint"></div>
+    </div>
+
+    <div class="panel sim-panel">
+      <div class="panel-head">
+        <h2>Simulated Day</h2>
+        <span class="sim-meta" id="sim-meta"></span>
+      </div>
+      <p class="panel-note">
+        The key results above are averages and a steady-state queueing formula. This runs the day event by event —
+        trucks arriving at random through the day (busiest hour = the peak-hour factor), queueing for doors, lift
+        trucks fetching and storing every pallet — <span id="sim-reps">30</span> times with different random arrivals, and
+        shows the average and the range across those days. Press <b>▶ Play a day</b> above the 3D view to watch one.
+      </p>
+      <div class="sim-grid">
+        <table class="sim-table" id="sim-table"></table>
+        <div class="sim-chart" id="sim-chart"></div>
+      </div>
+    </div>
+
+    <div class="panel decisions-panel">
+      <div class="panel-head">
+        <h2>Decisions</h2>
+        <div class="dtabs" role="tablist" aria-label="Decision tools">
+          <button type="button" role="tab" class="active" aria-selected="true" data-dtab="scenarios">Scenarios</button>
+          <button type="button" role="tab" aria-selected="false" data-dtab="sensitivity">Sensitivity</button>
+          <button type="button" role="tab" aria-selected="false" data-dtab="optimizer">Optimiser</button>
+        </div>
+      </div>
+
+      <div class="dpane" id="dpane-scenarios">
+        <p class="panel-note">Save the current design as a scenario, change things, save again — every scenario is recalculated here side by side (best value in each row highlighted). Scenarios stay in this browser; a share link carries one design to anyone.</p>
+        <div class="dtools">
+          <input type="text" id="scn-name" placeholder="Scenario name" aria-label="Scenario name" maxlength="40" />
+          <button class="btn small" id="scn-save" type="button">Save current design</button>
+          <button class="btn small" id="scn-link" type="button">Copy share link</button>
+          <button class="btn small" id="scn-json" type="button">Export JSON</button>
+          <button class="btn small" id="scn-csv" type="button">Export CSV</button>
+          <span class="dmsg" id="scn-msg" role="status"></span>
+        </div>
+        <p class="hint" id="scn-empty">No saved scenarios yet — the table shows the current design only.</p>
+        <div class="table-scroll"><table class="dtable" id="scn-table"></table></div>
+      </div>
+
+      <div class="dpane" id="dpane-sensitivity" hidden>
+        <p class="panel-note">Which inputs matter most? The tornado moves each input 10% down and up (one at a time) and shows how far the chosen result moves; the sweep runs one input across its whole range.</p>
+        <div class="dtools">
+          <label>Result <select id="sens-kpi" class="choice"></select></label>
+          <label>Sweep input <select id="sens-param" class="choice"></select></label>
+        </div>
+        <div class="sens-grid">
+          <div id="sens-tornado"></div>
+          <div id="sens-sweep"></div>
+        </div>
+      </div>
+
+      <div class="dpane" id="dpane-optimizer" hidden>
+        <p class="panel-note">Finds the cheapest designs (annual cost of ownership) that hold the current inventory within each rack type's planning ceiling and keep the peak-hour truck wait under a target, for the current throughput, peak, flow, slotting and costs. It tries every rack type, number of levels and building width; aisle width, rack and clear height, length and door counts are then sized to fit. Apply any result to explore it.</p>
+        <div class="dtools">
+          <label>Max. truck wait at the peak <input type="number" id="opt-wait" value="15" min="0.5" max="120" step="0.5" aria-label="Maximum truck wait at the peak hour, minutes" /> min</label>
+          <label>Selectivity at least <select id="opt-sel" class="choice">
+            <option value="1">100% (every pallet reachable)</option>
+            <option value="0.5">50% (allows double-deep)</option>
+            <option value="0">any (allows push-back, drive-in)</option>
+          </select></label>
+          <button class="btn small" id="opt-run" type="button">Find designs</button>
+        </div>
+        <div class="opt-progress"><div id="opt-bar"></div></div>
+        <p class="dmsg" id="opt-status" role="status"></p>
+        <div class="table-scroll"><table class="dtable" id="opt-table"></table></div>
+        <div id="opt-plot"></div>
+      </div>
+    </div>
+
+    <div class="panel data-panel">
+      <h2>Data &amp; Files</h2>
+      <div class="data-grid">
+        <div>
+          <h3 class="sub-h">Import your data</h3>
+          <p class="panel-note">A movements CSV (one row per pallet movement or order line: date and time, SKU, pallets, and in/out if you have it)
+            and, optionally, an inventory CSV (SKU, pallets on hand). Column names are matched loosely. The files are read in your browser — nothing is uploaded.</p>
+          <div class="dtools">
+            <label class="file-btn">Movements CSV<input type="file" id="imp-mv" accept=".csv,.txt,text/csv" /></label>
+            <span class="file-name" id="imp-mv-name">none</span>
+          </div>
+          <div class="dtools">
+            <label class="file-btn">Inventory CSV<input type="file" id="imp-inv" accept=".csv,.txt,text/csv" /></label>
+            <span class="file-name" id="imp-inv-name">none (optional)</span>
+          </div>
+          <div class="dtools">
+            <button class="btn small" id="imp-sample" type="button">Try the sample data</button>
+            <button class="btn small" id="imp-sample-dl" type="button">Download the sample CSVs</button>
+          </div>
+          <div id="imp-result"></div>
+        </div>
+        <div>
+          <h3 class="sub-h">Export the design</h3>
+          <p class="panel-note">The current design, in formats CAD and BIM tools open. All geometry comes from the same layout as the 3D view and the plan.</p>
+          <div class="exp-list">
+            <button class="btn small" id="exp-ifc" type="button">IFC 4 (BIM)</button><span>Building, walls, slabs, one element per rack row, dock doors and spaces, with every input and key result as property sets. Checked against the IFC4 schema with IfcOpenShell.</span>
+            <button class="btn small" id="exp-dxf" type="button">DXF (CAD plan)</button><span>The floor plan in metres on named layers (walls, racks with bay lines, aisles, docks, zones, notes) — AutoCAD R12, opens almost anywhere.</span>
+            <button class="btn small" id="exp-glb" type="button">glTF (3D model)</button><span>The live 3D model as a .glb file — racks, pallets, building and trailers.</span>
+            <button class="btn small" id="exp-svg" type="button">SVG (plan drawing)</button><span>The dimensioned floor plan above.</span>
+          </div>
+          <p class="panel-note fc-note">Regenerate this exact design as a real, parametric FreeCAD model (run from the <code>warehouse-model</code> folder):</p>
+          <div class="fc-cmd"><code id="exp-fc"></code><button class="btn small" id="exp-fc-copy" type="button">Copy</button></div>
+          <p class="dmsg" id="exp-msg" role="status"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="lower-grid">
+      <div class="panel">
+        <h2>Visual Analytics</h2>
+        <div class="charts" id="charts"></div>
+      </div>
+      <div class="panel">
+        <h2>Traceability — where every number comes from</h2>
+        <p class="panel-note">Every KPI above is derived through these exact steps. Nothing is a black box.</p>
+        <div id="trace-panel"></div>
+      </div>
+    </div>
+
+    <div class="explain-grid">
+      <details class="rules" open>
+        <summary>Why does this matter? — reading the model</summary>
+        <div>
+          <p>
+            <b>Storage capacity</b> is pure geometry: how many rack rows fit across the building's width,
+            how many bays fit along its length, times levels and positions per bay. Change <code>aisle_width</code>
+            and watch <em>fewer or more rack rows fit</em> — a physical consequence, not a tuning knob on the
+            capacity number itself.
+          </p>
+          <p>
+            <b>Utilization</b> is deliberately independent of capacity: <code>current_inventory_pallets</code> is
+            a real-world operating fact (how much is actually in the building right now), so shrinking capacity
+            without changing demand is exactly how utilization climbs past 100% — a genuine overflow condition,
+            not a clipped display.
+          </p>
+          <p>
+            <b>Rack type</b> sets how deep each lane is. Deeper lanes (double-deep, push-back, drive-in) need fewer
+            aisles, so the same floor holds more pallets — but fewer of them can be reached directly
+            (<em>selectivity</em>), and because a lane only holds one product, part-empty lanes waste space, so the
+            realistic ceiling (<em>practical capacity</em>) is lower. VNA keeps every pallet reachable and saves space
+            with very narrow aisles instead, at the price of a guided turret truck.
+          </p>
+          <p>
+            <b>Vertical fit</b> is checked the way a rack designer would: each level must hold a load plus the beam and
+            a lift-off gap, and the top load must stay the sprinkler clearance below the lowest obstruction
+            (0.46 m for standard sprinklers, 0.91 m for ESFR under NFPA 13).
+          </p>
+          <p>
+            <b>Cycle time</b> is an exact average over this layout, not a textbook approximation: every receiving or
+            shipping door to every aisle, bay and level, along a rectilinear route (door → across the staging zone →
+            down the aisle). Lift trucks raise the load only after stopping, so lift time adds to driving time — which
+            is why taller racks cost time even when the floor gets smaller. Trips are single-command (one pallet per trip,
+            random storage); smarter slotting and combined trips come in a later version.
+          </p>
+          <p>
+            <b>Docks</b> are sized by trucks, not pallets: each door turns a truck every <code>truck_turn_time</code>
+            minutes, receiving and shipping doors are separate (one can be the bottleneck while the other is idle),
+            and they are sized for the <b>peak hour</b>, not the daily average. Trucks arrive at random, so they queue well
+            before the doors are 100% busy: the wait comes from the <b>Erlang C</b> queueing formula (M/M/c), corrected for
+            turn times that vary less than purely random ones (Allen–Cunneen). The lift-truck fleet is sized for the peak
+            hour too, allowing for the share of each hour a truck really works.
+          </p>
+          <p>
+            <b>Slotting and flow.</b> With <b>class-based (ABC)</b> storage the fastest-moving pallets live in the quickest
+            positions. How much that saves depends on the demand skew — and on where the doors are. With <b>I-flow</b>
+            (receive at one end, ship from the other) a bay close to the receiving doors is far from the shipping doors, so
+            ABC only gains across the width and in height; with <b>U-flow</b> (both on one wall) it gains along the aisles too.
+            <b>Dual-command</b> trips store one pallet and fetch another on the same trip; <b>mid cross-aisles</b> shorten the
+            drive between the two, at the cost of some bays.
+          </p>
+          <p>
+            <b>Cost</b> uses flat illustrative rates (see the Cost sliders) — it shows how racking, building shell
+            and dock costs shift relative to each other as the design changes, not a quotation.
+          </p>
+        </div>
+      </details>
+
+      <details class="rules">
+        <summary>Guided experiments — try these</summary>
+        <div>
+          <ol class="experiments">
+            <li><b>Geometry.</b> Double <code>warehouse_length</code>. Does storage capacity double too? (Watch <code>bays_per_row</code> in the Traceability panel — the two cross-aisles are a fixed cost, so a longer building is slightly more efficient per metre, not exactly double.)</li>
+            <li><b>Capacity without footprint.</b> Leaving <code>warehouse_length</code> and <code>warehouse_width</code> untouched, can you raise storage capacity by changing only <code>rack_height</code> and <code>levels_per_rack</code>? What has to be true of <code>clear_height</code> for that to work?</li>
+            <li><b>Utilization under fixed capacity.</b> Freeze the building and racking parameters. Raise <code>current_inventory_pallets</code> past the storage capacity shown in Key Results. What warning appears, and what does that mean operationally?</li>
+            <li><b>A trade-off.</b> Narrow <code>aisle_width</code> to fit more rack rows. Capacity rises — but does <code>Avg. Round Trip</code> rise, fall, or stay flat? Why might a real facility still avoid the narrowest legal aisle?</li>
+            <li><b>The bottleneck shifts.</b> Push <code>daily_throughput_pallets</code> up while holding dock count fixed. At what point does <b>Dock Utilization</b> — not storage — become the binding constraint? Now raise <code>peak_hour_factor</code>: the average day hasn't changed, so why do you need more doors?</li>
+            <li><b>Rack types.</b> Switch to <b>Double-deep</b>, then <b>Drive-in</b>. Capacity rises — what happens to selectivity and to the practical capacity? Then try <b>VNA</b> and narrow the aisle to 1.8 m: how does it compare with double-deep on capacity, and why would you still pick one over the other?</li>
+            <li><b>Slotting.</b> Switch <code>storage_policy</code> to ABC and open the <b>ABC class</b> view. How much does the time per move drop? Now switch <code>flow_layout</code> to U-flow — why does ABC suddenly save much more?</li>
+            <li><b>Dual command.</b> With I-flow, raise <code>dual_command_share</code>: the time per move gets <em>worse</em>. Read the design note, switch to U-flow and try again. Then add two <code>mid_cross_aisles</code> in a 200 m building: what do you gain and what do you give up?</li>
+            <li><b>Queues before capacity.</b> Double <code>daily_throughput_pallets</code>. Door utilization is still under 100%, so why does <b>Truck Wait</b> jump? Add one door and watch the wait fall far more than the utilization.</li>
+            <li><b>What should we build?</b> Open <b>Decisions → Optimiser</b> and press <b>Find designs</b>. Why does the cheapest design use tall racks and a small footprint? Allow selectivity down to "any": what wins, and what would you have to know about the products before choosing it?</li>
+            <li><b>What matters most?</b> In <b>Sensitivity</b>, look at annual cost: drivers' wages usually top the tornado — which is why fewer, faster truck trips (slotting, U-flow) are worth more than cheaper racking.</li>
+            <li><b>Averages hide queues.</b> Raise <code>peak_hour_factor</code> to 2.5. The daily totals don't change, but look at the <b>Simulated Day</b>: the busiest hour's wait and the yard queue grow. Then set <code>sim_lift_trucks</code> to one fewer than recommended — work spills past closing, and outbound trucks wait at their doors for pallets.</li>
+            <li><b>Going up.</b> Add a level (5 levels) without changing the rack height. What warning appears? Raise <code>rack_height</code> until it clears — and watch the cycle time and the clear-height check.</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="rules">
+        <summary>How this is built — architecture</summary>
+        <div>
+          <p>
+            <code>freecad/create_model.py</code> is the authoritative engineering model: it reads
+            <code>data/parameters.json</code>, builds the warehouse in FreeCAD (floor/walls/roof via
+            <code>Part::Box</code>, a live <code>Spreadsheet::Sheet</code> holding every parameter as a
+            named, unit-tagged, expression-bindable cell), and exports a tessellated GLB snapshot.
+            Toggle <b>Reference Model</b> above to load that real export.
+          </p>
+          <p>
+            <code>web/src/calculations.js</code> is the analytical model — the same layout arithmetic
+            FreeCAD's script runs, reimplemented in JS so it can recompute instantly as you drag a slider,
+            with every function returning a <code>trace</code> array (see the Traceability panel). Unit tests
+            check it by hand calculation, over thousands of random designs, and against a brute-force walk over
+            every slot; a parity test runs the FreeCAD script's layout code on the same random designs and
+            requires identical results.
+          </p>
+          <p>
+            <code>web/src/visualization.js</code> is the live 3D view: procedural Three.js geometry built
+            from the same parameters and the same layout numbers, rebuilt on every change. It is
+            <em>not</em> the GLB — a baked mesh can't resize itself — and the app never implies otherwise.
+          </p>
+          <p>
+            <code>web/src/simulation.js</code> is a discrete-event simulation of the day that takes every lift-truck task
+            time from the same per-slot formulas; its tests check that lift-truck work per pallet matches the analytic model
+            and that door waits match the queueing formula. <code>web/src/optimizer.js</code> searches designs through the
+            same model; its tests re-check every design it returns. <code>web/src/exporters.js</code> writes the IFC and DXF
+            files (tested by opening them in IfcOpenShell and FreeCAD), and <code>web/src/dataimport.js</code> turns movement and
+            inventory data into model inputs.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span class="consult">Warehouse Model <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    A parametric warehouse model: real FreeCAD geometry, a traceable analytical model, and a live interactive 3D view sharing one parameter source of truth. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<!-- all modules, so they run in this order after the page is parsed -->
+<script type="module" src="src/model.js"></script>
+<script type="module" src="src/calculations.js"></script>
+<script type="module" src="src/simulation.js"></script>
+<script type="module" src="src/visualization.js"></script>
+<script type="module" src="src/blueprint.js"></script>
+<script type="module" src="src/optimizer.js"></script>
+<script type="module" src="src/decisions.js"></script>
+<script type="module" src="src/exporters.js"></script>
+<script type="module" src="src/dataimport.js"></script>
+<script type="module" src="src/datapanel.js"></script>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

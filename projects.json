@@ -8,20 +8,76 @@
     "demoUrl": "https://kathuman.github.io/claude-projects/balancebot-sim/"
   },
   {
-    "title": "Linkage",
-    "description": "A real-time 3D robotic arm simulator. Drive a 5-axis cobot by hand with per-joint sliders, or run canned Home / Wave / Pick & Place routines with an async tween engine. Live HUD reads the end-effector's actual forward-kinematics position off the joint hierarchy, an optional tip trace draws its path through space, and a cannon.js rigid-body world means anything the gripper releases actually falls, bounces and settles on the floor instead of snapping into place. Drag to orbit, scroll to zoom. Single page, vendored three.js + cannon.js, no runtime CDN dependency.",
+    "title": "Xiangqi",
+    "description": "Xiangqi (Chinese chess) against a friend on one screen, or against the open-source Fairy-Stockfish engine — one of the strongest Xiangqi engines, compiled to WebAssembly and running entirely in your browser — at eight strength levels from beginner to full strength. Full rules: generals confined to the palace and the flying-general rule, hobbled horses, blocked elephants that can't cross the river, cannons that capture over a screen, soldiers that step sideways once across the river, stalemate-loses, and perpetual check adjudicated from threefold repetition. Plus a Classic problems mode: mating problems from 《适情雅趣》 (Shiqing Yaqu, 1570), the oldest surviving Xiangqi problem book, graded by length, and the Four Great Endgames (江湖四大名局) as draw-holding studies against the engine. Every problem was scraped, replayed through the app's own rules and confirmed by Fairy-Stockfish; alternative solutions are judged live by the engine, with hints, a step-through solution viewer and solved-problem tracking. Traditional Chinese-character pieces or Western letters, five board styles, a 3D view you can tilt and turn by dragging, WXF move notation, undo and board flip. The move generator is verified against the published perft counts to depth 4 (3,290,240 positions). A small service worker supplies the cross-origin-isolation headers the multi-threaded engine needs, since GitHub Pages can't.",
+    "date": "2026-09-28",
+    "tags": ["javascript", "web", "game", "webassembly"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/xiangqi",
+    "demoUrl": "https://kathuman.github.io/claude-projects/xiangqi/"
+  },
+  {
+    "title": "Network Stress Test",
+    "description": "A supply-network resilience sandbox: build or generate a production/warehouse/consumer network (hundreds of editable nodes) connected by air/sea/road lanes with mode-characteristic defaults, and stress-test it against a real min-cost-flow solver. Phase 1: deterministic disruption scenarios and an N-1 contingency scan (the power-grid idea — which single node or lane, if lost, hurts the most). Phase 2: Monte Carlo random-failure sampling, a Time-to-Survive vs. Time-to-Recover check against consumer inventory buffers, and a greedy adversarial search for the worst combination of simultaneous failures. Every algorithm is unit-tested in Node before touching the UI, and the full pipeline is driven end-to-end in headless Chromium. Multi-file project, no runtime dependencies.",
+    "date": "2026-09-28",
+    "tags": ["javascript", "web", "simulation", "supply-chain", "engineering", "optimization"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/network-stress-test",
+    "demoUrl": "https://kathuman.github.io/claude-projects/network-stress-test/web/"
+  },
+  {
+    "title": "Face Morph",
+    "description": "Live face-landmark detection and triangulated face morphing, entirely on-device. Two small neural nets (TinyFaceDetector + a 68-point landmark CNN, via TensorFlow.js) run in the browser against your camera or an uploaded photo — nothing is ever uploaded, a persistent banner says so. Capture two faces, then morph between them with a real triangulated affine warp and cross-dissolve, the classic technique behind photo-morph effects. The 142-triangle mesh isn't computed live — it's a fixed, offline-verified triangulation (exact area match against the convex hull, so no gaps or overlaps) reused for every pair, since the 68 landmark indices always mean the same point on any detected face. Drag the blend slider, watch it auto-morph, or peek at the triangle mesh itself. Single file, vendored face-api.js, no other dependencies.",
+    "date": "2026-09-21",
+    "tags": ["javascript", "web", "computer-vision", "machine-learning", "canvas", "camera"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/face-morph",
+    "demoUrl": "https://kathuman.github.io/claude-projects/face-morph/"
+  },
+  {
+    "title": "Warehouse Model",
+    "description": "An interactive engineering reasoning environment for warehouse design — not a CAD viewer. A real parametric FreeCAD model is the authoritative geometry, and an analytical model shares its layout code (a parity test proves the two agree). Five rack types (selective, double-deep, VNA, push-back, drive-in) with selectivity and practical capacity; flue-space, level-pitch and sprinkler-clearance checks; lift-truck cycle time averaged exactly over every door, aisle, bay and level, with lift time; truck-based receiving and shipping docks sized for the peak hour, with Erlang C truck queues; I-flow or U-flow docks, mid cross-aisles, class-based (ABC) slotting with a demand-skew curve and dual-command trips; fleet size and cost. A discrete-event simulation replays the day — random truck arrivals over an hourly profile, yard queues, lift trucks fetching and storing every pallet — 30 times, showing ranges beside the analytic results, and plays one day back in 3D. Decision support: annual total cost of ownership, saved scenarios side by side, share links, JSON/CSV export, a sensitivity tornado and sweeps, and an optimiser that finds the cheapest designs meeting capacity, selectivity and truck-wait targets. Import real movement and inventory CSVs to set throughput, peaks, inventory and demand skew; export the design as IFC4 (BIM, validated with IfcOpenShell), a DXF floor plan, glTF 3D or the FreeCAD command that regenerates it. Every number shows its derivation; a live dimensioned floor plan, a detailed live 3D view (three.js: instanced uprights, beams and pallets, a travel-time heat map of every position, click a slot for its route and cycle time) and the FreeCAD reference model all come from the same parameters. Metric or imperial.",
+    "date": "2026-09-18",
+    "tags": ["javascript", "web", "3d", "simulation", "freecad", "cad", "supply-chain", "engineering"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/warehouse-model",
+    "demoUrl": "https://kathuman.github.io/claude-projects/warehouse-model/web/"
+  },
+  {
+    "title": "Tube Flow",
+    "description": "A validated 3D lattice-Boltzmann flow lab by kathuman: a sphere in a tube, in real fluids and units. The D3Q19 solver uses TRT/regularised collision, curved-wall interpolated bounce-back and mass-conserving inlet/outlet conditions, runs in a Web Worker, and is tested against Hagen–Poiseuille pipe flow, the Haberman–Sayre wall-corrected Stokes drag and a momentum balance. Pick a fluid, tube, sphere and speed (pipe flow or a moving sphere): it reports the Reynolds number, live drag and lift coefficients, Strouhal number, pressure drop and recirculation length, says when a case needs more resolution than the grid has, labels the regime from what it measures, and exports the time series as CSV. With WebGPU it runs the same scheme on the GPU (parity-tested against the CPU solver) on grids of over a million cells, resolving the wake's symmetry-breaking and vortex shedding — benchmarked against Johnson & Patel's sphere results (wake length, side force, Strouhal number). See it with dye released from a rake or the sphere, Q-criterion vortex surfaces, streamlines, tracers, time-averaged slices and a movable cross-section, and record it as video.",
+    "date": "2026-09-18",
+    "tags": ["javascript", "web", "3d", "simulation", "physics", "cfd"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/tube-flow-sim",
+    "demoUrl": "https://kathuman.github.io/claude-projects/tube-flow-sim/"
+  },
+  {
+    "title": "Cobot Lab",
+    "description": "A browser simulator of the Universal Robots e-Series cobots — UR3e, UR5e, UR10e and UR16e, each from its published Denavit–Hartenberg and dynamics parameters — or any 6-joint arm imported from a URDF file (numerical inverse kinematics, masses from the file) — built on pure, unit-tested cores. Kinematics: forward and analytic inverse kinematics (all 8 solutions), Jacobian and a manipulability 'dexterity' meter. Motion: MoveJ with synchronised trapezoidal joint profiles, MoveL straight-line and MoveC circular tool paths solved by IK at every step and retimed to stay inside every joint's speed limit. Drag a target handle and the arm follows it live, or plan the target and send the arm with Move J / Move L; cycle through the alternative arm configurations that reach the same tool pose. A collision guard refuses anything that would hit the table or the arm itself. Live joint position/speed/acceleration plots, tool pose telemetry and a tip trace. Physics runs on Rapier (WebAssembly) with the arm itself solid, so its links and fingers push blocks around; a real pick & place reads the workpiece's pose from the simulation, lines the grasp up with it, carries it on a fixed joint and releases it. Drop obstacles on the table and a collision-free path planner (RRT-Connect with shortcutting) routes Move J and pick & place around them. Motor-load bars show each joint's holding torque from the published UR5e masses against its rating, and teaching overlays show the joint frames, a live DH table, the reachable workspace and the dexterity ellipsoid. A teach-pendant program editor (Move J / Move L waypoints with gripper actions, run or loop) exports JSON or URScript for a real UR controller, and a share link reopens the same robot, pose, program and obstacles. A ROS bridge (rosbridge JSON protocol, ROS 1 or 2) publishes /joint_states and the tool pose and can follow joint commands, so the sim can mirror or be driven by ROS. Rendered with three.js r186: image-based studio lighting, PBR Neutral tone mapping and ambient occlusion. A guided in-app tutorial at three levels (Basic, Intermediate, Advanced) walks through every feature with highlighted controls, tasks that tick off as you do them and a 'Do it for me' button, or reads as a written guide. Vendored three.js + Rapier.",
     "date": "2026-09-17",
     "tags": ["javascript", "web", "3d", "simulation", "physics", "robotics"],
-    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/robotic-arm-sim",
-    "demoUrl": "https://kathuman.github.io/claude-projects/robotic-arm-sim/"
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/cobot-lab",
+    "demoUrl": "https://kathuman.github.io/claude-projects/cobot-lab/"
   },
   {
     "title": "Chess",
-    "description": "Play chess against a friend on one screen — full rules including castling (both sides), en passant, pawn promotion with a piece-choice picker, and check / checkmate / stalemate detection. Click a piece to see its legal destinations dotted in (rings mark captures), watch moves slide into place, flip the board to face the other player, undo, and follow the algebraic move log with a live captured-material count. Five board colourways, remembered between visits. Ported from a Python/Tkinter original (included in the folder). Single file, no dependencies.",
+    "description": "Play chess against a friend on one screen, or against the open-source Stockfish 18 engine (WebAssembly, runs in your browser) at eight strength levels from beginner to full strength — full rules including castling (both sides), en passant, pawn promotion with a piece-choice picker, and check / checkmate / stalemate detection. Click a piece to see its legal destinations dotted in (rings mark captures), watch moves slide into place, flip the board to face the other player, undo, and follow the algebraic move log with a live captured-material count. Five board colourways, remembered between visits, and a 3D view you can tilt and turn by dragging — the pieces stand up and face you, and everything still works. A Staunton piece option swaps in the classic Cburnett SVG set in 2D and, in 3D, real lathe-modelled pieces rendered with three.js (WebGL) with lighting and shadows. Ported from a Python/Tkinter original (included in the folder).",
     "date": "2026-09-13",
-    "tags": ["javascript", "web", "game"],
+    "tags": ["javascript", "web", "game", "webassembly"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/chess",
     "demoUrl": "https://kathuman.github.io/claude-projects/chess/"
+  },
+  {
+    "title": "Problem Log (Android)",
+    "description": "A native Android app that turns a spoken or typed problem description into a structured record — title, summary, category, short-term mitigation, long-term solution — via a forced tool-call to Claude, with every generated field editable before you save it. Records live in an on-device SQLite database; the only network call is your phone talking straight to the Anthropic API with your own key, held in the Android Keystore. No backend, no account. Built with Flutter — bring your own API key to run it.",
+    "date": "2026-09-12",
+    "tags": ["dart", "flutter", "android", "ai", "tool"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/problemlog-android",
+    "demoUrl": null
+  },
+  {
+    "title": "Othello (Android)",
+    "description": "A native Android port of the Othello sub-app below — the same rules engine and negamax AI (four strengths, full endgame solve), rebuilt from JavaScript to Dart with a CustomPainter board renderer. Play the computer or pass-and-play on a 6×6, 8×8 or 10×10 board, with the same disc colourways and board felts as the web version, undo, move log, and a Material 3 light/dark theme. Built with Flutter.",
+    "date": "2026-09-11",
+    "tags": ["dart", "flutter", "android", "game", "ai"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/othello-android",
+    "demoUrl": null
   },
   {
     "title": "Go",
@@ -49,8 +105,8 @@
   },
   {
     "title": "Network Design Visuals",
-    "description": "A browsable library of 17 supply-chain network-design visualizations, ordered simple → advanced: demand bars, cost-to-serve stacks, O–D flow maps, an echelon Sankey, lane-cost matrices, Pareto and tornado charts, a capacitated network graph, service-coverage rings, a cost–service efficient frontier, and strategic views — center-of-gravity / greenfield k-means, capacity-constrained catchment maps, animated throughput, phased network evolution, and a disruption-impact matrix. Every example runs on one shared synthetic network. Single file, no dependencies.",
-    "date": "2026-09-08",
+    "description": "A browsable library of 17 supply-chain network-design visualizations, ordered simple → advanced: demand bars, cost-to-serve stacks, O–D flow maps, an echelon Sankey, lane-cost matrices, Pareto and tornado charts, a capacitated network graph, service-coverage rings, a cost–service efficient frontier, and strategic views — center-of-gravity / greenfield k-means, capacity-constrained catchment maps, animated throughput, phased network evolution, and a capacity-aware disruption-impact matrix (fails each DC in turn, re-sources its markets to whichever surviving site has room, and flags the ones that don't). Every example runs on one shared synthetic network. Single file, no dependencies.",
+    "date": "2026-09-17",
     "tags": ["javascript", "web", "dataviz", "supply-chain"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/supply-chain-viz",
     "demoUrl": "https://kathuman.github.io/claude-projects/supply-chain-viz/"

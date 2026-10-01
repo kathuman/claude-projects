@@ -1,0 +1,5 @@
+three.js r186 (npm three@0.186.1) — https://threejs.org — MIT licence (see LICENSE).
+three.module.js + three.core.js are the ES-module build; addons/ holds the few example modules
+Linkage uses (RoomEnvironment, EffectComposer, RenderPass, GTAOPass, OutputPass and their
+dependencies), unmodified. They import "three" and "three/addons/…", resolved by the
+import map in index.html.

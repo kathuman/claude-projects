@@ -1,0 +1,5 @@
+# FreeCAD artifacts
+freecad/__pycache__/
+freecad/*.FCBak
+freecad/*.FCStd1
+freecad/*.FCStd.lock

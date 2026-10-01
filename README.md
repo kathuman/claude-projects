@@ -73,19 +73,29 @@ Some projects are self-contained web apps that live in their own folder here and
 are served straight from GitHub Pages:
 
 ```
+network-stress-test/web/index.html — https://kathuman.github.io/claude-projects/network-stress-test/web/
 scientific-calculator/index.html   — https://kathuman.github.io/claude-projects/scientific-calculator/
 rubiks-cube/index.html             — https://kathuman.github.io/claude-projects/rubiks-cube/
 supply-chain-viz/index.html        — https://kathuman.github.io/claude-projects/supply-chain-viz/
 real-options/index.html            — https://kathuman.github.io/claude-projects/real-options/
 othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
-robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
+chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
+xiangqi/index.html                 — https://kathuman.github.io/claude-projects/xiangqi/
+cobot-lab/index.html               — https://kathuman.github.io/claude-projects/cobot-lab/
+tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
+warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/
+face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/
 balancebot-sim/index.html          — https://kathuman.github.io/claude-projects/balancebot-sim/
 ```
 
-`balancebot-sim/` is structured differently from the others — it's a small
-real project (web app + Python/FreeCAD tooling + a test suite + CI), not a
-single HTML file — with its own [README](balancebot-sim/README.md). Its
+`warehouse-model` and `network-stress-test` are multi-file projects (several JS modules
+alongside the page, not just a single HTML file) — their entry points are `web/index.html`,
+not the folder root. See each folder's own `README.md` for its architecture.
+
+`balancebot-sim/` is structured the same way, and goes further — it's a small
+real project (web app + Python/FreeCAD tooling + a test suite + CI), not just
+a multi-file page — with its own [README](balancebot-sim/README.md). Its
 `index.html` at the folder root is just a redirect into `web/index.html`,
 kept so its demo URL matches the pattern above.
 
@@ -94,3 +104,14 @@ app has no runtime CDN dependency); the licence sits beside it.
 
 To add one, drop a folder with an `index.html` at the repo root and point the
 project's `demoUrl` at `https://kathuman.github.io/claude-projects/<folder>/`.
+
+## Native apps
+
+A couple of projects are native Android apps (Flutter) rather than static
+pages, so they aren't servable from GitHub Pages — their `demoUrl` is `null`
+and `repoUrl` points at the folder. Building one requires the Flutter SDK:
+
+```
+othello-android/      — flutter build apk --release  (from inside the folder)
+problemlog-android/   — same; problemlog-android also needs your own Claude API key at runtime
+```

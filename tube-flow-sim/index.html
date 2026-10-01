@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tube Flow — Flow Around a Sphere</title>
+  <meta name="description" content="A 3D lattice-Boltzmann flow lab by kathuman: a sphere in a tube, real fluids and units, validated solver, live drag, lift, Strouhal number, pressure drop and wake length." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52;
+  --panel:#0d3a63;
+  --panel-2:#082444;
+  --line:#2a5580;
+  --line-soft:#1d4470;
+  --ink:#bfe4ff;
+  --ink-dim:#8fd0f2;
+  --ink-faint:#6fa8c9;
+  --accent:#7dd3fc;
+  --accent-ink:#04202b;
+  --tele:#7be0c4;
+  --warn:#ffcf4a;
+  --ok:#3ddc97;
+  --bad:#ff6a6a;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg);}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--body);
+}
+.app{display:flex; flex-direction:column;}
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:14px 20px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#0d3a63,#0a2f52);
+  position:sticky; top:0; z-index:20;
+}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .mark{
+  font-family:var(--head);
+  font-weight:700;
+  font-size:22px;
+  letter-spacing:.04em;
+  color:var(--ink);
+}
+.brand .mark span{color:var(--accent);}
+.brand .sub{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-faint);
+  letter-spacing:.03em;
+}
+.header-actions{display:flex; align-items:center; gap:10px;}
+.back-link{
+  font-family:var(--head);
+  font-weight:600;
+  font-size:12px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-dim);
+  text-decoration:none;
+  padding:6px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+.status-pill{
+  display:flex; align-items:center; gap:8px;
+  padding:6px 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--panel);
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--ink-dim);
+  white-space:nowrap;
+}
+.status-pill .dot{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--ink-faint);
+  transition:background .2s, box-shadow .2s;
+}
+.status-pill.running .dot{background:var(--ok); box-shadow:0 0 8px var(--ok);}
+.status-pill #sim-clock{color:var(--ink-faint);}
+
+.layout{
+  display:grid;
+  grid-template-columns:300px 1fr;
+}
+.rail{
+  border-right:1px solid var(--line);
+  background:
+    repeating-linear-gradient(0deg, rgba(125,211,252,.05) 0, rgba(125,211,252,.05) 1px, transparent 1px, transparent 28px),
+    repeating-linear-gradient(90deg, rgba(125,211,252,.05) 0, rgba(125,211,252,.05) 1px, transparent 1px, transparent 28px),
+    var(--panel-2);
+  overflow-y:auto;
+  padding:18px 18px 28px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+  max-height:calc(100vh - 57px);
+}
+.rail::-webkit-scrollbar{width:8px;}
+.rail::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+
+.rail-section{display:flex; flex-direction:column; gap:12px;}
+.rail-section h2{
+  margin:0;
+  font-family:var(--head);
+  font-weight:700;
+  font-size:12px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  padding-bottom:8px;
+  border-bottom:1px solid var(--line-soft);
+}
+
+.ctrl-row{display:flex; flex-direction:column; gap:5px;}
+.ctrl-row .row-head{display:flex; justify-content:space-between; align-items:baseline;}
+.ctrl-row .row-head .name{
+  font-family:var(--head); font-weight:600; font-size:13px;
+  letter-spacing:.05em; text-transform:uppercase; color:var(--ink);
+}
+.ctrl-row .row-head .val{
+  font-family:var(--mono); font-size:12.5px;
+  font-variant-numeric:tabular-nums; color:var(--accent);
+}
+.slider-track{display:flex; align-items:center; gap:8px;}
+.slider-track .bound{font-family:var(--mono); font-size:10px; color:var(--ink-faint); width:34px; flex:0 0 auto;}
+.slider-track .bound.right{text-align:right;}
+.tick-note{font-family:var(--mono); font-size:10px; color:var(--ink-faint); margin-left:34px;}
+
+input[type=range]{
+  -webkit-appearance:none; appearance:none;
+  flex:1 1 auto; height:4px; border-radius:2px;
+  background:var(--line); outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--accent-ink);
+  box-shadow:0 0 0 2px var(--accent), 0 0 10px rgba(125,211,252,.6);
+  cursor:pointer; margin-top:0;
+}
+input[type=range]::-moz-range-thumb{
+  width:15px; height:15px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--accent-ink);
+  box-shadow:0 0 0 2px var(--accent), 0 0 10px rgba(125,211,252,.6);
+  cursor:pointer;
+}
+input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:var(--line);}
+
+.btn-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.btn-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.btn{
+  font-family:var(--head); font-weight:600; font-size:12.5px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--ink);
+  background:var(--panel); border:1px solid var(--line); border-radius:7px;
+  padding:10px 8px; cursor:pointer;
+  transition:border-color .15s, color .15s, box-shadow .15s;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 1px rgba(125,211,252,.25) inset;}
+.btn:active{transform:translateY(1px);}
+.btn.wide{grid-column:1 / -1;}
+.btn.primary{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+.btn.primary:hover{box-shadow:0 0 12px rgba(125,211,252,.5);}
+.btn.active{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 1px rgba(125,211,252,.25) inset;}
+.btn:disabled{opacity:.35; cursor:not-allowed; box-shadow:none;}
+.btn:disabled:hover{border-color:var(--line); color:var(--ink);}
+.btn small{display:block; font-family:var(--mono); font-weight:400; font-size:9.5px; letter-spacing:0; text-transform:none; color:var(--ink-faint); margin-top:2px;}
+
+.switch-row{display:flex; align-items:center; justify-content:space-between;}
+.switch-row .name{font-family:var(--head); font-weight:600; font-size:13px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink);}
+.switch{
+  position:relative; width:38px; height:21px; flex:0 0 auto;
+  border-radius:999px; background:var(--line); border:1px solid var(--line);
+  cursor:pointer; transition:background .15s;
+}
+.switch.on{background:rgba(125,211,252,.25); border-color:var(--accent);}
+.switch .knob{position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--ink-dim); transition:left .15s, background .15s;}
+.switch.on .knob{left:19px; background:var(--accent); box-shadow:0 0 6px rgba(125,211,252,.7);}
+
+.field-select{display:flex; gap:8px;}
+.field-select .btn{flex:1 1 0;}
+
+.stage-wrap{
+  position:relative;
+  min-height:0;
+  height:76vh; min-height:520px; max-height:800px;
+  background:radial-gradient(ellipse at 50% 30%, #164a78 0%, #0a2f52 70%);
+}
+#stage{position:absolute; inset:0;}
+#stage canvas{display:block; touch-action:none;}
+
+.hud{
+  position:absolute; top:16px; left:16px;
+  padding:12px 14px;
+  background:rgba(10,47,82,.76);
+  border:1px solid var(--line);
+  border-radius:2px;
+  backdrop-filter:blur(6px);
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-dim);
+  pointer-events:none; min-width:184px;
+}
+.hud:before, .hud:after, .legend:before, .legend:after{
+  content:""; position:absolute; width:9px; height:9px; pointer-events:none;
+  border-color:var(--accent); border-style:solid; border-width:0;
+}
+.hud:before, .legend:before{top:-1px; left:-1px; border-left-width:2px; border-top-width:2px;}
+.hud:after, .legend:after{bottom:-1px; right:-1px; border-right-width:2px; border-bottom-width:2px;}
+.hud .hud-title{font-family:var(--head); font-weight:700; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px;}
+.hud .hud-line{display:flex; justify-content:space-between; gap:14px; padding:1.5px 0;}
+.hud .hud-line b{color:var(--tele); font-weight:500; font-variant-numeric:tabular-nums;}
+.hud .re-line{display:flex; justify-content:space-between; align-items:baseline; margin:8px 0 6px; padding-top:8px; border-top:1px solid var(--line-soft);}
+.hud .re-value{font-family:var(--head); font-size:22px; font-weight:700; color:var(--ink);}
+.hud .regime{display:flex; align-items:center; gap:6px; font-family:var(--head); font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;}
+.hud .regime .rdot{width:8px; height:8px; border-radius:50%; flex:0 0 auto;}
+
+.legend{
+  position:absolute; top:16px; right:16px;
+  padding:10px 12px;
+  background:rgba(10,47,82,.76);
+  border:1px solid var(--line);
+  border-radius:2px;
+  backdrop-filter:blur(6px);
+  pointer-events:none;
+  display:none;
+}
+.legend.show{display:block;}
+.legend .lbl{font-family:var(--mono); font-size:10px; color:var(--ink-faint); display:flex; justify-content:space-between; margin-top:4px;}
+.legend .bar{width:150px; height:10px; border-radius:3px;}
+.legend .bar.speed{background:linear-gradient(90deg,#0d366b,#104281,#184f95,#256abf,#3987e5,#6da7ec,#9ec5f4,#cde2fb);}
+.legend .bar.vort{background:linear-gradient(90deg,#e34948,#383835,#2a78d6);}
+
+.caption{
+  position:absolute; left:16px; bottom:16px; right:16px;
+  display:flex; justify-content:space-between; align-items:flex-end; gap:12px;
+  font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+  pointer-events:none;
+}
+.caption .reset-btn{
+  pointer-events:auto;
+  font-family:var(--head); font-weight:600; font-size:11.5px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim);
+  background:rgba(10,47,82,.72); border:1px solid var(--line); border-radius:6px;
+  padding:6px 10px; cursor:pointer;
+}
+.caption .reset-btn:hover{color:var(--accent); border-color:var(--accent);}
+
+.explainer{max-width:1080px; margin:0 auto; padding:28px 22px 0;}
+details.rules{
+  margin-top:14px; background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; padding:4px 18px;
+}
+details.rules summary{cursor:pointer; font-family:var(--head); font-weight:700; font-size:13px; letter-spacing:.03em; padding:14px 0; color:var(--ink-dim); list-style:none;}
+details.rules summary::-webkit-details-marker{display:none;}
+details.rules summary:before{content:"▸ "; color:var(--accent);}
+details.rules[open] summary:before{content:"▾ "; }
+details.rules[open] summary{color:var(--ink);}
+details.rules p{font-size:13.5px; line-height:1.65; color:var(--ink-dim); margin:8px 0 14px;}
+details.rules code{font-family:var(--mono); font-size:11.5px; background:var(--panel-2); border:1px solid var(--line); padding:1px 5px; border-radius:4px; color:var(--ink);}
+details.rules table{width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:13px;}
+details.rules th, details.rules td{text-align:left; padding:7px 10px; border-bottom:1px solid var(--line-soft); color:var(--ink-dim);}
+details.rules th{color:var(--ink-faint); font-family:var(--head); font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:700;}
+details.rules td.re-cell{font-family:var(--mono); color:var(--ink);}
+
+footer.foot{max-width:1080px; margin:0 auto; padding:22px 22px 50px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:12.5px; line-height:1.7;}
+footer.foot a{color:var(--ink-faint);}
+footer.foot .consult{display:block; margin-bottom:6px; font-weight:600; color:var(--ink);}
+footer.foot .consult a{color:var(--accent);}
+
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;}
+  .rail{border-right:none; border-bottom:1px solid var(--line); max-height:none;}
+  .stage-wrap{height:60vh;}
+  .topbar{padding:12px 14px;}
+  .brand .sub{display:none;}
+  .legend{display:none !important;}
+}
+</style>
+<style>
+/* v2 additions */
+.brand .ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:5px; padding:1px 6px;}
+.brand .by{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+.brand .by a{color:var(--ink-dim); text-decoration:none; font-weight:600;}
+.brand .by a:hover{color:var(--accent);}
+.field{display:flex; flex-direction:column; gap:5px;}
+.field label, .field .lbl{font-family:var(--head); font-weight:600; font-size:13px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink);}
+.field select, .field input[type=number]{font-family:var(--mono); font-size:12.5px; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 8px; width:100%;}
+.field select:focus, .field input:focus{outline:none; border-color:var(--accent);}
+.inline{display:flex; gap:8px; align-items:center;}
+.inline input[type=number]{font-family:var(--mono); font-size:12.5px; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:5px 8px;}
+.hud-line[hidden], .field[hidden], .ctrl-row[hidden], .switch-row[hidden], .field-select[hidden]{display:none !important;}
+.inline input[type=number]{width:110px; flex:0 0 auto;}
+.unit{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+.note{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); line-height:1.5;}
+.note.warn{color:var(--warn);}
+.seg{display:flex; gap:6px;}
+.seg .btn{flex:1 1 0; padding:7px 6px;}
+.hud .hud-line.warn b{color:var(--warn);}
+.instruments{max-width:1280px; margin:0 auto; padding:22px 22px 0;}
+.inst-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+.inst-head h2{margin:0; font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim);}
+.regime-badge{font-family:var(--head); font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase; padding:5px 10px; border-radius:999px; border:1px solid var(--line); color:var(--ink);}
+.regime-badge.settling{color:var(--warn); border-color:rgba(255,207,74,.5);}
+.regime-badge.steady{color:var(--ok); border-color:rgba(61,220,151,.5);}
+.regime-badge.unsteady{color:var(--accent); border-color:var(--accent);}
+.tiles{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-bottom:14px;}
+.tile{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px;}
+.tile .k{font-family:var(--head); font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-faint);}
+.tile .v{font-family:var(--head); font-weight:700; font-size:21px; color:var(--ink); margin-top:2px; font-variant-numeric:tabular-nums;}
+.tile .s{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); margin-top:2px; line-height:1.4;}
+.chart-wrap{background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px;}
+.chart-wrap canvas{width:100%; height:200px; display:block;}
+.chart-legend{display:flex; gap:14px; flex-wrap:wrap; font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-top:6px;}
+.chart-legend i{display:inline-block; width:12px; height:3px; vertical-align:middle; margin-right:5px;}
+.ref{font-size:12.5px; color:var(--ink-dim); margin:12px 0 0; line-height:1.6;}
+.ref b{color:var(--ink);}
+.small-btn{font-family:var(--head); font-weight:600; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer;}
+.small-btn:hover{color:var(--accent); border-color:var(--accent);}
+@media (max-width:860px){ .brand .sub, .brand .by .rest{display:none;} #sim-clock{display:none;} .topbar{flex-wrap:wrap; row-gap:8px;} }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">TUBE<span>FLOW</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="by">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"></span></span>
+      <div class="sub">D3Q19 LATTICE-BOLTZMANN · VALIDATED · SPHERE IN A TUBE</div>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="../">← Projects</a>
+      <div class="status-pill" id="status-pill">
+        <span class="dot"></span>
+        <span id="status-text">PAUSED</span>
+        <span id="sim-clock">t = 0 s</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="rail">
+      <div class="rail-section">
+        <h2>Case</h2>
+        <div class="field">
+          <label for="fluid">Fluid (20 °C)</label>
+          <select id="fluid"></select>
+        </div>
+        <div class="field">
+          <span class="lbl">Tube diameter</span>
+          <div class="inline"><input type="number" id="tube" min="1" max="500" step="any" value="20" aria-label="Tube diameter in millimetres"><span class="unit">mm</span></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name">Sphere diameter</span><span class="val" id="ratio-val">30% of tube</span></div>
+          <div class="slider-track"><span class="bound">10%</span><input type="range" id="ratio" min="10" max="50" value="30" step="1" aria-label="Sphere diameter as a share of the tube diameter"><span class="bound right">50%</span></div>
+        </div>
+        <div class="ctrl-row">
+          <div class="row-head"><span class="name" id="speed-name">Centre-line speed</span><span class="val" id="speed-val"></span></div>
+          <div class="slider-track"><span class="bound">slow</span><input type="range" id="speed" min="0" max="1000" value="500" step="1" aria-label="Flow speed (logarithmic)"><span class="bound right">fast</span></div>
+          <div class="inline"><input type="number" id="speed-num" step="any" aria-label="Flow speed in metres per second"><span class="unit">m/s</span></div>
+        </div>
+        <div class="field">
+          <span class="lbl">Frame</span>
+          <div class="seg" id="frame">
+            <button class="btn active" data-frame="pipe" type="button" title="Sphere held still in fully developed pipe flow (parabolic profile)">Pipe flow</button>
+            <button class="btn" data-frame="moving" type="button" title="Sphere moving along the axis of a tube of still fluid (seen from the sphere)">Moving sphere</button>
+          </div>
+        </div>
+        <div class="note" id="re-note"></div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Reynolds Presets</h2>
+        <div class="btn-grid">
+          <button class="btn" data-re="0.5" type="button">Creeping<small>Re 0.5</small></button>
+          <button class="btn" data-re="10" type="button">Attached<small>Re 10</small></button>
+          <button class="btn" data-re="100" type="button">Separated<small>Re 100</small></button>
+          <button class="btn" data-re="max" type="button" id="re-max-btn"><span id="re-max-name">Grid limit</span><small id="re-max-label">Re max</small></button>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Grid</h2>
+        <div class="field" id="backend-row" hidden>
+          <label for="backend">Solver</label>
+          <select id="backend">
+            <option value="gpu">GPU (WebGPU) — large grids</option>
+            <option value="cpu">CPU (Web Worker)</option>
+          </select>
+        </div>
+        <div class="btn-grid cols-3" id="res-buttons"></div>
+        <div class="note" id="grid-note"></div>
+        <div class="field">
+          <label for="disturb">Inflow disturbance</label>
+          <select id="disturb">
+            <option value="kick">Brief asymmetric pulse (default)</option>
+            <option value="none">None (perfectly symmetric)</option>
+            <option value="noise">Continuous 1% noise</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <h2>Visualization</h2>
+        <div class="switch-row"><span class="name">Dye</span><div class="switch on" id="sw-dye" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div></div>
+        <div class="field-select" id="dye-opts">
+          <button class="btn active" data-dye="rake" type="button" title="Streaks from a grid of nozzles upstream">From a rake</button>
+          <button class="btn" data-dye="sphere" type="button" title="Released from the sphere's surface, like electrolytic dye">From the sphere</button>
+        </div>
+        <div class="switch-row"><span class="name">Tracers</span><div class="switch on" id="sw-tracers" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div></div>
+        <div class="ctrl-row" id="tracer-opts">
+          <div class="row-head"><span class="name" style="font-size:11px">Count</span><span class="val" id="particles-val">3000</span></div>
+          <div class="slider-track"><span class="bound">600</span><input type="range" id="particles" min="600" max="8000" value="3000" step="100" aria-label="Number of tracer particles"><span class="bound right">8000</span></div>
+        </div>
+        <div class="switch-row"><span class="name">Vortex surfaces</span><div class="switch" id="sw-vortex" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div></div>
+        <div class="ctrl-row" id="vortex-opts" hidden>
+          <div class="row-head"><span class="name" style="font-size:11px">Q level</span><span class="val" id="qlevel-val">0.60</span></div>
+          <div class="slider-track"><span class="bound">0.05</span><input type="range" id="qlevel" min="0" max="100" value="55" aria-label="Q-criterion level for the vortex surfaces"><span class="bound right">5</span></div>
+        </div>
+        <div class="switch-row"><span class="name">Streamlines</span><div class="switch" id="sw-stream" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div></div>
+        <div class="ctrl-row" id="stream-opts" hidden>
+          <div class="row-head"><span class="name" style="font-size:11px">Rake angle</span><span class="val" id="rake-val">0°</span></div>
+          <div class="slider-track"><span class="bound">0°</span><input type="range" id="rake" min="0" max="90" value="0" aria-label="Streamline rake angle"><span class="bound right">90°</span></div>
+        </div>
+        <div class="switch-row"><span class="name">Axial slice</span><div class="switch" id="slice-switch" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div></div>
+        <div class="switch-row"><span class="name">Cross-section</span><div class="switch" id="sw-cross" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div></div>
+        <div class="ctrl-row" id="cross-opts" hidden>
+          <div class="row-head"><span class="name" style="font-size:11px">Position</span><span class="val" id="crossx-val">55%</span></div>
+          <div class="slider-track"><span class="bound">in</span><input type="range" id="crossx" min="2" max="98" value="55" aria-label="Cross-section position along the tube"><span class="bound right">out</span></div>
+        </div>
+        <div class="field-select" id="field-select" hidden>
+          <button class="btn active" data-field="speed" type="button">Speed</button>
+          <button class="btn" data-field="vorticity" type="button">Vorticity</button>
+          <button class="btn" data-field="pressure" type="button">Pressure</button>
+        </div>
+        <div class="switch-row" id="avg-row" hidden><span class="name">Time-averaged</span><div class="switch" id="sw-avg" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div></div>
+        <button class="btn" id="btn-record" type="button">● Record video</button>
+      </div>
+
+      <div class="rail-section">
+        <h2>Playback</h2>
+        <div class="btn-grid">
+          <button class="btn primary wide" id="btn-play" type="button">Play</button>
+          <button class="btn" id="btn-step" type="button">Step</button>
+          <button class="btn" id="btn-reset" type="button">Reset</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div id="stage"></div>
+      <div class="hud">
+        <div class="hud-title">Solver</div>
+        <div class="hud-line"><span>Grid</span><b id="hud-grid">–</b></div>
+        <div class="hud-line"><span>Steps/s</span><b id="hud-sps">0</b></div>
+        <div class="hud-line"><span>Collision</span><b id="hud-coll">–</b></div>
+        <div class="hud-line"><span>Mach · τ</span><b id="hud-mach">–</b></div>
+        <div class="hud-line"><span>Flow-throughs</span><b id="hud-ft">0</b></div>
+        <div class="re-line">
+          <span style="font-family:var(--head); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);">Reynolds</span>
+          <span class="re-value" id="hud-re">0</span>
+        </div>
+        <div class="hud-line" id="hud-resim-line" hidden><span>simulating</span><b id="hud-resim">–</b></div>
+        <div class="regime"><span class="rdot" id="regime-dot"></span><span id="regime-label">–</span></div>
+      </div>
+      <div class="legend" id="legend">
+        <div class="bar speed" id="legend-bar"></div>
+        <div class="lbl"><span id="legend-lo">slow</span><span id="legend-hi">fast</span></div>
+      </div>
+      <div class="caption">
+        <span>Drag to orbit · scroll to zoom · tracers follow the live velocity field</span>
+        <button class="reset-btn" id="btn-reset-view" type="button">Reset View</button>
+      </div>
+    </section>
+  </main>
+
+  <section class="instruments" aria-label="Measurements">
+    <div class="inst-head">
+      <h2>Measurements</h2>
+      <span class="regime-badge settling" id="regime-badge">not started</span>
+      <button class="small-btn" id="btn-csv" type="button">Export CSV</button>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="chart-wrap">
+      <canvas id="chart" width="1200" height="200" aria-label="Drag and lift coefficients over time"></canvas>
+      <div class="chart-legend"><span><i style="background:#7be0c4"></i>drag coefficient C_d</span><span><i style="background:#ffcf4a"></i>lift coefficient C_l (×10)</span><span id="chart-time"></span></div>
+    </div>
+    <p class="ref" id="ref"></p>
+  </section>
+
+  <section class="explainer">
+    <details class="rules" id="howItWorks">
+      <summary>How this works — and how it's validated</summary>
+      <div>
+        <p>
+          The solver is a <b>D3Q19 lattice-Boltzmann</b> method: each grid node carries 19 populations that collide
+          and stream, which reproduces the incompressible Navier–Stokes equations. It runs in a background thread
+          (<code>src/sim-worker.js</code>) so the view stays smooth. The numerics are chosen for accuracy, not looks:
+          curved walls by <b>interpolated bounce-back</b> (every lattice link knows exactly where it crosses the sphere
+          or the tube wall), <b>TRT</b> collision where the grid Reynolds number is low and <b>regularised</b>
+          collision where it is high, a velocity inlet and a pressure outlet by non-equilibrium extrapolation — so mass
+          is conserved without corrections and there are no hidden velocity or density clamps.
+        </p>
+        <p>
+          <b>Your case, in real units.</b> Pick a fluid, a tube and a sphere and a speed: the app computes the Reynolds
+          number <code>Re = U·d/ν</code> and maps it onto the grid at a low Mach number. Forces come out in newtons,
+          pressure in pascals, time in seconds. If a case needs more resolution than the grid has (air at everyday
+          speeds is Re in the thousands), it runs the highest Reynolds number the grid can resolve and says so, rather
+          than showing a flow it can't compute.
+        </p>
+        <p>
+          <b>Measurements.</b> Drag and lift on the sphere by momentum exchange on the boundary links; the drag and lift
+          coefficients <code>C = F / (½ρU²·πd²/4)</code> with U the centre-line (pipe) or sphere (moving) speed; the
+          Strouhal number <code>St = f·d/U</code> from the dominant frequency of the lift once it oscillates; the
+          pressure drop across the sphere; and the length of the recirculation bubble behind it on the axis. The regime
+          shown is <b>measured</b> (is there a bubble? does the lift oscillate? has the drag settled?), not looked up
+          from a table — confinement in a tube shifts the thresholds known for a sphere in open flow.
+        </p>
+        <p>
+          <b>Validation</b> (<code>tests/lbm.test.js</code>, run on every change): the pipe-flow velocity profile and
+          pressure gradient against Hagen–Poiseuille (0.5% and 3%), mass conservation, the Stokes drag on a sphere
+          moving along a tube against the Haberman–Sayre wall-corrected value (3%, with the sphere only six cells
+          across), a momentum balance between pressure drop and the forces on the sphere and wall, and the appearance
+          of the recirculation bubble with Reynolds number.
+        </p>
+        <p>
+          <b>GPU.</b> When the browser supports WebGPU, the same scheme runs on the graphics card
+          (<code>src/lbm-gpu.js</code>), on grids up to 96 cells across the tube — the sphere is then 20–30 cells across,
+          enough to resolve vortex shedding. <code>tests/gpu.test.js</code> runs both solvers on the same cases and requires
+          the same answer (velocity within 2·10⁻⁵, drag within 0.01%). A long GPU benchmark of a sphere in nearly unbounded
+          flow reproduces Johnson &amp; Patel's measured wake length at Re 100 within 3%. Without WebGPU, the CPU solver
+          (6–14 cells across the sphere) still handles steady flows.
+        </p>
+        <p>
+          <b>Seeing the flow.</b> <b>Dye</b> is carried by the same velocity field the solver computes — released from a
+          rake of nozzles upstream or from the sphere's surface, the way water-tunnel experiments show wakes.
+          <b>Vortex surfaces</b> are where rotation beats strain (the Q-criterion), coloured by which way the fluid
+          turns about the tube axis. <b>Streamlines</b> start from a rake you can rotate. The <b>axial slice</b> can be
+          time-averaged to show the mean flow of an unsteady wake, and the <b>cross-section</b> can be moved along the tube.
+          <b>Record video</b> saves what you see as a WebM file.
+        </p>
+      </div>
+    </details>
+  </section>
+
+  <footer class="foot">
+    <span class="consult">Tube Flow <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    A validated lattice-Boltzmann flow lab: a sphere in a tube, real fluids and units, live measurements. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script src="src/lbm.js"></script>
+<script src="src/lbm-gpu.js"></script>
+<script type="module">
+import { createView } from "./src/view.js";
+(function(){
+  "use strict";
+  // Version history
+  //   1.0.0  real-time D3Q19 BGK solver, tracers and a slice
+  //   2.0.0  validated solver (TRT/regularised collision, curved-wall bounce-back, mass-conserving inlet/outlet,
+  //          no clamps) in a worker; real fluids and units; drag, lift, Strouhal, pressure drop, recirculation;
+  //          measured regime; CSV export; tests; kathuman credit and version badge
+  //   3.0.0  GPU solver (WebGPU compute, same scheme — parity-tested against the CPU solver): grids up to
+  //          96 cells across the tube, resolved vortex shedding; CPU worker kept as the fallback
+  //   3.0.1  "unsteady" only once the oscillation outlasts the start-up disturbance (3 flow-throughs)
+  //   4.0.0  visualisation: three.js r186 view module — dye (MacCormack advection, ray-marched volume) from a
+  //          rake or the sphere, Q-criterion vortex surfaces, streamlines, movable cross-section, time-averaged
+  //          slice, video recording; orbit controls
+  //   4.0.1  video recording restarts the recorder if the encoder delivers nothing at first
+  var APP_VERSION = "4.0.1";
+  document.getElementById('ver').textContent = 'v' + APP_VERSION;
+  document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
+
+  var FLUIDS = {
+    air:      {label:'Air',                         nu:1.516e-5, rho:1.204},
+    water:    {label:'Water',                       nu:1.004e-6, rho:998.2},
+    oil:      {label:'Olive oil',                   nu:9.2e-5,   rho:911},
+    gly80:    {label:'Glycerol–water 80%',          nu:4.97e-5,  rho:1209},
+    glycerol: {label:'Glycerol',                    nu:1.12e-3,  rho:1261}
+  };
+  var GRIDS = { cpu:[['low','Low',20],['medium','Medium',28],['high','High',36]], gpu:[['g40','40',40],['g64','64',64],['g96','96',96]] };
+  var state = {fluid:'water', tubeMM:20, ratio:0.30, speed:0.005, frame:'pipe', res:'g64', disturb:'kick', particles:3000, sliceOn:false, field:'speed', running:false};
+  var L = null, G = null, F = null, series = [], lastT = 0;
+  var fluidSel = document.getElementById('fluid');
+  Object.keys(FLUIDS).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=FLUIDS[k].label+' — ν '+FLUIDS[k].nu.toExponential(2)+' m²/s'; fluidSel.appendChild(o); });
+  fluidSel.value = state.fluid;
+
+  function caseOf(){ var f=FLUIDS[state.fluid]; return {nu:f.nu, rho:f.rho, tubeDiameter:state.tubeMM/1000, ratio:state.ratio, speed:state.speed, tubeCells:tubeCells()}; }
+  function fmtSI(v, unit){
+    if (!isFinite(v)) return '—';
+    var a=Math.abs(v), p=[[1,''],[1e-3,'m'],[1e-6,'µ'],[1e-9,'n']];
+    if (a>=1e3) return (v/1e3).toPrecision(3)+' k'+unit;
+    for (var i=0;i<p.length;i++) if (a>=p[i][0]*0.9999 || i===p.length-1) return (v/p[i][0]).toPrecision(3)+' '+p[i][1]+unit;
+  }
+  function fmtSpeed(v){ return v>=1 ? v.toPrecision(3)+' m/s' : v>=1e-3 ? (v*1000).toPrecision(3)+' mm/s' : (v*1e6).toPrecision(3)+' µm/s'; }
+
+  // ------------------------------------------------------------------ solver backends
+  // CPU: src/lbm.js in a Web Worker. GPU: src/lbm-gpu.js (WebGPU) on this thread — the same scheme,
+  // parity-tested. Both feed onFrame() the same data: instrument samples, the axis-plane slice and a
+  // velocity field for the tracers (downsampled on big GPU grids).
+  var backend = null, gpuInfo = null;
+  function gridsFor(kind){
+    return GRIDS[kind].filter(function(g){
+      if (kind !== 'gpu') return true;
+      var tc=g[2], n=Math.round(tc*4.5)*(tc+2)*(tc+2), bytes=n*19*4;
+      return bytes <= gpuInfo.maxBuffer && 2*bytes <= 1.6e9;
+    });
+  }
+  function tubeCells(){ var g=gridsFor(backend.kind), m=g.filter(function(x){ return x[0]===state.res; })[0]; return (m||g[Math.min(1,g.length-1)])[2]; }
+  function renderGrids(){
+    var box=document.getElementById('res-buttons'), g=gridsFor(backend.kind);
+    if (!g.some(function(x){ return x[0]===state.res; })) state.res = g[Math.min(1,g.length-1)][0];
+    box.innerHTML = g.map(function(x){ return '<button class="btn'+(x[0]===state.res?' active':'')+'" data-res="'+x[0]+'" type="button">'+(backend.kind==='gpu'?'GPU ':'')+x[1]+'<small>'+x[2]+' cells</small></button>'; }).join('');
+    box.querySelectorAll('.btn').forEach(function(btn){ btn.addEventListener('click', function(){ state.res=btn.getAttribute('data-res'); renderGrids(); buildSim(); }); });
+    var tc=tubeCells(), n=Math.round(tc*4.5)*(tc+2)*(tc+2);
+    document.getElementById('grid-note').textContent = (backend.kind==='gpu' ? 'GPU: '+[gpuInfo.info.vendor, gpuInfo.info.architecture].filter(Boolean).join(' ')+' · ' : 'CPU · ') +
+      (n/1e6).toFixed(2)+' million cells, '+(2*n*19*4/1048576).toFixed(0)+' MB';
+  }
+  function makeCPU(){
+    var w=new Worker('src/sim-worker.js'), b={kind:'cpu'};
+    w.onmessage=function(e){
+      var m=e.data;
+      if (m.type==='geometry') onGeometry(m);
+      else if (m.type==='frame' && G){
+        var Nx=G.Nx, Ny=G.Ny, z=Math.round(G.cz), sl={ux:new Float32Array(Nx*Ny), uy:new Float32Array(Nx*Ny), rho:new Float32Array(Nx*Ny)};
+        for (var y=0;y<Ny;y++) for (var x=0;x<Nx;x++){ var n=x+Nx*(y+Ny*z), k=x+Nx*y; sl.ux[k]=m.ux[n]; sl.uy[k]=m.uy[n]; sl.rho[k]=m.rho[n]; }
+        onFrame({t:m.t, stepsPerSec:m.stepsPerSec, collision:m.collision, samples:m.samples, slice:sl, field:{ux:m.ux, uy:m.uy, uz:m.uz, rho:m.rho, s:1, nx:Nx, ny:Ny, nz:G.Nz}});
+      }
+    };
+    b.init=function(o){ w.postMessage({type:'init', opts:o}); };
+    b.flow=function(u,nu){ w.postMessage({type:'flow', u:u, nu:nu}); };
+    b.disturb=function(m){ w.postMessage({type:'disturb', mode:m}); };
+    b.reset=function(){ w.postMessage({type:'reset'}); };
+    b.run=function(on){ w.postMessage({type:'run', on:on}); };
+    b.step=function(n){ w.postMessage({type:'step', n:n}); };
+    b.dispose=function(){ w.terminate(); };
+    return b;
+  }
+  function makeGPU(dev){
+    var b={kind:'gpu'}, S=null, running=false, pumping=false, gen=0, k=8, cycles=0, lastMass=0, rate=0, meta=null;
+    b.init=async function(o){
+      var my=++gen;
+      if (S){ S.destroy(); S=null; }
+      var g=await TF.GPUSolver.create(dev, o);
+      if (my!==gen){ g.destroy(); return; }
+      S=g; cycles=0; k=8;
+      var Nx=S.Nx, Ny=S.Ny, Nz=S.Nz, idx=function(x,y,z){ return x+Nx*(y+Ny*z); }, NONE=0xffffffff;
+      // cross-sections for the pressure drop, the wake axis, the axis-plane slice, a downsampled field
+      var pa=Math.max(1,Math.round(S.sx-2*S.R)), pb=Math.min(Nx-2,Math.round(S.sx+4*S.R)), planes=[], na=0;
+      [pa,pb].forEach(function(x,j){ for (var z=0;z<Nz;z++) for (var y=0;y<Ny;y++){ var n=idx(x,y,z); if(!S.solid[n]){ planes.push(n); if(!j) na++; } } });
+      var ay=Math.round(S.cy), az=Math.round(S.cz), ax0=Math.ceil(S.sx+S.r), axis=[];
+      for (var x=ax0;x<Nx-1;x++) axis.push(idx(x,ay,az));
+      var slice=new Uint32Array(Nx*Ny);
+      for (var yy=0;yy<Ny;yy++) for (var xx=0;xx<Nx;xx++){ var nn=idx(xx,yy,az); slice[xx+Nx*yy]=S.solid[nn]?NONE:nn; }
+      var st=Math.max(1, Math.ceil(Math.cbrt(S.N/300000))), fx=Math.ceil(Nx/st), fy=Math.ceil(Ny/st), fz=Math.ceil(Nz/st), field=new Uint32Array(fx*fy*fz);
+      for (var z2=0;z2<fz;z2++) for (var y2=0;y2<fy;y2++) for (var x2=0;x2<fx;x2++){ var n2=idx(Math.min(Nx-1,x2*st),Math.min(Ny-1,y2*st),Math.min(Nz-1,z2*st)); field[x2+fx*(y2+fy*z2)]=S.solid[n2]?NONE:n2; }
+      S.gatherer('planes', planes); S.gatherer('axis', axis); S.gatherer('slice', slice); S.gatherer('field', field);
+      meta={pa:pa, pb:pb, na:na, nb:planes.length-na, ax0:ax0, st:st, fx:fx, fy:fy, fz:fz};
+      onGeometry({Nx:Nx, Ny:Ny, Nz:Nz, R:S.R, cy:S.cy, cz:S.cz, sx:S.sx, r:S.r, solid:S.solid});
+      await frame();
+      if (running) pump();
+    };
+    async function frame(forces){
+      if (!S) return;
+      var my=gen, withMass=(cycles++ % 25===0);
+      var r=await S.read({slice:true, field:true, mass:withMass});
+      if (my!==gen || !S) return;
+      if (withMass) lastMass=r.mass;
+      var m=meta, ra=0, rb=0;
+      for (var i=0;i<m.na;i++) ra+=r.planes[4*i];
+      for (var j=m.na;j<m.na+m.nb;j++) rb+=r.planes[4*j];
+      var last=-1, ua=0, ub=0;
+      for (var q=0;q<r.axis.length/4;q++){ var ux=r.axis[4*q+1]; if (r.axis[4*q]===0) continue; if (ux<0){ last=q; ua=ux; } else if (last>=0){ ub=ux; break; } }
+      var rec = last<0 ? 0 : Math.max(0, m.ax0+last+(ub!==ua?-ua/(ub-ua):0) - (S.sx+S.r));
+      var Nx=S.Nx, Ny=S.Ny, sl={ux:new Float32Array(Nx*Ny), uy:new Float32Array(Nx*Ny), rho:new Float32Array(Nx*Ny)};
+      for (var k2=0;k2<Nx*Ny;k2++){ sl.rho[k2]=r.slice[4*k2]; sl.ux[k2]=r.slice[4*k2+1]; sl.uy[k2]=r.slice[4*k2+2]; }
+      var nf=m.fx*m.fy*m.fz, fd={ux:new Float32Array(nf), uy:new Float32Array(nf), uz:new Float32Array(nf), rho:new Float32Array(nf), s:m.st, nx:m.fx, ny:m.fy, nz:m.fz};
+      for (var k3=0;k3<nf;k3++){ fd.rho[k3]=r.field[4*k3]; fd.ux[k3]=r.field[4*k3+1]; fd.uy[k3]=r.field[4*k3+2]; fd.uz[k3]=r.field[4*k3+3]; }
+      var dr = ra/Math.max(1,m.na)-rb/Math.max(1,m.nb);
+      var smp = (forces && forces.length ? forces : [[r.t, r.force[0], r.force[1], r.force[2]]]).map(function(fz){ return [fz[0], fz[1], fz[2], fz[3], dr, rec, lastMass, m.pa, m.pb]; });
+      onFrame({t:r.t, stepsPerSec:rate, collision:S.collision, samples:smp, slice:sl, field:fd});
+    }
+    async function pump(){
+      if (pumping) return; pumping=true;
+      var my=gen;
+      while (running && my===gen && S){
+        var t0=performance.now();
+        var every=Math.max(1, Math.round(S.Nx/Math.max(S.u,1e-6)/200)), chunks=Math.max(1, Math.round(k/every));
+        var forces=await S.stepSampled(chunks, every);
+        if (my!==gen || !S) break;
+        await frame(forces);
+        var dt=Math.max(1, performance.now()-t0), done=chunks*every;
+        rate = rate ? 0.8*rate + 0.2*done/(dt/1000) : done/(dt/1000);
+        k = Math.max(every, Math.min(1200, Math.round(done*90/dt)));   // aim for ~90 ms per cycle
+      }
+      pumping=false;
+    }
+    b.run=function(on){ running=on; if (on && S) pump(); };
+    b.step=function(n){ if (S){ S.step(n); frame(); } };
+    b.flow=function(u,nu){ if (S) S.setFlow(u,nu); };
+    b.disturb=function(m){ if (S) S.disturb=m; };
+    b.reset=function(){ if (S){ S.reset(); frame(); } };
+    b.dispose=function(){ gen++; running=false; if (S){ S.destroy(); S=null; } };
+    return b;
+  }
+  function onGeometry(m){ G=m; buildScene(); }
+  function onFrame(m){
+    F=m;
+    for (var i=0;i<m.samples.length;i++) series.push(m.samples[i]);
+    if (series.length > 20000) series.splice(0, series.length - 20000);
+    document.getElementById('hud-sps').textContent = Math.round(m.stepsPerSec||0);
+    document.getElementById('hud-coll').textContent = (backend.kind==='gpu'?'GPU · ':'CPU · ') + (m.collision === 'reg' ? 'regularised' : 'TRT');
+    view.setFrame(m, L);
+    updateInstruments();
+  }
+  function buildSim(){
+    L = TF.caseToLattice(caseOf());
+    var tc = tubeCells();
+    series = []; lastT = 0; F = null;
+    backend.init({R:tc/2, length:Math.round(tc*4.5), ratio:state.ratio, sphereX:0.3, mode:state.frame, u:L.u, nu:L.nu, disturbance:state.disturb});
+    if (state.running) backend.run(true);
+    showCase();
+  }
+  function retune(){                       // speed/fluid/tube change: same grid, new lattice speed & viscosity
+    L = TF.caseToLattice(caseOf());
+    backend.flow(L.u, L.nu);
+    series = [];
+    showCase();
+  }
+
+  // ------------------------------------------------------------------ case UI
+  var speedEl=document.getElementById('speed'), speedNum=document.getElementById('speed-num');
+  var SP_MIN=1e-6, SP_MAX=20;
+  function speedFromSlider(v){ return SP_MIN*Math.pow(SP_MAX/SP_MIN, v/1000); }
+  function sliderFromSpeed(s){ return Math.round(1000*Math.log(s/SP_MIN)/Math.log(SP_MAX/SP_MIN)); }
+  function showCase(){
+    var re = L.Re;
+    document.getElementById('speed-val').textContent = fmtSpeed(state.speed);
+    speedNum.value = +state.speed.toPrecision(4);
+    speedEl.value = sliderFromSpeed(state.speed);
+    document.getElementById('ratio-val').textContent = Math.round(state.ratio*100)+'% of tube · '+(state.ratio*state.tubeMM).toPrecision(3)+' mm';
+    document.getElementById('speed-name').textContent = state.frame === 'pipe' ? 'Centre-line speed' : 'Sphere speed';
+    document.getElementById('hud-re').textContent = re<10 ? re.toFixed(2) : Math.round(re).toLocaleString('en-US');
+    document.getElementById('hud-resim-line').hidden = L.resolved;
+    document.getElementById('hud-resim').textContent = 'Re '+Math.round(L.ReSim);
+    document.getElementById('hud-resim-line').classList.toggle('warn', !L.resolved);
+    document.getElementById('hud-mach').textContent = L.mach.toFixed(3)+' · '+L.tau.toFixed(3);
+    // on the GPU grids the fourth preset is a vortex-shedding case; on the CPU grids, the grid's limit
+    var shed = backend && backend.kind === 'gpu' && L.ReMax >= 450, reShed = Math.min(500, Math.floor(L.ReMax));
+    document.getElementById('re-max-btn').setAttribute('data-re', shed ? String(reShed) : 'max');
+    document.getElementById('re-max-name').textContent = shed ? 'Unsteady wake' : 'Grid limit';
+    document.getElementById('re-max-label').textContent = 'Re ' + (shed ? reShed : Math.floor(L.ReMax));
+    var note = document.getElementById('re-note');
+    note.className = 'note' + (L.resolved ? '' : ' warn');
+    note.textContent = L.resolved
+      ? 'Re '+(re<10?re.toFixed(2):Math.round(re))+' · one grid cell = '+fmtSI(L.dx,'m')+' · one step = '+fmtSI(L.dt,'s')+'. This grid resolves up to Re '+Math.floor(L.ReMax)+'.'
+      : 'Re '+Math.round(re).toLocaleString('en-US')+' is beyond this grid (up to Re '+Math.floor(L.ReMax)+'): simulating Re '+Math.round(L.ReSim)+' instead. Slow the flow, pick a more viscous fluid or a finer grid.';
+  }
+  fluidSel.addEventListener('change', function(){ state.fluid=fluidSel.value; retune(); });
+  document.getElementById('tube').addEventListener('change', function(e){ var v=+e.target.value; if (v>0){ state.tubeMM=v; retune(); } });
+  speedEl.addEventListener('input', function(){ state.speed=speedFromSlider(+speedEl.value); retune(); });
+  speedNum.addEventListener('change', function(){ var v=+speedNum.value; if (v>0){ state.speed=Math.min(SP_MAX,Math.max(SP_MIN,v)); retune(); } });
+  var ratioEl=document.getElementById('ratio');
+  ratioEl.addEventListener('input', function(){ state.ratio=+ratioEl.value/100; L=TF.caseToLattice(caseOf()); showCase(); });
+  ratioEl.addEventListener('change', function(){ buildSim(); });
+  document.querySelectorAll('#frame .btn').forEach(function(b){ b.addEventListener('click', function(){
+    document.querySelectorAll('#frame .btn').forEach(function(x){ x.classList.toggle('active', x===b); });
+    state.frame=b.getAttribute('data-frame'); buildSim(); }); });
+  document.getElementById('disturb').addEventListener('change', function(e){ state.disturb=e.target.value; backend.disturb(state.disturb); });
+  document.querySelectorAll('[data-re]').forEach(function(b){ b.addEventListener('click', function(){
+    var t=b.getAttribute('data-re'), c=caseOf(), d=c.ratio*c.tubeDiameter;
+    var re = t==='max' ? Math.floor(TF.caseToLattice(c).ReMax) : +t;
+    state.speed = Math.min(SP_MAX, Math.max(SP_MIN, re*c.nu/d));
+    retune(); backend.reset(); series=[];
+  }); });
+
+  // ------------------------------------------------------------------ playback
+  var statusPill=document.getElementById('status-pill'), btnPlay=document.getElementById('btn-play');
+  function setRunning(r){ state.running=r; statusPill.classList.toggle('running', r); document.getElementById('status-text').textContent = r?'RUNNING':'PAUSED'; btnPlay.textContent = r?'Pause':'Play'; backend.run(r); }
+  btnPlay.addEventListener('click', function(){ setRunning(!state.running); });
+  document.getElementById('btn-step').addEventListener('click', function(){ setRunning(false); backend.step(backend.kind==='gpu'?50:10); });
+  document.getElementById('btn-reset').addEventListener('click', function(){ backend.reset(); series=[]; resetParticles(); });
+
+  // ------------------------------------------------------------------ 3D view (src/view.js)
+  var view = createView(document.getElementById('stage'));
+  var captionEl=document.querySelector('.caption span'), CAPTION=captionEl.textContent;
+  view.onCaption = function(slow){ captionEl.textContent = slow ? 'Drawing slowed down on this device so the solver keeps full speed · drag to orbit · scroll to zoom' : CAPTION; };
+  function buildScene(){ view.setGeometry(G); view.resize(); document.getElementById('hud-grid').textContent=G.Nx+'×'+G.Ny+'×'+G.Nz+' · sphere '+(2*G.r).toFixed(1)+' cells'; }
+  document.getElementById('btn-reset-view').addEventListener('click', function(){ view.resetView(); });
+  function resetParticles(){ view.frameReset(); }
+  var legend=document.getElementById('legend');
+  function showLegend(){
+    var on = view.opts.axial || view.opts.cross;
+    legend.classList.toggle('show', on);
+    var bar=document.getElementById('legend-bar'), lo=document.getElementById('legend-lo'), hi=document.getElementById('legend-hi');
+    if (view.opts.field==='vorticity'){ bar.className='bar vort'; lo.textContent='clockwise'; hi.textContent='counter-cw'; }
+    else { bar.className='bar speed'; lo.textContent=view.opts.field==='pressure'?'low pressure':'slow'; hi.textContent=view.opts.field==='pressure'?'high':'fast'; }
+  }
+  // switches: [element id, view option, extra panel to show]
+  [['sw-dye','dye','dye-opts'],['sw-tracers','tracers','tracer-opts'],['sw-vortex','vortex','vortex-opts'],['sw-stream','streamlines','stream-opts'],['slice-switch','axial',null],['sw-cross','cross','cross-opts'],['sw-avg','average',null]].forEach(function(sw){
+    var el=document.getElementById(sw[0]);
+    var sync=function(){ var on=!!view.opts[sw[1]]; el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); if (sw[2]) document.getElementById(sw[2]).hidden = !on;
+      var sl = view.opts.axial || view.opts.cross; document.getElementById('field-select').hidden = !sl; document.getElementById('avg-row').hidden = !view.opts.axial; showLegend(); };
+    var flip=function(){ view.set(sw[1], !view.opts[sw[1]]); sync(); };
+    el.addEventListener('click', flip);
+    el.addEventListener('keydown', function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } });
+    sync();
+  });
+  document.querySelectorAll('#dye-opts .btn').forEach(function(b){ b.addEventListener('click', function(){
+    document.querySelectorAll('#dye-opts .btn').forEach(function(x){ x.classList.toggle('active', x===b); }); view.set('dyeSource', b.getAttribute('data-dye')); }); });
+  document.querySelectorAll('#field-select .btn').forEach(function(b){ b.addEventListener('click', function(){
+    document.querySelectorAll('#field-select .btn').forEach(function(x){ x.classList.toggle('active', x===b); }); view.set('field', b.getAttribute('data-field')); showLegend(); }); });
+  document.getElementById('particles').addEventListener('input', function(e){ document.getElementById('particles-val').textContent=e.target.value; view.set('nTracers', +e.target.value); });
+  var qlev=function(v){ return 0.05*Math.pow(100, v/100); };
+  document.getElementById('qlevel').addEventListener('input', function(e){ var q=qlev(+e.target.value); document.getElementById('qlevel-val').textContent=q.toFixed(2); view.set('vortexLevel', q); });
+  document.getElementById('rake').addEventListener('input', function(e){ document.getElementById('rake-val').textContent=e.target.value+'°'; view.set('rakeY', +e.target.value/90); });
+  document.getElementById('crossx').addEventListener('input', function(e){ document.getElementById('crossx-val').textContent=e.target.value+'%'; view.set('crossX', +e.target.value/100); });
+  var recBtn=document.getElementById('btn-record');
+  recBtn.addEventListener('click', function(){
+    if (view.recording()){ view.record(false); recBtn.textContent='● Record video'; return; }
+    var ok=view.record(true, function(blob, err){
+      if (!blob){ recBtn.textContent = err || 'Recording unavailable'; return; }
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tube-flow.webm'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+    });
+    if (ok) recBtn.textContent='■ Stop and save';
+  });
+
+  // ------------------------------------------------------------------ measurements
+  // sample = [t, Fx, Fy, Fz, Δρ, recirculation, mass, a, b] in lattice units
+  function coeffScale(){ return 0.5 * L.u * L.u * Math.PI * Math.pow(G.r, 2); }       // ½ρU²·A, lattice (ρ = 1)
+  function stats(){
+    if (!G || !series.length || !G.r) return null;
+    var ft = G.Nx / L.u;                                   // steps per flow-through
+    // averaging window: one flow-through, or the viscous time R²/ν if shorter (slow, viscous flows
+    // settle by diffusion long before the fluid crosses the tube)
+    var tw = Math.max(50, Math.min(ft, 2 * G.R * G.R / L.nu));
+    var last = series[series.length-1], t = last[0];
+    var win = series.filter(function(s){ return s[0] > t - tw; });
+    var prev = series.filter(function(s){ return s[0] > t - 2*tw && s[0] <= t - tw; });
+    var mean = function(a, k){ return a.reduce(function(x,s){ return x+s[k]; },0)/Math.max(1,a.length); };
+    var q = coeffScale();
+    var cd = mean(win,1)/q, cdPrev = prev.length ? mean(prev,1)/q : NaN;
+    var my = mean(win,2), mz = mean(win,3);
+    var clr = Math.sqrt(win.reduce(function(x,s){ return x+(s[2]-my)*(s[2]-my)+(s[3]-mz)*(s[3]-mz); },0)/Math.max(1,win.length))/q;
+    // dominant lift frequency over the last few flow-throughs (direct DFT, a few hundred points)
+    // Strouhal number: dominant frequency of the side force over the last few flow-throughs —
+    // both components, resampled onto 256 evenly spaced times (samples needn't be evenly spaced)
+    var st = NaN, st2 = NaN, longWin = series.filter(function(s){ return s[0] > t - 6*ft; });
+    if (clr > 0.004*Math.abs(cd) && longWin.length > 64){
+      var NS=256, ta=longWin[0][0], tb=longWin[longWin.length-1][0], dtS=(tb-ta)/(NS-1), ys=[], zs=[], j=0;
+      for (var k=0;k<NS;k++){ var tt=ta+k*dtS; while (j<longWin.length-2 && longWin[j+1][0]<tt) j++; var A=longWin[j], B=longWin[j+1], u=(tt-A[0])/Math.max(1e-9,B[0]-A[0]); ys.push(A[2]+(B[2]-A[2])*u); zs.push(A[3]+(B[3]-A[3])*u); }
+      var my0=ys.reduce(function(a,b){return a+b;},0)/NS, mz0=zs.reduce(function(a,b){return a+b;},0)/NS, pw=[0,0], bf=0;
+      for (var kk=2;kk<NS/2;kk++){ var p2=0; [[ys,my0],[zs,mz0]].forEach(function(c){ var re=0, im=0; for (var jj=0;jj<NS;jj++){ var ph=2*Math.PI*kk*jj/NS; re+=(c[0][jj]-c[1])*Math.cos(ph); im+=(c[0][jj]-c[1])*Math.sin(ph); } p2+=re*re+im*im; }); pw[kk]=p2; if(!bf||p2>pw[bf]) bf=kk; }
+      // refine the peak between bins (parabola through the log power of the three bins around it)
+      var fb=bf;
+      if (bf>2 && pw[bf+1]){ var a1=Math.log(pw[bf-1]+1e-30), a2=Math.log(pw[bf]+1e-30), a3=Math.log(pw[bf+1]+1e-30), den=a1-2*a2+a3; if (den<0) fb=bf+0.5*(a1-a3)/den; }
+      st = fb/(NS*dtS)*2*G.r/L.u;
+      // second-strongest peak at least 3 bins away (sphere wakes often carry a slow modulation as well)
+      var b2=0; for (var k4=2;k4<NS/2;k4++){ if (Math.abs(k4-bf)<3) continue; if (!b2||pw[k4]>pw[b2]) b2=k4; }
+      if (b2 && pw[b2] > 0.25*pw[bf]) st2 = b2/(NS*dtS)*2*G.r/L.u;
+    }
+    var settled = prev.length > 5 && Math.abs(cd/cdPrev-1) < 0.005;
+    var rec = last[5]/(2*G.r);
+    // unsteady: the lift keeps oscillating (rms above 0.4% of the drag, at a clear frequency) after the
+    // start-up disturbance has had three flow-throughs to die out
+    var oscillating = isFinite(st) && clr > 0.004*Math.abs(cd);
+    var regime = !prev.length ? 'settling' : (oscillating && t/ft >= 3) ? 'unsteady' : settled && !oscillating ? 'steady' : 'settling';
+    var massChange = win.length > 1 ? win[win.length-1][6]/win[0][6] - 1 : 0;
+    var clMean = Math.hypot(my, mz) / q;
+    return { st2:st2, clMean:clMean, massChange:massChange, tw:tw, t:t, ft:t/ft, cd:cd, cdPrev:cdPrev, clr:clr, st:st, settled:settled, rec:rec, dp:last[4]/3, fx:mean(win,1), regime:regime, a:last[7], b:last[8] };
+  }
+  function tile(k, v, s){ return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'; }
+  var badge=document.getElementById('regime-badge');
+  function updateInstruments(){
+    if (!F) return;
+    var tSec = F.t*L.dt;
+    document.getElementById('sim-clock').textContent = 't = '+fmtSI(tSec,'s');
+    var S = stats();
+    var ftNow = G ? F.t*L.u/G.Nx : 0;
+    document.getElementById('hud-ft').textContent = ftNow.toFixed(1);
+    if (!S){ document.getElementById('tiles').innerHTML = tile('Waiting','—', state.running ? 'collecting the first samples' : 'press Play'); document.getElementById('ref').innerHTML=''; return; }
+    var c = caseOf(), Ureal = c.speed, d = c.ratio*c.tubeDiameter;
+    var Freal = S.fx*L.forceScale, dpReal = S.dp*L.pressureScale;
+    badge.className='regime-badge '+S.regime;
+    // a steady wake can lose its axial symmetry (steady oblique wake with a constant side force)
+    var asym = S.clMean > 0.01 && S.clMean > 0.05 * Math.abs(S.cd);
+    badge.textContent = S.regime==='settling' ? 'settling — '+(S.t/S.tw).toFixed(1)+' settling times' : S.regime==='steady' ? (asym ? 'steady · asymmetric wake' : S.rec>0.02 ? 'steady · separated wake' : 'steady · attached flow') : 'unsteady wake';
+    var dot=document.getElementById('regime-dot'), lbl=document.getElementById('regime-label');
+    lbl.textContent = badge.textContent; dot.style.background = S.regime==='unsteady' ? '#7dd3fc' : S.regime==='steady' ? '#3ddc97' : '#ffcf4a';
+    var h = '';
+    h += tile('Drag force', fmtSI(Freal,'N'), L.resolved ? 'on the sphere, '+(state.frame==='pipe'?'in pipe flow':'moving') : 'at the simulated Re');
+    h += tile('Drag coefficient C_d', S.cd.toPrecision(3), 'F / (½ρU²·πd²/4)'+(S.settled?'':' · settling'));
+    h += tile('Lift C_l', S.clMean < 1e-4 ? '≈ 0' : S.clMean.toPrecision(2), (S.clr < 0.01*Math.abs(S.cd) ? 'steady' : 'oscillating, rms '+S.clr.toPrecision(2)) + (S.clMean > 0.01 ? ' · wake leans to one side' : ' · symmetric'));
+    var stTxt = isFinite(S.st) ? S.st.toFixed(3) + (isFinite(S.st2) ? ' · ' + S.st2.toFixed(3) : '') : '—';
+    h += tile('Strouhal St', stTxt, isFinite(S.st) ? 'f·d/U, f = '+fmtSI(S.st*Ureal/d,'Hz') + (isFinite(S.st2) ? ' (two peaks: shedding and a slower wandering)' : '') : 'no oscillation');
+    h += tile('Recirculation', S.rec>0.005 ? (S.rec).toFixed(2)+' d' : 'none', S.rec>0.005 ? fmtSI(S.rec*d,'m')+' behind the sphere' : 'flow stays attached');
+    h += tile('Pressure drop', fmtSI(dpReal,'Pa'), 'across the sphere ('+((S.b-S.a)/(2*G.R)).toFixed(1)+' tube Ø)');
+    h += tile('Mass balance', (S.massChange*100).toExponential(1)+' %', 'change over the last window — no corrections applied');
+    document.getElementById('tiles').innerHTML = h;
+    drawChart();
+    // references
+    var ref = '', Re = L.ReSim;
+    if (state.frame==='moving' && Re < 1){
+      var lam=state.ratio, K=(1-0.75857*Math.pow(lam,5))/(1-2.1050*lam+2.0865*Math.pow(lam,3)-1.7068*Math.pow(lam,5)+0.72603*Math.pow(lam,6));
+      var Fst = 6*Math.PI*FLUIDS[state.fluid].nu*FLUIDS[state.fluid].rho*(d/2)*Ureal*K;
+      ref = '<b>Reference:</b> Stokes drag with the Haberman–Sayre wall correction K(λ = '+lam.toFixed(2)+') = '+K.toFixed(3)+' gives '+fmtSI(Fst,'N')+
+            ' — this simulation: '+fmtSI(Freal,'N')+' ('+((Freal/Fst-1)*100).toFixed(1)+'%). Valid for Re ≪ 1.';
+    } else if (Re < 800){
+      var cdSN = 24/Re*(1+0.15*Math.pow(Re,0.687));
+      ref = '<b>For comparison:</b> a sphere in unbounded flow at Re '+(Re<10?Re.toFixed(2):Math.round(Re))+' has C_d ≈ '+cdSN.toPrecision(3)+' (Schiller–Naumann). '+
+            'In a tube the walls raise the drag — the more, the larger the sphere'+(state.frame==='pipe'?', and pipe flow is defined here by its centre-line speed':'')+'. ';
+    }
+    document.getElementById('ref').innerHTML = ref;
+  }
+  // drag and lift coefficients over the last few flow-throughs
+  var chart=document.getElementById('chart'), cx=chart.getContext('2d');
+  function drawChart(){
+    var Wd=chart.width, Ht=chart.height, q=coeffScale(); cx.clearRect(0,0,Wd,Ht);
+    if (series.length<2) return;
+    var ft=G.Nx/L.u, t1=series[series.length-1][0], t0=Math.max(series[0][0], t1-6*ft);
+    var pts=series.filter(function(s){ return s[0]>=t0; });
+    var cds=pts.map(function(s){ return s[1]/q; }), cls=pts.map(function(s){ return s[2]/q*10; });
+    var lo=Math.min(0, Math.min.apply(null,cds), Math.min.apply(null,cls)), hi=Math.max(Math.max.apply(null,cds), Math.max.apply(null,cls))*1.1+1e-9;
+    var X=function(t){ return 40+(t-t0)/Math.max(1,t1-t0)*(Wd-50); }, Y=function(v){ return Ht-20-(v-lo)/(hi-lo)*(Ht-30); };
+    cx.strokeStyle='#1d4470'; cx.lineWidth=1; cx.beginPath(); cx.moveTo(40,Y(0)); cx.lineTo(Wd-10,Y(0)); cx.stroke();
+    cx.fillStyle='#6fa8c9'; cx.font='11px IBM Plex Mono, monospace'; cx.fillText(hi.toPrecision(2), 2, 14); cx.fillText(lo.toPrecision(2), 2, Ht-22);
+    [[cds,'#7be0c4'],[cls,'#ffcf4a']].forEach(function(pair){ cx.strokeStyle=pair[1]; cx.lineWidth=2; cx.beginPath(); pts.forEach(function(s,i){ var x=X(s[0]), y=Y(pair[0][i]); if(i) cx.lineTo(x,y); else cx.moveTo(x,y); }); cx.stroke(); });
+    document.getElementById('chart-time').textContent='last '+fmtSI((t1-t0)*L.dt,'s')+' ('+((t1-t0)/ft).toFixed(1)+' flow-throughs)';
+  }
+  document.getElementById('btn-csv').addEventListener('click', function(){
+    if (!series.length) return;
+    var q=coeffScale(), rows=['time_s,step,drag_N,lift_y_N,lift_z_N,Cd,Cl_y,Cl_z,pressure_drop_Pa,recirculation_over_d'];
+    series.forEach(function(s){ rows.push([(s[0]*L.dt).toPrecision(6), s[0], (s[1]*L.forceScale).toPrecision(6), (s[2]*L.forceScale).toPrecision(6), (s[3]*L.forceScale).toPrecision(6), (s[1]/q).toPrecision(6), (s[2]/q).toPrecision(6), (s[3]/q).toPrecision(6), (s[4]/3*L.pressureScale).toPrecision(6), (s[5]/(2*G.r)).toPrecision(4)].join(',')); });
+    var meta='# Tube Flow v'+APP_VERSION+' · '+FLUIDS[state.fluid].label+' · tube '+state.tubeMM+' mm · sphere '+Math.round(state.ratio*100)+'% · '+state.frame+' · U '+state.speed+' m/s · Re '+L.Re.toPrecision(4)+' (simulated '+L.ReSim.toPrecision(4)+') · grid '+G.Nx+'x'+G.Ny+'x'+G.Nz;
+    var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([meta+'\n'+rows.join('\n')],{type:'text/csv'})); a.download='tube-flow-measurements.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  });
+
+  // ------------------------------------------------------------------ main loop
+  function animate(){ requestAnimationFrame(animate); view.tick(state.running, F && F.stepsPerSec); }
+  window.tubeDebug = { view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
+
+  // pick the solver: the GPU when WebGPU is available, otherwise the CPU worker
+  (async function(){
+    gpuInfo = await TF.gpuAvailable();
+    var sel=document.getElementById('backend');
+    if (gpuInfo){ document.getElementById('backend-row').hidden=false; backend=makeGPU(gpuInfo.device); }
+    else { backend=makeCPU(); state.res='medium'; }
+    sel.value = backend.kind;
+    sel.addEventListener('change', function(){
+      backend.dispose();
+      backend = sel.value==='gpu' ? makeGPU(gpuInfo.device) : makeCPU();
+      state.res = sel.value==='gpu' ? 'g64' : 'medium';
+      renderGrids(); buildSim();
+    });
+    renderGrids(); buildSim(); view.resize(); requestAnimationFrame(animate);
+  })();
+})();
+</script>
+</body>
+</html>

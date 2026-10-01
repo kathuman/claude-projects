@@ -1,0 +1,110 @@
+/*
+ * model.js — parameter state management.
+ *
+ * Loads data/parameters.json (the single source of truth also read by
+ * freecad/create_model.py) and holds the live working copy of every
+ * parameter's current value. Nothing here computes an engineering result —
+ * that's calculations.js's job. This module only knows about parameter
+ * definitions, current values, and who to notify when a value changes.
+ */
+(function (global) {
+  "use strict";
+
+  function ParameterModel() {
+    this.schema = null;      // raw parameters.json .parameters
+    this.values = {};        // name -> current numeric value
+    this.defaults = {};      // name -> original default value
+    this.rackTypes = null;   // parameters.json "rack_types" table (passed to calculations.js)
+    this.listeners = [];
+  }
+
+  ParameterModel.prototype.load = function (url, done) {
+    const self = this;
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+      if (xhr.status !== 200 && xhr.status !== 0) {
+        done(new Error("Failed to load " + url + " (HTTP " + xhr.status + ")"));
+        return;
+      }
+      try {
+        const data = JSON.parse(xhr.responseText);
+        self.schema = data.parameters;
+        self.units = data.units;
+        self.rackTypes = {};
+        for (const k in data.rack_types) if (k.charAt(0) !== "$") self.rackTypes[k] = data.rack_types[k];
+        for (const name in self.schema) {
+          self.values[name] = self.schema[name].value;
+          self.defaults[name] = self.schema[name].value;
+        }
+        done(null);
+      } catch (e) {
+        done(e);
+      }
+    };
+    xhr.send();
+  };
+
+  ParameterModel.prototype.get = function (name) { return this.values[name]; };
+
+  ParameterModel.prototype.getAll = function () {
+    // Returns a plain {name: value} snapshot, exactly what calculations.js
+    // and visualization.js expect as their single "p" argument.
+    const snap = {};
+    for (const name in this.values) snap[name] = this.values[name];
+    return snap;
+  };
+
+  ParameterModel.prototype.set = function (name, value) {
+    const def = this.schema[name];
+    if (!def) throw new Error("Unknown parameter: " + name);
+    if (def.type === "choice") {
+      if (def.options.indexOf(value) < 0 || this.values[name] === value) return;
+      this.values[name] = value;
+      this._notify(name);
+      return;
+    }
+    if (!isFinite(value)) return;
+    const clamped = Math.max(def.minimum, Math.min(def.maximum, value));
+    if (this.values[name] === clamped) return;
+    this.values[name] = clamped;
+    this._notify(name);
+  };
+
+  // Set several parameters at once (a scenario, a share link, an optimiser result) — one notification.
+  ParameterModel.prototype.setMany = function (obj) {
+    let changed = false;
+    for (const name in obj) {
+      const def = this.schema[name], v = obj[name];
+      if (!def) continue;
+      if (def.type === "choice") { if (def.options.indexOf(v) < 0) continue; }
+      else if (typeof v !== "number" || !isFinite(v)) continue;
+      const val = def.type === "choice" ? v : Math.max(def.minimum, Math.min(def.maximum, v));
+      if (this.values[name] !== val) { this.values[name] = val; changed = true; }
+    }
+    if (changed) this._notify(null);
+    return changed;
+  };
+
+  ParameterModel.prototype.resetOne = function (name) {
+    this.set(name, this.defaults[name]);
+  };
+
+  ParameterModel.prototype.resetAll = function () {
+    for (const name in this.defaults) this.values[name] = this.defaults[name];
+    this._notify(null);
+  };
+
+  ParameterModel.prototype.onChange = function (cb) { this.listeners.push(cb); };
+
+  ParameterModel.prototype._notify = function (changedName) {
+    this.listeners.forEach(function (cb) { cb(changedName); });
+  };
+
+  // Ordered category list — drives the order rail sections render in.
+  ParameterModel.CATEGORY_ORDER = ["Building", "Racking", "Docks & Flow", "Operations", "Simulation", "Cost"];
+
+  global.WH = global.WH || {};
+  global.WH.ParameterModel = ParameterModel;
+})(window);

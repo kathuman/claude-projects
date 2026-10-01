@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess</title>
-  <meta name="description" content="Play chess against a friend on one screen — full rules including castling, en passant, promotion, check, checkmate and stalemate. Undo, flip board, move log, board themes. Single file, no dependencies." />
+  <meta name="description" content="Play chess against a friend on one screen or against the Stockfish engine (eight strength levels) — full rules including castling, en passant, promotion, check, checkmate and stalemate. Undo, flip board, move log, board themes." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9818;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -80,6 +80,9 @@
     .brand .mk { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 15px; }
     .brand h1 { font-size: 15px; font-weight: 700; margin: 0; letter-spacing: -.01em; white-space: nowrap; }
     .brand .sub { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .brand .sub a { color: var(--ink-2); font-weight: 600; text-decoration: none; }
+    .brand .sub a:hover { color: var(--accent); }
+    .ver { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; letter-spacing: .02em; }
     .hactions { display: flex; align-items: center; gap: 8px; flex: none; }
     .lnk { font-size: 12.5px; font-weight: 500; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; }
     .lnk:hover { border-color: var(--accent); color: var(--ink); }
@@ -163,6 +166,62 @@
       transition: left .16s ease-out, top .16s ease-out;
     }
 
+    /* ---- 3D view: the same DOM board, tilted and spun with CSS 3D transforms.
+       preserve-3d has to run unbroken from the frame down to each piece (no overflow,
+       filter or opacity on the way). Pieces are glyphs, so in 3D each one undoes the
+       board's rotation (var(--tilt), var(--spin)) and stands up facing the viewer. ---- */
+    .stage { display: flex; justify-content: center; width: 100%; perspective: 1500px; perspective-origin: 50% 35%; }
+    .board-frame { --tilt: 0; --spin: 0; }
+    .view-toggle { display: inline-flex; padding: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+    .view-toggle button { font: inherit; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); background: transparent; border: 0; border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+    .view-toggle button.on { background: var(--accent); color: var(--accent-ink); }
+    .board .edge { display: none; }
+    :root[data-view="3d"] .board-wrap { overflow: hidden; }
+    :root[data-view="3d"] .stage { touch-action: none; padding: 26px 0 34px; cursor: grab; }
+    :root[data-view="3d"] .stage.dragging { cursor: grabbing; }
+    :root[data-view="3d"] .board-frame { transform-style: preserve-3d; transition: transform .45s cubic-bezier(.2,.7,.2,1), margin .45s cubic-bezier(.2,.7,.2,1); }
+    :root[data-view="3d"] .stage.dragging .board-frame { transition: margin .45s cubic-bezier(.2,.7,.2,1); }
+    :root[data-view="3d"] .board { overflow: visible; transform-style: preserve-3d; }
+    /* lift the squares a hair off the board so clicks never resolve to the coplanar board behind them */
+    :root[data-view="3d"] .cell { transform-style: preserve-3d; transform: translateZ(.4px); }
+    :root[data-view="3d"] .piece,
+    :root[data-view="3d"] .anim-piece {
+      transform-origin: 50% 80%;
+      transform: translateZ(1px) rotateZ(calc(var(--spin) * -1deg)) rotateX(calc(var(--tilt) * -1deg)) scale(.86);
+      filter: drop-shadow(0 3px 2px rgba(0,0,0,.35));
+    }
+    :root[data-view="3d"] .piece { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .15s; }
+    /* A standing piece overlaps the squares behind it on screen, so it only takes clicks when
+       it's one you'd want: your movable pieces before selecting, capturable ones after. Every
+       other click passes through to the square underneath. */
+    :root[data-view="3d"] .board:not(.has-sel) .cell.playable .piece,
+    :root[data-view="3d"] .board.has-sel .cell:has(.ring) .piece { pointer-events: auto; }
+    /* while a piece is selected, the others turn translucent so every target square shows through */
+    :root[data-view="3d"] .board.has-sel .cell:not(:has(.ring)):not(:has(.hl.select)) .piece { opacity: .3; }
+    :root[data-view="3d"] .board .edge { display: block; position: absolute; background: var(--sq-dark); pointer-events: none; }
+    :root[data-view="3d"] .edge.s { left: -3px; right: -3px; top: calc(100% + 3px); height: 14px; transform-origin: top; transform: rotateX(-90deg); background: color-mix(in srgb, var(--sq-dark) 78%, #000); }
+    :root[data-view="3d"] .edge.n { left: -3px; right: -3px; bottom: calc(100% + 3px); height: 14px; transform-origin: bottom; transform: rotateX(90deg); background: color-mix(in srgb, var(--sq-dark) 78%, #000); }
+    :root[data-view="3d"] .edge.w { top: -3px; bottom: -3px; right: calc(100% + 3px); width: 14px; transform-origin: right; transform: rotateY(-90deg); background: color-mix(in srgb, var(--sq-dark) 62%, #000); }
+    :root[data-view="3d"] .edge.e { top: -3px; bottom: -3px; left: calc(100% + 3px); width: 14px; transform-origin: left; transform: rotateY(90deg); background: color-mix(in srgb, var(--sq-dark) 62%, #000); }
+    /* ---- "Staunton" pieces: Cburnett SVGs in 2D, a WebGL scene in 3D ---- */
+    .pimg { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+    :root[data-pieces="staunton"] .piece { width: 92%; height: 92%; display: grid; place-items: center; text-shadow: none; }
+    :root[data-pieces="staunton"] .anim-piece { text-shadow: none; }
+    :root[data-pieces="staunton"] .anim-piece .pimg { width: 92%; height: 92%; }
+    .side-score .cap .pimg { width: 18px; height: 18px; display: inline-block; }
+    .modal .choices button .pimg { width: 44px; height: 44px; margin: auto; }
+    .gl-canvas { display: none; width: 100%; border-radius: 10px; touch-action: none; }
+    .stage.gl-on .gl-canvas { display: block; }
+    .stage.gl-on .board-frame { display: none; }
+    :root[data-view="3d"] .stage.gl-on { padding: 0; }
+    .glnote { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+
+    .range-row { display: grid; grid-template-columns: 52px 1fr 40px; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+    .range-row input { width: 100%; accent-color: var(--accent); }
+    .range-row output { font-family: var(--font-mono); font-size: 11px; text-align: right; color: var(--muted); }
+    .view3d-only[hidden] { display: none; }
+    .fieldnote { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+
     .banner { min-height: 22px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); text-align: center; }
     .banner.win { color: var(--accent); font-size: 15px; }
 
@@ -197,6 +256,14 @@
     .swatches { display: flex; gap: 8px; margin-top: 9px; }
     .swatch { flex: 1; height: 30px; border-radius: 8px; border: 1px solid var(--border); position: relative; overflow: hidden; }
     .swatch .pv { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; }
+
+    .engine-only[hidden] { display: none; }
+    .engine-status { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); }
+    .engine-status .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+    .engine-status.ready .led { background: #3f9b5a; }
+    .engine-status.busy .led { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+    .engine-status.error .led { background: #d0453a; }
+    @keyframes pulse { 50% { opacity: .3; } }
 
     .stats { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
     .stats div { display: flex; justify-content: space-between; padding: 3px 0; }
@@ -251,9 +318,16 @@
 
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
-      .board { width: min(88vw, 520px); }
+      .board { width: min(100%, 520px); }
+      .board-frame { width: min(100%, 520px); }
+      .turn-row { flex-wrap: wrap; gap: 10px; }
       .cell { font-size: min(9.5vw, 44px); }
       .anim-piece { font-size: min(9.5vw, 44px); }
+    }
+    @media (max-width: 520px) {
+      .brand .sub .sub-rest { display: none; }
+      main { padding: 18px 16px 10px; }
+      .board-wrap { padding: 12px; }
     }
   </style>
 </head>
@@ -262,8 +336,8 @@
     <div class="brand">
       <span class="mk">♞</span>
       <div>
-        <h1>Chess</h1>
-        <div class="sub">two players &middot; one screen</div>
+        <h1>Chess <span class="ver" id="verBadge" title="App version"></span></h1>
+        <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="sub-rest"> &middot; vs a friend &middot; or vs Stockfish</span></div>
       </div>
     </div>
     <div class="hactions">
@@ -281,22 +355,62 @@
         <div class="turn-row">
           <div class="side-score" id="scoreWhite">
             <span class="chip w"></span>
-            <span class="lbl">White</span>
+            <span class="lbl" id="lblWhite">White</span>
             <span class="cap" id="capWhite"></span>
           </div>
           <div class="side-score" id="scoreBlack">
             <span class="chip b"></span>
-            <span class="lbl">Black</span>
+            <span class="lbl" id="lblBlack">Black</span>
             <span class="cap" id="capBlack"></span>
+          </div>
+          <div class="view-toggle" role="group" aria-label="Board view">
+            <button type="button" data-view="2d">2D</button>
+            <button type="button" data-view="3d">3D</button>
           </div>
         </div>
 
-        <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+        <div class="stage" id="stage">
+          <div class="board-frame" id="boardFrame">
+            <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+          </div>
+        </div>
 
         <div class="banner" id="banner">White to move</div>
       </section>
 
       <aside>
+        <div class="panel">
+          <h3>Opponent</h3>
+          <div class="field">
+            <label for="oppSel">Play against</label>
+            <select class="sel" id="oppSel">
+              <option value="human">A friend — same screen</option>
+              <option value="engine">Computer — Stockfish</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="sideSel">You play</label>
+            <select class="sel" id="sideSel">
+              <option value="w">White</option>
+              <option value="b">Black</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="levelSel">Strength</label>
+            <select class="sel" id="levelSel">
+              <option value="1">1 — Beginner</option>
+              <option value="2">2 — Novice</option>
+              <option value="3">3 — Casual</option>
+              <option value="4">4 — Club</option>
+              <option value="5">5 — Strong club</option>
+              <option value="6">6 — Expert</option>
+              <option value="7">7 — Master</option>
+              <option value="8">8 — Full strength</option>
+            </select>
+          </div>
+          <div class="engine-status engine-only" id="engineStatus"><span class="led"></span><span id="engineText">Engine not loaded</span></div>
+        </div>
+
         <div class="panel">
           <h3>Game</h3>
           <button class="btn primary" id="newBtn">New game</button>
@@ -317,6 +431,27 @@
               <option value="charcoal">Charcoal</option>
             </select>
             <div class="swatches" id="lookPreview" aria-hidden="true"></div>
+          </div>
+          <div class="field">
+            <label for="pieceSel">Pieces</label>
+            <select class="sel" id="pieceSel">
+              <option value="classic">Classic glyphs</option>
+              <option value="staunton">Staunton — detailed 2D, modelled 3D</option>
+            </select>
+            <p class="glnote" id="glNote" hidden></p>
+          </div>
+          <div class="field">
+            <label>View</label>
+            <div class="view-toggle" role="group" aria-label="Board view">
+              <button type="button" data-view="2d">2D</button>
+              <button type="button" data-view="3d">3D</button>
+            </div>
+          </div>
+          <div class="field view3d-only" id="view3dCtl">
+            <div class="range-row"><span>Tilt</span><input type="range" id="tiltRange" min="0" max="75" step="1" aria-label="Tilt" /><output id="tiltOut"></output></div>
+            <div class="range-row"><span>Rotate</span><input type="range" id="spinRange" min="-180" max="180" step="1" aria-label="Rotate" /><output id="spinOut"></output></div>
+            <button class="btn" id="viewReset" type="button">Reset view</button>
+            <p class="fieldnote">Drag the board to turn it around. Click (without dragging) to move pieces as usual.</p>
           </div>
         </div>
 
@@ -349,8 +484,21 @@
       <p>
         A king in check is ringed in red; you must get out of check immediately. Checkmate ends
         the game for the side with no way out; if the side to move has no legal move but isn't in
-        check, it's stalemate — a draw. Undo steps back one full move at a time; Flip board turns
+        check, it's stalemate — a draw. Undo steps back one move at a time; Flip board turns
         the board around for the other player without changing whose turn it is.
+      </p>
+      <p>
+        To play the computer, set <b>Play against</b> to <b>Computer — Stockfish</b>, pick your colour
+        and a strength, and just play. Level 1 blunders freely and suits a first game; level 8 is the
+        engine at full (lite) strength and will beat any human. You can switch sides or strength
+        mid-game — the engine picks up from the current position. In this mode Undo takes back your
+        last move <em>and</em> the computer's reply, so it's your turn again.
+      </p>
+      <p>
+        <b>3D view.</b> Press <b>3D</b> (above the board, or under Look) to see the board in perspective,
+        with the pieces standing up. With <b>Pieces: Staunton</b> the 3D board uses modelled, lit
+        Staunton pieces (and the flat board uses a detailed SVG set). Drag anywhere on it to turn it around and tilt it — or use the Tilt
+        and Rotate sliders, and Reset view to go back. Everything else works the same.
       </p>
     </details>
 
@@ -358,7 +506,8 @@
       <summary>How the code is built</summary>
       <div class="codedoc">
         <p>
-          The whole game is this one HTML file — no build step, no libraries. All the
+          The whole game is this one HTML file — no build step, no libraries (the optional
+          Stockfish engine is a separate file it loads on demand; see below). All the
           JavaScript lives in a single function (an <em>IIFE</em>) at the bottom, split into
           labelled sections with <code>// ===</code> banners, mirroring the structure of the
           Python/Tkinter version this was ported from:
@@ -413,6 +562,26 @@
           "is this move legal" all reduce to calls to this one function.
         </p>
 
+        <h4>The computer opponent is Stockfish, talking UCI</h4>
+        <p>
+          The engine is <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>
+          — the open-source <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish 18</a>
+          compiled to WebAssembly (the ~7&nbsp;MB "lite, single-threaded" build, GPLv3), vendored in
+          <code>chess/engine/</code>. It runs in a <code>Web Worker</code> so it never freezes the page, and
+          is only downloaded the first time you pick the computer as opponent. The page talks to it in
+          plain-text <em>UCI</em>, the protocol every chess GUI uses: it sends
+          <code>position startpos moves e2e4 e7e5 …</code> (the whole game, so the engine also sees
+          repetitions), then <code>go depth N</code>, and waits for a <code>bestmove g1f3</code> line.
+          That string is matched against this page's own legal-move list, and played through the same
+          <code>makeMove</code> a click uses — so the engine can never make a move the rules here don't allow.
+        </p>
+        <p>
+          Strength levels set Stockfish's <code>Skill Level</code> option (0–20, which makes it
+          deliberately choose weaker moves) together with a search-depth cap. If you undo or start a new
+          game while it's thinking, the page sends <code>stop</code> and throws away the answer that
+          comes back.
+        </p>
+
         <h4>Undo is snapshots, not reverse moves</h4>
         <p>
           Before every move, the entire board, castling rights, en-passant square and last move
@@ -426,6 +595,35 @@
           regardless of orientation; only <code>buildGrid()</code>'s construction order changes
           when flipped, walking visual rows/columns and computing which logical square lands
           there. Every other function only ever thinks in logical coordinates.
+        </p>
+
+        <h4>The 3D view is the same board, transformed</h4>
+        <p>
+          Switching to 3D doesn't swap in a 3D engine. The very same board gets a CSS
+          <code>perspective</code> and a <code>rotateX(tilt) rotateZ(rotation)</code> transform, with
+          <code>transform-style: preserve-3d</code> carried down to every square. Each piece then applies
+          the <em>inverse</em> rotation — <code>rotateZ(-rotation) rotateX(-tilt)</code>, read from two CSS
+          variables — around its base, so the flat Unicode glyph stands up and faces you like a real
+          chessman wherever the board is turned. Four faces folded down with
+          <code>rotateX/Y(±90°)</code> make the board's sides. Because it's still the same DOM, the browser
+          maps clicks through the transform onto the right square, so moves, highlights, animation, undo
+          and the engine all work unchanged. A drag longer than a few pixels turns the board, and the click
+          at the end of it is swallowed so it can't also move a piece.
+        </p>
+
+        <h4>Staunton pieces: SVG in 2D, real geometry in 3D</h4>
+        <p>
+          With <b>Pieces: Staunton</b>, the flat board shows Colin M.L. Burnett's classic SVG set (the one
+          used on Wikipedia and lichess, here under the GPL). In 3D the pieces become actual 3D models
+          drawn with <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (WebGL,
+          vendored, only downloaded when first needed). Each piece is a <code>LatheGeometry</code> — a
+          profile of radius against height, spun around its axis like wood on a lathe — plus a few extra
+          parts: rook battlements, the queen's coronet of spheres, the king's cross, and a knight's head
+          that is a 2D silhouette extruded into a solid. A directional light casts soft shadows onto a
+          board whose squares are painted into a canvas texture from the same CSS colours as the flat
+          board. The hidden DOM board is still the one source of truth: a click on the 3D view is
+          raycast to a square (a piece you can see wins, unless a highlighted target square is under the
+          pointer) and handed to that square's normal click handler.
         </p>
 
         <h4>Look = CSS variables + a data attribute</h4>
@@ -449,13 +647,22 @@
   </main>
 
   <footer class="foot">
-    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Classic chess, two players on one screen. Single file, no dependencies. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    <span class="consult">Chess <span id="verFooter"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Staunton SVG pieces by Colin M.L. Burnett (GPL); 3D via <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (MIT). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
   <script>
   (function () {
     "use strict";
+
+    // Bump on every user-visible change.
+    //   1.0.0  launch: two players on one screen (ported from chess_game.py)
+    //   1.1.0  computer opponent: Stockfish 18 (WASM) at eight levels
+    //   1.2.0  3D board view; author credit + version in the header and footer
+    //   1.3.0  Staunton pieces: Cburnett SVGs in 2D, lathe-modelled WebGL pieces in 3D
+    var APP_VERSION = "1.3.0";
+    document.getElementById("verBadge").textContent = "v" + APP_VERSION;
+    document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
     // ========================================================== THEME
     (function initTheme() {
@@ -744,7 +951,13 @@
       moveList: [],
       captured: { w: [], b: [] }, // pieces captured BY white / BY black
       animating: false,
-      pendingPromotion: null
+      pendingPromotion: null,
+      uciMoves: [],         // the game so far in UCI ("e2e4", "e7e8q") — what the engine is sent
+      opponent: "human",    // "human" | "engine"
+      humanColor: "w",
+      level: 3,
+      thinking: false,
+      gameId: 0             // bumped by New game, so a move still animating from the old game is dropped
     };
     state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
 
@@ -752,14 +965,161 @@
       var b = readLS("chess-board", "classic");
       if (b && b !== "classic") document.documentElement.setAttribute("data-board", b);
       state._board = b || "classic";
+      state._pieces = readLS("chess-pieces", "classic") === "staunton" ? "staunton" : "classic";
+      state.opponent = readLS("chess-opponent", "human") === "engine" ? "engine" : "human";
+      state.humanColor = readLS("chess-side", "w") === "b" ? "b" : "w";
+      var lv = parseInt(readLS("chess-level", "3"), 10);
+      state.level = lv >= 1 && lv <= 8 ? lv : 3;
+      state.flipped = state.opponent === "engine" && state.humanColor === "b";
     })();
+
+    // ========================================================== ENGINE
+    // Stockfish 18 (lite, single-threaded WASM build of Stockfish.js, GPLv3) in a
+    // Web Worker, spoken to in UCI. Loaded lazily the first time it's needed.
+    var ENGINE_URL = "engine/stockfish-18-lite-single.js";
+    // level -> Stockfish "Skill Level" (0-20) + a search limit
+    var LEVELS = {
+      1: { skill: 0,  go: "depth 1" },
+      2: { skill: 3,  go: "depth 2" },
+      3: { skill: 6,  go: "depth 4" },
+      4: { skill: 9,  go: "depth 6" },
+      5: { skill: 12, go: "depth 8" },
+      6: { skill: 15, go: "depth 11" },
+      7: { skill: 18, go: "depth 14" },
+      8: { skill: 20, go: "movetime 1500" }
+    };
+    var MIN_THINK_MS = 450; // so an instant reply still reads as a move, not a glitch
+
+    var engine = {
+      worker: null,
+      status: "off",        // off | loading | ready | error
+      // Every "go" gets exactly one "bestmove", in order, so counting both tells us
+      // which search a reply belongs to; replies to cancelled searches are dropped.
+      gosSent: 0,
+      bestsSeen: 0,
+      pending: null,        // { id, cb } for the search we still want an answer to
+      searchToken: 0,       // bumped on cancel, so a reply already in hand is ignored too
+      onReady: []
+    };
+
+    function setEngineStatus(status, text) {
+      engine.status = status;
+      var el = document.getElementById("engineStatus");
+      el.classList.toggle("ready", status === "ready" && !state.thinking);
+      el.classList.toggle("busy", status === "loading" || state.thinking);
+      el.classList.toggle("error", status === "error");
+      document.getElementById("engineText").textContent = text;
+    }
+
+    function engineIdleText() { return "Stockfish 18 · ready · level " + state.level; }
+
+    function engineSend(cmd) { if (engine.worker) engine.worker.postMessage(cmd); }
+
+    function ensureEngine(cb) {
+      if (engine.status === "ready") { cb(); return; }
+      if (engine.status === "error") return;
+      engine.onReady.push(cb);
+      if (engine.status === "loading") return;
+      setEngineStatus("loading", "Loading Stockfish (≈7 MB, first time only)…");
+      try {
+        engine.worker = new Worker(ENGINE_URL);
+      } catch (e) {
+        engineFailed();
+        return;
+      }
+      engine.worker.onerror = engineFailed;
+      setTimeout(function () { if (engine.status === "loading") engineFailed(); }, 60000);
+      engine.worker.onmessage = function (e) {
+        var line = typeof e.data === "string" ? e.data : "";
+        if (line === "uciok") {
+          engineSend("isready");
+        } else if (line === "readyok" && engine.status === "loading") {
+          setEngineStatus("ready", engineIdleText());
+          var q = engine.onReady; engine.onReady = [];
+          q.forEach(function (f) { f(); });
+        } else if (line.indexOf("bestmove") === 0) {
+          engine.bestsSeen++;
+          var p = engine.pending;
+          if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1]); }
+        }
+      };
+      engineSend("uci");
+    }
+
+    function engineFailed() {
+      engine.onReady = [];
+      if (engine.worker) { try { engine.worker.terminate(); } catch (e) {} }
+      engine.worker = null;
+      state.thinking = false;
+      var local = location.protocol === "file:";
+      setEngineStatus("error", local
+        ? "Engine can't start from a local file — serve the folder over http"
+        : "Couldn't load the engine — check your connection");
+      render();
+    }
+
+    function engineSearch(cb) {
+      var lv = LEVELS[state.level];
+      engine.pending = { id: ++engine.gosSent, cb: cb };
+      engineSend("setoption name Skill Level value " + lv.skill);
+      engineSend("position startpos" + (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : ""));
+      engineSend("go " + lv.go);
+    }
+
+    function cancelEngine() {
+      if (!state.thinking) return;
+      state.thinking = false;
+      engine.searchToken++;
+      if (engine.pending) { engine.pending = null; engineSend("stop"); }
+      if (engine.status === "ready") setEngineStatus("ready", engineIdleText());
+    }
+
+    function isEngineTurn() {
+      return state.opponent === "engine" && !state.over && state.turn !== state.humanColor;
+    }
+
+    // Called whenever the position settles: if it's the computer's move, ask for one.
+    function maybeEngineMove() {
+      if (!isEngineTurn() || state.thinking || state.animating || engine.status === "error") return;
+      state.thinking = true;
+      var token = engine.searchToken;
+      render();
+      ensureEngine(function () {
+        if (token !== engine.searchToken) return; // cancelled while the engine was loading
+        setEngineStatus("ready", "Stockfish is thinking…");
+        var started = Date.now();
+        engineSearch(function (uci) {
+          var wait = Math.max(0, MIN_THINK_MS - (Date.now() - started));
+          setTimeout(function () {
+            if (token !== engine.searchToken) return;
+            state.thinking = false;
+            setEngineStatus("ready", engineIdleText());
+            var mv = uciToMove(uci);
+            if (mv) makeMove(mv); else render();
+          }, wait);
+        });
+      });
+    }
+
+    function moveToUCI(m) {
+      return squareName(m[0], m[1]) + squareName(m[2], m[3]) + (m[4] === "promo" ? m[5].toLowerCase() : "");
+    }
+    // Map the engine's answer back onto our own legal-move list, so it can only play legal moves.
+    function uciToMove(uci) {
+      if (!uci || uci === "(none)") return null;
+      for (var i = 0; i < state.legalCache.length; i++) {
+        if (moveToUCI(state.legalCache[i]) === uci) return state.legalCache[i];
+      }
+      return null;
+    }
 
     // ========================================================== RENDER
     var boardEl = document.getElementById("board");
     var cells = []; // cells[r][c] -> DOM node, indexed by LOGICAL square
 
     function buildGrid() {
-      boardEl.innerHTML = "";
+      // the four .edge faces are the board's sides, only shown in 3D
+      boardEl.innerHTML = '<div class="edge n"></div><div class="edge s"></div><div class="edge w"></div><div class="edge e"></div>';
       cells = [];
       for (var r = 0; r < 8; r++) { cells.push([null,null,null,null,null,null,null,null]); }
       for (var vr = 0; vr < 8; vr++) {
@@ -795,6 +1155,14 @@
       return { left: (vc / 8 * 100) + "%", top: (vr / 8 * 100) + "%" };
     }
 
+    // What a piece looks like in the DOM: a Unicode glyph, or a Cburnett SVG for "Staunton".
+    function pieceHTML(p) {
+      if (state._pieces === "staunton") {
+        return '<img class="pimg" src="pieces/cburnett/' + colorOf(p) + p.toUpperCase() + '.svg" alt="" draggable="false">';
+      }
+      return UNICODE_PIECES[p];
+    }
+
     function render() {
       var board = state.board;
       var legalSet = {};
@@ -820,7 +1188,7 @@
         if (piece) {
           var pe = document.createElement("div");
           pe.className = "piece";
-          pe.textContent = UNICODE_PIECES[piece];
+          pe.innerHTML = pieceHTML(piece);
           cell.appendChild(pe);
         }
 
@@ -833,12 +1201,14 @@
           }
         }
 
-        cell.classList.toggle("playable", !!legalSet[r + "," + c] || (piece != null && colorOf(piece) === state.turn && !state.over));
+        cell.classList.toggle("playable", !!legalSet[r + "," + c] || (piece != null && colorOf(piece) === state.turn && !state.over && !isEngineTurn()));
       }
 
+      boardEl.classList.toggle("has-sel", !!state.selected);
       renderStatus();
       renderCaptured();
       renderLog();
+      if (gl.active) glSync();
     }
 
     function renderStatus() {
@@ -849,12 +1219,18 @@
       document.getElementById("stTurn").textContent = turnName;
       document.getElementById("stLast").textContent = state.moveList.length ? state.moveList[state.moveList.length - 1] : "—";
       document.getElementById("undoBtn").disabled = state.history.length === 0 || state.animating;
+      var vsEngine = state.opponent === "engine";
+      document.getElementById("lblWhite").textContent = "White" + (vsEngine ? (state.humanColor === "w" ? " · you" : " · Stockfish") : "");
+      document.getElementById("lblBlack").textContent = "Black" + (vsEngine ? (state.humanColor === "b" ? " · you" : " · Stockfish") : "");
 
       var banner = document.getElementById("banner");
       banner.classList.remove("win");
       if (state.over) {
         banner.classList.add("win");
         banner.textContent = state.overText;
+      } else if (isEngineTurn()) {
+        banner.textContent = engine.status === "error" ? "Engine unavailable — switch to a friend, or undo"
+          : (inCheck(state.board, state.turn) ? "Check! " : "") + "Stockfish is thinking…";
       } else if (inCheck(state.board, state.turn)) {
         banner.textContent = turnName + " to move — Check!";
       } else {
@@ -865,14 +1241,15 @@
     function renderCaptured() {
       var order = { Q: 0, R: 1, B: 2, N: 3, P: 4 };
       function summarize(list, el) {
-        var sorted = list.slice().sort(function (a, b) { return order[a] - order[b]; });
-        var html = sorted.map(function (p) { return UNICODE_PIECES[p]; }).join(" ");
+        var sorted = list.slice().sort(function (a, b) { return order[a.toUpperCase()] - order[b.toUpperCase()]; });
+        // classic glyphs show every captured piece as an outline; Staunton shows its real colour
+        var html = sorted.map(function (p) { return state._pieces === "staunton" ? pieceHTML(p) : UNICODE_PIECES[p.toUpperCase()]; }).join(" ");
         el.innerHTML = html;
       }
       var capWhite = document.getElementById("capWhite"); // pieces White has captured (black pieces)
       var capBlack = document.getElementById("capBlack");
-      summarize(state.captured.w.map(function (p) { return p.toUpperCase(); }), capWhite);
-      summarize(state.captured.b.map(function (p) { return p.toUpperCase(); }), capBlack);
+      summarize(state.captured.w, capWhite);
+      summarize(state.captured.b, capBlack);
       var valW = state.captured.w.reduce(function (s, p) { return s + PIECE_VALUE[p.toUpperCase()]; }, 0);
       var valB = state.captured.b.reduce(function (s, p) { return s + PIECE_VALUE[p.toUpperCase()]; }, 0);
       var diff = valW - valB;
@@ -900,11 +1277,12 @@
       else if (flag === "O-O-O") movers.push([preBoard[r][0], r, 0, r, 3]);
 
       state.animating = true;
+      if (gl.active) glAnimate(move, preBoard);
       var floaters = movers.map(function (m) {
         var piece = m[0], fr = m[1], fc = m[2];
         var el = document.createElement("div");
         el.className = "anim-piece";
-        el.textContent = UNICODE_PIECES[piece];
+        el.innerHTML = pieceHTML(piece);
         var p0 = visPos(fr, fc);
         el.style.left = p0.left; el.style.top = p0.top;
         boardEl.appendChild(el);
@@ -945,6 +1323,7 @@
         enPassant: state.enPassant,
         lastMove: state.lastMove,
         moveList: state.moveList.slice(),
+        uciMoves: state.uciMoves.slice(),
         captured: { w: state.captured.w.slice(), b: state.captured.b.slice() },
         over: state.over,
         overText: state.overText
@@ -963,11 +1342,15 @@
         if (isCheckAfter) {
           var winner = state.turn === "w" ? "Black" : "White";
           state.overText = "Checkmate! " + winner + " wins.";
+          if (state.opponent === "engine") {
+            state.overText = state.turn === state.humanColor ? "Checkmate — Stockfish wins." : "Checkmate — you win!";
+          }
         } else {
           state.overText = "Stalemate! Draw.";
         }
       }
       render();
+      maybeEngineMove();
     }
 
     function makeMove(move) {
@@ -977,6 +1360,7 @@
       if (flag === "ep") captured = state.turn === "w" ? "p" : "P";
 
       pushHistory();
+      state.uciMoves.push(moveToUCI(move));
       var preBoard = cloneBoard(state.board);
       var boardBefore = preBoard;
       applyMoveTo(state.board, move, state.castling);
@@ -990,7 +1374,9 @@
       move._boardBefore = boardBefore;
       move._legalBefore = legalBefore;
 
+      var gameId = state.gameId;
       animateMove(move, preBoard, function () {
+        if (gameId !== state.gameId) { maybeEngineMove(); return; }
         var stillLegal = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
         var isCheckAfter = inCheck(state.board, state.turn);
         var isMate = stillLegal.length === 0 && isCheckAfter;
@@ -1000,13 +1386,17 @@
 
     function undo() {
       if (!state.history.length || state.animating) return;
+      cancelEngine();
       var snap = state.history.pop();
+      // vs the computer, step back to the human's turn (their move + the engine's reply)
+      if (state.opponent === "engine" && snap.turn !== state.humanColor && state.history.length) snap = state.history.pop();
       state.board = snap.board;
       state.turn = snap.turn;
       state.castling = snap.castling;
       state.enPassant = snap.enPassant;
       state.lastMove = snap.lastMove;
       state.moveList = snap.moveList;
+      state.uciMoves = snap.uciMoves;
       state.captured = snap.captured;
       state.over = snap.over;
       state.overText = snap.overText;
@@ -1014,9 +1404,12 @@
       state.legalTargets = [];
       state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
       render();
+      maybeEngineMove();
     }
 
     function newGame() {
+      cancelEngine();
+      state.gameId++;
       state.board = initialBoard();
       state.turn = "w";
       state.castling = { K: true, Q: true, k: true, q: true };
@@ -1028,9 +1421,11 @@
       state.over = false;
       state.overText = "";
       state.moveList = [];
+      state.uciMoves = [];
       state.captured = { w: [], b: [] };
       state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
       render();
+      maybeEngineMove();
     }
 
     function askPromotion(color, cb) {
@@ -1046,7 +1441,7 @@
       ["Q", "R", "B", "N"].forEach(function (piece) {
         var btn = document.createElement("button");
         var glyph = color === "w" ? piece : piece.toLowerCase();
-        btn.textContent = UNICODE_PIECES[glyph];
+        btn.innerHTML = pieceHTML(glyph);
         btn.addEventListener("click", function () {
           backdrop.remove();
           cb(piece);
@@ -1059,7 +1454,7 @@
     }
 
     function onCellClick(e) {
-      if (state.over || state.animating) return;
+      if (state.over || state.animating || isEngineTurn()) return;
       var row = +this.dataset.r, col = +this.dataset.c;
       var board = state.board;
 
@@ -1107,12 +1502,51 @@
       render();
     });
 
+    var oppSel = document.getElementById("oppSel");
+    var sideSel = document.getElementById("sideSel");
+    var levelSel = document.getElementById("levelSel");
+    function applyOpponentUI() {
+      var vs = state.opponent === "engine";
+      document.querySelectorAll(".engine-only").forEach(function (el) { el.hidden = !vs; });
+      oppSel.value = state.opponent;
+      sideSel.value = state.humanColor;
+      levelSel.value = String(state.level);
+    }
+    oppSel.addEventListener("change", function () {
+      state.opponent = this.value; writeLS("chess-opponent", this.value);
+      applyOpponentUI();
+      if (state.opponent === "engine") {
+        if (state.flipped !== (state.humanColor === "b")) { state.flipped = state.humanColor === "b"; buildGrid(); }
+        state.selected = null; state.legalTargets = [];
+        render();
+        maybeEngineMove();
+        if (engine.status === "off") ensureEngine(function () {}); // warm up in the background
+      } else {
+        cancelEngine();
+        render();
+      }
+    });
+    sideSel.addEventListener("change", function () {
+      cancelEngine();
+      state.humanColor = this.value; writeLS("chess-side", this.value);
+      state.flipped = state.humanColor === "b";
+      state.selected = null; state.legalTargets = [];
+      buildGrid();
+      render();
+      maybeEngineMove();
+    });
+    levelSel.addEventListener("change", function () {
+      state.level = parseInt(this.value, 10); writeLS("chess-level", this.value);
+      if (engine.status === "ready" && !state.thinking) setEngineStatus("ready", engineIdleText());
+    });
+
     var BOARD_PREVIEW = {
       classic: ["#f0d9b5", "#b58863"], walnut: ["#e4c9a0", "#7a4a26"], slate: ["#cdd6dd", "#44525f"],
       ocean: ["#cfeae7", "#1a6e77"], sand: ["#ecdcb8", "#c09c5c"], charcoal: ["#55555e", "#2a2a30"]
     };
     function applyLook() {
       var root = document.documentElement;
+      if (state._pieces === "staunton") root.setAttribute("data-pieces", "staunton"); else root.removeAttribute("data-pieces");
       if (state._board === "classic") root.removeAttribute("data-board");
       else root.setAttribute("data-board", state._board);
       var host = document.getElementById("lookPreview");
@@ -1120,10 +1554,490 @@
       host.innerHTML =
         '<div class="swatch"><div class="pv"><div style="background:' + bc[0] + '"></div><div style="background:' + bc[1] + '"></div></div></div>';
     }
+    // ---- 3D view ----
+    // The board keeps working exactly as in 2D: it's the same DOM, just transformed, and the
+    // browser maps clicks through the transform. A pointer drag of more than a few pixels
+    // turns the board instead, and the click that ends the drag is swallowed.
+    var VIEW_DEFAULT = { tilt: 50, spin: 0 };
+    var view = { mode: readLS("chess-view", "2d") === "3d" ? "3d" : "2d", tilt: VIEW_DEFAULT.tilt, spin: VIEW_DEFAULT.spin };
+    (function () {
+      var t = parseFloat(readLS("chess-tilt", "")), sp = parseFloat(readLS("chess-spin", ""));
+      if (isFinite(t)) view.tilt = Math.max(0, Math.min(75, t));
+      if (isFinite(sp)) view.spin = sp;
+    })();
+    var stage = document.getElementById("stage");
+    var frame = document.getElementById("boardFrame");
+    var tiltRange = document.getElementById("tiltRange");
+    var spinRange = document.getElementById("spinRange");
+
+    function normSpin(a) { a = ((a + 180) % 360 + 360) % 360 - 180; return Math.round(a); }
+    function applyView(persist) {
+      var is3d = view.mode === "3d";
+      var root = document.documentElement;
+      if (is3d) root.setAttribute("data-view", "3d"); else root.removeAttribute("data-view");
+      frame.style.transform = "";
+      frame.style.margin = "";
+      // the pieces read these to stand upright facing the viewer
+      frame.style.setProperty("--tilt", is3d ? String(view.tilt) : "0");
+      frame.style.setProperty("--spin", is3d ? String(view.spin) : "0");
+      var useGL = updateGL();
+      if (is3d && !useGL) {
+        // Keep the turned board inside its panel: shrink only when the rotated board's bounding
+        // width wouldn't fit, and a little more as tilting brings the near edge closer.
+        var w = frame.offsetWidth, h = frame.offsetHeight;
+        var t = view.tilt * Math.PI / 180, a = view.spin * Math.PI / 180;
+        var bound = Math.abs(Math.cos(a)) * w + Math.abs(Math.sin(a)) * h;
+        var avail = stage.clientWidth - 8;
+        var k = Math.min(1, avail / bound) * (1 - 0.14 * Math.sin(t));
+        frame.style.transform = "scale(" + k.toFixed(3) + ") rotateX(" + view.tilt + "deg) rotateZ(" + view.spin + "deg)";
+        // tilting makes the board shorter on screen; give the freed-up height back to the page
+        var projected = (Math.abs(Math.sin(a)) * w + Math.abs(Math.cos(a)) * h) * Math.cos(t) * k;
+        var spare = Math.max(0, (h - projected) / 2 - 30);
+        frame.style.margin = (-spare).toFixed(0) + "px 0";
+      }
+      document.querySelectorAll(".view-toggle button").forEach(function (b) {
+        b.classList.toggle("on", b.dataset.view === view.mode);
+        b.setAttribute("aria-pressed", String(b.dataset.view === view.mode));
+      });
+      document.getElementById("view3dCtl").hidden = !is3d;
+      tiltRange.value = String(view.tilt);
+      spinRange.value = String(normSpin(view.spin));
+      document.getElementById("tiltOut").textContent = Math.round(view.tilt) + "°";
+      document.getElementById("spinOut").textContent = normSpin(view.spin) + "°";
+      if (persist) {
+        writeLS("chess-view", view.mode);
+        writeLS("chess-tilt", String(Math.round(view.tilt)));
+        writeLS("chess-spin", String(normSpin(view.spin)));
+      }
+      if (useGL) { glCamera(); glRender(); }
+    }
+    document.querySelectorAll(".view-toggle button").forEach(function (b) {
+      b.addEventListener("click", function () { view.mode = this.dataset.view; applyView(true); });
+    });
+    tiltRange.addEventListener("input", function () { view.tilt = +this.value; applyView(true); });
+    spinRange.addEventListener("input", function () { view.spin = +this.value; applyView(true); });
+    document.getElementById("viewReset").addEventListener("click", function () {
+      view.tilt = VIEW_DEFAULT.tilt; view.spin = VIEW_DEFAULT.spin; applyView(true);
+    });
+    window.addEventListener("resize", function () { if (view.mode === "3d") applyView(false); });
+
+    (function wireDrag() {
+      var drag = null, swallowClick = false;
+      stage.addEventListener("pointerdown", function (e) {
+        if (view.mode !== "3d" || (e.pointerType === "mouse" && e.button !== 0)) return;
+        drag = { id: e.pointerId, x: e.clientX, y: e.clientY, tilt: view.tilt, spin: view.spin, moved: false };
+      });
+      stage.addEventListener("pointermove", function (e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (!drag.moved) {
+          if (Math.abs(dx) + Math.abs(dy) < 7) return;
+          drag.moved = true;
+          stage.classList.add("dragging");
+          try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+        view.spin = drag.spin + dx * 0.45;
+        view.tilt = Math.max(0, Math.min(75, drag.tilt - dy * 0.35));
+        applyView(false);
+      });
+      function end(e) {
+        if (!drag || e.pointerId !== drag.id) return;
+        if (drag.moved) {
+          swallowClick = true;
+          setTimeout(function () { swallowClick = false; }, 0);
+          stage.classList.remove("dragging");
+          applyView(true);
+        }
+        drag = null;
+      }
+      stage.addEventListener("pointerup", end);
+      stage.addEventListener("pointercancel", end);
+      // capture phase: runs before the square's own click handler
+      stage.addEventListener("click", function (e) {
+        if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; }
+      }, true);
+    })();
+
+    // ========================================================== 3D PIECES (WebGL)
+    // With "Staunton" pieces, the 3D view is real geometry: three.js (r128, vendored, loaded
+    // only when first needed) draws the board and lathe-turned pieces with light and shadows.
+    // The DOM board stays underneath, hidden, as the one source of truth — a click on the
+    // canvas is raycast to a square and handed to that square's own click handler, so every
+    // rule, highlight and engine hook is shared with 2D. Board units: one square = 1.
+    var gl = { active: false, loading: false, failed: false, onLoad: [] };
+
+    function wantGL() { return view.mode === "3d" && state._pieces === "staunton"; }
+
+    function loadThree(cb) {
+      if (window.THREE) { cb(); return; }
+      gl.onLoad.push(cb);
+      if (gl.loading) return;
+      gl.loading = true;
+      var sc = document.createElement("script");
+      sc.src = "vendor/three.min.js";
+      sc.onload = function () { gl.loading = false; var q = gl.onLoad; gl.onLoad = []; q.forEach(function (f) { f(); }); };
+      sc.onerror = function () { gl.loading = false; gl.failed = true; glNote("Couldn't load the 3D engine — showing the flat 3D board instead."); applyView(false); };
+      document.head.appendChild(sc);
+    }
+    function glNote(text) {
+      var n = document.getElementById("glNote");
+      n.textContent = text || ""; n.hidden = !text;
+    }
+
+    // Turn the WebGL view on/off to match the settings; true when it's the one showing.
+    function updateGL() {
+      if (!wantGL() || gl.failed) {
+        if (gl.active) { gl.active = false; stage.classList.remove("gl-on"); }
+        return false;
+      }
+      if (!window.THREE) { loadThree(function () { applyView(false); }); return false; }
+      if (!gl.renderer && !glInit()) {
+        gl.failed = true;
+        glNote("This browser has no WebGL, so the 3D Staunton set isn't available — showing the flat 3D board.");
+        return false;
+      }
+      if (!gl.active) { gl.active = true; stage.classList.add("gl-on"); glSync(); }
+      glResize();
+      return true;
+    }
+
+    function glInit() {
+      var T = THREE, R;
+      try { R = new T.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { return false; }
+      if (!R.getContext()) return false;
+      gl.renderer = R;
+      R.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      R.shadowMap.enabled = true;
+      R.shadowMap.type = T.PCFSoftShadowMap;
+      R.outputEncoding = T.sRGBEncoding;
+      R.toneMapping = T.NoToneMapping;   // keep the board's CSS colours true
+      R.domElement.className = "gl-canvas";
+      R.domElement.style.display = "";   // three.js sets display:block inline; let the stylesheet decide
+      stage.appendChild(R.domElement);
+
+      var scene = gl.scene = new T.Scene();
+      gl.camera = new T.PerspectiveCamera(32, 1, 0.1, 200);
+      scene.add(new T.HemisphereLight(0xfff4e2, 0x3b3128, 0.55));
+      var sun = new T.DirectionalLight(0xffffff, 0.85);
+      sun.position.set(-4.5, 11, 6.5);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(2048, 2048);
+      var sc = sun.shadow.camera;
+      sc.left = -6.5; sc.right = 6.5; sc.top = 6.5; sc.bottom = -6.5; sc.near = 1; sc.far = 30;
+      sun.shadow.bias = -0.0006;
+      scene.add(sun);
+      var rim = new T.DirectionalLight(0xdce6ff, 0.28);
+      rim.position.set(6, 6, -7);
+      scene.add(rim);
+
+      // board: a wooden slab with the squares as a canvas texture on top
+      gl.frameMat = new T.MeshStandardMaterial({ color: 0x5b3a22, roughness: 0.55 });
+      var slab = new T.Mesh(new T.BoxGeometry(8.9, 0.42, 8.9), gl.frameMat);
+      slab.position.y = -0.21; slab.receiveShadow = true; scene.add(slab);
+      gl.topMat = new T.MeshStandardMaterial({ roughness: 0.5, metalness: 0 });
+      var top = new T.Mesh(new T.PlaneGeometry(8, 8), gl.topMat);
+      top.rotation.x = -Math.PI / 2; top.position.y = 0.002; top.receiveShadow = true; scene.add(top);
+      glBoardTexture();
+
+      gl.marks = new T.Group(); scene.add(gl.marks);
+      gl.pieceGroup = new T.Group(); scene.add(gl.pieceGroup);
+      gl.meshes = {};   // "r,c" -> { piece, obj }
+      gl.dying = [];    // captured pieces waiting to be removed
+      gl.tweens = [];
+      gl.geo = {};
+
+      function mat(color, rough, metal) { return new T.MeshStandardMaterial({ color: color, roughness: rough, metalness: metal }); }
+      gl.mat = { w: mat(0xe9dcc2, 0.4, 0.02), b: mat(0x1c1715, 0.28, 0.08) };
+      ["w", "b"].forEach(function (k) {
+        var f = gl.mat[k].clone(); f.transparent = true; f.opacity = 0.28; f.depthWrite = false;
+        gl.mat[k + "Fade"] = f;
+      });
+      function markMat(color, opacity) { return new T.MeshBasicMaterial({ color: color, transparent: true, opacity: opacity, depthWrite: false }); }
+      gl.markMat = { sel: markMat(0xffd633, 0.5), last: markMat(0xb6c52a, 0.42), check: markMat(0xe0402f, 0.62), dot: markMat(0x14140f, 0.38), ring: markMat(0x14140f, 0.45) };
+      gl.markGeo = { sq: new T.PlaneGeometry(1, 1), dot: new T.CircleGeometry(0.14, 32), ring: new T.RingGeometry(0.39, 0.47, 48) };
+
+      gl.ray = new T.Raycaster();
+      gl.plane = new T.Plane(new T.Vector3(0, 1, 0), 0);
+      var cv = R.domElement;
+      cv.addEventListener("click", function (e) {
+        var sq = glPick(e);
+        if (sq) cells[sq[0]][sq[1]].click();   // the square's own handler does the rest
+      });
+      cv.addEventListener("pointermove", function (e) {
+        var sq = glPick(e);
+        cv.style.cursor = sq && cells[sq[0]][sq[1]].classList.contains("playable") ? "pointer" : "";
+      });
+      return true;
+    }
+
+    function glBoardTexture() {
+      var cs = getComputedStyle(document.documentElement);
+      var light = cs.getPropertyValue("--sq-light").trim() || "#f0d9b5";
+      var dark = cs.getPropertyValue("--sq-dark").trim() || "#b58863";
+      var N = 1024, s = N / 8, cv = document.createElement("canvas");
+      cv.width = cv.height = N;
+      var g = cv.getContext("2d");
+      for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+        g.fillStyle = (r + c) % 2 ? dark : light;
+        g.fillRect(c * s, r * s, s, s);
+      }
+      // a faint, fixed wood grain so the squares don't look like flat plastic
+      var seed = 7;
+      function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+      g.globalAlpha = 0.045; g.strokeStyle = "#000"; g.lineWidth = 1.2;
+      for (var i = 0; i < 700; i++) {
+        var y = rnd() * N, x = rnd() * N, len = 40 + rnd() * 160;
+        g.beginPath(); g.moveTo(x, y); g.bezierCurveTo(x + len / 3, y + rnd() * 6 - 3, x + 2 * len / 3, y + rnd() * 6 - 3, x + len, y + rnd() * 4 - 2); g.stroke();
+      }
+      g.globalAlpha = 0.75;
+      g.font = "600 22px ui-monospace, Menlo, monospace";
+      for (var k = 0; k < 8; k++) {
+        g.fillStyle = k % 2 ? light : dark;            // file letters along rank 1
+        g.fillText(FILES[k], k * s + s - 20, N - 8);
+        g.fillStyle = k % 2 ? light : dark;            // rank numbers along the a-file
+        g.fillText(String(8 - k), 6, k * s + 24);
+      }
+      var tex = new THREE.CanvasTexture(cv);
+      tex.encoding = THREE.sRGBEncoding;
+      tex.anisotropy = gl.renderer.capabilities.getMaxAnisotropy();
+      if (gl.topMat.map) gl.topMat.map.dispose();
+      gl.topMat.map = tex; gl.topMat.needsUpdate = true;
+      gl.frameMat.color.set(dark).multiplyScalar(0.42);
+    }
+
+    // ---- the pieces: lathe profiles [radius, height], plus a few extra parts
+    var BASE = [[0, 0], [0.37, 0], [0.37, 0.045], [0.34, 0.075], [0.35, 0.095], [0.3, 0.125], [0.25, 0.15]];
+    function arc(cx, cy, rad, a0, a1, n) {   // points on a circle, for heads and balls
+      var out = [];
+      for (var i = 0; i <= n; i++) { var a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; out.push([Math.max(0, rad * Math.cos(a)), cy + rad * Math.sin(a)]); }
+      out[out.length - 1][0] = 0;
+      return out;
+    }
+    var PROFILE = {
+      P: BASE.concat([[0.2, 0.19], [0.14, 0.25], [0.12, 0.33], [0.2, 0.36], [0.2, 0.385], [0.12, 0.405]], arc(0, 0.5, 0.12, -55, 90, 12)),
+      R: BASE.concat([[0.25, 0.19], [0.21, 0.25], [0.19, 0.47], [0.24, 0.51], [0.28, 0.53], [0.28, 0.66], [0.21, 0.66], [0.21, 0.62], [0, 0.62]]),
+      N: BASE.concat([[0.24, 0.19], [0.22, 0.23], [0, 0.23]]),
+      B: BASE.concat([[0.22, 0.19], [0.14, 0.27], [0.1, 0.5], [0.2, 0.535], [0.2, 0.56], [0.11, 0.58]], arc(0, 0.72, 0.155, -75, 72, 12), [[0.035, 0.88]], arc(0, 0.92, 0.045, -60, 90, 6)),
+      Q: BASE.concat([[0.23, 0.19], [0.16, 0.29], [0.1, 0.62], [0.21, 0.66], [0.21, 0.69], [0.12, 0.71], [0.14, 0.76], [0.25, 0.92], [0.21, 0.925], [0.12, 0.87], [0, 0.86]]),
+      K: BASE.concat([[0.23, 0.19], [0.16, 0.29], [0.11, 0.66], [0.22, 0.7], [0.22, 0.725], [0.13, 0.75], [0.15, 0.8], [0.23, 0.95], [0.23, 0.98], [0.11, 1.0], [0.06, 1.02], [0, 1.02]])
+    };
+    // side silhouette of the knight's head (x = forward, y = up), extruded into a solid
+    var KNIGHT_HEAD = [[-0.2, 0.2], [0.2, 0.2], [0.19, 0.31], [0.13, 0.43], [0.18, 0.51], [0.28, 0.57], [0.34, 0.63], [0.32, 0.7], [0.21, 0.71],
+      [0.12, 0.75], [0.09, 0.84], [0.03, 0.92], [-0.02, 0.85], [-0.08, 0.87], [-0.15, 0.79], [-0.21, 0.63], [-0.22, 0.46], [-0.21, 0.31]];
+
+    function glParts(t) {
+      if (gl.geo[t]) return gl.geo[t];
+      var T = THREE, parts = [];
+      parts.push({ g: new T.LatheGeometry(PROFILE[t].map(function (q) { return new T.Vector2(q[0], q[1]); }), 48) });
+      if (t === "N") {
+        var sh = new T.Shape();
+        KNIGHT_HEAD.forEach(function (q, i) { if (i) sh.lineTo(q[0], q[1]); else sh.moveTo(q[0], q[1]); });
+        var eg = new T.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.055, bevelSize: 0.04, bevelSegments: 5, curveSegments: 8 });
+        eg.translate(0, 0, -0.1);
+        parts.push({ g: eg, knight: true });
+      } else if (t === "R") {
+        for (var i = 0; i < 6; i++) {   // battlements
+          var a = i / 6 * Math.PI * 2;
+          parts.push({ g: new T.BoxGeometry(0.1, 0.08, 0.07), x: 0.245 * Math.cos(a), y: 0.7, z: 0.245 * Math.sin(a), ry: -a });
+        }
+      } else if (t === "Q") {
+        for (var j = 0; j < 9; j++) {   // coronet
+          var b = j / 9 * Math.PI * 2;
+          parts.push({ g: new T.SphereGeometry(0.036, 12, 10), x: 0.23 * Math.cos(b), y: 0.945, z: 0.23 * Math.sin(b) });
+        }
+        parts.push({ g: new T.SphereGeometry(0.07, 18, 14), y: 0.93 });
+      } else if (t === "K") {
+        parts.push({ g: new T.BoxGeometry(0.055, 0.22, 0.055), y: 1.12 });   // the cross
+        parts.push({ g: new T.BoxGeometry(0.16, 0.055, 0.055), y: 1.15 });
+      }
+      gl.geo[t] = parts;
+      return parts;
+    }
+
+    function glMakePiece(p) {
+      var T = THREE, color = colorOf(p), grp = new T.Group();
+      glParts(p.toUpperCase()).forEach(function (part) {
+        var m = new T.Mesh(part.g, gl.mat[color]);
+        m.castShadow = true; m.receiveShadow = true;
+        m.position.set(part.x || 0, part.y || 0, part.z || 0);
+        if (part.ry) m.rotation.y = part.ry;
+        // knights face the enemy, turned ~50° so their profile reads from the player's side
+        if (part.knight) m.rotation.y = (color === "w" ? Math.PI / 2 : -Math.PI / 2) + 0.9;
+        grp.add(m);
+      });
+      grp.userData.color = color;
+      return grp;
+    }
+    function glSetFade(grp, fade) {
+      var m = gl.mat[grp.userData.color + (fade ? "Fade" : "")];
+      grp.userData.faded = fade;
+      grp.children.forEach(function (ch) { ch.material = m; ch.castShadow = !fade; });
+    }
+    function sqX(c) { return c - 3.5; }
+    function sqZ(r) { return r - 3.5; }
+
+    // Make the scene match `state`: pieces, fading, and the square markers.
+    function glSync() {
+      if (!gl.active) return;
+      gl.tweens = [];
+      gl.dying.forEach(function (o) { gl.pieceGroup.remove(o); });
+      gl.dying = [];
+      var seen = {}, key, r, c;
+      var legal = {};
+      state.legalTargets.forEach(function (m) { legal[m[2] + "," + m[3]] = true; });
+      for (r = 0; r < 8; r++) for (c = 0; c < 8; c++) {
+        var p = state.board[r][c];
+        if (!p) continue;
+        key = r + "," + c;
+        var e = gl.meshes[key];
+        if (!e || e.piece !== p) {
+          if (e) gl.pieceGroup.remove(e.obj);
+          e = gl.meshes[key] = { piece: p, obj: glMakePiece(p) };
+          gl.pieceGroup.add(e.obj);
+        }
+        e.obj.position.set(sqX(c), 0, sqZ(r));
+        e.obj.scale.setScalar(1);
+        e.obj.userData.sq = [r, c];
+        var isSel = state.selected && state.selected[0] === r && state.selected[1] === c;
+        glSetFade(e.obj, !!state.selected && !isSel && !legal[key]);
+        seen[key] = true;
+      }
+      Object.keys(gl.meshes).forEach(function (k) {
+        if (!seen[k]) { gl.pieceGroup.remove(gl.meshes[k].obj); delete gl.meshes[k]; }
+      });
+
+      // markers
+      while (gl.marks.children.length) gl.marks.remove(gl.marks.children[0]);
+      function mark(geo, m, rr, cc, y) {
+        var me = new THREE.Mesh(geo, m);
+        me.rotation.x = -Math.PI / 2;
+        me.position.set(sqX(cc), y, sqZ(rr));
+        gl.marks.add(me);
+      }
+      var lm = state.lastMove;
+      if (lm) { mark(gl.markGeo.sq, gl.markMat.last, lm[0], lm[1], 0.004); mark(gl.markGeo.sq, gl.markMat.last, lm[2], lm[3], 0.004); }
+      if (state.selected) mark(gl.markGeo.sq, gl.markMat.sel, state.selected[0], state.selected[1], 0.006);
+      if (inCheck(state.board, state.turn)) { var kp = kingPos(state.board, state.turn); if (kp) mark(gl.markGeo.sq, gl.markMat.check, kp[0], kp[1], 0.008); }
+      state.legalTargets.forEach(function (m) {
+        var occupied = state.board[m[2]][m[3]] != null || m[4] === "ep";
+        mark(occupied ? gl.markGeo.ring : gl.markGeo.dot, occupied ? gl.markMat.ring : gl.markMat.dot, m[2], m[3], 0.01);
+      });
+      glCamera();
+      glRender();
+    }
+
+    // Slide the moving piece(s) along a small arc; the knight hops higher.
+    function glAnimate(move, preBoard) {
+      var r = move[0], c = move[1], rr = move[2], cc = move[3], flag = move[4];
+      var movers = [[r, c, rr, cc]];
+      if (flag === "O-O") movers.push([r, 7, r, 5]);
+      else if (flag === "O-O-O") movers.push([r, 0, r, 3]);
+      var capKey = flag === "ep" ? r + "," + cc : (preBoard[rr][cc] ? rr + "," + cc : null);
+      if (capKey && gl.meshes[capKey]) { gl.dying.push(gl.meshes[capKey].obj); delete gl.meshes[capKey]; }
+      var now = performance.now();
+      movers.forEach(function (mv) {
+        var e = gl.meshes[mv[0] + "," + mv[1]];
+        if (!e) return;
+        delete gl.meshes[mv[0] + "," + mv[1]];
+        gl.meshes[mv[2] + "," + mv[3]] = e;
+        e.obj.userData.sq = [mv[2], mv[3]];
+        var hop = e.piece.toUpperCase() === "N" ? 0.55 : 0.18;
+        gl.tweens.push({ o: e.obj, x0: sqX(mv[1]), z0: sqZ(mv[0]), x1: sqX(mv[3]), z1: sqZ(mv[2]), t0: now, dur: 185, hop: hop });
+      });
+      glRender();
+    }
+
+    function glPick(e) {
+      if (!gl.active) return null;
+      var rect = gl.renderer.domElement.getBoundingClientRect();
+      var ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      gl.ray.setFromCamera(ndc, gl.camera);
+      var planeSq = null, pt = new THREE.Vector3();
+      if (gl.ray.ray.intersectPlane(gl.plane, pt)) {
+        var pc = Math.floor(pt.x + 4), pr = Math.floor(pt.z + 4);
+        if (pc >= 0 && pc < 8 && pr >= 0 && pr < 8) planeSq = [pr, pc];
+      }
+      // a solid (not faded) piece under the pointer wins — you click the piece you see; but if
+      // the ray also passes through the piece standing on the square right under the pointer
+      // (you clicked the visible base of a piece partly hidden behind a taller one), that one wins
+      var pieceSq = null;
+      var hits = gl.ray.intersectObjects(gl.pieceGroup.children, true);
+      for (var i = 0; i < hits.length; i++) {
+        var g = hits[i].object.parent;
+        if (!g || !g.userData.sq || g.userData.faded) continue;
+        if (!pieceSq) pieceSq = g.userData.sq;
+        if (planeSq && g.userData.sq[0] === planeSq[0] && g.userData.sq[1] === planeSq[1]) { pieceSq = planeSq; break; }
+      }
+      // …except that a legal target square under the pointer always wins once a piece is selected
+      if (state.selected && planeSq && state.legalTargets.some(function (m) { return m[2] === planeSq[0] && m[3] === planeSq[1]; })) return planeSq;
+      return pieceSq || planeSq;
+    }
+
+    function glResize() {
+      var w = Math.max(200, stage.clientWidth), h = Math.round(Math.min(w * 0.86, 660));
+      gl.renderer.setSize(w, h, false);
+      gl.renderer.domElement.style.height = h + "px";
+      gl.camera.aspect = w / h;
+      gl.camera.updateProjectionMatrix();
+    }
+
+    // Orbit the camera from the same tilt/rotation the drag and sliders control.
+    function glCamera() {
+      if (!gl.camera) return;
+      var t = Math.max(1, view.tilt) * Math.PI / 180;
+      var a = (-view.spin + (state.flipped ? 180 : 0)) * Math.PI / 180;
+      // back off far enough that the turned board fits both across and up/down
+      var span = 4.75 * (Math.abs(Math.cos(a)) + Math.abs(Math.sin(a)));
+      var half = Math.tan(gl.camera.fov * Math.PI / 360);
+      var needW = span / (half * gl.camera.aspect);
+      var needH = (span * Math.cos(t) + 1.2 * Math.sin(t)) / half;
+      // (+ margin: the near edge is closer to the camera, so it looks wider than `span`)
+      var d = Math.max(needW, needH, 9) * (1.08 + 0.14 * Math.sin(t));
+      gl.camera.position.set(d * Math.sin(t) * Math.sin(a), d * Math.cos(t), d * Math.sin(t) * Math.cos(a));
+      gl.camera.lookAt(0, 0.25 * Math.sin(t), 0);
+    }
+
+    // For automated tests only (open the page with ?debug3d): where a square is on screen.
+    if (/[?&]debug3d\b/.test(location.search)) {
+      window.chess3dDebug = {
+        active: function () { return gl.active; },
+        square: function (r, c) {
+          var v = new THREE.Vector3(sqX(c), 0.03, sqZ(r)).project(gl.camera);
+          var rect = gl.renderer.domElement.getBoundingClientRect();
+          return { x: rect.left + (v.x + 1) / 2 * rect.width, y: rect.top + (1 - v.y) / 2 * rect.height };
+        }
+      };
+    }
+
+    function glRender() {
+      if (!gl.active || gl.raf) return;
+      gl.raf = requestAnimationFrame(glFrame);
+    }
+    function glFrame() {
+      gl.raf = 0;
+      var now = performance.now();
+      gl.tweens = gl.tweens.filter(function (tw) {
+        var k = Math.min(1, (now - tw.t0) / tw.dur);
+        var e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        tw.o.position.set(tw.x0 + (tw.x1 - tw.x0) * e, tw.hop * Math.sin(Math.PI * k), tw.z0 + (tw.z1 - tw.z0) * e);
+        return k < 1;
+      });
+      if (!gl.tweens.length && gl.dying.length) { gl.dying.forEach(function (o) { gl.pieceGroup.remove(o); }); gl.dying = []; }
+      gl.renderer.render(gl.scene, gl.camera);
+      if (gl.tweens.length) glRender();
+    }
+
     var boardSel = document.getElementById("boardSel");
     boardSel.value = state._board;
     boardSel.addEventListener("change", function () {
       state._board = this.value; writeLS("chess-board", this.value); applyLook();
+      if (gl.renderer) { glBoardTexture(); glRender(); }
+    });
+    var pieceSel = document.getElementById("pieceSel");
+    pieceSel.value = state._pieces;
+    pieceSel.addEventListener("change", function () {
+      state._pieces = this.value; writeLS("chess-pieces", this.value);
+      applyLook(); render(); applyView(false);
     });
 
     // ---- source viewer: the page reads and shows its own code ----
@@ -1164,8 +2078,11 @@
 
     // ========================================================== GO
     applyLook();
+    applyView(false);
+    applyOpponentUI();
     buildGrid();
     render();
+    maybeEngineMove();
   })();
   </script>
 </body>

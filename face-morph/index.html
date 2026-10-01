@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Face Morph — Live Landmark Detection &amp; Morphing</title>
+  <meta name="description" content="A real-time face-landmark detector (68-point CNN, TensorFlow.js) that captures still frames from your camera or an uploaded photo, then morphs between two captures with a triangulated warp and cross-dissolve. Everything runs on-device — nothing is ever uploaded. By kathuman." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🙂</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#120a12;
+  --panel:#1c1220;
+  --panel-2:#170e19;
+  --line:#3a2438;
+  --line-soft:#2a1a29;
+  --ink:#f5e9f2;
+  --ink-dim:#c6a3c0;
+  --ink-faint:#7a5c76;
+  --accent:#f0599c;
+  --accent-ink:#2b0316;
+  --tele:#7be0c4;
+  --warn:#ffcf4a;
+  --ok:#3ddc97;
+  --bad:#ff6a6a;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg);}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+code{font-family:var(--mono); font-size:0.92em; background:var(--panel-2); border:1px solid var(--line); padding:1px 5px; border-radius:4px; color:var(--ink);}
+
+.app{display:flex; flex-direction:column;}
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px 20px; border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#1c1220,#120a12);
+  position:sticky; top:0; z-index:20;
+}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em; color:var(--ink);}
+.brand .mark span{color:var(--accent);}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.header-actions{display:flex; align-items:center; gap:10px;}
+.back-link{
+  font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px;
+}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+.status-pill{
+  display:flex; align-items:center; gap:8px; padding:6px 12px; border:1px solid var(--line); border-radius:999px;
+  background:var(--panel); font-family:var(--mono); font-size:11px; letter-spacing:.06em; color:var(--ink-dim); white-space:nowrap;
+}
+.status-pill .dot{width:7px; height:7px; border-radius:50%; background:var(--ink-faint); transition:background .2s, box-shadow .2s;}
+.status-pill.ok .dot{background:var(--ok); box-shadow:0 0 8px var(--ok);}
+.status-pill.warn .dot{background:var(--warn); box-shadow:0 0 8px var(--warn);}
+.status-pill.bad .dot{background:var(--bad); box-shadow:0 0 8px var(--bad);}
+
+.privacy-banner{
+  background:rgba(61,220,151,.08); border-bottom:1px solid rgba(61,220,151,.3);
+  padding:9px 20px; font-family:var(--mono); font-size:12px; color:#9be9c9; text-align:center;
+}
+
+.layout{display:grid; grid-template-columns:300px 1fr;}
+.rail{
+  border-right:1px solid var(--line); background:var(--panel-2);
+  overflow-y:auto; padding:18px 18px 28px; display:flex; flex-direction:column; gap:20px;
+  max-height:calc(100vh - 94px);
+}
+.rail::-webkit-scrollbar{width:8px;}
+.rail::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+
+.rail-section{display:flex; flex-direction:column; gap:12px;}
+.rail-section h2{
+  margin:0; font-family:var(--head); font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-faint); padding-bottom:8px; border-bottom:1px solid var(--line-soft);
+}
+.rail-note{font-size:11.5px; line-height:1.55; color:var(--ink-faint); margin:0;}
+
+.btn{
+  font-family:var(--head); font-weight:600; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:7px;
+  padding:10px 12px; cursor:pointer; transition:border-color .15s, color .15s, box-shadow .15s;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 1px rgba(240,89,156,.25) inset;}
+.btn:active{transform:translateY(1px);}
+.btn.primary{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+.btn.primary:hover{box-shadow:0 0 12px rgba(240,89,156,.5); color:var(--accent-ink);}
+.btn.wide{width:100%;}
+.btn:disabled{opacity:.35; cursor:not-allowed; box-shadow:none;}
+.btn:disabled:hover{border-color:var(--line); color:var(--ink);}
+.btn.small{padding:6px 9px; font-size:11px;}
+
+.btn-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+
+.switch-row{display:flex; align-items:center; justify-content:space-between;}
+.switch-row .name{font-family:var(--head); font-weight:600; font-size:12.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--ink);}
+.switch{position:relative; width:38px; height:21px; flex:0 0 auto; border-radius:999px; background:var(--line); border:1px solid var(--line); cursor:pointer; transition:background .15s;}
+.switch.on{background:rgba(240,89,156,.25); border-color:var(--accent);}
+.switch .knob{position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--ink-dim); transition:left .15s, background .15s;}
+.switch.on .knob{left:19px; background:var(--accent); box-shadow:0 0 6px rgba(240,89,156,.7);}
+
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:2px; background:var(--line); outline:none;}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--accent-ink); box-shadow:0 0 0 2px var(--accent), 0 0 10px rgba(240,89,156,.6); cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:15px; height:15px; border-radius:50%; background:var(--accent); border:2px solid var(--accent-ink);
+  box-shadow:0 0 0 2px var(--accent), 0 0 10px rgba(240,89,156,.6); cursor:pointer;
+}
+input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:var(--line);}
+
+.file-drop{
+  border:1.5px dashed var(--line); border-radius:8px; padding:14px; text-align:center;
+  font-family:var(--mono); font-size:11px; color:var(--ink-faint); cursor:pointer; transition:border-color .15s, color .15s;
+}
+.file-drop:hover{border-color:var(--accent); color:var(--accent);}
+.file-drop input{display:none;}
+
+.gallery{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+.gallery-empty{grid-column:1/-1; font-size:11.5px; color:var(--ink-faint); text-align:center; padding:16px 6px; border:1px dashed var(--line-soft); border-radius:8px;}
+.cap-card{position:relative; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--panel);}
+.cap-card img{display:block; width:100%; aspect-ratio:1; object-fit:cover;}
+.cap-card .cap-tools{display:flex; gap:3px; padding:4px; background:var(--panel-2);}
+.cap-card .cap-tools .btn{flex:1; padding:4px 2px; font-size:9.5px;}
+.cap-card.slot-a{outline:2px solid #7be0c4;}
+.cap-card.slot-b{outline:2px solid var(--accent);}
+.cap-card .slot-tag{position:absolute; top:4px; left:4px; font-family:var(--head); font-weight:700; font-size:10px; padding:1px 6px; border-radius:4px; background:rgba(0,0,0,.6);}
+.cap-card.slot-a .slot-tag{color:#7be0c4;}
+.cap-card.slot-b .slot-tag{color:var(--accent);}
+
+.stage-wrap{
+  position:relative; min-height:0;
+  background:radial-gradient(ellipse at 50% 30%, #241428 0%, #120a12 70%);
+}
+#stage{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+#stage video, #stage canvas.view{max-width:100%; max-height:100%; border-radius:4px;}
+.view-layer{position:relative;}
+.view-layer video{display:block;}
+.view-layer canvas.overlay{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+#morphCanvas{border-radius:4px;}
+
+.stage-toolbar{
+  position:absolute; top:14px; left:14px; right:14px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px; pointer-events:none;
+}
+.stage-toolbar .btn, .stage-toolbar .viewmode-group{pointer-events:auto;}
+.viewmode-group{display:flex; gap:6px; background:rgba(18,10,18,.72); border:1px solid var(--line); border-radius:8px; padding:4px; backdrop-filter:blur(6px);}
+.viewmode-group .btn{background:transparent; border:none;}
+.viewmode-group .btn.active{background:var(--accent); color:var(--accent-ink);}
+
+.hud{
+  position:absolute; top:16px; left:16px; padding:10px 12px;
+  background:rgba(18,10,18,.76); border:1px solid var(--line); border-radius:8px; backdrop-filter:blur(6px);
+  font-family:var(--mono); font-size:11px; color:var(--ink-dim); pointer-events:none;
+}
+.hud .hud-line{display:flex; justify-content:space-between; gap:12px; padding:1px 0;}
+.hud .hud-line b{color:var(--tele); font-weight:500;}
+
+.morph-controls{
+  position:absolute; left:14px; right:14px; bottom:14px;
+  background:rgba(18,10,18,.82); border:1px solid var(--line); border-radius:8px; padding:12px 14px;
+  display:flex; flex-direction:column; gap:10px; backdrop-filter:blur(6px);
+}
+/* an explicit `display` on an author rule beats the UA stylesheet's
+   `[hidden]{display:none}` regardless of the hidden attribute being set --
+   this override (higher specificity: class+attribute) keeps hidden working */
+.morph-controls[hidden]{display:none;}
+.morph-controls .row{display:flex; align-items:center; gap:10px;}
+.morph-controls .row label{font-family:var(--mono); font-size:11px; color:var(--ink-faint); width:50px; flex:0 0 auto;}
+.morph-controls .val{font-family:var(--mono); font-size:11px; color:var(--accent); width:38px; text-align:right;}
+.morph-controls .btn-row{display:flex; gap:8px;}
+
+.caption{position:absolute; left:14px; bottom:14px; font-family:var(--mono); font-size:11px; color:var(--ink-faint); background:rgba(18,10,18,.6); padding:5px 9px; border-radius:6px;}
+
+.empty-state{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; text-align:center; padding:20px;}
+.empty-state p{color:var(--ink-faint); font-size:13px; max-width:340px; margin:0;}
+
+.lower{max-width:1200px; margin:0 auto; padding:26px 22px 0; width:100%;}
+details.rules{background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:4px 18px; margin-bottom:14px;}
+details.rules summary{cursor:pointer; font-family:var(--head); font-weight:700; font-size:13.5px; padding:14px 0; color:var(--ink-dim); list-style:none;}
+details.rules summary::-webkit-details-marker{display:none;}
+details.rules summary:before{content:"▸ "; color:var(--accent);}
+details.rules[open] summary:before{content:"▾ ";}
+details.rules[open] summary{color:var(--ink);}
+details.rules p{font-size:13.5px; line-height:1.65; color:var(--ink-dim); margin:8px 0 14px;}
+details.rules ul{font-size:13.5px; line-height:1.7; color:var(--ink-dim); margin:8px 0 14px; padding-left:20px;}
+
+footer.foot{max-width:1200px; margin:0 auto; padding:22px 22px 50px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:12.5px; line-height:1.7;}
+footer.foot a{color:var(--ink-faint);}
+footer.foot .consult{display:block; margin-bottom:6px; font-weight:600; color:var(--ink);}
+footer.foot .consult a{color:var(--accent);}
+
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;}
+  .rail{border-right:none; border-bottom:1px solid var(--line); max-height:none;}
+  .stage-wrap{height:60vh;}
+}
+@media (min-width:861px){
+  .stage-wrap{height:74vh; min-height:520px; max-height:760px;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">FACE<span>MORPH</span></div>
+      <div class="sub">68-POINT LANDMARK CNN · TRIANGULATED WARP MORPH</div>
+    </div>
+    <div class="header-actions">
+      <a class="back-link" href="../">← Projects</a>
+      <div class="status-pill" id="model-status"><span class="dot"></span><span id="model-status-text">Loading models…</span></div>
+    </div>
+  </header>
+
+  <div class="privacy-banner">🔒 Everything runs on your device. No frame, photo or landmark is ever uploaded — the model files load once, then it's all local.</div>
+
+  <main class="layout">
+    <aside class="rail">
+      <div class="rail-section">
+        <h2>Camera</h2>
+        <div class="btn-grid">
+          <button class="btn" id="btn-start-cam">Start Camera</button>
+          <button class="btn" id="btn-stop-cam" disabled>Stop</button>
+        </div>
+        <div class="switch-row">
+          <span class="name">Show landmarks</span>
+          <div class="switch on" id="landmarks-switch"><div class="knob"></div></div>
+        </div>
+        <button class="btn primary wide" id="btn-capture" disabled>Capture Face</button>
+        <p class="rail-note" id="capture-hint">Start the camera and center your face to enable capture.</p>
+      </div>
+
+      <div class="rail-section">
+        <h2>Or Upload a Photo</h2>
+        <label class="file-drop" for="file-input">
+          Click to choose an image<br>(a clear, front-facing photo works best)
+          <input type="file" id="file-input" accept="image/*" />
+        </label>
+      </div>
+
+      <div class="rail-section">
+        <h2>Captures</h2>
+        <p class="rail-note">Pick two to morph between — tap <b style="color:#7be0c4">A</b> / <b style="color:var(--accent)">B</b> on any two cards.</p>
+        <div class="gallery" id="gallery">
+          <div class="gallery-empty">No captures yet</div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage-wrap">
+      <div id="stage"></div>
+
+      <div class="stage-toolbar">
+        <div class="viewmode-group">
+          <button class="btn small active" data-viewmode="live" id="mode-live-btn">Live Camera</button>
+          <button class="btn small" data-viewmode="morph" id="mode-morph-btn">Morph</button>
+        </div>
+      </div>
+
+      <div class="hud" id="live-hud" hidden>
+        <div class="hud-line"><span>Face</span><b id="hud-face-status">searching…</b></div>
+        <div class="hud-line"><span>Detector</span><b>TinyFaceDetector</b></div>
+        <div class="hud-line"><span>Landmarks</span><b>68-point CNN</b></div>
+      </div>
+
+      <div class="morph-controls" id="morph-controls" hidden>
+        <div class="row">
+          <label>BLEND</label>
+          <input type="range" id="blend-slider" min="0" max="100" value="50" />
+          <span class="val" id="blend-val">50%</span>
+        </div>
+        <div class="row btn-row">
+          <button class="btn small" id="btn-play-morph">▶ Play</button>
+          <button class="btn small" id="btn-mesh-toggle">Show Mesh</button>
+          <button class="btn small" id="btn-download-frame">Download Frame</button>
+        </div>
+      </div>
+
+      <div class="caption" id="stage-caption">Detecting ~6×/second · nothing leaves this tab</div>
+    </section>
+  </main>
+
+  <section class="lower">
+    <details class="rules">
+      <summary>How this works</summary>
+      <div>
+        <p>
+          <b>Detection.</b> Two small convolutional networks run entirely in your browser via TensorFlow.js
+          (<a href="https://github.com/justadudewhohacks/face-api.js" target="_blank" rel="noopener">face-api.js</a>):
+          a <code>TinyFaceDetector</code> finds the face box, then a 68-point landmark network locates the jaw,
+          eyebrows, eyes, nose and mouth within it. Both model files together are under 600&nbsp;KB and are vendored
+          in this repo — no CDN, no API call, no network request carries your image anywhere.
+        </p>
+        <p>
+          <b>Capture.</b> A capture is a 480×480 snapshot (from your camera or an uploaded photo) plus the 68
+          landmark points detected on it, with 8 extra points added around the frame's edges so the whole photo
+          warps smoothly, not just an oval cut-out of the face.
+        </p>
+        <p>
+          <b>Morphing.</b> The 68+8 = 76 points always mean the same thing in the same order for every capture
+          (point 30 is always the nose tip, point 8 is always the chin, and so on), so instead of re-triangulating
+          on the fly, this app uses one <b>fixed Delaunay triangulation</b> — 142 triangles — computed once offline
+          on a canonical face layout and verified to exactly tile the frame with no gaps or overlaps (triangle-area
+          sum matches the convex-hull area to floating-point precision). At blend position <i>t</i>, each triangle's
+          target shape is the linear interpolation between its shape in photo A and photo B; both photos are warped
+          into that shared target shape with a per-triangle affine transform (<code>ctx.transform</code> + clip +
+          <code>drawImage</code>), then cross-dissolved (A drawn opaque, B drawn on top at alpha <i>t</i>). That's
+          the whole algorithm — the same one behind classic photo-morph effects, just computed live in a
+          &lt;canvas&gt;.
+        </p>
+        <ul>
+          <li>Works best with a clear, front-facing, evenly lit face.</li>
+          <li>Only one face is detected per capture — for a group photo, crop to one person first.</li>
+          <li>Captures live only in this browser tab's memory — reload the page and they're gone. Nothing is
+            written to disk or sent anywhere unless you click <i>Download Frame</i>.</li>
+        </ul>
+      </div>
+    </details>
+  </section>
+
+  <footer class="foot">
+    <span class="consult">Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    Real-time face-landmark detection and triangulated morphing — <a href="https://github.com/justadudewhohacks/face-api.js" target="_blank" rel="noopener">face-api.js</a> (MIT) vendored, no other dependencies, everything on-device. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+
+<script src="vendor/face-api.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // =====================================================================
+  // Canonical triangulation: 68 dlib landmark indices (0-67) + 8 boundary
+  // points (68-75). Computed ONCE offline with a well-tested Delaunay
+  // implementation (delaunator) on a representative frontal-face layout,
+  // and verified there (triangle-area sum === convex-hull area to
+  // floating-point precision, i.e. no gaps and no overlaps). The same
+  // 142 triangles are reused for every capture: landmark index i always
+  // means the same point (nose tip, chin, eye corner...) for any face
+  // this model detects, so one fixed triangulation is valid for all of
+  // them -- the standard technique for landmark-based face morphing.
+  // =====================================================================
+  var TRIANGLES = [[30,35,29],[30,34,35],[42,28,29],[30,33,34],[35,42,29],[30,32,33],[31,32,30],[31,30,29],[35,47,42],[39,31,29],[42,27,28],[28,39,29],[51,33,50],[51,52,33],[33,52,34],[34,52,35],[35,46,47],[47,43,42],[42,22,27],[52,53,35],[50,33,32],[52,63,53],[15,46,14],[47,46,43],[51,63,52],[31,50,32],[51,62,63],[43,22,42],[55,64,53],[53,54,35],[61,62,51],[63,65,53],[46,44,43],[43,23,22],[64,54,53],[49,61,50],[50,61,51],[62,65,63],[64,55,54],[66,65,62],[15,45,46],[46,45,44],[21,39,27],[27,39,28],[31,49,50],[24,23,43],[22,21,27],[24,43,44],[67,66,62],[65,55,53],[56,55,65],[61,67,62],[60,49,48],[49,67,61],[20,21,69],[66,56,65],[57,56,66],[38,40,39],[39,40,31],[25,24,44],[69,21,22],[58,66,67],[58,57,66],[48,49,31],[49,59,67],[59,58,67],[21,38,39],[60,59,49],[14,46,35],[26,25,44],[13,14,54],[54,14,35],[2,48,31],[60,48,59],[26,44,45],[69,22,23],[21,20,38],[16,26,45],[37,41,40],[40,41,31],[37,40,38],[15,16,45],[12,13,54],[12,54,11],[19,37,38],[11,54,55],[11,55,10],[17,36,37],[37,36,41],[41,2,31],[69,19,20],[20,19,38],[10,55,56],[10,56,9],[9,57,8],[9,56,57],[19,18,37],[8,57,7],[57,58,7],[18,17,37],[1,2,41],[1,41,36],[48,5,59],[0,1,36],[2,3,48],[6,58,59],[3,4,48],[17,0,36],[4,5,48],[5,6,59],[6,7,58],[14,71,15],[15,71,16],[16,70,26],[70,69,25],[13,71,14],[72,71,13],[72,13,12],[25,69,24],[24,69,23],[19,69,18],[18,68,17],[70,25,26],[8,73,9],[9,73,10],[10,72,11],[11,72,12],[7,73,8],[6,73,7],[74,73,6],[3,74,4],[4,74,5],[5,74,6],[2,75,3],[1,75,2],[0,75,1],[68,75,0],[68,0,17],[71,70,16],[73,72,10],[69,68,18],[75,74,3]];
+
+  var BOUNDARY_REL = [
+    [-0.3,-0.3],[0.5,-0.3],[1.3,-0.3],
+    [1.3,0.5],
+    [1.3,1.3],[0.5,1.3],[-0.3,1.3],
+    [-0.3,0.5]
+  ];
+
+  var CAP_SIZE = 480;
+
+  // Face outline connections for the live overlay (not used by the morph
+  // engine -- purely a visual "here's what the model sees" readout).
+  var JAW = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+  var BROW_R = [17,18,19,20,21], BROW_L = [22,23,24,25,26];
+  var NOSE_BRIDGE = [27,28,29,30], NOSE_BASE = [31,32,33,34,35];
+  var EYE_R = [36,37,38,39,40,41,36], EYE_L = [42,43,44,45,46,47,42];
+  var MOUTH_OUT = [48,49,50,51,52,53,54,55,56,57,58,59,48];
+  var MOUTH_IN = [60,61,62,63,64,65,66,67,60];
+
+  // ---------------------------------------------------------------------
+  // Affine transform from 3 point correspondences (verified in isolation:
+  // maps all 3 source points exactly onto their destination points, and
+  // returns null for a degenerate/collinear source triangle instead of
+  // propagating NaN/Infinity into the canvas transform).
+  // ---------------------------------------------------------------------
+  function affineFrom3Points(src, dst) {
+    var p0 = src[0], p1 = src[1], p2 = src[2];
+    var q0 = dst[0], q1 = dst[1], q2 = dst[2];
+    var denom = p0.x * (p1.y - p2.y) + p1.x * (p2.y - p0.y) + p2.x * (p0.y - p1.y);
+    if (Math.abs(denom) < 1e-9) return null;
+    var a = (q0.x * (p1.y - p2.y) + q1.x * (p2.y - p0.y) + q2.x * (p0.y - p1.y)) / denom;
+    var b = (q0.y * (p1.y - p2.y) + q1.y * (p2.y - p0.y) + q2.y * (p0.y - p1.y)) / denom;
+    var c = (q0.x * (p2.x - p1.x) + q1.x * (p0.x - p2.x) + q2.x * (p1.x - p0.x)) / denom;
+    var d = (q0.y * (p2.x - p1.x) + q1.y * (p0.x - p2.x) + q2.y * (p1.x - p0.x)) / denom;
+    var e = q0.x - a * p0.x - c * p0.y;
+    var f = q0.y - b * p0.x - d * p0.y;
+    return { a: a, b: b, c: c, d: d, e: e, f: f };
+  }
+
+  // ---------------------------------------------------------------------
+  // Model loading
+  // ---------------------------------------------------------------------
+  var statusEl = document.getElementById('model-status');
+  var statusTextEl = document.getElementById('model-status-text');
+  var modelsReady = false;
+
+  function setStatus(cls, text) {
+    statusEl.className = 'status-pill ' + cls;
+    statusTextEl.textContent = text;
+  }
+
+  faceapi.nets.tinyFaceDetector.loadFromUri('vendor/weights')
+    .then(function(){ return faceapi.nets.faceLandmark68Net.loadFromUri('vendor/weights'); })
+    .then(function(){
+      modelsReady = true;
+      setStatus('ok', 'Models ready');
+    })
+    .catch(function(err){
+      console.error('Model load failed:', err);
+      setStatus('bad', 'Model load failed');
+    });
+
+  var detectorOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+
+  // ---------------------------------------------------------------------
+  // DOM refs
+  // ---------------------------------------------------------------------
+  var stageEl = document.getElementById('stage');
+  var btnStartCam = document.getElementById('btn-start-cam');
+  var btnStopCam = document.getElementById('btn-stop-cam');
+  var btnCapture = document.getElementById('btn-capture');
+  var captureHint = document.getElementById('capture-hint');
+  var landmarksSwitch = document.getElementById('landmarks-switch');
+  var fileInput = document.getElementById('file-input');
+  var galleryEl = document.getElementById('gallery');
+  var liveHud = document.getElementById('live-hud');
+  var hudFaceStatus = document.getElementById('hud-face-status');
+  var morphControls = document.getElementById('morph-controls');
+  var blendSlider = document.getElementById('blend-slider');
+  var blendVal = document.getElementById('blend-val');
+  var btnPlayMorph = document.getElementById('btn-play-morph');
+  var btnMeshToggle = document.getElementById('btn-mesh-toggle');
+  var btnDownloadFrame = document.getElementById('btn-download-frame');
+  var stageCaption = document.getElementById('stage-caption');
+  var modeLiveBtn = document.getElementById('mode-live-btn');
+  var modeMorphBtn = document.getElementById('mode-morph-btn');
+
+  // ---------------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------------
+  var mode = 'live';
+  var showLandmarks = true;
+  var stream = null;
+  var videoEl = null;
+  var overlayCanvas = null;
+  var liveLoopHandle = null;
+  var lastDetection = null; // {points: [{x,y}...68]} in video-display space
+
+  var captures = []; // {id, dataUrl, points(76), canvas}
+  var slotA = null, slotB = null; // capture ids
+  var morphCanvas = null;
+  var meshOverlayOn = false;
+  var morphPlaying = false;
+  var morphDirection = 1;
+  var morphRaf = null;
+
+  // ---------------------------------------------------------------------
+  // Live camera view
+  // ---------------------------------------------------------------------
+  function buildLiveView() {
+    stageEl.innerHTML = '';
+    var wrap = document.createElement('div');
+    wrap.className = 'view-layer';
+    videoEl = document.createElement('video');
+    videoEl.autoplay = true; videoEl.playsInline = true; videoEl.muted = true;
+    overlayCanvas = document.createElement('canvas');
+    overlayCanvas.className = 'overlay';
+    wrap.appendChild(videoEl);
+    wrap.appendChild(overlayCanvas);
+    stageEl.appendChild(wrap);
+  }
+
+  function startCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus('bad', 'Camera API unavailable');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+      .then(function(s){
+        stream = s;
+        buildLiveView();
+        videoEl.srcObject = stream;
+        videoEl.onloadedmetadata = function(){
+          overlayCanvas.width = videoEl.videoWidth;
+          overlayCanvas.height = videoEl.videoHeight;
+          videoEl.style.width = videoEl.videoWidth + 'px';
+          videoEl.style.height = videoEl.videoHeight + 'px';
+        };
+        btnStartCam.disabled = true;
+        btnStopCam.disabled = false;
+        liveHud.hidden = false;
+        startLiveLoop();
+      })
+      .catch(function(err){
+        console.error('getUserMedia failed:', err);
+        captureHint.textContent = 'Camera permission denied or unavailable — you can still use "Upload a Photo" below.';
+      });
+  }
+
+  function stopCamera() {
+    if (liveLoopHandle) { clearInterval(liveLoopHandle); liveLoopHandle = null; }
+    if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+    btnStartCam.disabled = false;
+    btnStopCam.disabled = true;
+    btnCapture.disabled = true;
+    liveHud.hidden = true;
+    lastDetection = null;
+    captureHint.textContent = 'Start the camera and center your face to enable capture.';
+    if (mode === 'live') {
+      stageEl.innerHTML = '';
+      var empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = '<p>Camera is stopped. Press "Start Camera" or upload a photo to get a capture.</p>';
+      stageEl.appendChild(empty);
+    }
+  }
+
+  function startLiveLoop() {
+    if (liveLoopHandle) clearInterval(liveLoopHandle);
+    liveLoopHandle = setInterval(function(){
+      if (!modelsReady || !videoEl || videoEl.readyState < 2) return;
+      faceapi.detectSingleFace(videoEl, detectorOptions).withFaceLandmarks()
+        .then(function(result){
+          drawLiveOverlay(result);
+          if (result) {
+            lastDetection = result;
+            hudFaceStatus.textContent = 'detected (' + (result.detection.score*100).toFixed(0) + '%)';
+            btnCapture.disabled = false;
+            captureHint.textContent = 'Face detected — capture whenever you like.';
+          } else {
+            lastDetection = null;
+            hudFaceStatus.textContent = 'searching…';
+            btnCapture.disabled = true;
+            captureHint.textContent = 'No face detected — center your face in frame.';
+          }
+        })
+        .catch(function(err){ console.error('detection error:', err); });
+    }, 150);
+  }
+
+  function drawLiveOverlay(result) {
+    if (!overlayCanvas) return;
+    var ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    if (!result || !showLandmarks) return;
+    var box = result.detection.box;
+    ctx.strokeStyle = '#f0599c'; ctx.lineWidth = 2;
+    ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+    var pts = result.landmarks.positions;
+    function strokeChain(idxs) {
+      ctx.beginPath();
+      idxs.forEach(function(i, k){ var p = pts[i]; if (k === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+      ctx.strokeStyle = 'rgba(240,89,156,.85)'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    strokeChain(JAW); strokeChain(BROW_R); strokeChain(BROW_L);
+    strokeChain(NOSE_BRIDGE); strokeChain(NOSE_BASE);
+    strokeChain(EYE_R); strokeChain(EYE_L);
+    strokeChain(MOUTH_OUT); strokeChain(MOUTH_IN);
+
+    ctx.fillStyle = '#7be0c4';
+    pts.forEach(function(p){ ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, Math.PI*2); ctx.fill(); });
+  }
+
+  // ---------------------------------------------------------------------
+  // Capture: cover-fit source into a CAP_SIZE x CAP_SIZE canvas, detect
+  // on THAT canvas so landmark coordinates already live in its space.
+  // ---------------------------------------------------------------------
+  function detectAndCapture(source, naturalW, naturalH) {
+    var canvas = document.createElement('canvas');
+    canvas.width = CAP_SIZE; canvas.height = CAP_SIZE;
+    var ctx = canvas.getContext('2d');
+
+    var scale = Math.max(CAP_SIZE / naturalW, CAP_SIZE / naturalH);
+    var sw = CAP_SIZE / scale, sh = CAP_SIZE / scale;
+    var sx = (naturalW - sw) / 2, sy = (naturalH - sh) / 2;
+    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, CAP_SIZE, CAP_SIZE);
+
+    return faceapi.detectSingleFace(canvas, detectorOptions).withFaceLandmarks()
+      .then(function(result){
+        if (!result) return null;
+        var points = result.landmarks.positions.map(function(p){ return { x: p.x, y: p.y }; });
+        BOUNDARY_REL.forEach(function(rel){ points.push({ x: rel[0]*CAP_SIZE, y: rel[1]*CAP_SIZE }); });
+        return { canvas: canvas, points: points };
+      });
+  }
+
+  function addCapture(canvas, points) {
+    var id = 'c' + Date.now() + Math.random().toString(36).slice(2,7);
+    var cap = { id: id, canvas: canvas, points: points, dataUrl: canvas.toDataURL('image/jpeg', 0.88) };
+    captures.push(cap);
+    renderGallery();
+    return cap;
+  }
+
+  document.getElementById('btn-capture').addEventListener('click', function(){
+    if (!videoEl || !lastDetection) return;
+    detectAndCapture(videoEl, videoEl.videoWidth, videoEl.videoHeight).then(function(res){
+      if (res) addCapture(res.canvas, res.points);
+    });
+  });
+
+  fileInput.addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var img = new Image();
+    img.onload = function(){
+      detectAndCapture(img, img.naturalWidth, img.naturalHeight).then(function(res){
+        if (res) addCapture(res.canvas, res.points);
+        else alert('No face detected in that photo — try a clearer, front-facing shot.');
+        fileInput.value = '';
+      });
+    };
+    img.onerror = function(){ alert('Could not load that image.'); fileInput.value = ''; };
+    img.src = URL.createObjectURL(file);
+  });
+
+  // ---------------------------------------------------------------------
+  // Gallery
+  // ---------------------------------------------------------------------
+  function renderGallery() {
+    galleryEl.innerHTML = '';
+    if (captures.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'gallery-empty';
+      empty.textContent = 'No captures yet';
+      galleryEl.appendChild(empty);
+      return;
+    }
+    captures.forEach(function(cap){
+      var card = document.createElement('div');
+      card.className = 'cap-card';
+      if (cap.id === slotA) card.classList.add('slot-a');
+      if (cap.id === slotB) card.classList.add('slot-b');
+
+      var img = document.createElement('img');
+      img.src = cap.dataUrl;
+      card.appendChild(img);
+
+      if (cap.id === slotA) { var tagA = document.createElement('div'); tagA.className='slot-tag'; tagA.textContent='A'; card.appendChild(tagA); }
+      if (cap.id === slotB) { var tagB = document.createElement('div'); tagB.className='slot-tag'; tagB.textContent='B'; card.appendChild(tagB); }
+
+      var tools = document.createElement('div');
+      tools.className = 'cap-tools';
+      var btnA = document.createElement('button'); btnA.className='btn small'; btnA.textContent='A';
+      btnA.addEventListener('click', function(){ slotA = (slotA===cap.id) ? null : cap.id; onSlotsChanged(); });
+      var btnB = document.createElement('button'); btnB.className='btn small'; btnB.textContent='B';
+      btnB.addEventListener('click', function(){ slotB = (slotB===cap.id) ? null : cap.id; onSlotsChanged(); });
+      var btnX = document.createElement('button'); btnX.className='btn small'; btnX.textContent='✕';
+      btnX.addEventListener('click', function(){
+        captures = captures.filter(function(c){ return c.id !== cap.id; });
+        if (slotA === cap.id) slotA = null;
+        if (slotB === cap.id) slotB = null;
+        renderGallery(); onSlotsChanged();
+      });
+      tools.appendChild(btnA); tools.appendChild(btnB); tools.appendChild(btnX);
+      card.appendChild(tools);
+      galleryEl.appendChild(card);
+    });
+  }
+
+  function getCap(id) { return captures.filter(function(c){ return c.id === id; })[0] || null; }
+
+  function onSlotsChanged() {
+    renderGallery();
+    var a = getCap(slotA), b = getCap(slotB);
+    if (a && b) {
+      setMode('morph');
+      buildMorphView();
+      renderMorphFrame(parseInt(blendSlider.value,10)/100);
+    } else if (mode === 'morph') {
+      buildMorphView(); // show "pick two captures" placeholder
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Morph rendering
+  // ---------------------------------------------------------------------
+  function buildMorphView() {
+    stageEl.innerHTML = '';
+    var a = getCap(slotA), b = getCap(slotB);
+    if (!a || !b) {
+      var empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = '<p>Pick two captures from the rail (tap A on one, B on another) to morph between them.</p>';
+      stageEl.appendChild(empty);
+      morphControls.hidden = true;
+      return;
+    }
+    morphCanvas = document.createElement('canvas');
+    morphCanvas.id = 'morphCanvas';
+    morphCanvas.className = 'view';
+    morphCanvas.width = CAP_SIZE; morphCanvas.height = CAP_SIZE;
+    stageEl.appendChild(morphCanvas);
+    morphControls.hidden = false;
+  }
+
+  function buildWarpedCanvas(cap, targetPoints) {
+    var out = document.createElement('canvas');
+    out.width = CAP_SIZE; out.height = CAP_SIZE;
+    var ctx = out.getContext('2d');
+    for (var t = 0; t < TRIANGLES.length; t++) {
+      var tri = TRIANGLES[t];
+      var srcTri = [cap.points[tri[0]], cap.points[tri[1]], cap.points[tri[2]]];
+      var dstTri = [targetPoints[tri[0]], targetPoints[tri[1]], targetPoints[tri[2]]];
+      var m = affineFrom3Points(srcTri, dstTri);
+      if (!m) continue;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(dstTri[0].x, dstTri[0].y);
+      ctx.lineTo(dstTri[1].x, dstTri[1].y);
+      ctx.lineTo(dstTri[2].x, dstTri[2].y);
+      ctx.closePath();
+      ctx.clip();
+      ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+      ctx.drawImage(cap.canvas, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.restore();
+    }
+    return out;
+  }
+
+  function renderMorphFrame(t) {
+    var a = getCap(slotA), b = getCap(slotB);
+    if (!a || !b || !morphCanvas) return;
+    var targetPoints = a.points.map(function(pa, i){
+      var pb = b.points[i];
+      return { x: pa.x + (pb.x - pa.x) * t, y: pa.y + (pb.y - pa.y) * t };
+    });
+    var warpedA = buildWarpedCanvas(a, targetPoints);
+    var warpedB = buildWarpedCanvas(b, targetPoints);
+    var ctx = morphCanvas.getContext('2d');
+    ctx.clearRect(0, 0, CAP_SIZE, CAP_SIZE);
+    ctx.globalAlpha = 1;
+    ctx.drawImage(warpedA, 0, 0);
+    ctx.globalAlpha = t;
+    ctx.drawImage(warpedB, 0, 0);
+    ctx.globalAlpha = 1;
+
+    if (meshOverlayOn) {
+      ctx.strokeStyle = 'rgba(240,89,156,.55)';
+      ctx.lineWidth = 0.75;
+      TRIANGLES.forEach(function(tri){
+        var p0 = targetPoints[tri[0]], p1 = targetPoints[tri[1]], p2 = targetPoints[tri[2]];
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.closePath();
+        ctx.stroke();
+      });
+    }
+  }
+
+  blendSlider.addEventListener('input', function(){
+    var t = parseInt(blendSlider.value, 10) / 100;
+    blendVal.textContent = blendSlider.value + '%';
+    renderMorphFrame(t);
+  });
+
+  btnMeshToggle.addEventListener('click', function(){
+    meshOverlayOn = !meshOverlayOn;
+    btnMeshToggle.classList.toggle('active', meshOverlayOn);
+    renderMorphFrame(parseInt(blendSlider.value,10)/100);
+  });
+
+  btnDownloadFrame.addEventListener('click', function(){
+    if (!morphCanvas) return;
+    var link = document.createElement('a');
+    link.download = 'face-morph-' + Date.now() + '.png';
+    link.href = morphCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+  function stopMorphPlayback() {
+    morphPlaying = false;
+    btnPlayMorph.textContent = '▶ Play';
+    if (morphRaf) { cancelAnimationFrame(morphRaf); morphRaf = null; }
+  }
+
+  btnPlayMorph.addEventListener('click', function(){
+    if (morphPlaying) { stopMorphPlayback(); return; }
+    morphPlaying = true;
+    btnPlayMorph.textContent = '❚❚ Pause';
+    var last = performance.now();
+    function step(now) {
+      if (!morphPlaying) return;
+      var dt = (now - last) / 1000; last = now;
+      var t = parseInt(blendSlider.value, 10) / 100;
+      t += morphDirection * dt * 0.4; // full cycle ~2.5s one-way
+      if (t >= 1) { t = 1; morphDirection = -1; }
+      if (t <= 0) { t = 0; morphDirection = 1; }
+      blendSlider.value = Math.round(t * 100);
+      blendVal.textContent = Math.round(t*100) + '%';
+      renderMorphFrame(t);
+      morphRaf = requestAnimationFrame(step);
+    }
+    morphRaf = requestAnimationFrame(step);
+  });
+
+  // ---------------------------------------------------------------------
+  // Mode switching
+  // ---------------------------------------------------------------------
+  function setMode(m) {
+    mode = m;
+    modeLiveBtn.classList.toggle('active', m === 'live');
+    modeMorphBtn.classList.toggle('active', m === 'morph');
+    liveHud.hidden = (m !== 'live');
+    morphControls.hidden = (m !== 'morph') || !(getCap(slotA) && getCap(slotB));
+    stageCaption.hidden = (m !== 'live');
+    if (m === 'live') {
+      if (stream) buildLiveView(), (videoEl.srcObject = stream), startLiveLoop();
+      else stopCamera();
+    } else {
+      buildMorphView();
+      if (getCap(slotA) && getCap(slotB)) renderMorphFrame(parseInt(blendSlider.value,10)/100);
+    }
+  }
+
+  modeLiveBtn.addEventListener('click', function(){ setMode('live'); });
+  modeMorphBtn.addEventListener('click', function(){ setMode('morph'); });
+
+  btnStartCam.addEventListener('click', startCamera);
+  btnStopCam.addEventListener('click', stopCamera);
+
+  landmarksSwitch.addEventListener('click', function(){
+    showLandmarks = !showLandmarks;
+    landmarksSwitch.classList.toggle('on', showLandmarks);
+  });
+
+  // ---------------------------------------------------------------------
+  // Boot
+  // ---------------------------------------------------------------------
+  stopCamera();
+})();
+</script>
+</body>
+</html>

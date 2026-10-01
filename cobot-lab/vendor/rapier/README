@@ -1,0 +1,3 @@
+Rapier 3D (@dimforge/rapier3d-compat 0.21.0) — https://rapier.rs
+The "compat" build, with the WebAssembly inlined as base64 in rapier.mjs.
+Licensed under the Apache License 2.0 (see LICENSE). Copyright (c) Dimforge EURL.

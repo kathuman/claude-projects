@@ -1,0 +1,238 @@
+{
+  "$schema": "Single source of truth for the warehouse model. Every value here is an INDEPENDENT input — nothing here is a calculated output. FreeCAD (freecad/create_model.py), the analytical model (web/src/calculations.js) and the web UI all read this same file so they can never disagree about what a parameter means or what range it's allowed to take.",
+  "units": {
+    "length": "m",
+    "small_length": "mm",
+    "count": "count",
+    "percent": "%",
+    "speed": "m/s",
+    "time": "s",
+    "minutes": "min",
+    "currency": "$"
+  },
+  "rack_types": {
+    "$comment": "Typical planning values for each storage system (industry rules of thumb, not a specific manufacturer's data). deep = pallets stored one behind the other in a lane on each side of an aisle; selectivity = share of pallets reachable without moving another; min_aisle = narrowest working aisle for the truck that serves it; usable = planning occupancy ceiling (lanes can only hold one SKU, so deep lanes lose more space to part-empty lanes — 'honeycombing'); truck_cost = typical price of one truck of that kind, US$ (illustrative).",
+    "selective":   { "label": "Selective (single-deep)", "deep": 1, "selectivity": 1.0,  "min_aisle": 2.7, "usable": 0.90, "truck": "reach truck" , "truck_cost": 45000 },
+    "double_deep": { "label": "Double-deep",             "deep": 2, "selectivity": 0.5,  "min_aisle": 2.9, "usable": 0.85, "truck": "reach truck with telescopic forks" , "truck_cost": 55000 },
+    "vna":         { "label": "Very narrow aisle (VNA)", "deep": 1, "selectivity": 1.0,  "min_aisle": 1.6, "usable": 0.90, "truck": "guided turret truck" , "truck_cost": 150000 },
+    "push_back":   { "label": "Push-back (3 deep)",      "deep": 3, "selectivity": 0.33, "min_aisle": 3.3, "usable": 0.80, "truck": "counterbalance truck" , "truck_cost": 35000 },
+    "drive_in":    { "label": "Drive-in (5 deep)",       "deep": 5, "selectivity": 0.2,  "min_aisle": 3.5, "usable": 0.75, "truck": "counterbalance truck" , "truck_cost": 35000 }
+  },
+  "parameters": {
+    "warehouse_length": {
+      "value": 100, "unit": "m", "minimum": 40, "maximum": 300,
+      "category": "Building",
+      "description": "Inside length of the building (wall face to wall face), along the direction the rack aisles run — the direction a lift truck travels furthest."
+    },
+    "warehouse_width": {
+      "value": 60, "unit": "m", "minimum": 20, "maximum": 150,
+      "category": "Building",
+      "description": "Inside width of the building, across the aisles — this is what limits how many rack rows fit side by side."
+    },
+    "clear_height": {
+      "value": 10, "unit": "m", "minimum": 6, "maximum": 18,
+      "category": "Building",
+      "description": "Clear height from the floor to the lowest obstruction (roof structure or sprinkler pipework). Must hold the top beam, the load on it and the sprinkler clearance above that load."
+    },
+    "wall_thickness": {
+      "value": 200, "unit": "mm", "minimum": 150, "maximum": 400,
+      "category": "Building",
+      "description": "Perimeter wall thickness (tilt-up concrete panel range). Added outside the inside dimensions, so it counts toward the building footprint and its cost."
+    },
+    "rack_type": {
+      "value": "selective", "type": "choice",
+      "options": ["selective", "double_deep", "vna", "push_back", "drive_in"],
+      "category": "Racking",
+      "description": "Storage system. Sets how many pallets deep each lane is, how many pallets you can reach directly (selectivity), the narrowest aisle its truck can work in, and how full it can realistically be run. See rack_types above for the values."
+    },
+    "rack_height": {
+      "value": 8, "unit": "m", "minimum": 3, "maximum": 14,
+      "category": "Racking",
+      "description": "Height of the top beam level. Taller racks pack more levels into the same footprint, but need taller (costlier) lift trucks and a taller building."
+    },
+    "levels_per_rack": {
+      "value": 4, "unit": "count", "minimum": 2, "maximum": 8,
+      "category": "Racking",
+      "description": "Number of storage levels, floor level included; the beam levels are spaced evenly up to the top beam."
+    },
+    "load_height": {
+      "value": 1.5, "unit": "m", "minimum": 1.0, "maximum": 2.2,
+      "category": "Racking",
+      "description": "Height of one pallet load including the pallet. Each level must be tall enough for a load plus the beam and a lift-off gap; the top load must also clear the sprinklers."
+    },
+    "rack_depth": {
+      "value": 1.1, "unit": "m", "minimum": 0.9, "maximum": 1.5,
+      "category": "Racking",
+      "description": "Depth of one pallet position (front to back). A lane is this times the rack type's depth in pallets; rows stand back to back between aisles."
+    },
+    "bay_width": {
+      "value": 2.7, "unit": "m", "minimum": 1.8, "maximum": 3.6,
+      "category": "Racking",
+      "description": "Width of one rack bay (upright to upright) — the repeating module along the row."
+    },
+    "positions_per_level_per_bay": {
+      "value": 2, "unit": "count", "minimum": 1, "maximum": 3,
+      "category": "Racking",
+      "description": "Pallets side by side on one beam level of one bay (2 is typical for a 2.7 m bay with 1.2 m pallets). Depth is set by the rack type, not here."
+    },
+    "aisle_width": {
+      "value": 3.2, "unit": "m", "minimum": 1.6, "maximum": 4.5,
+      "category": "Racking",
+      "description": "Clear working aisle between two facing rack rows, set by the truck that serves the rack type — the model warns when it's narrower than that truck needs."
+    },
+    "flue_space": {
+      "value": 0.3, "unit": "m", "minimum": 0.15, "maximum": 0.6,
+      "category": "Racking",
+      "description": "Gap between back-to-back rows (the longitudinal flue), kept clear so sprinkler water and heat can travel up through the racks. Fire codes such as NFPA 13 require at least 150 mm; 300 mm is common practice."
+    },
+    "mid_cross_aisles": {
+      "value": 0, "unit": "count", "minimum": 0, "maximum": 4,
+      "category": "Racking",
+      "description": "Cross-aisles through the middle of the racking, splitting every row into equal segments. They cost storage bays, but let a truck change aisles without driving to the end — which shortens dual-command trips."
+    },
+    "mid_cross_aisle_width": {
+      "value": 3.5, "unit": "m", "minimum": 2.5, "maximum": 6,
+      "category": "Racking",
+      "description": "Clear width of each mid cross-aisle — at least the aisle width, so a truck can turn out of an aisle into it."
+    },
+    "sprinkler_clearance": {
+      "value": 0.46, "unit": "m", "minimum": 0.3, "maximum": 1.0,
+      "category": "Racking",
+      "description": "Minimum gap between the top of the highest load and the sprinkler deflectors — 0.46 m (18 in) for standard ceiling sprinklers, 0.91 m (36 in) for ESFR under NFPA 13."
+    },
+    "flow_layout": {
+      "value": "i_flow", "type": "choice",
+      "options": ["i_flow", "u_flow"],
+      "labels": { "i_flow": "I-flow: receive west, ship east", "u_flow": "U-flow: receive and ship on the west wall" },
+      "category": "Docks & Flow",
+      "description": "Where the doors are. I-flow (flow-through) receives at one end and ships from the other; U-flow puts both on the same wall, so the doors need more wall but fast-moving pallets can sit close to both."
+    },
+    "num_receiving_docks": {
+      "value": 4, "unit": "count", "minimum": 1, "maximum": 20,
+      "category": "Docks & Flow",
+      "description": "Inbound truck dock doors, on the receiving (west) end wall."
+    },
+    "num_shipping_docks": {
+      "value": 4, "unit": "count", "minimum": 1, "maximum": 20,
+      "category": "Docks & Flow",
+      "description": "Outbound truck dock doors, on the shipping (east) end wall."
+    },
+    "dock_bay_width": {
+      "value": 3.7, "unit": "m", "minimum": 3.2, "maximum": 4.5,
+      "category": "Docks & Flow",
+      "description": "Width allotted per dock door along the dock wall, trailer-width driven."
+    },
+    "cross_aisle_width": {
+      "value": 5, "unit": "m", "minimum": 3, "maximum": 12,
+      "category": "Docks & Flow",
+      "description": "Clear staging zone at each end of the racking, between the dock doors and the first bay — reserved for staging and cross-traffic, not used for storage."
+    },
+    "pallets_per_truck": {
+      "value": 26, "unit": "count", "minimum": 8, "maximum": 33,
+      "category": "Docks & Flow",
+      "description": "Pallets per truckload (26 fills a 53 ft US trailer single-stacked; 33 fills a 13.6 m European trailer with Euro pallets)."
+    },
+    "truck_turn_time": {
+      "value": 60, "unit": "min", "minimum": 20, "maximum": 150,
+      "category": "Docks & Flow",
+      "description": "Time a truck occupies a door: backing in, unloading or loading every pallet, paperwork and pulling out."
+    },
+    "current_inventory_pallets": {
+      "value": 4000, "unit": "count", "minimum": 0, "maximum": 30000,
+      "category": "Operations",
+      "description": "Pallets currently in storage — set independently of physical capacity, on purpose: this is what lets you see utilization exceed 100% when you shrink capacity without shrinking demand."
+    },
+    "daily_throughput_pallets": {
+      "value": 800, "unit": "count", "minimum": 50, "maximum": 5000,
+      "category": "Operations",
+      "description": "Pallets moved per day, inbound plus outbound (assumed half each) — drives dock loading and lift-truck work."
+    },
+    "storage_policy": {
+      "value": "random", "type": "choice",
+      "options": ["random", "abc"],
+      "labels": { "random": "Random (any free slot)", "abc": "Class-based ABC (fast movers nearest the doors)" },
+      "category": "Operations",
+      "description": "How pallets are assigned to slots. Random uses any free slot; class-based ABC keeps the fastest-moving pallets (class A) in the quickest slots, the next (B) in the next quickest, the rest (C) further away."
+    },
+    "demand_skew": {
+      "value": 80, "unit": "%", "minimum": 20, "maximum": 95,
+      "category": "Operations",
+      "description": "Share of pallet moves that come from the 20% fastest-moving pallets — 80 is the classic Pareto rule, 20 means every pallet moves equally often. Only matters with class-based storage."
+    },
+    "dual_command_share": {
+      "value": 0, "unit": "%", "minimum": 0, "maximum": 100,
+      "category": "Operations",
+      "description": "Share of pallet moves done on dual-command trips: store one pallet and fetch another on the same trip, instead of driving back empty."
+    },
+    "operating_hours_per_day": {
+      "value": 16, "unit": "hr", "minimum": 8, "maximum": 24,
+      "category": "Operations",
+      "description": "Hours per day the docks and floor are actively operating (e.g. two shifts = 16 h)."
+    },
+    "peak_hour_factor": {
+      "value": 1.5, "unit": "×", "minimum": 1.0, "maximum": 3.0,
+      "category": "Operations",
+      "description": "Busiest hour's volume relative to the average hour. Docks and trucks have to be sized for the peak, not the daily average."
+    },
+    "forklift_speed": {
+      "value": 1.8, "unit": "m/s", "minimum": 1.0, "maximum": 3.0,
+      "category": "Operations",
+      "description": "Average loaded travel speed, including acceleration and cornering (reach trucks in narrow aisles run slower than counterbalance trucks in open floor)."
+    },
+    "lift_speed": {
+      "value": 0.4, "unit": "m/s", "minimum": 0.15, "maximum": 0.8,
+      "category": "Operations",
+      "description": "Average mast lifting/lowering speed. Lift trucks raise the load after stopping at the bay (lifting while driving is unsafe), so lift time adds to travel time — higher levels take longer."
+    },
+    "forklift_cycle_overhead": {
+      "value": 45, "unit": "s", "minimum": 20, "maximum": 180,
+      "category": "Operations",
+      "description": "Fixed time per trip that isn't travel or lifting: picking up and setting down the pallet, positioning at the bay, scanning, turning into the aisle."
+    },
+    "truck_efficiency": {
+      "value": 0.8, "unit": "×", "minimum": 0.5, "maximum": 0.95,
+      "category": "Operations",
+      "description": "Share of each operating hour a lift truck is actually working (breaks, battery changes, congestion and waiting take the rest)."
+    },
+    "sim_lift_trucks": {
+      "value": 0, "unit": "count", "minimum": 0, "maximum": 60,
+      "category": "Simulation",
+      "description": "Lift trucks in the simulated day. 0 uses the fleet the analytic model recommends (Lift Trucks in Key Results) — set a number to see what happens with fewer or more."
+    },
+    "cost_per_rack_position": {
+      "value": 65, "unit": "$", "minimum": 30, "maximum": 150,
+      "category": "Cost",
+      "description": "Installed cost per storage position (racking, hardware, install) — illustrative, not a quotation."
+    },
+    "cost_per_sqm_building": {
+      "value": 550, "unit": "$", "minimum": 300, "maximum": 1200,
+      "category": "Cost",
+      "description": "Shell building cost per square metre of footprint (outside the walls) — illustrative; its growth with clear height is not modeled."
+    },
+    "operating_days_per_year": {
+      "value": 250, "unit": "count", "minimum": 200, "maximum": 365,
+      "category": "Cost",
+      "description": "Days a year the warehouse operates — turns daily work and throughput into annual costs."
+    },
+    "labour_cost_per_hour": {
+      "value": 32, "unit": "$", "minimum": 10, "maximum": 90,
+      "category": "Cost",
+      "description": "Fully loaded cost of one lift-truck driver hour (wages, benefits, supervision). Every truck in the fleet is crewed for the whole operating day."
+    },
+    "truck_running_cost_per_hour": {
+      "value": 4, "unit": "$", "minimum": 1, "maximum": 20,
+      "category": "Cost",
+      "description": "Energy, tyres and maintenance per hour a lift truck is working."
+    },
+    "discount_rate": {
+      "value": 7, "unit": "%", "minimum": 0, "maximum": 15,
+      "category": "Cost",
+      "description": "Cost of capital, used to turn up-front investment into an equivalent annual cost over each asset's life (building 30 years, racking and docks 20, lift trucks 8)."
+    },
+    "cost_per_dock": {
+      "value": 45000, "unit": "$", "minimum": 20000, "maximum": 120000,
+      "category": "Cost",
+      "description": "Installed cost per dock door (leveler, seal, door, door control) — illustrative."
+    }
+  }
+}
