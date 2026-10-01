@@ -1,0 +1,557 @@
+{
+ "app": "Tube Flow v6.0.0",
+ "date": "2026-10-01",
+ "runtime": "Node v24.19.0",
+ "results": [
+  {
+   "id": "poiseuille",
+   "group": "Exact solutions",
+   "title": "Pipe flow (Hagen–Poiseuille)",
+   "cite": "Hagen 1839, Poiseuille 1840",
+   "what": "An empty tube 16 cells across: the velocity profile must be the parabola u = u_c(1 − r²/R²), the pressure gradient 4μu_c/R², the mass flux the same at every cross-section, and the total mass constant with no corrections applied.",
+   "seconds": 2.732,
+   "pass": true,
+   "checks": [
+    {
+     "name": "velocity profile, max error (of u_c)",
+     "value": 0.49848705530165793,
+     "unit": "%",
+     "tol": 1,
+     "pass": true
+    },
+    {
+     "name": "pressure gradient vs 4μu_c/R²",
+     "value": 3.736645136123662,
+     "unit": "%",
+     "tol": 4,
+     "pass": true
+    },
+    {
+     "name": "mass flux, inlet vs outlet half",
+     "value": 0.0900632205341978,
+     "unit": "%",
+     "tol": 0.5,
+     "pass": true
+    },
+    {
+     "name": "total mass drift over 500 steps",
+     "value": -2.0370030107130788e-07,
+     "unit": "%",
+     "tol": "± 0.01 %",
+     "pass": true
+    }
+   ],
+   "plot": {
+    "type": "profile",
+    "points": [
+     [
+      -0.9375,
+      0.11717
+     ],
+     [
+      -0.8125,
+      0.33793
+     ],
+     [
+      -0.6875,
+      0.52665
+     ],
+     [
+      -0.5625,
+      0.6837
+     ],
+     [
+      -0.4375,
+      0.80919
+     ],
+     [
+      -0.3125,
+      0.90323
+     ],
+     [
+      -0.1875,
+      0.96587
+     ],
+     [
+      -0.0625,
+      0.99717
+     ],
+     [
+      0.0625,
+      0.99717
+     ],
+     [
+      0.1875,
+      0.96587
+     ],
+     [
+      0.3125,
+      0.90323
+     ],
+     [
+      0.4375,
+      0.80919
+     ],
+     [
+      0.5625,
+      0.6837
+     ],
+     [
+      0.6875,
+      0.52665
+     ],
+     [
+      0.8125,
+      0.33793
+     ],
+     [
+      0.9375,
+      0.11717
+     ]
+    ]
+   }
+  },
+  {
+   "id": "stokes-k",
+   "group": "Published results",
+   "title": "Stokes drag on a sphere moving along a tube",
+   "cite": "Haberman & Sayre 1958 (wall factor K(λ))",
+   "what": "A sphere moving slowly (Re 0.05) along the axis of a tube of still fluid, at three blockages λ = d/D. The drag must be Stokes' 6πμaU times the Haberman–Sayre wall factor K(λ), which grows steeply with λ.",
+   "seconds": 46.04,
+   "pass": true,
+   "checks": [
+    {
+     "name": "λ = 0.2 (sphere 4 cells): K = 1.608 vs 1.680",
+     "value": -4.245309708841982,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "λ = 0.3 (sphere 6 cells): K = 2.290 vs 2.370",
+     "value": -3.3442132750502673,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "λ = 0.4 (sphere 8 cells): K = 3.477 vs 3.582",
+     "value": -2.908125761888536,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "no side force on an axisymmetric flow (|F_side|/F_drag)",
+     "value": 4.043922716551209e-14,
+     "unit": "",
+     "tol": 1e-06,
+     "pass": true
+    }
+   ],
+   "plot": {
+    "type": "wallfactor",
+    "points": [
+     [
+      0.2,
+      1.6084120743683152
+     ],
+     [
+      0.3,
+      2.290447940080935
+     ],
+     [
+      0.4,
+      3.47749080194438
+     ]
+    ]
+   }
+  },
+  {
+   "id": "momentum",
+   "group": "Conservation",
+   "title": "Momentum balance",
+   "cite": "control-volume momentum theorem",
+   "what": "Flow past a sphere in a tube at Re ≈ 7: the drop in pressure plus momentum flux between two cross-sections must equal the force on the sphere plus the wall shear between them — the forces are measured independently, by momentum exchange on the boundary links.",
+   "seconds": 5.642,
+   "pass": true,
+   "checks": [
+    {
+     "name": "Δ(p + ρu²)·A vs drag on sphere + wall",
+     "value": -2.0722770778568878,
+     "unit": "%",
+     "tol": 3,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "stl",
+   "group": "Geometry",
+   "title": "Imported shapes: an STL sphere",
+   "cite": "consistency with the exact sphere",
+   "what": "The same Stokes case with the sphere replaced by a 5,120-triangle STL mesh of it. Shapes from files are found by ray parity and their surfaces by bisection; the drag must match the exact sphere's.",
+   "seconds": 31.042,
+   "pass": true,
+   "checks": [
+    {
+     "name": "STL sphere drag vs exact sphere drag",
+     "value": -0.1052410733624276,
+     "unit": "%",
+     "tol": 1.5,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "pulse",
+   "group": "Boundary conditions",
+   "title": "Pulsatile inflow",
+   "cite": "imposed flow rate",
+   "what": "The inflow rate swings 40% about its mean; a sinusoid fitted to the flow rate near the inlet over one period must have that amplitude, in phase.",
+   "seconds": 4.484,
+   "pass": true,
+   "checks": [
+    {
+     "name": "flow-rate amplitude vs 40%",
+     "value": -0.753447737225077,
+     "unit": "%",
+     "tol": 3,
+     "pass": true
+    },
+    {
+     "name": "phase lag",
+     "value": 2.9005850881439152,
+     "unit": "°",
+     "tol": 5,
+     "pass": true
+    }
+   ],
+   "plot": {
+    "type": "pulse",
+    "amp": 0.4,
+    "mean": 0.01988860060643804,
+    "points": [
+     [
+      0,
+      0.01949043824736561
+     ],
+     [
+      0.025,
+      0.020729043471094753
+     ],
+     [
+      0.05,
+      0.02194685612006911
+     ],
+     [
+      0.075,
+      0.023113886127248406
+     ],
+     [
+      0.1,
+      0.024201397684269717
+     ],
+     [
+      0.125,
+      0.02518263678731663
+     ],
+     [
+      0.15,
+      0.026033445594034026
+     ],
+     [
+      0.175,
+      0.02673291228711605
+     ],
+     [
+      0.2,
+      0.027263856193582927
+     ],
+     [
+      0.225,
+      0.027613230581794466
+     ],
+     [
+      0.25,
+      0.02777247822710446
+     ],
+     [
+      0.275,
+      0.02773770982665675
+     ],
+     [
+      0.3,
+      0.027509802520009025
+     ],
+     [
+      0.325,
+      0.02709436187121485
+     ],
+     [
+      0.35,
+      0.026501628570258617
+     ],
+     [
+      0.375,
+      0.025746172294020653
+     ],
+     [
+      0.4,
+      0.024846547017140046
+     ],
+     [
+      0.425,
+      0.023824863767783557
+     ],
+     [
+      0.45,
+      0.022706222055213793
+     ],
+     [
+      0.475,
+      0.02151813404634595
+     ],
+     [
+      0.5,
+      0.020289802707598677
+     ],
+     [
+      0.525,
+      0.019051445199043622
+     ],
+     [
+      0.55,
+      0.017833566442797228
+     ],
+     [
+      0.575,
+      0.01666613877750933
+     ],
+     [
+      0.6,
+      0.015577959478832781
+     ],
+     [
+      0.625,
+      0.014595847210979887
+     ],
+     [
+      0.65,
+      0.013744041340292565
+     ],
+     [
+      0.675,
+      0.013043540513275989
+     ],
+     [
+      0.7,
+      0.012511652428656816
+     ],
+     [
+      0.725,
+      0.012161489842193467
+     ],
+     [
+      0.75,
+      0.012001699169299431
+     ],
+     [
+      0.775,
+      0.0120362215509106
+     ],
+     [
+      0.8,
+      0.012264205159486405
+     ],
+     [
+      0.825,
+      0.012680016973588084
+     ],
+     [
+      0.85,
+      0.01327340368048421
+     ],
+     [
+      0.875,
+      0.014029731658021254
+     ],
+     [
+      0.9,
+      0.014930354115287108
+     ],
+     [
+      0.925,
+      0.015953070101594285
+     ],
+     [
+      0.95,
+      0.01707266377551215
+     ],
+     [
+      0.975,
+      0.018261550842518254
+     ]
+    ]
+   }
+  },
+  {
+   "id": "conv-poiseuille",
+   "group": "Grid convergence",
+   "title": "Grid convergence: pipe flow",
+   "cite": "order of accuracy",
+   "what": "Pipe flow on five grids, 8 to 32 cells across. With curved-wall bounce-back the error should fall as the square of the cell size (second order). On the grids 8, 16 and 32 cells across (refinement ratio 2): the flow rate's observed order, its Richardson extrapolation to an infinitely fine grid, and the grid convergence index (GCI) — the numerical uncertainty of the finest grid's flow rate.",
+   "seconds": 42.147,
+   "pass": true,
+   "checks": [
+    {
+     "name": "observed order of accuracy, RMS velocity profile (5 grids)",
+     "value": 1.8378925430771742,
+     "unit": "",
+     "tol": "≥ 1.5",
+     "pass": true
+    },
+    {
+     "name": "observed order, flow rate (8 → 16 → 32 cells)",
+     "value": 2.279729961711226,
+     "unit": "",
+     "tol": "1.5 – 3",
+     "pass": true
+    },
+    {
+     "name": "flow rate extrapolated to a fine grid, vs exact",
+     "value": 0.17710383082332193,
+     "unit": "%",
+     "tol": 0.5,
+     "pass": true
+    },
+    {
+     "name": "GCI of the 32-cell grid's flow rate",
+     "value": 0.8268243691967347,
+     "unit": "%",
+     "tol": "< 2 %",
+     "pass": true
+    }
+   ],
+   "plot": {
+    "type": "convergence",
+    "x": "cells across the tube",
+    "points": [
+     [
+      8,
+      0.01537797117659179
+     ],
+     [
+      12,
+      0.008278665484601927
+     ],
+     [
+      16,
+      0.0033788254826901294
+     ],
+     [
+      24,
+      0.0020127559405452634
+     ],
+     [
+      32,
+      0.0012754248232400246
+     ]
+    ],
+    "order": 1.8378925430771742,
+    "q": [
+     [
+      8,
+      1.1590563448342845
+     ],
+     [
+      16,
+      1.034161791922342
+     ],
+     [
+      32,
+      1.0084414701677797
+     ]
+    ],
+    "qx": 1.0017710383082332,
+    "gci": 0.008268243691967348
+   }
+  },
+  {
+   "id": "conv-stokes",
+   "group": "Grid convergence",
+   "title": "Resolution study: Stokes drag",
+   "cite": "Haberman & Sayre 1958; ASME V&V 20 (oscillatory convergence)",
+   "what": "The wall-corrected Stokes drag (λ = 0.3) with the sphere 6, 7.5, 9 and 9.6 cells across. The error shrinks with resolution, but where the sphere's surface falls between lattice nodes scatters the drag by about ±1% — more than the trend at these resolutions — so the convergence is not monotonic and Richardson extrapolation does not apply. The spread is the honest uncertainty: treat the drag on a body 6–10 cells across as good to about ±3%. (Below ~6 cells it drops fast: 12% low at 4.8 cells.)",
+   "seconds": 108.24,
+   "pass": true,
+   "checks": [
+    {
+     "name": "sphere 6.0 cells across: K = 2.291 vs 2.370",
+     "value": -3.3327410328116702,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "sphere 7.5 cells across: K = 2.308 vs 2.370",
+     "value": -2.6146007323439746,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "sphere 9.0 cells across: K = 2.273 vs 2.370",
+     "value": -4.0945884761842795,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "sphere 9.6 cells across: K = 2.327 vs 2.370",
+     "value": -1.783225487693485,
+     "unit": "%",
+     "tol": 5,
+     "pass": true
+    },
+    {
+     "name": "spread across the four grids (the scatter from surface alignment)",
+     "value": 2.3113629884907945,
+     "unit": "%",
+     "tol": "< 3 %",
+     "pass": true
+    },
+    {
+     "name": "finest grid (9.6 cells) vs Haberman–Sayre",
+     "value": -1.783225487693485,
+     "unit": "%",
+     "tol": 3,
+     "pass": true
+    }
+   ],
+   "plot": {
+    "type": "resolution",
+    "points": [
+     [
+      6,
+      2.2907197973022546
+     ],
+     [
+      7.5,
+      2.3077375365150763
+     ],
+     [
+      9,
+      2.272666331840385
+     ],
+     [
+      9.6,
+      2.3274385992353332
+     ]
+    ],
+    "ref": 2.369695615430444,
+    "worst": 4.0945884761842795
+   }
+  }
+ ]
+}

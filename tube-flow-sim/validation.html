@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tube Flow Validation</title>
+  <meta name="description" content="Validation report for Tube Flow by kathuman: the lattice-Boltzmann solver against exact solutions and published results, grid convergence with Richardson extrapolation and GCI, GPU/CPU parity and sphere-wake benchmarks — re-runnable in your browser." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --warn:#ffcf4a; --ok:#3ddc97; --bad:#ff6a6a;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg);}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body); line-height:1.55;}
+a{color:var(--accent);}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52); position:sticky; top:0; z-index:20; flex-wrap:wrap;}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.ver{font-family:var(--mono); font-size:11px; color:var(--accent); border:1px solid var(--line); border-radius:5px; padding:1px 6px;}
+.by{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);} .by a{color:var(--ink); text-decoration:none; font-weight:600;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+main{max-width:1180px; margin:0 auto; padding:24px 20px 10px;}
+h1{font-family:var(--head); font-weight:700; font-size:30px; letter-spacing:.03em; margin:0 0 6px;}
+h2{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); margin:34px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line-soft);}
+.lead{color:var(--ink-dim); max-width:860px; margin:0 0 16px;}
+.summary{display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+.big{font-family:var(--head); font-weight:700; font-size:28px;}
+.big.ok{color:var(--ok);} .big.bad{color:var(--bad);}
+.meta{font-family:var(--mono); font-size:12px; color:var(--ink-faint);}
+.btn{font-family:var(--head); font-weight:600; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); background:var(--panel-2); border:1px solid var(--line); border-radius:7px; padding:8px 12px; cursor:pointer;}
+.btn:hover{border-color:var(--accent); color:var(--accent);}
+.btn.primary{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+.btn:disabled{opacity:.4; cursor:not-allowed;}
+.progress{flex:1 1 240px; min-width:200px;}
+.bar{height:6px; background:var(--line-soft); border-radius:3px; overflow:hidden;} .bar i{display:block; height:100%; width:0; background:var(--accent); transition:width .3s;}
+.cases{display:grid; grid-template-columns:1fr; gap:14px;}
+.case{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:16px;}
+.case h3{font-family:var(--head); font-weight:700; font-size:18px; margin:0; letter-spacing:.02em;}
+.chip{display:inline-block; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:999px; padding:1px 8px; margin-right:6px;}
+.verdict{font-family:var(--head); font-weight:700; font-size:12px; letter-spacing:.08em; text-transform:uppercase; padding:2px 9px; border-radius:999px;}
+.verdict.ok{color:var(--ok); border:1px solid rgba(61,220,151,.5);} .verdict.bad{color:var(--bad); border:1px solid rgba(255,106,106,.5);} .verdict.run{color:var(--warn); border:1px solid rgba(255,207,74,.5);}
+.what{font-size:14px; color:var(--ink-dim); margin:8px 0;}
+.cite{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+table{border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12px; margin-top:8px;}
+th,td{text-align:left; padding:6px 8px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+th{color:var(--ink-faint); font-weight:500;}
+td.num{text-align:right; white-space:nowrap;}
+td.okc{color:var(--ok);} td.badc{color:var(--bad);}
+canvas.plot{width:100%; height:250px; display:block; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:8px;}
+.case-foot{display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:10px; flex-wrap:wrap;}
+.note{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);}
+.prose{color:var(--ink-dim); font-size:14.5px; max-width:900px;}
+.prose code, code{font-family:var(--mono); font-size:12.5px; color:var(--ink); background:var(--panel-2); border:1px solid var(--line-soft); border-radius:4px; padding:0 4px;}
+pre{font-family:var(--mono); font-size:12.5px; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:8px; padding:12px; overflow-x:auto; color:var(--ink);}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; overflow-x:auto;}
+.foot{max-width:1180px; margin:30px auto 0; padding:18px 20px 30px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-faint); text-align:center;}
+.foot .consult{display:block; color:var(--ink); font-weight:600; margin-bottom:4px;}
+@media (max-width:860px){ .case{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">TUBE<span>FLOW</span></div>
+    <span class="ver" id="ver"></span>
+    <span class="by">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · validation report</span>
+  </div>
+  <a class="back-link" href="./">← Tube Flow</a>
+</header>
+
+<main>
+  <h1>How far can you trust the numbers?</h1>
+  <p class="lead">
+    Every case below runs the app's own solver (<code>src/lbm.js</code>) on a problem with a known answer —
+    an exact solution, a published result, or a conservation law — and checks the answer against a stated
+    tolerance. The results shown were recorded with <code>node tube-flow-sim/tests/validation.test.js</code>;
+    press <b>Re-run</b> to compute them again in your browser, from the same code.
+  </p>
+  <div class="summary">
+    <span class="big" id="sum-big">—</span>
+    <span class="meta" id="sum-meta">loading recorded results…</span>
+    <span style="flex:1 1 auto"></span>
+    <button class="btn primary" id="run-all" type="button">Re-run all in this browser</button>
+    <div class="progress" id="prog" hidden><div class="note" id="prog-label"></div><div class="bar"><i id="prog-bar"></i></div></div>
+  </div>
+
+  <h2>Cases</h2>
+  <div class="cases" id="cases"></div>
+
+  <h2>GPU solver: same answer as the CPU solver</h2>
+  <div class="card">
+    <p class="prose">The WebGPU solver (<code>src/lbm-gpu.js</code>) is a port of the same scheme. Each case runs both for 400 steps and
+      compares every node: velocity within 5·10⁻⁴ of the speed (float32 summation order), density within 10⁻⁵, the drag on the body within
+      0.01%, the wall force within 0.5% (a sum of thousands of nearly cancelling terms), mass within 10⁻⁶.</p>
+    <div class="case-foot" style="margin-top:0"><span class="note" id="gpu-note">Needs a browser with WebGPU.</span><button class="btn" id="run-gpu" type="button">Run the parity cases here</button></div>
+    <table id="gpu-table"><tr><th>case</th><th>nodes</th><th>velocity diff</th><th>density diff</th><th>drag GPU / CPU − 1</th><th>wall force</th><th>mass</th></tr>
+      <tr><td colspan="7" class="note">Recorded with <code>tests/gpu.test.js</code> on an Intel Xe laptop GPU: all 5 cases pass (27/27 checks), ~200 million lattice updates per second.</td></tr></table>
+  </div>
+
+  <h2>Benchmark: the wake of a sphere</h2>
+  <div class="card">
+    <p class="prose">Long GPU runs (<code>tests/benchmark.js</code>): a sphere moving through a tube with 20% blockage, 16 cells across,
+      1.8 million cells, compared with Johnson &amp; Patel (1999, <i>J. Fluid Mech.</i> 378, 19–70) for a sphere in unbounded flow.</p>
+    <table>
+      <tr><th>Re</th><th>quantity</th><th>simulation</th><th>Johnson &amp; Patel (unbounded)</th></tr>
+      <tr><td>100</td><td>recirculation length L/d</td><td class="num"><b>0.86</b></td><td>0.88</td></tr>
+      <tr><td>100</td><td>drag coefficient C_d</td><td class="num">1.20</td><td>1.09 — the tube's blockage raises the drag</td></tr>
+      <tr><td>300</td><td>wake</td><td class="num">steady, oblique</td><td>steady, planar-symmetric from Re ≈ 210</td></tr>
+      <tr><td>300</td><td>mean lift coefficient</td><td class="num"><b>0.066</b></td><td>≈ 0.065</td></tr>
+      <tr><td>376</td><td>wake</td><td class="num">periodic shedding</td><td>periodic shedding above Re ≈ 270</td></tr>
+      <tr><td>376</td><td>Strouhal number</td><td class="num"><b>0.150</b></td><td>0.137 at Re 300, rising toward ~0.17 at Re 500</td></tr>
+    </table>
+  </div>
+
+  <h2>Limits — what the numbers don't cover</h2>
+  <div class="prose">
+    <ul>
+      <li><b>Resolution.</b> A body needs at least ~6 cells across for drag within a few percent (at 4.8 cells the Stokes drag is 12% low);
+        the app says when a case's Reynolds number is beyond what the grid can resolve and runs the highest it can instead.</li>
+      <li><b>No turbulence model.</b> Flows are resolved directly; wakes become under-resolved well before transition in open flow (Re ~ 10³).</li>
+      <li><b>Weak compressibility.</b> Lattice Boltzmann is weakly compressible: the app keeps the Mach number ≤ 0.17 (errors ~ Ma² ≈ 2–3%).</li>
+      <li><b>Confinement.</b> Every case is in a tube. Published open-flow data (Schiller–Naumann, Johnson &amp; Patel) are for comparison:
+        blockage raises the drag and delays wake instabilities.</li>
+      <li><b>Start-up.</b> A run starts from the inflow profile with the body present, which gives a brief force spike and pressure waves
+        that die out over one to two flow-throughs; the measurements average over windows after that.</li>
+    </ul>
+  </div>
+
+  <h2>Reproduce</h2>
+  <pre>node tube-flow-sim/tests/lbm.test.js           # 28 checks (also run on every change)
+node tube-flow-sim/tests/validation.test.js    # this report → tests/validation-results.json
+python -m http.server 8767                     # then, with Playwright and a WebGPU-capable Chromium:
+CHROME=&lt;chrome.exe&gt; node tube-flow-sim/tests/gpu.test.js</pre>
+</main>
+
+<footer class="foot">
+  <span class="consult">Tube Flow <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+  A validated lattice-Boltzmann flow lab. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+</footer>
+
+<script src="src/lbm.js"></script>
+<script src="src/validation.js"></script>
+<script src="src/lbm-gpu.js"></script>
+<script src="src/gpu-parity.js"></script>
+<script>
+(function () {
+  "use strict";
+  var APP_VERSION = "6.0.0";   // keep in step with index.html
+  document.getElementById('ver').textContent = 'v' + APP_VERSION;
+  document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
+  var CASES = TF.validation.CASES, results = {}, recorded = null, running = false;
+
+  // ---------------------------------------------------------------- plots
+  function plot(cv, o){
+    var g=cv.getContext('2d'), W=cv.width, H=cv.height, L=58, R=16, T=16, B=40; g.clearRect(0,0,W,H);
+    var tx=function(v){ return o.xlog ? Math.log(v) : v; }, ty=function(v){ return o.ylog ? Math.log(v) : v; };
+    var X=function(v){ return L+(tx(v)-tx(o.x[0]))/(tx(o.x[1])-tx(o.x[0]))*(W-L-R); }, Y=function(v){ return H-B-(ty(v)-ty(o.y[0]))/(ty(o.y[1])-ty(o.y[0]))*(H-T-B); };
+    g.font='12px IBM Plex Mono, monospace'; g.strokeStyle='#1d4470'; g.fillStyle='#6fa8c9'; g.lineWidth=1;
+    (o.xt||[]).forEach(function(v){ g.beginPath(); g.moveTo(X(v),T); g.lineTo(X(v),H-B); g.stroke(); g.fillText(String(v), X(v)-10, H-B+16); });
+    (o.yt||[]).forEach(function(v){ g.beginPath(); g.moveTo(L,Y(v)); g.lineTo(W-R,Y(v)); g.stroke(); g.fillText(String(v), 4, Y(v)+4); });
+    g.fillText(o.xl, L, H-6); g.save(); g.translate(13, T+4); g.fillText(o.yl, 0, 0); g.restore();
+    (o.lines||[]).forEach(function(s){ g.strokeStyle=s.c; g.lineWidth=2; g.setLineDash(s.dash||[]); g.beginPath(); s.p.forEach(function(p,i){ if(i) g.lineTo(X(p[0]),Y(p[1])); else g.moveTo(X(p[0]),Y(p[1])); }); g.stroke(); g.setLineDash([]); });
+    (o.dots||[]).forEach(function(s){ g.fillStyle=s.c; s.p.forEach(function(p){ g.beginPath(); g.arc(X(p[0]),Y(p[1]),s.r||4,0,7); g.fill(); }); });
+    var ly=T+14; (o.legend||[]).forEach(function(l){ g.fillStyle=l[1]; g.fillText(l[0], W-R-8-g.measureText(l[0]).width, ly); ly+=16; });
+  }
+  function drawPlot(cv, r){
+    var P=r.plot; if (!P) return;
+    var range=function(a){ return [Math.min.apply(null,a), Math.max.apply(null,a)]; };
+    if (P.type==='profile'){
+      var ex=[]; for (var k=0;k<=60;k++){ var x=-1+k/30; ex.push([x, 1-x*x]); }
+      plot(cv,{x:[-1.05,1.05], y:[0,1.08], xt:[-1,-0.5,0,0.5,1], yt:[0,0.5,1], xl:'r / R across the tube', yl:'u / u_c',
+        lines:[{p:ex, c:'#ffcf4a', dash:[6,4]}], dots:[{p:P.points, c:'#7be0c4'}], legend:[['● simulation','#7be0c4'],['-- 1 − r²/R² (exact)','#ffcf4a']]});
+    } else if (P.type==='wallfactor'){
+      var hs=[]; for (var l=0;l<=50;l++){ var lam=l/100; hs.push([lam, TF.validation.HS(lam)]); }
+      plot(cv,{x:[0,0.5], y:[1,4.2], xt:[0,0.1,0.2,0.3,0.4,0.5], yt:[1,2,3,4], xl:'blockage λ = d / D', yl:'wall factor K',
+        lines:[{p:hs, c:'#ffcf4a', dash:[6,4]}], dots:[{p:P.points, c:'#7be0c4', r:5}], legend:[['● simulation','#7be0c4'],['-- Haberman & Sayre (1958)','#ffcf4a']]});
+    } else if (P.type==='pulse'){
+      var fit=[]; for (var q=0;q<=80;q++){ var ph=q/80; fit.push([ph, P.mean*(1+P.amp*Math.sin(2*Math.PI*ph))]); }
+      var ys=P.points.map(function(p){ return p[1]; }).concat(fit.map(function(p){ return p[1]; })), yr=range(ys);
+      plot(cv,{x:[0,1], y:[yr[0]*0.9, yr[1]*1.08], xt:[0,0.25,0.5,0.75,1], yt:[], xl:'phase of the pulse', yl:'flow rate',
+        lines:[{p:fit, c:'#ffcf4a', dash:[6,4]}], dots:[{p:P.points, c:'#7be0c4'}], legend:[['● simulation, near the inlet','#7be0c4'],['-- imposed: mean × (1 + 0.4 sin ωt)','#ffcf4a']]});
+    } else if (P.type==='convergence'){
+      var xs=P.points.map(function(p){ return p[0]; }), es=P.points.map(function(p){ return p[1]; });
+      var x0=xs[0], e0=es[0], o1=[[x0,e0],[xs[xs.length-1], e0*x0/xs[xs.length-1]]], o2=[[x0,e0],[xs[xs.length-1], e0*Math.pow(x0/xs[xs.length-1],2)]];
+      plot(cv,{xlog:true, ylog:true, x:[x0*0.85, xs[xs.length-1]*1.15], y:[Math.min.apply(null,es)*0.3, e0*2], xt:xs, yt:[0.001,0.003,0.01,0.03], xl:'cells across the tube', yl:'RMS error / u_c',
+        lines:[{p:o1, c:'#6fa8c9', dash:[2,4]},{p:o2, c:'#ffcf4a', dash:[6,4]}], dots:[{p:P.points, c:'#7be0c4', r:5}],
+        legend:[['● simulation (order '+P.order.toFixed(2)+')','#7be0c4'],['-- second order','#ffcf4a'],['·· first order','#6fa8c9']].concat(P.gci!==undefined?[['flow rate: extrapolated '+P.qx.toFixed(4)+' · GCI '+(P.gci*100).toFixed(2)+'%','#ff8fa3']]:[])});
+    } else if (P.type==='resolution'){
+      var ks=P.points.map(function(p){ return p[1]; }), lo=Math.min(P.ref*0.95, Math.min.apply(null, ks)), hi=P.ref*1.04;
+      var band=[[5,P.ref*0.97],[10.5,P.ref*0.97]], band2=[[5,P.ref*1.03],[10.5,P.ref*1.03]];
+      plot(cv,{x:[5,10.5], y:[lo-0.02, hi], xt:[6,7,8,9,10], yt:[2.2,2.25,2.3,2.35,2.4].filter(function(v){ return v>=lo-0.02 && v<=hi; }), xl:'cells across the sphere', yl:'wall factor K',
+        lines:[{p:[[5,P.ref],[10.5,P.ref]], c:'#ffcf4a', dash:[6,4]},{p:band, c:'#3d6f99', dash:[2,3]},{p:band2, c:'#3d6f99', dash:[2,3]}],
+        dots:[{p:P.points, c:'#7be0c4', r:5}],
+        legend:[['● simulation','#7be0c4'],['-- Haberman & Sayre (1958)','#ffcf4a'],['·· ±3%','#6fa8c9']]});
+    }
+  }
+
+  // ---------------------------------------------------------------- cards
+  function fmt(v){ return typeof v!=='number' ? String(v) : Math.abs(v)>=100 ? v.toFixed(0) : Math.abs(v)>=1 ? v.toFixed(2) : Math.abs(v)>=0.01 ? v.toFixed(3) : v.toExponential(1); }
+  function render(){
+    var box=document.getElementById('cases');
+    box.innerHTML=CASES.map(function(c){
+      var r=results[c.id], st = r==='running' ? 'run' : r ? (r.pass?'ok':'bad') : '';
+      var rows = r && r.checks ? r.checks.map(function(k){ return '<tr><td>'+k.name+'</td><td class="num">'+fmt(k.value)+(k.unit?' '+k.unit:'')+'</td><td class="num">'+(typeof k.tol==='number'?'± '+k.tol:k.tol)+(k.unit&&typeof k.tol==='number'?' '+k.unit:'')+'</td><td class="'+(k.pass?'okc':'badc')+'">'+(k.pass?'✓':'✗')+'</td></tr>'; }).join('') : '';
+      return '<div class="case" id="case-'+c.id+'"><div>'+
+        '<div><span class="chip">'+c.group+'</span>'+(st?'<span class="verdict '+st+'">'+(st==='run'?'running…':st==='ok'?'pass':'fail')+'</span>':'')+'</div>'+
+        '<h3 style="margin-top:8px">'+c.title+'</h3><p class="what">'+c.what+'</p><div class="cite">Reference: '+c.cite+'</div>'+
+        (rows?'<table><tr><th>check</th><th style="text-align:right">result</th><th style="text-align:right">tolerance</th><th></th></tr>'+rows+'</table>':'')+
+        '<div class="case-foot"><span class="note">'+(r && r.seconds!==undefined ? 'computed in '+r.seconds.toFixed(0)+' s'+(r.live?' in this browser':' (recorded)') : '')+'</span>'+
+        '<button class="btn" type="button" data-run="'+c.id+'"'+(running?' disabled':'')+'>Re-run</button></div>'+
+        '</div><div><canvas class="plot" width="640" height="300" id="plot-'+c.id+'" aria-label="Plot for '+c.title+'"></canvas></div></div>';
+    }).join('');
+    CASES.forEach(function(c){ var r=results[c.id]; if (r && r.plot) drawPlot(document.getElementById('plot-'+c.id), r); });
+    box.querySelectorAll('[data-run]').forEach(function(b){ b.addEventListener('click', function(){ runCases([b.getAttribute('data-run')]); }); });
+    var done=CASES.map(function(c){ return results[c.id]; }).filter(function(r){ return r && r.checks; });
+    var nC=0, nP=0; done.forEach(function(r){ r.checks.forEach(function(k){ nC++; if (k.pass) nP++; }); });
+    var big=document.getElementById('sum-big'); big.textContent=nP+' / '+nC+' checks pass'; big.className='big '+(nP===nC&&nC?'ok':'bad');
+    document.getElementById('sum-meta').textContent = recorded ? 'recorded '+recorded.date+' · '+recorded.app+' · '+recorded.runtime + (done.some(function(r){ return r.live; }) ? ' · some re-run in this browser' : '') : '';
+  }
+  var worker=null;
+  function runCases(ids){
+    if (running) return;
+    running=true; ids.forEach(function(id){ results[id]='running'; }); render();
+    document.getElementById('run-all').disabled=true;
+    var prog=document.getElementById('prog'); prog.hidden=false;
+    worker = worker || new Worker('src/validation-worker.js');
+    worker.onmessage=function(e){
+      var m=e.data;
+      if (m.type==='progress'){ document.getElementById('prog-label').textContent=m.title+' — '+Math.round(m.frac*100)+'%'; document.getElementById('prog-bar').style.width=(m.frac*100)+'%'; }
+      else if (m.type==='case'){ m.result.live=true; results[m.result.id]=m.result; render(); }
+      else if (m.type==='done'){ running=false; prog.hidden=true; document.getElementById('run-all').disabled=false; render(); }
+    };
+    worker.postMessage({only:ids});
+  }
+  document.getElementById('run-all').addEventListener('click', function(){ runCases(CASES.map(function(c){ return c.id; })); });
+
+  // ---------------------------------------------------------------- GPU parity
+  document.getElementById('run-gpu').addEventListener('click', async function(){
+    var btn=this, note=document.getElementById('gpu-note'), tb=document.getElementById('gpu-table');
+    btn.disabled=true; note.textContent='Looking for a WebGPU adapter…';
+    var rows='<tr><th>case</th><th>nodes</th><th>velocity diff</th><th>density diff</th><th>drag GPU / CPU − 1</th><th>wall force</th><th>mass</th></tr>', okAll=true, adapter='';
+    for (var i=0;i<TF.PARITY_CASES.length;i++){
+      var c=TF.PARITY_CASES[i]; note.textContent='Running '+c[0]+'…';
+      var r=await TF.gpuParity(c[1], 400);
+      if (r.error){ note.textContent='This browser has no WebGPU adapter: the GPU solver is not available here (the app falls back to the CPU solver).'; btn.disabled=false; return; }
+      adapter=r.adapter;
+      var cells=[[r.maxVelocityDiff, 5e-4],[r.maxDensityDiff,1e-5],[Math.abs(r.dragGPU/r.dragCPU-1),1e-4],[Math.abs(r.wallGPU/r.wallCPU-1),5e-3],[Math.abs(r.massGPU/r.massCPU-1),1e-6]];
+      rows+='<tr><td>'+c[0]+'</td><td class="num">'+r.nodes.toLocaleString('en-US')+'</td>'+cells.map(function(x){ var ok=x[0]<x[1]; okAll=okAll&&ok; return '<td class="num '+(ok?'okc':'badc')+'">'+x[0].toExponential(1)+'</td>'; }).join('')+'</tr>';
+      tb.innerHTML=rows;
+    }
+    var sp=await TF.gpuSpeed({ R: 32, length: 288, ratio: 0.3, u: 0.08, nu: 0.006, mode: "pipe", disturbance: "none" }, 200);
+    note.textContent=(okAll?'All cases match':'Some cases differ')+' on '+adapter+' · speed '+Math.round(sp.MLUPS)+' million lattice updates per second ('+Math.round(sp.stepsPerSec)+' steps/s on a 1.25-million-node grid).';
+    btn.disabled=false;
+  });
+
+  // ---------------------------------------------------------------- recorded results
+  fetch('tests/validation-results.json').then(function(r){ return r.json(); }).then(function(d){
+    recorded=d; d.results.forEach(function(r){ results[r.id]=r; }); render();
+  }).catch(function(){ document.getElementById('sum-meta').textContent='No recorded results found: press Re-run.'; render(); });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -41,7 +41,15 @@ measurements, Reynolds sweeps against published curves, saved runs and VTK expor
   (speed, vorticity, pressure, optionally time-averaged) and a movable cross-section; WebM recording.
   It runs on whatever the solver streams, so every view works on both the GPU and the CPU solver.
 - `src/sim-worker.js` — runs the CPU solver in a Web Worker and streams the field and the measurements.
-- `tests/lbm.test.js` — validation (below); `tests/gpu.test.js` + `gpu-parity.html` — GPU vs CPU
+- `src/labs.js` — five guided labs (Stokes' law and the walls, separation and the wake bubble, shape and
+  drag, vortex shedding, pulsatile flow and the Womersley number): steps that point at the control
+  involved, tick themselves off from the live state, and can be done for you.
+- `validation.html` — the validation report: every case with its reference, tolerance, result and a plot;
+  recorded results from `tests/validation-results.json`, re-runnable in the browser
+  (`src/validation.js` in `src/validation-worker.js`), plus GPU/CPU parity (`src/gpu-parity.js`) and the
+  sphere-wake benchmark.
+- `tests/lbm.test.js` — validation (below); `tests/validation.test.js` — the report's suite, including
+  grid convergence (writes `tests/validation-results.json`); `tests/gpu.test.js` + `gpu-parity.html` — GPU vs CPU
   parity; `tests/benchmark.js` + `gpu-bench.html` — long GPU runs against published sphere data.
 
 ## Validation
@@ -64,6 +72,20 @@ measurements, Reynolds sweeps against published curves, saved runs and VTK expor
 | STL sphere (5120 triangles), Stokes drag | exact sphere | −0.1% |
 | Uniform inflow | develops into Poiseuille flow | centre/mean 1.07 at the inlet → 1.94 (2 exact) |
 | Pulsatile inflow, 40% amplitude | imposed flow rate | amplitude 0.397, lag 2.9° |
+
+### Grid convergence (`tests/validation.test.js`)
+
+| Study | Grids | Result |
+|---|---|---|
+| Pipe flow, RMS velocity-profile error | 8, 12, 16, 24, 32 cells across | observed order **1.84** |
+| Pipe flow, flow rate | 8 → 16 → 32 cells (ratio 2) | order 2.28; Richardson-extrapolated flow rate within **0.18%** of exact; GCI 0.83% |
+| Stokes drag with wall factor (λ = 0.3) | sphere 6, 7.5, 9, 9.6 cells across | −3.3, −2.6, −4.1, −1.8% — scatter ±1% |
+
+The drag on a small body does not converge monotonically: where its surface falls between lattice nodes
+scatters it by about ±1%, more than the resolution trend at 6–10 cells across, so Richardson
+extrapolation doesn't apply (ASME V&V 20 calls this oscillatory convergence); the spread is reported as
+the uncertainty — about ±3% for bodies 6–10 cells across. Below about 6 cells the error grows fast (12%
+low at 4.8 cells), which is why the app flags grids that can't resolve a case.
 
 ### GPU solver
 
@@ -105,6 +127,7 @@ clear by Re 500 — the GPU "Unsteady wake" preset.
   (LES for higher Reynolds numbers moves to a later version.)
 - **v4** — visualisation: dye, vortex surfaces, streamlines, movable cross-section,
   time-averaged slice, video recording, three.js r186.
-- **v5 (current)** — experiment workbench: shapes and STL import, inflow options (parabolic, uniform,
+- **v5** — experiment workbench: shapes and STL import, inflow options (parabolic, uniform,
   pulsatile), Reynolds sweeps against literature curves, saved runs and comparison, VTK/CSV/JSON export.
-- **v6** — trust and teaching: validation report page, grid-convergence studies, guided labs.
+- **v6 (current)** — trust and teaching: validation report page (re-runnable in the browser), grid-convergence
+  studies with Richardson extrapolation and GCI, five guided labs.

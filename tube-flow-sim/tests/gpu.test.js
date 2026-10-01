@@ -9,13 +9,8 @@ function check(name, cond, detail) { if (cond) pass++; else fail++; console.log(
   const p = await b.newPage();
   const errs = []; p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errs.push(m.text()); });
   await p.goto(URL);
-  const cases = [
-    ["pipe, Re 30", { R: 8, length: 48, ratio: 0.35, u: 0.05, nu: 0.05 * 5.6 / 30, mode: "pipe", disturbance: "none" }],
-    ["pipe, regularised, Re 150", { R: 8, length: 48, ratio: 0.35, u: 0.08, nu: 0.08 * 5.6 / 150, mode: "pipe", disturbance: "none" }],
-    ["moving sphere, TRT, Re 1", { R: 8, length: 48, ratio: 0.3, u: 0.01, nu: 0.01 * 4.8, mode: "moving", disturbance: "none" }],
-    ["cube, pulsatile inflow, Re 40", { R: 8, length: 48, ratio: 0.42, u: 0.05, nu: 0.05 * 6.72 / 40, mode: "pipe", disturbance: "none", body: { shape: "cube" }, inflow: "pulsatile", pulse: { amp: 0.4, period: 150 } }],
-    ["bar across the tube, uniform inflow, Re 60", { R: 8, length: 48, ratio: 0.25, u: 0.06, nu: 0.06 * 4 / 60, mode: "pipe", disturbance: "none", body: { shape: "bar" }, inflow: "uniform" }]
-  ];
+  const cases = await p.evaluate(() => TF.PARITY_CASES);      // shared with validation.html (src/gpu-parity.js)
+
   for (const [name, o] of cases) {
     const r = await p.evaluate(([o]) => window.parity(o, 400), [o]);
     if (r.error) { check(name + ": WebGPU available", false, r.error); continue; }

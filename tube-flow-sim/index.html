@@ -199,6 +199,7 @@ input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:va
 
 .stage-wrap{
   position:relative;
+  overflow:hidden;
   min-height:0;
   height:76vh; min-height:520px; max-height:800px;
   background:radial-gradient(ellipse at 50% 30%, #164a78 0%, #0a2f52 70%);
@@ -304,6 +305,8 @@ footer.foot .consult a{color:var(--accent);}
 .field select:focus, .field input:focus{outline:none; border-color:var(--accent);}
 .inline{display:flex; gap:8px; align-items:center;}
 .inline input[type=number]{font-family:var(--mono); font-size:12.5px; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:5px 8px;}
+.hud{max-width:calc(100% - 32px);}
+.hud-line b{overflow-wrap:anywhere; text-align:right;}
 .hud-line[hidden], .field[hidden], .ctrl-row[hidden], .switch-row[hidden], .field-select[hidden]{display:none !important;}
 .inline input[type=number]{width:110px; flex:0 0 auto;}
 .unit{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
@@ -357,7 +360,28 @@ footer.foot .consult a{color:var(--accent);}
 .run-row .sw{width:10px; height:10px; border-radius:2px; flex:0 0 auto;}
 .run-row button{font-family:var(--mono); font-size:11px; background:none; border:1px solid var(--line); color:var(--ink-dim); border-radius:5px; padding:3px 7px; cursor:pointer;}
 .run-row button:hover{color:var(--accent); border-color:var(--accent);}
-@media (max-width:860px){ .wb-charts{grid-template-columns:1fr;} }
+.lab-card{position:absolute; top:14px; right:14px; width:350px; max-width:calc(100% - 28px); max-height:calc(100% - 70px); overflow-y:auto; z-index:6;
+  background:rgba(8,36,68,.96); border:1px solid var(--accent); border-radius:10px; padding:12px 14px; box-shadow:0 10px 30px rgba(0,0,0,.45);}
+.lab-card[hidden]{display:none !important;}
+.lab-top{display:flex; justify-content:space-between; align-items:center;}
+.lab-level{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint);}
+.lab-x{background:none; border:none; color:var(--ink-dim); font-size:20px; cursor:pointer; line-height:1;}
+.lab-title{font-family:var(--head); font-weight:700; font-size:18px; color:var(--ink); margin:2px 0 6px;}
+.lab-intro{font-size:13px; color:var(--ink-dim); margin:0 0 8px; line-height:1.5;}
+.lab-dots{display:flex; gap:5px; margin:4px 0 8px;} .lab-dots i{flex:1 1 0; height:3px; border-radius:2px; background:var(--line);}
+.lab-dots i.past{background:var(--ok);} .lab-dots i.now{background:var(--accent);}
+.lab-step{font-size:13.5px; color:var(--ink); line-height:1.55; margin:0 0 10px; display:flex; gap:10px; align-items:flex-start;}
+.lab-tick{flex:0 0 auto; width:22px; height:22px; border-radius:50%; border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+.lab-tick.ok{border-color:var(--ok); color:var(--ok);}
+.lab-btns{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
+.lab-btn{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer;}
+.lab-btn:hover{border-color:var(--accent); color:var(--accent);} .lab-btn:disabled{opacity:.4; cursor:not-allowed;}
+.lab-btn.primary{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+.lab-hl{outline:2px solid var(--warn) !important; outline-offset:3px; border-radius:6px; animation:labpulse 1.4s ease-in-out infinite;}
+@keyframes labpulse{0%,100%{outline-color:rgba(255,207,74,1);} 50%{outline-color:rgba(255,207,74,.25);}}
+.lab-list{display:flex; flex-direction:column; gap:6px;}
+.lab-list .btn{text-align:left; padding:8px 10px;}
+@media (max-width:860px){ .wb-charts{grid-template-columns:1fr;} .lab-card{top:auto; bottom:44px; width:auto; left:14px; max-height:55%;} }
 @media (max-width:860px){ .brand .sub, .brand .by .rest{display:none;} #sim-clock{display:none;} .topbar{flex-wrap:wrap; row-gap:8px;} }
 </style>
 </head>
@@ -372,6 +396,7 @@ footer.foot .consult a{color:var(--accent);}
       <div class="sub">D3Q19 LATTICE-BOLTZMANN · VALIDATED · FLOW LAB</div>
     </div>
     <div class="header-actions">
+      <a class="back-link" href="validation.html" id="validation-link" title="How the solver is validated — re-runnable in your browser">Validation</a>
       <a class="back-link" href="../">← Projects</a>
       <div class="status-pill" id="status-pill">
         <span class="dot"></span>
@@ -383,6 +408,11 @@ footer.foot .consult a{color:var(--accent);}
 
   <main class="layout">
     <aside class="rail">
+      <div class="rail-section">
+        <h2>Guided Labs</h2>
+        <div class="lab-list" id="lab-list"></div>
+      </div>
+
       <div class="rail-section">
         <h2>Case</h2>
         <div class="field">
@@ -667,6 +697,15 @@ footer.foot .consult a{color:var(--accent);}
           exact sphere (0.1%), and the uniform and pulsatile inflows; the GPU solver matches the CPU solver on these cases.
         </p>
         <p>
+          <b>Labs and validation.</b> Five <b>guided labs</b> (Stokes' law and the walls, separation and the wake bubble, how
+          shape changes drag, vortex shedding, pulsatile flow and the Womersley number) walk through classic experiments step
+          by step: each step points at the control involved, ticks itself off when you've done it, and can do it for you.
+          The <a href="validation.html">validation report</a> shows every check the solver passes — exact solutions,
+          published results, conservation laws, a <b>grid-convergence study</b> (observed order of accuracy, Richardson
+          extrapolation and the grid convergence index), GPU/CPU parity and the sphere-wake benchmarks — and can re-run them
+          in your browser.
+        </p>
+        <p>
           <b>Seeing the flow.</b> <b>Dye</b> is carried by the same velocity field the solver computes — released from a
           rake of nozzles upstream or from the body's surface, the way water-tunnel experiments show wakes.
           <b>Vortex surfaces</b> are where rotation beats strain (the Q-criterion), coloured by which way the fluid
@@ -691,6 +730,7 @@ footer.foot .consult a{color:var(--accent);}
 <script src="src/lbm-gpu.js"></script>
 <script type="module">
 import { createView } from "./src/view.js";
+import { createLabs } from "./src/labs.js";
 (function(){
   "use strict";
   // Version history
@@ -708,7 +748,9 @@ import { createView } from "./src/view.js";
   //   5.0.0  experiment workbench: bodies (ellipsoid, cylinder, disc, cube, bar, STL import), inflow (parabolic,
   //          uniform, pulsatile at a Womersley number), Reynolds sweeps against published curves, saved runs and
   //          comparison, JSON and VTK export
-  var APP_VERSION = "5.0.0";
+  //   6.0.0  trust and teaching: validation report page (re-runnable in the browser) with grid-convergence studies
+  //          (observed order, Richardson extrapolation, GCI) and GPU parity; five guided labs
+  var APP_VERSION = "6.0.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -788,6 +830,10 @@ import { createView } from "./src/view.js";
       var g=await TF.GPUSolver.create(dev, o);
       if (my!==gen){ g.destroy(); return; }
       S=g; cycles=0; k=8;
+      // the case may have changed while the solver was being built (a preset pressed right after a rebuild):
+      // flow changes sent meanwhile went to the old solver, so start this one from the current settings
+      if (L && (L.u !== o.u || L.nu !== o.nu)){ S.setFlow(L.u, L.nu); S.reset(); }
+      S.disturb = state.disturb; S.setPulse(pulseSpec());
       var Nx=S.Nx, Ny=S.Ny, Nz=S.Nz, idx=function(x,y,z){ return x+Nx*(y+Ny*z); }, NONE=0xffffffff;
       // cross-sections for the pressure drop, the wake axis, the axis-plane slice, a downsampled field
       var pa=Math.max(1,Math.round(S.sx-2*S.R)), pb=Math.min(S.cpu.spongeX-2,Math.round(S.xRear-S.r+4*S.R)), planes=[], na=0;
@@ -1020,6 +1066,7 @@ import { createView } from "./src/view.js";
     else { bar.className='bar speed'; lo.textContent=view.opts.field==='pressure'?'low pressure':'slow'; hi.textContent=view.opts.field==='pressure'?'high':'fast'; }
   }
   // switches: [element id, view option, extra panel to show]
+  var switchSyncs=[];
   [['sw-dye','dye','dye-opts'],['sw-tracers','tracers','tracer-opts'],['sw-vortex','vortex','vortex-opts'],['sw-stream','streamlines','stream-opts'],['slice-switch','axial',null],['sw-cross','cross','cross-opts'],['sw-avg','average',null]].forEach(function(sw){
     var el=document.getElementById(sw[0]);
     var sync=function(){ var on=!!view.opts[sw[1]]; el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); if (sw[2]) document.getElementById(sw[2]).hidden = !on;
@@ -1027,8 +1074,13 @@ import { createView } from "./src/view.js";
     var flip=function(){ view.set(sw[1], !view.opts[sw[1]]); sync(); };
     el.addEventListener('click', flip);
     el.addEventListener('keydown', function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } });
-    sync();
+    sync(); switchSyncs.push(sync);
   });
+  function syncView(){
+    switchSyncs.forEach(function(f){ f(); });
+    document.querySelectorAll('#field-select .btn').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-field')===view.opts.field); });
+    document.querySelectorAll('#dye-opts .btn').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-dye')===view.opts.dyeSource); });
+  }
   document.querySelectorAll('#dye-opts .btn').forEach(function(b){ b.addEventListener('click', function(){
     document.querySelectorAll('#dye-opts .btn').forEach(function(x){ x.classList.toggle('active', x===b); }); view.set('dyeSource', b.getAttribute('data-dye')); }); });
   document.querySelectorAll('#field-select .btn').forEach(function(b){ b.addEventListener('click', function(){
@@ -1270,10 +1322,11 @@ import { createView } from "./src/view.js";
     if (backend.disturb) backend.disturb(state.disturb);
     syncCaseUI(); buildSim();
   }
-  document.getElementById('btn-save').addEventListener('click', function(){
+  function saveRun(){
     var snap=snapshot(); if (!snap) return;
     runs.unshift(snap); if (runs.length>60) runs.length=60; compareIds[snap.id]=1; storeRuns(); renderRuns();
-  });
+  }
+  document.getElementById('btn-save').addEventListener('click', saveRun);
   document.getElementById('runs-export').addEventListener('click', function(){ download('tube-flow-runs.json', new Blob([JSON.stringify({app:'Tube Flow v'+APP_VERSION, runs:runs}, null, 1)], {type:'application/json'})); });
   document.getElementById('runs-import').addEventListener('change', function(e){
     var file=e.target.files[0]; if (!file) return;
@@ -1373,9 +1426,32 @@ import { createView } from "./src/view.js";
   });
   renderRuns();
 
+  // ------------------------------------------------------------------ guided labs (src/labs.js)
+  var app = {
+    state: state, view: view, stats: stats, applyRe: applyRe, syncView: syncView, save: saveRun,
+    lattice: function(){ return L; }, geometry: function(){ return G; }, backendKind: function(){ return backend && backend.kind; },
+    runs: function(){ return runs; }, compareCount: function(){ return Object.keys(compareIds).length; }, sweep: function(){ return sweepLast; },
+    play: function(on){ if (state.running!==on) setRunning(on); },
+    // change the case; pulse settings alone are applied live, anything else rebuilds the grid
+    setCase: function(patch){
+      var live=Object.keys(patch).every(function(k){ return k==='womersley' || k==='pulseAmp'; });
+      Object.keys(patch).forEach(function(k){ state[k]=patch[k]; });
+      syncCaseUI();
+      if (live){ showPulse(); if (backend.pulse) backend.pulse(pulseSpec()); } else buildSim();
+    },
+    startSweep: function(o){
+      if (sweep) return;
+      document.getElementById('sw-from').value=o.from; document.getElementById('sw-to').value=o.to; document.getElementById('sw-n').value=o.n; document.getElementById('sw-ft').value=o.ft;
+      startSweep();
+    }
+  };
+  var labs = createLabs(app, document.querySelector('.stage-wrap'));
+  document.getElementById('lab-list').innerHTML = labs.labs.map(function(l){ return '<button class="btn" type="button" data-lab="'+l.id+'">'+l.title+'<small>'+l.level+'</small></button>'; }).join('');
+  document.querySelectorAll('[data-lab]').forEach(function(b){ b.addEventListener('click', function(){ labs.start(b.getAttribute('data-lab')); }); });
+
   // ------------------------------------------------------------------ main loop
   function animate(){ requestAnimationFrame(animate); view.tick(state.running, F && F.stepsPerSec); }
-  window.tubeDebug = { snapshot:snapshot, vtkBlob:vtkBlob, runs:function(){ return runs; }, sweep:function(){ return sweepLast; }, applyRe:applyRe, view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
+  window.tubeDebug = { labs:function(){ return labs; }, app:app, snapshot:snapshot, vtkBlob:vtkBlob, runs:function(){ return runs; }, sweep:function(){ return sweepLast; }, applyRe:applyRe, view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
 
   // pick the solver: the GPU when WebGPU is available, otherwise the CPU worker
   (async function(){

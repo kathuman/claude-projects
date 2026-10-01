@@ -3,43 +3,11 @@
 <link rel="icon" href="data:,">
 <title>GPU/CPU parity</title>
 <!-- Runs the CPU solver (src/lbm.js) and the GPU solver (src/lbm-gpu.js) on the same case and
-     compares them; driven by tests/gpu.test.js in a WebGPU-capable Chromium. -->
+     compares them (src/gpu-parity.js); driven by tests/gpu.test.js in a WebGPU-capable Chromium. -->
 <script src="../src/lbm.js"></script>
 <script src="../src/lbm-gpu.js"></script>
+<script src="../src/gpu-parity.js"></script>
 <script>
-window.parity = async function (opts, steps) {
-  const gpu = await TF.gpuAvailable();
-  if (!gpu) return { error: "no WebGPU adapter" };
-  const S = new TF.Solver(opts), G = await TF.GPUSolver.create(gpu.device, opts);
-  const all = Array.from(S.fluid);
-  G.gatherer("field", all);
-  G.gatherer("planes", []); G.gatherer("axis", []);
-  for (let k = 0; k < steps; k++) S.step();
-  G.step(steps);
-  const r = await G.read({ field: true, mass: true });
-  S.macroscopic();
-  let du = 0, dr = 0, umax = 0;
-  all.forEach((n, i) => {
-    du = Math.max(du, Math.abs(r.field[4 * i + 1] - S.ux[n]), Math.abs(r.field[4 * i + 2] - S.uy[n]), Math.abs(r.field[4 * i + 3] - S.uz[n]));
-    dr = Math.max(dr, Math.abs(r.field[4 * i] - S.rho[n]));
-    umax = Math.max(umax, Math.abs(S.ux[n]));
-  });
-  return {
-    adapter: [gpu.info.vendor, gpu.info.architecture].join(" "),
-    nodes: S.fluid.length, links: S.nLinks, collision: S.collision,
-    maxVelocityDiff: du / umax, maxDensityDiff: dr,
-    dragCPU: S.force[0], dragGPU: r.force[0], liftGPU: Math.hypot(r.force[1], r.force[2]),
-    wallCPU: S.wallForce[0], wallGPU: r.wallForce[0],
-    massCPU: S.mass(), massGPU: r.mass
-  };
-};
-window.speed = async function (opts, steps) {
-  const gpu = await TF.gpuAvailable();
-  const G = await TF.GPUSolver.create(gpu.device, opts);
-  G.gatherer("planes", []); G.gatherer("axis", []);
-  G.step(20); await G.read({});
-  const t0 = performance.now(); G.step(steps); await G.read({});
-  const ms = performance.now() - t0;
-  return { nodes: G.cpu.fluid.length, stepsPerSec: steps / ms * 1000, MLUPS: G.cpu.fluid.length * steps / ms / 1000 };
-};
+window.parity = TF.gpuParity;
+window.speed = TF.gpuSpeed;
 </script>
