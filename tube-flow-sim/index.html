@@ -432,6 +432,7 @@ footer.foot .consult a{color:var(--accent);}
             <option value="disc">Disc, face-on</option>
             <option value="cube">Cube</option>
             <option value="bar">Bar across the tube</option>
+            <option value="wing">Wing section (NACA airfoil)</option>
             <option value="mesh">Your shape (STL file)…</option>
           </select>
         </div>
@@ -443,6 +444,28 @@ footer.foot .consult a{color:var(--accent);}
             <option value="z">Flow along the model's z axis</option>
           </select>
           <div class="note" id="stl-note">A closed (watertight) mesh in any units: it is scaled so its width across the flow matches the width below.</div>
+        </div>
+        <div class="sub-group" id="wing-opts" hidden>
+          <div class="field">
+            <label for="naca">Airfoil</label>
+            <select id="naca">
+              <option value="0012">NACA 0012 · symmetric, 12% thick</option>
+              <option value="0006">NACA 0006 · symmetric, 6% thick</option>
+              <option value="0018">NACA 0018 · symmetric, 18% thick</option>
+              <option value="2412">NACA 2412 · 2% camber</option>
+              <option value="4412">NACA 4412 · 4% camber</option>
+              <option value="6409">NACA 6409 · 6% camber, thin</option>
+            </select>
+          </div>
+          <div class="ctrl-row">
+            <div class="row-head"><span class="name">Angle of attack</span><span class="val" id="alpha-val">5.0°</span></div>
+            <div class="slider-track"><span class="bound">−10°</span><input type="range" id="alpha" min="-10" max="20" step="0.5" value="5" aria-label="Angle of attack in degrees"><span class="bound right">20°</span></div>
+          </div>
+          <div class="ctrl-row">
+            <div class="row-head"><span class="name">Span</span><span class="val" id="span-val">wall to wall</span></div>
+            <div class="slider-track"><span class="bound">30%</span><input type="range" id="span" min="30" max="100" value="100" aria-label="Wing span as a share of the tube diameter"><span class="bound right">100%</span></div>
+          </div>
+          <div class="note" id="wing-note"></div>
         </div>
         <div class="ctrl-row" id="aspect-row" hidden>
           <div class="row-head"><span class="name">Length / width</span><span class="val" id="aspect-val">2.0</span></div>
@@ -610,9 +633,11 @@ footer.foot .consult a{color:var(--accent);}
 
     <div class="workbench">
       <div class="wb-card" id="sweep-card">
-        <div class="wb-head"><h3>Reynolds sweep</h3><span class="note" id="sweep-status">Runs this case at several Reynolds numbers, each until it settles, and plots the results against published curves.</span></div>
+        <div class="wb-head"><h3>Sweep</h3><span class="note" id="sweep-status">Runs this case at several Reynolds numbers — or, for a wing, angles of attack — each until it settles, and plots the results against published curves and theory.</span></div>
         <div class="wb-form">
-          <label>Re from <input type="number" id="sw-from" value="10" min="0.01" step="any"></label>
+          <label>sweep <select id="sw-var" style="font-family:var(--mono); font-size:12px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:5px; padding:3px 4px;">
+            <option value="re">Reynolds number</option><option value="alpha">angle of attack (wing)</option></select></label>
+          <label><span id="sw-unit">Re</span> from <input type="number" id="sw-from" value="10" step="any"></label>
           <label>to <input type="number" id="sw-to" value="200" min="0.01" step="any"></label>
           <label>points <input type="number" id="sw-n" value="5" min="2" max="12" step="1"></label>
           <label>at most <input type="number" id="sw-ft" value="6" min="2" max="40" step="1"> flow-throughs each</label>
@@ -697,6 +722,17 @@ footer.foot .consult a{color:var(--accent);}
           exact sphere (0.1%), and the uniform and pulsatile inflows; the GPU solver matches the CPU solver on these cases.
         </p>
         <p>
+          <b>Wings.</b> The <b>wing section</b> is a NACA four-digit airfoil — symmetric or cambered — at an angle of attack you
+          set, spanning the tube wall to wall (a two-dimensional section, as in a wind tunnel) or shorter, so that tip vortices
+          form. Chord, angle and span are geometry: the wing is rebuilt on the grid when they change, and its thin trailing edge
+          is kept watertight (links that pass through a part thinner than a cell bounce back too). It flies through still air in
+          the tube (the <i>moving body</i> frame), a uniform stream; the lift and drag coefficients use the planform area
+          chord × span, and the Reynolds number the chord. The measurements show C_L, C_D and the lift-to-drag ratio, compared
+          with thin-airfoil theory C_L = 2π(α − α_L0) — inviscid and two-dimensional, so at these Reynolds numbers (hundreds to
+          about a thousand: insect and small-drone flight, not airliners) the measured lift slope is lower, while the tube's
+          walls close above and below the wing raise it. Sweep the <b>angle of attack</b> for the lift curve.
+        </p>
+        <p>
           <b>Labs and validation.</b> Five <b>guided labs</b> (Stokes' law and the walls, separation and the wake bubble, how
           shape changes drag, vortex shedding, pulsatile flow and the Womersley number) walk through classic experiments step
           by step: each step points at the control involved, ticks itself off when you've done it, and can do it for you.
@@ -750,7 +786,9 @@ import { createLabs } from "./src/labs.js";
   //          comparison, JSON and VTK export
   //   6.0.0  trust and teaching: validation report page (re-runnable in the browser) with grid-convergence studies
   //          (observed order, Richardson extrapolation, GCI) and GPU parity; five guided labs
-  var APP_VERSION = "6.0.0";
+  //   6.1.0  wing sections: NACA 4-digit airfoils at an angle of attack, wall to wall or finite span; links through
+  //          parts thinner than a cell; C_L, L/D, thin-airfoil comparison; angle-of-attack sweeps; wing lab
+  var APP_VERSION = "6.1.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -763,8 +801,8 @@ import { createLabs } from "./src/labs.js";
   };
   var GRIDS = { cpu:[['low','Low',20],['medium','Medium',28],['high','High',36]], gpu:[['g40','40',40],['g64','64',64],['g96','96',96]] };
   var state = {fluid:'water', tubeMM:20, ratio:0.30, speed:0.005, frame:'pipe', res:'g64', disturb:'kick', particles:3000, sliceOn:false, field:'speed', running:false,
-               body:'sphere', aspect:2, stl:null, stlName:'', stlAxis:'x', inflow:'parabolic', pulseAmp:0.3, womersley:8};
-  var SHAPES = {sphere:'Sphere', ellipsoid:'Ellipsoid', cylinder:'Cylinder', disc:'Disc', cube:'Cube', bar:'Bar', mesh:'STL shape'};
+               body:'sphere', aspect:2, stl:null, stlName:'', stlAxis:'x', inflow:'parabolic', pulseAmp:0.3, womersley:8, naca:'0012', alpha:5, span:1};
+  var SHAPES = {sphere:'Sphere', ellipsoid:'Ellipsoid', cylinder:'Cylinder', disc:'Disc', cube:'Cube', bar:'Bar', wing:'Wing', mesh:'STL shape'};
   var L = null, G = null, F = null, series = [], lastT = 0;
   var fluidSel = document.getElementById('fluid');
   Object.keys(FLUIDS).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=FLUIDS[k].label+' — ν '+FLUIDS[k].nu.toExponential(2)+' m²/s'; fluidSel.appendChild(o); });
@@ -934,8 +972,8 @@ import { createLabs } from "./src/labs.js";
     speedNum.value = +state.speed.toPrecision(4);
     speedEl.value = sliderFromSpeed(state.speed);
     document.getElementById('ratio-val').textContent = Math.round(state.ratio*100)+'% of tube · '+(state.ratio*state.tubeMM).toPrecision(3)+' mm';
-    document.getElementById('ratio-name').textContent = state.body==='sphere' ? 'Sphere diameter' : state.body==='bar' ? 'Bar diameter' : 'Body width';
-    document.getElementById('speed-name').textContent = state.frame !== 'pipe' ? 'Body speed' : state.inflow==='uniform' ? 'Inflow speed' : state.inflow==='pulsatile' ? 'Mean centre-line speed' : 'Centre-line speed';
+    document.getElementById('ratio-name').textContent = state.body==='sphere' ? 'Sphere diameter' : state.body==='bar' ? 'Bar diameter' : state.body==='wing' ? 'Chord' : 'Body width';
+    document.getElementById('speed-name').textContent = state.frame !== 'pipe' ? (state.body==='wing' ? 'Flight speed' : 'Body speed') : state.inflow==='uniform' ? 'Inflow speed' : state.inflow==='pulsatile' ? 'Mean centre-line speed' : 'Centre-line speed';
     showPulse();
     document.getElementById('hud-re').textContent = re<10 ? re.toFixed(2) : Math.round(re).toLocaleString('en-US');
     document.getElementById('hud-resim-line').hidden = L.resolved;
@@ -978,6 +1016,7 @@ import { createLabs } from "./src/labs.js";
   function bodySpec(){
     var b={shape:state.body};
     if (state.body==='ellipsoid' || state.body==='cylinder') b.aspect=state.aspect;
+    if (state.body==='wing'){ b.naca=state.naca; b.alpha=state.alpha; b.span=state.span; }
     if (state.body==='mesh'){ if (!state.stl) return {shape:'sphere'}; b.mesh=state.stl; b.axis=state.stlAxis; }
     return b;
   }
@@ -1004,9 +1043,34 @@ import { createLabs } from "./src/labs.js";
     document.getElementById('aspect-val').textContent=state.aspect.toFixed(2);
     document.getElementById('stl-row').hidden = state.body!=='mesh';
     document.getElementById('stl-axis').value=state.stlAxis;
+    var wing=state.body==='wing';
+    document.getElementById('wing-opts').hidden=!wing;
+    document.getElementById('naca').value=state.naca;
+    document.getElementById('alpha').value=state.alpha; document.getElementById('alpha-val').textContent=(+state.alpha).toFixed(1)+'°';
+    document.getElementById('span').value=Math.round(state.span*100); document.getElementById('span-val').textContent=state.span>=0.995?'wall to wall':Math.round(state.span*100)+'% of the tube';
+    ratioEl.max = wing ? 80 : 50;
+    if (!wing && state.ratio>0.5) state.ratio=0.5;
+    ratioEl.value=Math.round(state.ratio*100);
+    var rb=ratioEl.parentNode.querySelector('.bound.right'); if (rb) rb.textContent=(wing?80:50)+'%';
+    var sv=document.getElementById('sw-var'); sv.options[1].disabled=!wing; if (!wing && sv.value==='alpha'){ sv.value='re'; syncSweepVar(); }
+    if (wing){
+      var ar=state.span*2/(2*state.ratio), note=document.getElementById('wing-note');
+      note.textContent='Re and C_L use the chord; C_L and C_D the planform area chord × span. Aspect ratio span/chord '+ar.toFixed(2)+
+        (state.frame==='moving' ? ' · uniform stream (the wing flies through still air).' : ' · in developed pipe flow the curved velocity profile acts like negative camber: use Moving body for a uniform stream.');
+    }
   }
+  function syncSweepVar(){
+    var a=document.getElementById('sw-var').value==='alpha';
+    document.getElementById('sw-unit').textContent = a ? 'α (°)' : 'Re';
+    var f=document.getElementById('sw-from'), t=document.getElementById('sw-to'), n=document.getElementById('sw-n');
+    if (a){ f.value=-4; t.value=12; n.value=5; f.min='-10'; t.max='20'; } else { f.value=10; t.value=200; n.value=5; f.min='0.01'; }
+  }
+  document.getElementById('sw-var').addEventListener('change', syncSweepVar);
   document.getElementById('body').addEventListener('change', function(e){
-    state.body=e.target.value; syncBodyUI();
+    state.body=e.target.value;
+    // a wing is tested in a uniform stream, flying through still air, with a chord big enough to resolve its section
+    if (state.body==='wing'){ state.frame='moving'; if (state.ratio<0.6) state.ratio=0.7; syncCaseUI(); }
+    syncBodyUI();
     if (state.body==='mesh' && !state.stl){ document.getElementById('stl-note').textContent='Choose an STL file: until then the body stays a sphere.'; }
     buildSim();
   });
@@ -1030,6 +1094,12 @@ import { createLabs } from "./src/labs.js";
     rd.readAsArrayBuffer(file);
   });
   document.getElementById('inflow').addEventListener('change', function(e){ state.inflow=e.target.value; buildSim(); });
+  document.getElementById('naca').addEventListener('change', function(e){ state.naca=e.target.value; buildSim(); });
+  var alphaEl=document.getElementById('alpha'), spanEl=document.getElementById('span');
+  alphaEl.addEventListener('input', function(){ state.alpha=+alphaEl.value; document.getElementById('alpha-val').textContent=state.alpha.toFixed(1)+'°'; });
+  alphaEl.addEventListener('change', function(){ buildSim(); });
+  spanEl.addEventListener('input', function(){ state.span=+spanEl.value/100; syncBodyUI(); });
+  spanEl.addEventListener('change', function(){ buildSim(); });
   var pampEl=document.getElementById('pamp'), womEl=document.getElementById('wom');
   pampEl.addEventListener('input', function(){ state.pulseAmp=+pampEl.value/100; showPulse(); if (backend.pulse) backend.pulse(pulseSpec()); });
   womEl.addEventListener('input', function(){ state.womersley=womFrom(+womEl.value); showPulse(); if (backend.pulse) backend.pulse(pulseSpec()); });
@@ -1080,6 +1150,7 @@ import { createLabs } from "./src/labs.js";
     switchSyncs.forEach(function(f){ f(); });
     document.querySelectorAll('#field-select .btn').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-field')===view.opts.field); });
     document.querySelectorAll('#dye-opts .btn').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-dye')===view.opts.dyeSource); });
+    document.getElementById('qlevel').value=Math.round(100*Math.log(view.opts.vortexLevel/0.05)/Math.log(100)); document.getElementById('qlevel-val').textContent=view.opts.vortexLevel.toFixed(2);
   }
   document.querySelectorAll('#dye-opts .btn').forEach(function(b){ b.addEventListener('click', function(){
     document.querySelectorAll('#dye-opts .btn').forEach(function(x){ x.classList.toggle('active', x===b); }); view.set('dyeSource', b.getAttribute('data-dye')); }); });
@@ -1126,13 +1197,17 @@ import { createLabs } from "./src/labs.js";
       var NS=256, ta=longWin[0][0], tb=longWin[longWin.length-1][0], dtS=(tb-ta)/(NS-1), ys=[], zs=[], j=0;
       for (var k=0;k<NS;k++){ var tt=ta+k*dtS; while (j<longWin.length-2 && longWin[j+1][0]<tt) j++; var A=longWin[j], B=longWin[j+1], u=(tt-A[0])/Math.max(1e-9,B[0]-A[0]); ys.push(A[2]+(B[2]-A[2])*u); zs.push(A[3]+(B[3]-A[3])*u); }
       var my0=ys.reduce(function(a,b){return a+b;},0)/NS, mz0=zs.reduce(function(a,b){return a+b;},0)/NS, pw=[0,0], bf=0;
-      for (var kk=2;kk<NS/2;kk++){ var p2=0; [[ys,my0],[zs,mz0]].forEach(function(c){ var re=0, im=0; for (var jj=0;jj<NS;jj++){ var ph=2*Math.PI*kk*jj/NS; re+=(c[0][jj]-c[1])*Math.cos(ph); im+=(c[0][jj]-c[1])*Math.sin(ph); } p2+=re*re+im*im; }); pw[kk]=p2; if(!bf||p2>pw[bf]) bf=kk; }
+      // lattice Boltzmann is weakly compressible: the tube's acoustic modes (lowest transverse one at
+      // f = 1.841·c_s/(2πR)) can ring after a start; only frequencies well below it count as flow oscillations
+      var fAc = 1.841/(2*Math.PI*Math.sqrt(3)*G.R), kMax = Math.min(NS/2, Math.floor(0.5*fAc*NS*dtS)), pLow=0, pAll=0;
+      for (var kk=2;kk<NS/2;kk++){ var p2=0; [[ys,my0],[zs,mz0]].forEach(function(c){ var re=0, im=0; for (var jj=0;jj<NS;jj++){ var ph=2*Math.PI*kk*jj/NS; re+=(c[0][jj]-c[1])*Math.cos(ph); im+=(c[0][jj]-c[1])*Math.sin(ph); } p2+=re*re+im*im; }); pw[kk]=p2; pAll+=p2; if (kk<kMax){ pLow+=p2; if(!bf||p2>pw[bf]) bf=kk; } }
       // refine the peak between bins (parabola through the log power of the three bins around it)
+      if (!bf || pLow < 0.5*pAll) bf=0;              // mostly acoustic ringing, not a flow oscillation
       var fb=bf;
       if (bf>2 && pw[bf+1]){ var a1=Math.log(pw[bf-1]+1e-30), a2=Math.log(pw[bf]+1e-30), a3=Math.log(pw[bf+1]+1e-30), den=a1-2*a2+a3; if (den<0) fb=bf+0.5*(a1-a3)/den; }
-      st = fb/(NS*dtS)*2*G.r/L.u;
+      st = bf ? fb/(NS*dtS)*2*G.r/L.u : NaN;
       // second-strongest peak at least 3 bins away (sphere wakes often carry a slow modulation as well)
-      var b2=0; for (var k4=2;k4<NS/2;k4++){ if (Math.abs(k4-bf)<3) continue; if (!b2||pw[k4]>pw[b2]) b2=k4; }
+      var b2=0; if (bf) for (var k4=2;k4<kMax;k4++){ if (Math.abs(k4-bf)<3) continue; if (!b2||pw[k4]>pw[b2]) b2=k4; }
       if (b2 && pw[b2] > 0.25*pw[bf]) st2 = b2/(NS*dtS)*2*G.r/L.u;
     }
     var settled = prev.length > 5 && Math.abs(cd/cdPrev-1) < 0.005;
@@ -1144,7 +1219,7 @@ import { createLabs } from "./src/labs.js";
     if (state.frame==='pipe' && state.inflow==='pulsatile' && state.pulseAmp>0) regime = t/ft >= 2 ? 'unsteady' : 'settling';
     var massChange = win.length > 1 ? win[win.length-1][6]/win[0][6] - 1 : 0;
     var clMean = Math.hypot(my, mz) / q;
-    return { st2:st2, clMean:clMean, massChange:massChange, tw:tw, t:t, ft:t/ft, cd:cd, cdPrev:cdPrev, clr:clr, st:st, settled:settled, rec:rec, dp:last[4]/3, fx:mean(win,1), regime:regime, a:last[7], b:last[8] };
+    return { clz:mz/q, fz:mz, st2:st2, clMean:clMean, massChange:massChange, tw:tw, t:t, ft:t/ft, cd:cd, cdPrev:cdPrev, clr:clr, st:st, settled:settled, rec:rec, dp:last[4]/3, fx:mean(win,1), regime:regime, a:last[7], b:last[8] };
   }
   function tile(k, v, s){ return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'; }
   var badge=document.getElementById('regime-badge');
@@ -1160,7 +1235,8 @@ import { createLabs } from "./src/labs.js";
     var Freal = S.fx*L.forceScale, dpReal = S.dp*L.pressureScale;
     badge.className='regime-badge '+S.regime;
     // a steady wake can lose its axial symmetry (steady oblique wake with a constant side force)
-    var asym = S.clMean > 0.01 && S.clMean > 0.05 * Math.abs(S.cd);
+    var isWing = G.body && G.body.shape==='wing';
+    var asym = !isWing && S.clMean > 0.01 && S.clMean > 0.05 * Math.abs(S.cd);
     var pulsing = state.frame==='pipe' && state.inflow==='pulsatile' && state.pulseAmp>0;
     badge.textContent = S.regime==='settling' ? 'settling — '+(S.t/S.tw).toFixed(1)+' settling times' : S.regime==='steady' ? (asym ? 'steady · asymmetric wake' : S.rec>0.02 ? 'steady · separated wake' : 'steady · attached flow') : pulsing ? 'pulsatile · forced' : 'unsteady wake';
     var dot=document.getElementById('regime-dot'), lbl=document.getElementById('regime-label');
@@ -1168,11 +1244,16 @@ import { createLabs } from "./src/labs.js";
     var h = '';
     var bn = G.body ? SHAPES[G.body.shape].toLowerCase() : 'sphere';
     h += tile('Drag force', fmtSI(Freal,'N'), L.resolved ? (pulsing ? 'mean ' : '')+'on the '+bn+', '+(state.frame==='pipe'?'in pipe flow':'moving') : 'at the simulated Re');
-    h += tile('Drag coefficient C_d', S.cd.toPrecision(3), (bn==='sphere' ? 'F / (½ρU²·πd²/4)' : 'F / (½ρU²·A), A = frontal area')+(S.settled?'':' · settling'));
+    h += tile('Drag coefficient C_d', S.cd.toPrecision(3), (bn==='sphere' ? 'F / (½ρU²·πd²/4)' : isWing ? 'F / (½ρU²·S), S = chord × span' : 'F / (½ρU²·A), A = frontal area')+(S.settled?'':' · settling'));
+    var TA = isWing ? TF.thinAirfoil(G.body.naca) : null;
+    if (isWing){
+      h += tile('Lift coefficient C_L', Math.abs(S.clz)<1e-4 ? '≈ 0' : S.clz.toPrecision(3), 'lift '+fmtSI(S.fz*L.forceScale,'N')+(S.clz>=0?' (up)':' (down)')+' · thin-airfoil 2D: '+TA.cl(G.body.alpha).toFixed(2));
+      h += tile('Lift / drag', Math.abs(S.cd)>1e-9 ? (S.clz/S.cd).toFixed(2) : '—', 'L/D at α = '+G.body.alpha.toFixed(1)+'° · NACA '+G.body.naca);
+    } else
     h += tile('Lift C_l', S.clMean < 1e-4 ? '≈ 0' : S.clMean.toPrecision(2), (S.clr < 0.01*Math.abs(S.cd) ? 'steady' : 'oscillating, rms '+S.clr.toPrecision(2)) + (S.clMean > 0.01 ? ' · wake leans to one side' : ' · symmetric'));
     var stTxt = isFinite(S.st) ? S.st.toFixed(3) + (isFinite(S.st2) ? ' · ' + S.st2.toFixed(3) : '') : '—';
     h += tile('Strouhal St', stTxt, isFinite(S.st) ? 'f·d/U, f = '+fmtSI(S.st*Ureal/d,'Hz') + (isFinite(S.st2) ? ' (two peaks: shedding and a slower wandering)' : '') : 'no oscillation');
-    h += tile('Recirculation', S.rec>0.005 ? (S.rec).toFixed(2)+' d' : 'none', S.rec>0.005 ? fmtSI(S.rec*d,'m')+' behind the '+bn : 'flow stays attached');
+    if (!isWing) h += tile('Recirculation', S.rec>0.005 ? (S.rec).toFixed(2)+' d' : 'none', S.rec>0.005 ? fmtSI(S.rec*d,'m')+' behind the '+bn : 'flow stays attached');
     h += tile('Pressure drop', fmtSI(dpReal,'Pa'), 'across the '+bn+' ('+((S.b-S.a)/(2*G.R)).toFixed(1)+' tube Ø)');
     h += tile('Mass balance', (S.massChange*100).toExponential(1)+' %', 'change over the last window — no corrections applied');
     document.getElementById('tiles').innerHTML = h;
@@ -1180,7 +1261,12 @@ import { createLabs } from "./src/labs.js";
     sweepTick(S);
     // references
     var ref = '', Re = L.ReSim;
-    if (G.body && G.body.shape!=='sphere'){
+    if (isWing){
+      var A=G.body.span/G.body.chord, aDeg=G.body.alpha-TA.alphaL0, slope3=2*Math.PI*A/(2+Math.sqrt(A*A+4));
+      ref = '<b>For comparison:</b> thin-airfoil theory (inviscid, two-dimensional, unbounded) gives C_L = 2π(α − α_L0) = <b>'+TA.cl(G.body.alpha).toFixed(3)+'</b> for NACA '+G.body.naca+' at '+G.body.alpha.toFixed(1)+'° (α_L0 = '+TA.alphaL0.toFixed(2)+'°)'+
+        (G.body.wallToWall ? '' : '; for this span (aspect ratio '+A.toFixed(2)+') Helmbold\'s lifting-surface estimate is C_L ≈ '+(slope3*aDeg*Math.PI/180).toFixed(3))+
+        '. Measured here: <b>'+S.clz.toFixed(3)+'</b>. At Re '+Math.round(Re)+' the boundary layers are thick and lower the lift slope; the tube\'s walls, close above and below the wing, raise it.';
+    } else if (G.body && G.body.shape!=='sphere'){
       ref = '<b>Reference:</b> there is no closed-form drag law for this shape in a tube — compare it with a sphere of the same width with <b>Save run</b>, or run a <b>Reynolds sweep</b>.'+
             (state.frame==='pipe' && state.inflow==='pulsatile' ? ' With a pulsatile inflow the coefficients are averages over the pulse.' : '');
     } else if (state.frame==='moving' && Re < 1){
@@ -1221,12 +1307,13 @@ import { createLabs } from "./src/labs.js";
   // ------------------------------------------------------------------ workbench: exports, saved runs, sweeps (v5)
   function download(name, blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
   function caseLabel(){
+    if (state.body==='wing') return 'NACA '+state.naca+' α '+(+state.alpha).toFixed(1)+'°'+(state.span<0.995?' span '+Math.round(state.span*100)+'%':'')+' · chord '+Math.round(state.ratio*100)+'% · Re '+(L.ReSim<10?L.ReSim.toFixed(2):Math.round(L.ReSim))+' · '+(state.frame==='pipe' ? state.inflow : 'moving');
     var b = SHAPES[state.body==='mesh' && !state.stl ? 'sphere' : state.body] + (state.body==='mesh' && state.stlName ? ' ('+state.stlName+')' : '') + ((state.body==='ellipsoid'||state.body==='cylinder') ? ' '+state.aspect.toFixed(1)+':1' : '');
     var re = L.ReSim<10 ? L.ReSim.toFixed(2) : Math.round(L.ReSim);
     return b+' '+Math.round(state.ratio*100)+'% · Re '+re+' · '+(state.frame==='pipe' ? state.inflow : 'moving');
   }
   function caseState(){
-    var c={}; ['fluid','tubeMM','ratio','speed','frame','body','aspect','stlName','stlAxis','inflow','pulseAmp','womersley','disturb','res'].forEach(function(k){ c[k]=state[k]; });
+    var c={}; ['fluid','tubeMM','ratio','speed','frame','body','aspect','stlName','stlAxis','inflow','pulseAmp','womersley','disturb','res','naca','alpha','span'].forEach(function(k){ c[k]=state[k]; });
     c.backend=backend.kind; return c;
   }
   function snapshot(){
@@ -1236,7 +1323,7 @@ import { createLabs } from "./src/labs.js";
     return { id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), name:caseLabel(), savedAt:new Date().toISOString(), app:'Tube Flow v'+APP_VERSION,
       case:caseState(), grid:{Nx:G.Nx, Ny:G.Ny, Nz:G.Nz, bodyWidthCells:+(2*G.r).toFixed(2), frontalAreaCells:+frontArea().toFixed(2)},
       lattice:{Re:L.Re, ReSim:L.ReSim, resolved:L.resolved, u:L.u, nu:L.nu, tau:L.tau, mach:L.mach, dx_m:L.dx, dt_s:L.dt},
-      results:{regime:S.regime, settled:S.settled, flowThroughs:+S.ft.toFixed(2), Cd:S.cd, Cl_mean:S.clMean, Cl_rms:S.clr, St:isFinite(S.st)?S.st:null, St2:isFinite(S.st2)?S.st2:null,
+      results:{regime:S.regime, settled:S.settled, flowThroughs:+S.ft.toFixed(2), Cd:S.cd, CL:S.clz, lift_N:S.fz*L.forceScale, Cl_mean:S.clMean, Cl_rms:S.clr, St:isFinite(S.st)?S.st:null, St2:isFinite(S.st2)?S.st2:null,
                recirculation_over_d:S.rec, drag_N:S.fx*L.forceScale, pressure_drop_Pa:S.dp*L.pressureScale, width_m:d},
       trace:pts.filter(function(x,i){ return i%every===0; }).map(function(x){ return [+(x[0]/ft).toFixed(4), +(x[1]/q).toPrecision(5), +(x[2]/q).toPrecision(5), +(x[3]/q).toPrecision(5)]; }) };
   }
@@ -1292,7 +1379,7 @@ import { createLabs } from "./src/labs.js";
     var rows=[['Case',function(r){ return esc(r.name); }],['Fluid · tube',function(r){ return esc(FLUIDS[r.case.fluid] ? FLUIDS[r.case.fluid].label : r.case.fluid)+' · '+r.case.tubeMM+' mm'; }],
       ['Re (simulated)',function(r){ return f(r.lattice.ReSim,4); }],['Grid',function(r){ return r.grid.Nx+'×'+r.grid.Ny+'×'+r.grid.Nz+' · '+r.case.backend; }],
       ['Regime',function(r){ return esc(r.results.regime); }],['C_d',function(r){ return f(r.results.Cd,4); }],['C_l mean · rms',function(r){ return f(r.results.Cl_mean,2)+' · '+f(r.results.Cl_rms,2); }],
-      ['St',function(r){ return f(r.results.St,3); }],['Wake L/d',function(r){ return f(r.results.recirculation_over_d,3); }],
+      ['C_L (lift, +z)',function(r){ return f(r.results.CL,3); }],['St',function(r){ return f(r.results.St,3); }],['Wake L/d',function(r){ return f(r.results.recirculation_over_d,3); }],
       ['Drag',function(r){ return fmtSI(r.results.drag_N,'N'); }],['Pressure drop',function(r){ return fmtSI(r.results.pressure_drop_Pa,'Pa'); }]];
     document.getElementById('cmp-table').innerHTML='<tr><th></th>'+sel.map(function(r,i){ return '<th style="color:'+PAL[i%PAL.length]+'">run '+(i+1)+'</th>'; }).join('')+'</tr>'+
       rows.map(function(rw){ return '<tr><td>'+rw[0]+'</td>'+sel.map(function(r){ return '<td>'+rw[1](r)+'</td>'; }).join('')+'</tr>'; }).join('');
@@ -1314,7 +1401,7 @@ import { createLabs } from "./src/labs.js";
   function loadRun(r){
     if (!r) return;
     var c=r.case;
-    ['fluid','tubeMM','ratio','speed','frame','body','aspect','stlAxis','inflow','pulseAmp','womersley','disturb'].forEach(function(k){ if (c[k]!==undefined) state[k]=c[k]; });
+    ['fluid','tubeMM','ratio','speed','frame','body','aspect','stlAxis','inflow','pulseAmp','womersley','disturb','naca','alpha','span'].forEach(function(k){ if (c[k]!==undefined) state[k]=c[k]; });
     if (state.body==='mesh' && (!state.stl || state.stlName!==c.stlName)){
       var note=document.getElementById('stl-note'); note.className='note warn'; note.textContent='This run used '+(c.stlName||'an STL file')+': choose that file to load its shape (showing a sphere meanwhile).';
       state.stl=null;
@@ -1351,17 +1438,25 @@ import { createLabs } from "./src/labs.js";
   function startSweep(){
     if (sweep){ sweep=null; setRunning(false); document.getElementById('sw-run').textContent='Run sweep'; document.getElementById('sweep-status').textContent='Sweep stopped.'; return; }
     var a=+document.getElementById('sw-from').value, b=+document.getElementById('sw-to').value, n=Math.max(2,Math.min(12,Math.round(+document.getElementById('sw-n').value)||5)), mx=Math.max(2,+document.getElementById('sw-ft').value||6);
+    if (document.getElementById('sw-var').value==='alpha' && state.body==='wing'){
+      a=Math.max(-10,Math.min(20,a)); b=Math.max(-10,Math.min(20,b)); if (b<a){ var t2=a; a=b; b=t2; }
+      var la=[]; for (var i2=0;i2<n;i2++) la.push(Math.round((a+(b-a)*i2/(n-1))*2)/2);
+      sweep={v:'alpha', list:la, i:0, results:[], maxFt:mx, label:caseLabel().replace(/ α [^ ]+°/,'').replace(/ · Re [^·]+/,'')+' · Re '+Math.round(L.ReSim), frame:state.frame, shape:'wing', naca:state.naca, wallToWall:state.span>=0.995, aspect:state.span/state.ratio, note:''};
+      sweepLast=sweep; document.getElementById('sw-run').textContent='Stop sweep';
+      setAlpha(la[0]); setRunning(true); renderSweep(); return;
+    }
     var lim=Math.floor(TF.caseToLattice(caseOf()).ReMax), note='';
     if (!(a>0) || !(b>0)) return;
     if (b<a){ var t=a; a=b; b=t; }
     if (b>lim){ b=lim; note=' (capped at this grid\'s limit, Re '+lim+')'; }
     if (a>=b) a=b/10;
     var list=[]; for (var i=0;i<n;i++) list.push(+(a*Math.pow(b/a, i/(n-1))).toPrecision(3));
-    sweep={list:list, i:0, results:[], maxFt:mx, label:caseLabel().replace(/ · Re [^·]+/,''), frame:state.frame, shape:G.body?G.body.shape:'sphere', note:note};
+    sweep={v:'re', list:list, i:0, results:[], maxFt:mx, label:caseLabel().replace(/ · Re [^·]+/,''), frame:state.frame, shape:G.body?G.body.shape:'sphere', note:note};
     sweepLast=sweep;
     document.getElementById('sw-run').textContent='Stop sweep';
     applyRe(list[0]); setRunning(true); renderSweep();
   }
+  function setAlpha(v){ state.alpha=v; syncBodyUI(); buildSim(); }
   function sweepTick(S){
     if (!sweep || !S || !series.length) return;
     var ft=G.Nx/L.u;
@@ -1369,12 +1464,12 @@ import { createLabs } from "./src/labs.js";
     var done=(S.regime==='steady' && S.settled && S.ft>=2) || S.ft>=sweep.maxFt;
     if (!done) return;
     var ref=refCd(L.ReSim);
-    sweep.results.push({Re:L.ReSim, ReCase:L.Re, Cd:S.cd, sn:ref.sn, hs:ref.hs, rec:S.rec, St:isFinite(S.st)?S.st:null, clMean:S.clMean, clr:S.clr, regime:S.regime, settled:S.settled, ft:S.ft});
+    sweep.results.push({alpha:state.alpha, CL:S.clz, thin:state.body==='wing'?TF.thinAirfoil(state.naca).cl(state.alpha):null, Re:L.ReSim, ReCase:L.Re, Cd:S.cd, sn:ref.sn, hs:ref.hs, rec:S.rec, St:isFinite(S.st)?S.st:null, clMean:S.clMean, clr:S.clr, regime:S.regime, settled:S.settled, ft:S.ft});
     sweep.i++;
     if (sweep.i>=sweep.list.length){
       sweep.done=true; sweep=null; setRunning(false);
       document.getElementById('sw-run').textContent='Run sweep';
-    } else applyRe(sweep.list[sweep.i]);
+    } else if (sweep.v==='alpha') setAlpha(sweep.list[sweep.i]); else applyRe(sweep.list[sweep.i]);
     renderSweep();
   }
   function renderSweep(){
@@ -1382,6 +1477,11 @@ import { createLabs } from "./src/labs.js";
     document.getElementById('sweep-status').textContent = (sw.done ? 'Done: ' : 'Running point '+Math.min(sw.i+1, sw.list.length)+' of '+sw.list.length+': ')+sw.label+' at Re '+sw.list.join(', ')+sw.note;
     document.getElementById('sw-export').disabled=!sw.results.length;
     var f=function(v,p){ return v===null || v===undefined || !isFinite(v) ? '—' : (+v).toPrecision(p||3); };
+    if (sw.v==='alpha'){
+      document.getElementById('sw-table').innerHTML='<tr><th>α</th><th>C_L</th><th>thin-airfoil C_L (2D)</th><th>C_D</th><th>L/D</th><th>St</th><th>regime</th></tr>'+
+        sw.results.map(function(r){ return '<tr><td>'+r.alpha.toFixed(1)+'°</td><td>'+f(r.CL,3)+'</td><td>'+f(r.thin,3)+'</td><td>'+f(r.Cd,3)+'</td><td>'+(Math.abs(r.Cd)>1e-9?(r.CL/r.Cd).toFixed(2):'—')+'</td><td>'+f(r.St,3)+'</td><td>'+r.regime+'</td></tr>'; }).join('');
+      drawPolar(sw); return;
+    }
     document.getElementById('sw-table').innerHTML='<tr><th>Re</th><th>C_d</th><th>Schiller–Naumann</th>'+(sw.frame==='moving'?'<th>Stokes·K(λ)</th>':'')+'<th>wake L/d</th><th>St</th><th>C_l mean</th><th>regime</th></tr>'+
       sw.results.map(function(r){ return '<tr><td>'+f(r.Re,4)+'</td><td>'+f(r.Cd,4)+'</td><td>'+f(r.sn,4)+'</td>'+(sw.frame==='moving'?'<td>'+f(r.hs,4)+'</td>':'')+'<td>'+f(r.rec,3)+'</td><td>'+f(r.St,3)+'</td><td>'+f(r.clMean,2)+'</td><td>'+r.regime+(r.settled||r.regime!=='steady'?'':' (not settled)')+'</td></tr>'; }).join('');
     drawSweep(sw);
@@ -1417,11 +1517,35 @@ import { createLabs } from "./src/labs.js";
     h.fillStyle='#7be0c4'; h.fillText('● wake length L/d (left)', 60, 24); h.fillStyle='#ff8fa3'; h.fillText('◆ Strouhal number (right)', 60, 40);
     res.forEach(function(r){ h.fillStyle='#7be0c4'; h.beginPath(); h.arc(X(r.Re),Y2(r.rec||0),4.5,0,7); h.fill(); if (r.St){ h.fillStyle='#ff8fa3'; h.save(); h.translate(X(r.Re),Y3(r.St)); h.rotate(Math.PI/4); h.fillRect(-4,-4,8,8); h.restore(); } });
   }
+  // lift curve (C_L against α, with thin-airfoil theory) and drag / lift-to-drag against α
+  function drawPolar(sw){
+    var res=sw.results, TA=TF.thinAirfoil(sw.naca), a0=Math.min.apply(null, sw.list)-1, a1=Math.max.apply(null, sw.list)+1;
+    var cv=document.getElementById('sw-cd'), g=cv.getContext('2d'), Wd=cv.width, Ht=cv.height; g.clearRect(0,0,Wd,Ht);
+    var cls=res.map(function(r){ return r.CL; }).concat([TA.cl(a0), TA.cl(a1)]), lo=Math.min(0, Math.min.apply(null, cls))-0.1, hi=Math.max.apply(null, cls)+0.1;
+    var X=function(a){ return 52+(a-a0)/(a1-a0)*(Wd-66); }, Y=function(v){ return Ht-30-(v-lo)/(hi-lo)*(Ht-46); };
+    g.font='12px IBM Plex Mono, monospace'; g.strokeStyle='#1d4470'; g.lineWidth=1; g.fillStyle='#6fa8c9';
+    for (var a=Math.ceil(a0/4)*4; a<=a1; a+=4){ g.beginPath(); g.moveTo(X(a),12); g.lineTo(X(a),Ht-30); g.stroke(); g.fillText(a+'°', X(a)-8, Ht-14); }
+    for (var v=Math.ceil(lo*2)/2; v<=hi; v+=0.5){ g.beginPath(); g.moveTo(52,Y(v)); g.lineTo(Wd-14,Y(v)); g.stroke(); g.fillText(v.toFixed(1), 4, Y(v)+4); }
+    g.strokeStyle='#3d6f99'; g.beginPath(); g.moveTo(52,Y(0)); g.lineTo(Wd-14,Y(0)); g.stroke();
+    g.strokeStyle='#ffcf4a'; g.setLineDash([6,4]); g.lineWidth=2; g.beginPath(); g.moveTo(X(a0),Y(TA.cl(a0))); g.lineTo(X(a1),Y(TA.cl(a1))); g.stroke(); g.setLineDash([]);
+    g.fillStyle='#7be0c4'; res.forEach(function(r){ g.beginPath(); g.arc(X(r.alpha),Y(r.CL),4.5,0,7); g.fill(); });
+    g.font='11px IBM Plex Mono, monospace'; g.fillStyle='#7be0c4'; g.fillText('● C_L, simulation (in the tube)', 60, 24); g.fillStyle='#ffcf4a'; g.fillText('-- thin-airfoil theory, 2π(α − α_L0)', 60, 40);
+    g.fillStyle='#6fa8c9'; g.fillText('lift curve · NACA '+sw.naca, Wd-170, Ht-36);
+    var c2=document.getElementById('sw-ld'), h=c2.getContext('2d'); h.clearRect(0,0,Wd,Ht);
+    var cds=res.map(function(r){ return r.Cd; }), lds=res.map(function(r){ return Math.abs(r.Cd)>1e-9 ? r.CL/r.Cd : 0; });
+    var dmax=Math.max(0.1, Math.max.apply(null, cds.concat([0]))*1.2), lmin=Math.min(0, Math.min.apply(null, lds.concat([0])))*1.2, lmax=Math.max(1, Math.max.apply(null, lds.concat([0]))*1.2);
+    var Yd=function(v){ return Ht-30-v/dmax*(Ht-46); }, Yl=function(v){ return Ht-30-(v-lmin)/(lmax-lmin)*(Ht-46); };
+    h.font='12px IBM Plex Mono, monospace'; h.strokeStyle='#1d4470'; h.fillStyle='#6fa8c9';
+    for (var a2=Math.ceil(a0/4)*4; a2<=a1; a2+=4){ h.beginPath(); h.moveTo(X(a2),12); h.lineTo(X(a2),Ht-30); h.stroke(); h.fillText(a2+'°', X(a2)-8, Ht-14); }
+    [0,0.25,0.5,0.75,1].forEach(function(fr){ h.fillText((dmax*fr).toFixed(2), 4, Yd(dmax*fr)+4); h.fillText((lmin+(lmax-lmin)*fr).toFixed(1), Wd-40, Yd(dmax*fr)+4); });
+    h.fillStyle='#7be0c4'; h.fillText('● C_D (left)', 60, 24); h.fillStyle='#ff8fa3'; h.fillText('◆ lift / drag (right)', 60, 40);
+    res.forEach(function(r,i){ h.fillStyle='#7be0c4'; h.beginPath(); h.arc(X(r.alpha),Yd(r.Cd),4.5,0,7); h.fill(); h.fillStyle='#ff8fa3'; h.save(); h.translate(X(r.alpha),Yl(lds[i])); h.rotate(Math.PI/4); h.fillRect(-4,-4,8,8); h.restore(); });
+  }
   document.getElementById('sw-run').addEventListener('click', startSweep);
   document.getElementById('sw-export').addEventListener('click', function(){
     var sw=sweepLast; if (!sw) return;
-    var rows=['Re_simulated,Re_case,Cd,Cd_SchillerNaumann,Cd_Stokes_HabermanSayre,recirculation_over_d,St,Cl_mean,Cl_rms,regime,flow_throughs'];
-    sw.results.forEach(function(r){ rows.push([r.Re,r.ReCase,r.Cd,r.sn||'',r.hs||'',r.rec,r.St||'',r.clMean,r.clr,r.regime,r.ft.toFixed(2)].join(',')); });
+    var rows=['alpha_deg,CL,CL_thin_airfoil,Re_simulated,Re_case,Cd,Cd_SchillerNaumann,Cd_Stokes_HabermanSayre,recirculation_over_d,St,Cl_side_mean,Cl_rms,regime,flow_throughs'];
+    sw.results.forEach(function(r){ rows.push([sw.v==='alpha'?r.alpha:'', sw.v==='alpha'?r.CL:'', r.thin===null||r.thin===undefined?'':r.thin, r.Re,r.ReCase,r.Cd,r.sn||'',r.hs||'',r.rec,r.St||'',r.clMean,r.clr,r.regime,r.ft.toFixed(2)].join(',')); });
     download('tube-flow-sweep.csv', new Blob(['# Tube Flow v'+APP_VERSION+' sweep · '+sw.label+' · '+FLUIDS[state.fluid].label+' · tube '+state.tubeMM+' mm\n'+rows.join('\n')], {type:'text/csv'}));
   });
   renderRuns();
@@ -1441,6 +1565,7 @@ import { createLabs } from "./src/labs.js";
     },
     startSweep: function(o){
       if (sweep) return;
+      document.getElementById('sw-var').value=o.v||'re'; syncSweepVar();
       document.getElementById('sw-from').value=o.from; document.getElementById('sw-to').value=o.to; document.getElementById('sw-n').value=o.n; document.getElementById('sw-ft').value=o.ft;
       startSweep();
     }

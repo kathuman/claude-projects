@@ -183,5 +183,27 @@ const pct = (a, b) => (a / b - 1) * 100;
   check("pulsatile inflow (amplitude 40%): flow-rate amplitude within 3%, in phase within 5°", Math.abs(amp / A - 1) < 0.03 && Math.abs(lag) < 5, "amplitude " + amp.toFixed(3) + ", lag " + lag.toFixed(1) + "°");
 }
 
+// ---------------------------------------------------------------- 9. Wing sections (NACA 4-digit) at an angle of attack
+{
+  // geometry: a NACA 0012 of chord 25.6 cells and span 25.6 has the section's area (0.684·t·c²) × span
+  const g = new TF.Solver({ R: 16, length: 144, ratio: 0.8, sphereX: 0.3, u: 0.05, nu: 0.05, body: { shape: "wing", naca: "0012", alpha: 0, span: 0.8 }, geometryOnly: true });
+  let cells = 0; for (let z = 0; z < g.Nz; z++) for (let y = 0; y < g.Ny; y++) for (let x = 0; x < g.Nx; x++) if (g.body.inside(x, y, z)) cells++;
+  const vol = 0.68385 * 0.12 * 25.6 * 25.6 * 25.6;
+  check("wing: NACA 0012 solid cells match its volume within 8% (trailing edge thinner than a cell)", Math.abs(pct(cells, vol)) < 8, pct(cells, vol).toFixed(1) + "%");
+  check("wing: thin-airfoil zero-lift angle of NACA 2412 = −2.08° (textbook −2.077°)", Math.abs(TF.thinAirfoil("2412").alphaL0 + 2.077) < 0.01, TF.thinAirfoil("2412").alphaL0.toFixed(3) + "°");
+  // flow: the wing flying through still air in a tube (uniform stream), Re 600 on the chord
+  const R = 12, ratio = 0.8, c = 2 * R * ratio, u = 0.06, nu = u * c / 600;
+  const fly = (naca, alpha, span) => {
+    const s = new TF.Solver({ R: R, length: 9 * R, ratio: ratio, sphereX: 0.3, mode: "moving", u: u, nu: nu, disturbance: "none", body: { shape: "wing", naca: naca, alpha: alpha, span: span || 1 } });
+    let fx = 0, fz = 0; for (let k = 0; k < 5000; k++) { s.step(); if (k >= 4000) { fx += s.force[0] / 1000; fz += s.force[2] / 1000; } }
+    const q = 0.5 * u * u * s.body.area; return { cd: fx / q, cl: fz / q, thin: s.nThin || 0 };
+  };
+  const w0 = fly("0012", 0), w6 = fly("0012", 6), c4 = fly("4412", 0), c2 = fly("2412", 0), f6 = fly("0012", 6, 0.5);
+  check("wing: symmetric section at α = 0 has no lift", Math.abs(w0.cl) < 1e-5, w0.cl.toExponential(1));
+  check("wing: NACA 0012 at α = 6°, wall to wall: C_L between 0.4 and 1 (thin-airfoil 0.66; low Re lowers, the tube's walls raise it)", w6.cl > 0.4 && w6.cl < 1, "C_L " + w6.cl.toFixed(3) + ", C_D " + w6.cd.toFixed(3));
+  check("wing: camber gives lift at α = 0 — NACA 4412 > 2412 > 0 (needs the thin trailing edge: " + c4.thin + " links through it)", c4.cl > c2.cl && c2.cl > 0.03, "C_L " + c4.cl.toFixed(3) + " / " + c2.cl.toFixed(3));
+  check("wing: a short wing (aspect ratio 0.6) loses most of its lift to the tip vortices (C_L 2D / 3D > 2)", w6.cl / f6.cl > 2, (w6.cl / f6.cl).toFixed(2) + "×");
+}
+
 console.log(pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail ? 1 : 0);

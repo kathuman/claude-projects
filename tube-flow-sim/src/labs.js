@@ -62,6 +62,29 @@ export const LABS = [
     ]
   },
   {
+    id: "wing", title: "Lift on a wing", level: "Intermediate · ~10 min",
+    intro: "A wing makes lift by turning the flow down: tilt it (the angle of attack) or curve it (camber). Here a NACA airfoil flies through still air in the tube — measure its lift, sweep the angle for the lift curve, then see what camber and a short span do.",
+    steps: [
+      { text: "Set up a <b>Wing section</b>, NACA 0012 (symmetric), chord 70% of the tube, <b>Moving body</b> frame, angle of attack <b>0°</b>, water at Re 400, and Play.", el: "#body",
+        done: (a) => shapeIs(a, "wing") && a.state.naca === "0012" && a.state.alpha === 0 && a.state.frame === "moving" && a.state.running,
+        doIt: (a) => { a.setCase({ fluid: "water", body: "wing", naca: "0012", alpha: 0, span: 1, ratio: 0.7, frame: "moving" }); a.applyRe(400); a.play(true); } },
+      { text: "Let it run two flow-throughs. A symmetric wing at zero angle makes <b>no lift</b>: the flow over the top and the bottom is the same.", el: "#tiles",
+        done: (a) => shapeIs(a, "wing") && ft(a) > 2 && Math.abs((a.stats() || {}).clz) < 0.02 },
+      { text: "Tilt it: angle of attack <b>8°</b>. The lift coefficient C_L rises to a few tenths, and the <b>Reference</b> line compares it with thin-airfoil theory, 2π·α. Turn the dye on (from the body) to see the wake pushed down.", el: "#alpha",
+        done: (a) => a.state.alpha === 8 && ft(a) > 2 && (a.stats() || {}).clz > 0.15,
+        doIt: (a) => { a.setCase({ alpha: 8 }); a.view.set("dye", true); a.view.set("dyeSource", "sphere"); a.syncView(); a.play(true); } },
+      { text: "Now the lift curve: in <b>Sweep</b> choose <i>angle of attack</i>, −4° to 12°, 5 points, and run it. Lift rises in proportion to the angle — with a lower slope than inviscid theory at this Reynolds number — and the lift-to-drag ratio peaks at a modest angle.", el: "#sw-run",
+        done: (a) => { const s = a.sweep(); return !!s && s.done && s.v === "alpha" && s.results.length >= 4; },
+        doIt: (a) => a.startSweep({ v: "alpha", from: -4, to: 12, n: 5, ft: 4 }) },
+      { text: "Camber: switch the airfoil to <b>NACA 4412</b> at <b>0°</b>. Curving the section makes lift with no tilt at all — the reason real wings are cambered.", el: "#naca",
+        done: (a) => a.state.naca === "4412" && a.state.alpha === 0 && ft(a) > 2 && (a.stats() || {}).clz > 0.05,
+        doIt: (a) => { a.setCase({ naca: "4412", alpha: 0 }); a.play(true); } },
+      { text: "Finally a short wing: <b>span 40%</b> of the tube at 8°, with <b>Vortex surfaces</b> on. Air spills round the tips into two trailing vortices, which wash the wing down — a wing this stubby keeps only a fraction of the section's lift.", el: "#span",
+        done: (a) => a.state.span <= 0.45 && a.view.opts.vortex,
+        doIt: (a) => { a.setCase({ span: 0.4, alpha: 8 }); a.view.set("vortex", true); a.view.set("vortexLevel", 0.4); a.syncView(); a.play(true); } }
+    ]
+  },
+  {
     id: "shedding", title: "Vortex shedding", level: "Advanced · GPU · ~5 min",
     intro: "Past Re ≈ 210 a sphere's wake loses its symmetry, and from about 270 it sheds hairpin vortices at a regular rhythm — the Strouhal number St = f·d/U. Resolving this needs the GPU grid.",
     steps: [

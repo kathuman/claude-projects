@@ -14,7 +14,7 @@
  *   - the axial slice (speed, vorticity or pressure; optionally time-averaged) and a
  *     movable cross-section;
  *   - video recording of the canvas.
- * The body (sphere, ellipsoid, cylinder, disc, cube, bar or an imported mesh) is drawn from
+ * The body (sphere, ellipsoid, cylinder, disc, cube, bar, wing section or an imported mesh) is drawn from
  * the solver's description of it (G.body); masks come from the solver's solid nodes.
  * Coordinates: scene x along the tube, the tube radius is 1 scene unit.
  */
@@ -59,6 +59,12 @@ export function createView(stageEl) {
     else if (B.shape === "cylinder" || B.shape === "disc") { g = new THREE.CylinderGeometry(a, a, 2 * b, 64, 1); g.rotateZ(Math.PI / 2); }
     else if (B.shape === "cube") g = new THREE.BoxGeometry(2 * b, 2 * a, 2 * a);
     else if (B.shape === "bar") g = new THREE.CylinderGeometry(a, a, 2 * G.R * sc, 48, 1);
+    else if (B.shape === "wing" && B.outline) {
+      // the section outline (x along the flow, z up) extruded across the span (y)
+      const sh = new THREE.Shape(B.outline.map((q) => new THREE.Vector2(q[0] * sc, q[1] * sc)));
+      g = new THREE.ExtrudeGeometry(sh, { depth: B.span * sc, bevelEnabled: false, curveSegments: 1 });
+      g.translate(0, 0, -B.span * sc / 2); g.rotateX(Math.PI / 2); g.computeVertexNormals();
+    }
     else if (B.shape === "mesh" && B.tris) {
       const t = B.tris, pos = new Float32Array(t.length);
       for (let i = 0; i < t.length; i += 3) { pos[i] = (t[i] - B.sx) * sc; pos[i + 1] = (t[i + 1] - G.cy) * sc; pos[i + 2] = (t[i + 2] - G.cz) * sc; }
@@ -327,6 +333,9 @@ export function createView(stageEl) {
     for (let z = 1; z < nz - 1; z++) for (let y = 1; y < ny - 1; y++) for (let x = 1; x < nx - 1; x++) {
       const n = x + nx * (y + ny * z);
       if (!(rho[n] > 0)) { Q[n] = -1e9; continue; }
+      // cells touching a body are left out: on the coarse view grid its boundary layer would wrap it in a
+      // false vortex surface (a long wing especially); the tube wall is handled by one-sided differences
+      if (V.G.body && nearBody(x * s, y * s, z * s, s)) { Q[n] = -1e9; continue; }
       // central differences, one-sided where a neighbour is inside a wall (walls have zero velocity,
       // so leaving them out avoids false vortex surfaces wrapped around the body)
       const D = (arr, st) => { const p = rho[n + st] > 0, m = rho[n - st] > 0; return p && m ? (arr[n + st] - arr[n - st]) / (2 * s) : p ? (arr[n + st] - arr[n]) / s : m ? (arr[n] - arr[n - st]) / s : 0; };
@@ -336,6 +345,10 @@ export function createView(stageEl) {
       Q[n] = -0.5 * (a11 * a11 + a22 * a22 + a33 * a33 + 2 * (a12 * a21 + a13 * a31 + a23 * a32)) / ref;
     }
     return Q;
+  }
+  function nearBody(X, Y, Z, s) {
+    for (let dz = -1; dz <= 1; dz++) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (bodyAt(X + dx * s, Y + dy * s, Z + dz * s)) return true;
+    return false;
   }
   function surfaceNets(Q, Fd, level) {
     const nx = Fd.nx, ny = Fd.ny, nz = Fd.nz, s = Fd.s, vid = new Int32Array(nx * ny * nz).fill(-1), pos = [], idx = [], sc = [0, 0, 0];

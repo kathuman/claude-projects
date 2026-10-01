@@ -1,7 +1,7 @@
 # Tube Flow — a validated lattice-Boltzmann flow lab
 
 By [kathuman](https://github.com/kathuman). Flow through a tube past a sphere — or an ellipsoid, cylinder,
-disc, cube, a bar across the tube, or your own STL shape — in 3D, with real fluids and units, live
+disc, cube, a bar across the tube, a wing section (NACA airfoil at an angle of attack), or your own STL shape — in 3D, with real fluids and units, live
 measurements, Reynolds sweeps against published curves, saved runs and VTK export. Live: https://kathuman.github.io/claude-projects/tube-flow-sim/
 
 ## Files
@@ -25,6 +25,11 @@ measurements, Reynolds sweeps against published curves, saved runs and VTK expor
     across the tube by bisection on an inside test; closed triangle meshes (`parseSTL`, binary or ASCII)
     scaled to the chosen width, with an inside test by ray parity over binned triangles and a
     watertightness check. Re and C_d use the body's width and frontal area.
+  - wing sections: NACA 4-digit airfoils (symmetric or cambered) pivoting about the quarter chord at an angle of
+    attack, wall to wall (2D section) or of finite span; chord = 2a, planform area chord × span as the reference.
+    Links between two fluid nodes that pass through a part thinner than a cell (the trailing edge) bounce back
+    too (`crossThin`, wings and meshes) — without them flow leaks through the trailing edge and camber makes
+    almost no lift. `thinAirfoil(naca)` gives α_L0 and 2π(α − α_L0) for comparison.
   - inflow: developed (parabolic), uniform plug, or pulsatile — the flow rate swings sinusoidally at a
     chosen amplitude and Womersley number α = R√(ω/ν).
   - `caseToLattice()` maps a physical case (fluid, tube, sphere, speed) onto the grid at Mach ≤ 0.17
@@ -72,6 +77,11 @@ measurements, Reynolds sweeps against published curves, saved runs and VTK expor
 | STL sphere (5120 triangles), Stokes drag | exact sphere | −0.1% |
 | Uniform inflow | develops into Poiseuille flow | centre/mean 1.07 at the inlet → 1.94 (2 exact) |
 | Pulsatile inflow, 40% amplitude | imposed flow rate | amplitude 0.397, lag 2.9° |
+| Wing NACA 0012, cells vs. section area × span | 0.684·t·c² | −5.6% (trailing edge thinner than a cell) |
+| Thin-airfoil zero-lift angle, NACA 2412 | −2.077° | −2.077° |
+| NACA 0012, α = 0 / 6° (Re 600, uniform stream) | no lift / thin-airfoil 0.66 | 6·10⁻¹⁶ / C_L 0.73 (the tube's walls raise it) |
+| Camber at α = 0: NACA 4412, 2412 | lift, 4412 > 2412 > 0 | C_L 0.167, 0.098 (≈ 40% of inviscid at Re 600) |
+| Short wing, aspect ratio 0.6, α = 6° | slender-wing theory C_L ≈ (πA/2)·α ≈ 0.10 | C_L 0.16 at Re 600 (0.099 at Re 200); 4.6× less than wall to wall |
 
 ### Grid convergence (`tests/validation.test.js`)
 

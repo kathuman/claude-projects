@@ -1,5 +1,5 @@
 {
- "app": "Tube Flow v6.0.0",
+ "app": "Tube Flow v6.1.0",
  "date": "2026-10-01",
  "runtime": "Node v24.19.0",
  "results": [
@@ -9,7 +9,7 @@
    "title": "Pipe flow (Hagen–Poiseuille)",
    "cite": "Hagen 1839, Poiseuille 1840",
    "what": "An empty tube 16 cells across: the velocity profile must be the parabola u = u_c(1 − r²/R²), the pressure gradient 4μu_c/R², the mass flux the same at every cross-section, and the total mass constant with no corrections applied.",
-   "seconds": 2.732,
+   "seconds": 3.046,
    "pass": true,
    "checks": [
     {
@@ -35,7 +35,7 @@
     },
     {
      "name": "total mass drift over 500 steps",
-     "value": -2.0370030107130788e-07,
+     "value": -2.0370030107130788e-7,
      "unit": "%",
      "tol": "± 0.01 %",
      "pass": true
@@ -117,7 +117,7 @@
    "title": "Stokes drag on a sphere moving along a tube",
    "cite": "Haberman & Sayre 1958 (wall factor K(λ))",
    "what": "A sphere moving slowly (Re 0.05) along the axis of a tube of still fluid, at three blockages λ = d/D. The drag must be Stokes' 6πμaU times the Haberman–Sayre wall factor K(λ), which grows steeply with λ.",
-   "seconds": 46.04,
+   "seconds": 45.034,
    "pass": true,
    "checks": [
     {
@@ -145,7 +145,7 @@
      "name": "no side force on an axisymmetric flow (|F_side|/F_drag)",
      "value": 4.043922716551209e-14,
      "unit": "",
-     "tol": 1e-06,
+     "tol": 0.000001,
      "pass": true
     }
    ],
@@ -173,7 +173,7 @@
    "title": "Momentum balance",
    "cite": "control-volume momentum theorem",
    "what": "Flow past a sphere in a tube at Re ≈ 7: the drop in pressure plus momentum flux between two cross-sections must equal the force on the sphere plus the wall shear between them — the forces are measured independently, by momentum exchange on the boundary links.",
-   "seconds": 5.642,
+   "seconds": 5.246,
    "pass": true,
    "checks": [
     {
@@ -191,7 +191,7 @@
    "title": "Imported shapes: an STL sphere",
    "cite": "consistency with the exact sphere",
    "what": "The same Stokes case with the sphere replaced by a 5,120-triangle STL mesh of it. Shapes from files are found by ray parity and their surfaces by bisection; the drag must match the exact sphere's.",
-   "seconds": 31.042,
+   "seconds": 29.691,
    "pass": true,
    "checks": [
     {
@@ -209,7 +209,7 @@
    "title": "Pulsatile inflow",
    "cite": "imposed flow rate",
    "what": "The inflow rate swings 40% about its mean; a sinusoid fitted to the flow rate near the inlet over one period must have that amplitude, in phase.",
-   "seconds": 4.484,
+   "seconds": 4.438,
    "pass": true,
    "checks": [
     {
@@ -401,7 +401,7 @@
    "title": "Grid convergence: pipe flow",
    "cite": "order of accuracy",
    "what": "Pipe flow on five grids, 8 to 32 cells across. With curved-wall bounce-back the error should fall as the square of the cell size (second order). On the grids 8, 16 and 32 cells across (refinement ratio 2): the flow rate's observed order, its Richardson extrapolation to an infinitely fine grid, and the grid convergence index (GCI) — the numerical uncertainty of the finest grid's flow rate.",
-   "seconds": 42.147,
+   "seconds": 40.387,
    "pass": true,
    "checks": [
     {
@@ -483,7 +483,7 @@
    "title": "Resolution study: Stokes drag",
    "cite": "Haberman & Sayre 1958; ASME V&V 20 (oscillatory convergence)",
    "what": "The wall-corrected Stokes drag (λ = 0.3) with the sphere 6, 7.5, 9 and 9.6 cells across. The error shrinks with resolution, but where the sphere's surface falls between lattice nodes scatters the drag by about ±1% — more than the trend at these resolutions — so the convergence is not monotonic and Richardson extrapolation does not apply. The spread is the honest uncertainty: treat the drag on a body 6–10 cells across as good to about ±3%. (Below ~6 cells it drops fast: 12% low at 4.8 cells.)",
-   "seconds": 108.24,
+   "seconds": 8429.465,
    "pass": true,
    "checks": [
     {

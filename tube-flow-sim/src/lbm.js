@@ -1,8 +1,9 @@
 /*
  * lbm.js — D3Q19 lattice-Boltzmann solver for flow through a tube past a sphere.
  *
- * Bodies: a sphere (exact), ellipsoid, axial cylinder, disc, cube, a bar across the tube, or any
- * closed triangle mesh (STL) — see makeBody(). Inflow: developed (parabolic), uniform or pulsatile.
+ * Bodies: a sphere (exact), ellipsoid, axial cylinder, disc, cube, a bar across the tube, a wing section
+ * (NACA 4-digit airfoil at an angle of attack, wall to wall or of finite span), or any closed triangle
+ * mesh (STL) — see makeBody(). Inflow: developed (parabolic), uniform or pulsatile.
  *
  * Numerics (all standard, chosen for accuracy and robustness at low viscosity):
  *   - TRT collision (two relaxation times, "magic" Λ = 3/16): as cheap as BGK but
@@ -138,8 +139,11 @@
   // Reynolds number and C_d use the width d = 2a and the frontal area); `aspect` = length / width
   // for the elongated shapes. Each body answers inside(x, y, z) and, for links into it, where the
   // link crosses its surface: analytic for the sphere and ellipsoid, by bisection otherwise.
-  //   spec: { shape: "sphere" | "ellipsoid" | "cylinder" | "disc" | "cube" | "bar" | "mesh",
-  //           ratio, aspect, mesh: Float32Array (STL triangles), axis: "x" | "y" | "z" (mesh axis along the flow) }
+  //   spec: { shape: "sphere" | "ellipsoid" | "cylinder" | "disc" | "cube" | "bar" | "wing" | "mesh",
+  //           ratio, aspect, mesh: Float32Array (STL triangles), axis: "x" | "y" | "z" (mesh axis along the flow),
+  //           naca: "0012" (wing section), alpha: angle of attack in degrees (nose up +, lift along +z),
+  //           span: share of the tube diameter (1 = wall to wall, a 2D section) }
+  // For a wing, ratio sets the chord (2a = chord); the coefficients use the planform area chord × span.
   function makeBody(spec, R, sx, cy, cz) {
     const shape = spec.shape || "sphere", a = R * (spec.ratio || 0);
     if (!(a > 0)) return null;
@@ -223,8 +227,54 @@
       const ny = Math.ceil(2 * B.ay / st), nz = Math.ceil(2 * B.az / st), hy = 2 * B.ay / ny, hz = 2 * B.az / nz;   // cell-centred samples
       for (let j = 0; j < nz; j++) for (let i = 0; i < ny; i++) { const n = crossings(cy - B.ay + (i + 0.5) * hy, cz - B.az + (j + 0.5) * hz).length; if (n) { cov++; tot++; if (n & 1) odd++; } }
       B.area = cov * hy * hz; B.leaky = tot ? odd / tot : 0;
+    } else if (shape === "wing") {
+      // NACA 4-digit section (m = max camber, p = its position, t = thickness, all of the chord), chord along
+      // the flow, pivoting about its quarter chord at (sx, cz), spanning across the tube along y
+      const c = 2 * a, code = String(spec.naca || "0012").replace(/\D/g, "").padStart(4, "0").slice(-4);
+      const m = +code[0] / 100, pp = +code[1] / 10 || 0.4, t = Math.max(0.01, +code.slice(2) / 100);
+      const al = (spec.alpha || 0) * Math.PI / 180, ca = Math.cos(al), sa = Math.sin(al);
+      const span = Math.min(2 * R, Math.max(0.05, spec.span || 1) * 2 * R), hs = span / 2;
+      const camber = (u) => m === 0 ? 0 : u < pp ? m / (pp * pp) * (2 * pp * u - u * u) : m / ((1 - pp) * (1 - pp)) * (1 - 2 * pp + 2 * pp * u - u * u);
+      const thick = (u) => 5 * t * (0.2969 * Math.sqrt(u) - 0.1260 * u - 0.3516 * u * u + 0.2843 * u * u * u - 0.1036 * u * u * u * u);
+      B.inside = (x, y, z) => {
+        if (Math.abs(y - cy) > hs) return false;
+        const dx = x - sx, dz = z - cz, xp = dx * ca - dz * sa, zp = dx * sa + dz * ca, u = xp / c + 0.25;   // airfoil frame
+        if (u < 0 || u > 1) return false;
+        return Math.abs(zp / c - camber(u)) <= thick(u);
+      };
+      // outline (upper surface nose → tail, lower surface back), in lattice units about the pivot, rotated
+      const out = [], N = 80;
+      for (let k = 0; k <= N; k++) { const u = 0.5 * (1 - Math.cos(Math.PI * k / N)); out.push([u, camber(u) + thick(u)]); }
+      for (let k = N - 1; k >= 1; k--) { const u = 0.5 * (1 - Math.cos(Math.PI * k / N)); out.push([u, camber(u) - thick(u)]); }
+      B.outline = out.map((q) => { const xp = (q[0] - 0.25) * c, zp = q[1] * c; return [xp * ca + zp * sa, -xp * sa + zp * ca]; });
+      const xs = B.outline.map((q) => q[0]);
+      B.xf = sx + Math.min(...xs); B.xr = sx + Math.max(...xs);
+      b = (B.xr - B.xf) / 2; B.b = b; B.aspect = b / a;
+      B.area = c * span;                                  // planform (reference) area
+      Object.assign(B, { chord: c, span: span, wallToWall: span >= 2 * R - 1e-9, alpha: spec.alpha || 0, naca: code, thickness: t, camber: m, camberPos: pp });
     } else throw new Error("unknown body shape " + shape);
-    B.xFront = sx - b; B.xRear = sx + b;
+    B.xFront = B.xf !== undefined ? B.xf : sx - b; B.xRear = B.xr !== undefined ? B.xr : sx + b;
+    // Bodies with parts thinner than a cell (a wing's trailing edge, thin shells in a mesh) can sit between
+    // two fluid nodes with no node inside them. For those, links between fluid nodes are tested too: a link
+    // that passes through the body is a wall link, or flow would leak straight through the thin part.
+    if (shape === "wing" || shape === "mesh") {
+      const zs = shape === "wing" ? B.outline.map((q) => Math.abs(q[1])) : [B.az];
+      const hy = shape === "wing" ? B.span / 2 : B.ay, hz = Math.max(...zs);
+      B.box = [B.xFront - 1.5, B.xRear + 1.5, cy - hy - 1.5, cy + hy + 1.5, cz - hz - 1.5, cz + hz + 1.5];
+      B.crossThin = function (x, y, z, dx, dy, dz) {
+        const S = 8; let prev = 0;
+        for (let k = 1; k < S; k++) {
+          const t = k / S;
+          if (B.inside(x + t * dx, y + t * dy, z + t * dz)) {
+            let lo = prev, hi = t;
+            for (let it = 0; it < 30; it++) { const m = 0.5 * (lo + hi); if (B.inside(x + m * dx, y + m * dy, z + m * dz)) hi = m; else lo = m; }
+            return Math.max(1e-6, 0.5 * (lo + hi));
+          }
+          prev = t;
+        }
+        return Infinity;
+      };
+    }
     B.d = 2 * a;
     // where a link from (x, y, z) along (dx, dy, dz) first enters the body, as a fraction of the link
     B.cross = function (x, y, z, dx, dy, dz) {
@@ -238,9 +288,24 @@
     B.info = function () {
       const o = { shape: shape, a: a, b: b, sx: sx, aspect: B.aspect, area: B.area, xFront: B.xFront, xRear: B.xRear, d: B.d };
       if (B.tris) { o.tris = Float32Array.from(B.tris); o.leaky = B.leaky; }
+      if (shape === "wing") Object.assign(o, { outline: B.outline, chord: B.chord, span: B.span, wallToWall: B.wallToWall, alpha: B.alpha, naca: B.naca, thickness: B.thickness, camber: B.camber, camberPos: B.camberPos });
       return o;
     };
     return B;
+  }
+
+  // Thin-airfoil theory for a NACA 4-digit section: zero-lift angle (degrees) from the camber line,
+  // α_L0 = −(1/π) ∫₀^π (dy_c/dx)(cos θ − 1) dθ with x = (1 − cos θ)/2; lift C_L = 2π(α − α_L0) in 2D.
+  function thinAirfoil(naca) {
+    const code = String(naca || "0012").replace(/\D/g, "").padStart(4, "0").slice(-4), m = +code[0] / 100, pp = +code[1] / 10 || 0.4;
+    let s = 0; const N = 2000;
+    for (let k = 0; k < N; k++) {
+      const th = Math.PI * (k + 0.5) / N, x = 0.5 * (1 - Math.cos(th));
+      const dy = m === 0 ? 0 : x < pp ? 2 * m / (pp * pp) * (pp - x) : 2 * m / ((1 - pp) * (1 - pp)) * (pp - x);
+      s += dy * (Math.cos(th) - 1) * Math.PI / N;
+    }
+    const a0 = -s / Math.PI * 180 / Math.PI;
+    return { alphaL0: a0, cl: (alphaDeg) => 2 * Math.PI * (alphaDeg - a0) * Math.PI / 180 };
   }
 
   // pulsatile inflow: the flow rate swings sinusoidally about its mean
@@ -319,7 +384,19 @@
       for (let j = 1; j < Q; j++) {
         const xn = x + CX[j], yn = y + CY[j], zn = z + CZ[j];
         if (xn < 0 || xn >= Nx) continue;                       // inlet/outlet planes, handled by their conditions
-        if (!solid[xn + Nx * (yn + Ny * zn)]) continue;
+        if (!solid[xn + Nx * (yn + Ny * zn)]) {
+          // a thin part of the body between two fluid nodes
+          if (body && body.crossThin) {
+            const bb = body.box;
+            if (x < bb[0] || x > bb[1] || y < bb[2] || y > bb[3] || z < bb[4] || z > bb[5]) continue;
+            const t = body.crossThin(x, y, z, CX[j], CY[j], CZ[j]);
+            if (t === Infinity) continue;
+            const back = n - this.offsets[j], bx = x - CX[j], by = y - CY[j], bz = z - CZ[j];
+            const backOK = bx >= 0 && bx < Nx && by >= 0 && by < Ny && bz >= 0 && bz < Nz && !solid[back];
+            links.push(n, j, t, 2, backOK ? back : -1); this.nThin = (this.nThin || 0) + 1;
+          }
+          continue;
+        }
         const c = crossing(x, y, z, j);
         const back = n - this.offsets[j];                        // the fluid node behind n (for q < 1/2)
         const bx = x - CX[j], by = y - CY[j], bz = z - CZ[j];
@@ -524,5 +601,5 @@
     return Math.max(0, xz - this.xRear);
   };
 
-  return { Solver: Solver, caseToLattice: caseToLattice, makeBody: makeBody, parseSTL: parseSTL, pulseFactor: pulseFactor, Q: Q, CX: CX, CY: CY, CZ: CZ, W: W, OPP: OPP, NU_MIN: NU_MIN, U_MAX: U_MAX, U_TARGET: U_TARGET };
+  return { Solver: Solver, caseToLattice: caseToLattice, makeBody: makeBody, parseSTL: parseSTL, thinAirfoil: thinAirfoil, pulseFactor: pulseFactor, Q: Q, CX: CX, CY: CY, CZ: CZ, W: W, OPP: OPP, NU_MIN: NU_MIN, U_MAX: U_MAX, U_TARGET: U_TARGET };
 });

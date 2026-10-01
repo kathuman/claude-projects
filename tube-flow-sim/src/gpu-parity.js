@@ -13,7 +13,8 @@
     ["pipe, regularised, Re 150", { R: 8, length: 48, ratio: 0.35, u: 0.08, nu: 0.08 * 5.6 / 150, mode: "pipe", disturbance: "none" }],
     ["moving sphere, TRT, Re 1", { R: 8, length: 48, ratio: 0.3, u: 0.01, nu: 0.01 * 4.8, mode: "moving", disturbance: "none" }],
     ["cube, pulsatile inflow, Re 40", { R: 8, length: 48, ratio: 0.42, u: 0.05, nu: 0.05 * 6.72 / 40, mode: "pipe", disturbance: "none", body: { shape: "cube" }, inflow: "pulsatile", pulse: { amp: 0.4, period: 150 } }],
-    ["bar across the tube, uniform inflow, Re 60", { R: 8, length: 48, ratio: 0.25, u: 0.06, nu: 0.06 * 4 / 60, mode: "pipe", disturbance: "none", body: { shape: "bar" }, inflow: "uniform" }]
+    ["bar across the tube, uniform inflow, Re 60", { R: 8, length: 48, ratio: 0.25, u: 0.06, nu: 0.06 * 4 / 60, mode: "pipe", disturbance: "none", body: { shape: "bar" }, inflow: "uniform" }],
+    ["NACA 4412 wing at 8°, moving, Re 200", { R: 8, length: 48, ratio: 0.8, u: 0.05, nu: 0.05 * 12.8 / 200, mode: "moving", disturbance: "none", body: { shape: "wing", naca: "4412", alpha: 8 } }]
   ];
   let gpuP = null;
   const gpu = () => gpuP || (gpuP = TF.gpuAvailable());
