@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tube Flow — Flow Around a Sphere</title>
-  <meta name="description" content="A 3D lattice-Boltzmann flow lab by kathuman: a sphere in a tube, real fluids and units, validated solver, live drag, lift, Strouhal number, pressure drop and wake length." />
+  <title>Tube Flow — Flow Around Bodies</title>
+  <meta name="description" content="A 3D lattice-Boltzmann flow lab by kathuman: a sphere, other shapes or your own STL in a tube; real fluids and units, validated solver, live drag, lift, Strouhal number and wake length; Reynolds sweeps against the literature, saved runs, VTK export." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -332,6 +332,32 @@ footer.foot .consult a{color:var(--accent);}
 .ref b{color:var(--ink);}
 .small-btn{font-family:var(--head); font-weight:600; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer;}
 .small-btn:hover{color:var(--accent); border-color:var(--accent);}
+.small-btn:disabled{opacity:.4; cursor:not-allowed;}
+.sub-group{display:flex; flex-direction:column; gap:10px;}
+.sub-group[hidden], .wb-card [hidden]{display:none !important;}
+.field input[type=file]{font-family:var(--mono); font-size:11px; color:var(--ink-dim); width:100%;}
+.workbench{display:grid; grid-template-columns:1fr; gap:14px; margin-top:16px;}
+.wb-card{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; min-width:0;}
+.wb-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:10px;}
+.wb-head h3{margin:0; font-family:var(--head); font-weight:700; font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim);}
+.wb-form{display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; margin-bottom:10px;}
+.wb-form label{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); display:flex; align-items:center; gap:6px;}
+.wb-form input[type=number]{font-family:var(--mono); font-size:12px; width:78px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line); border-radius:5px; padding:4px 6px;}
+.file-btn{display:inline-flex; align-items:center;}
+.wb-charts{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.wb-charts canvas, #cmp-chart{width:100%; height:230px; display:block; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:6px;}
+.table-wrap{overflow-x:auto; margin-top:10px;}
+.wb-table{border-collapse:collapse; font-family:var(--mono); font-size:11.5px; color:var(--ink); min-width:100%;}
+.wb-table th, .wb-table td{padding:5px 9px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap;}
+.wb-table th{color:var(--ink-faint); font-weight:500;}
+.wb-table th:first-child, .wb-table td:first-child{text-align:left;}
+.run-row{display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-family:var(--mono); font-size:11.5px; color:var(--ink);}
+.run-row .nm{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.run-row .dt{color:var(--ink-faint);}
+.run-row .sw{width:10px; height:10px; border-radius:2px; flex:0 0 auto;}
+.run-row button{font-family:var(--mono); font-size:11px; background:none; border:1px solid var(--line); color:var(--ink-dim); border-radius:5px; padding:3px 7px; cursor:pointer;}
+.run-row button:hover{color:var(--accent); border-color:var(--accent);}
+@media (max-width:860px){ .wb-charts{grid-template-columns:1fr;} }
 @media (max-width:860px){ .brand .sub, .brand .by .rest{display:none;} #sim-clock{display:none;} .topbar{flex-wrap:wrap; row-gap:8px;} }
 </style>
 </head>
@@ -343,7 +369,7 @@ footer.foot .consult a{color:var(--accent);}
       <div class="mark">TUBE<span>FLOW</span></div>
       <span class="ver" id="ver"></span>
       <span class="by">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"></span></span>
-      <div class="sub">D3Q19 LATTICE-BOLTZMANN · VALIDATED · SPHERE IN A TUBE</div>
+      <div class="sub">D3Q19 LATTICE-BOLTZMANN · VALIDATED · FLOW LAB</div>
     </div>
     <div class="header-actions">
       <a class="back-link" href="../">← Projects</a>
@@ -367,9 +393,34 @@ footer.foot .consult a{color:var(--accent);}
           <span class="lbl">Tube diameter</span>
           <div class="inline"><input type="number" id="tube" min="1" max="500" step="any" value="20" aria-label="Tube diameter in millimetres"><span class="unit">mm</span></div>
         </div>
+        <div class="field">
+          <label for="body">Body</label>
+          <select id="body">
+            <option value="sphere">Sphere</option>
+            <option value="ellipsoid">Ellipsoid (spheroid)</option>
+            <option value="cylinder">Cylinder along the flow</option>
+            <option value="disc">Disc, face-on</option>
+            <option value="cube">Cube</option>
+            <option value="bar">Bar across the tube</option>
+            <option value="mesh">Your shape (STL file)…</option>
+          </select>
+        </div>
+        <div class="field" id="stl-row" hidden>
+          <input type="file" id="stl-file" accept=".stl" aria-label="STL file of a closed body">
+          <select id="stl-axis" aria-label="Which model axis points along the flow">
+            <option value="x">Flow along the model's x axis</option>
+            <option value="y">Flow along the model's y axis</option>
+            <option value="z">Flow along the model's z axis</option>
+          </select>
+          <div class="note" id="stl-note">A closed (watertight) mesh in any units: it is scaled so its width across the flow matches the width below.</div>
+        </div>
+        <div class="ctrl-row" id="aspect-row" hidden>
+          <div class="row-head"><span class="name">Length / width</span><span class="val" id="aspect-val">2.0</span></div>
+          <div class="slider-track"><span class="bound">0.25</span><input type="range" id="aspect" min="0" max="100" value="75" aria-label="Body length along the flow over its width"><span class="bound right">4</span></div>
+        </div>
         <div class="ctrl-row">
-          <div class="row-head"><span class="name">Sphere diameter</span><span class="val" id="ratio-val">30% of tube</span></div>
-          <div class="slider-track"><span class="bound">10%</span><input type="range" id="ratio" min="10" max="50" value="30" step="1" aria-label="Sphere diameter as a share of the tube diameter"><span class="bound right">50%</span></div>
+          <div class="row-head"><span class="name" id="ratio-name">Sphere diameter</span><span class="val" id="ratio-val">30% of tube</span></div>
+          <div class="slider-track"><span class="bound">10%</span><input type="range" id="ratio" min="10" max="50" value="30" step="1" aria-label="Body width as a share of the tube diameter"><span class="bound right">50%</span></div>
         </div>
         <div class="ctrl-row">
           <div class="row-head"><span class="name" id="speed-name">Centre-line speed</span><span class="val" id="speed-val"></span></div>
@@ -380,7 +431,26 @@ footer.foot .consult a{color:var(--accent);}
           <span class="lbl">Frame</span>
           <div class="seg" id="frame">
             <button class="btn active" data-frame="pipe" type="button" title="Sphere held still in fully developed pipe flow (parabolic profile)">Pipe flow</button>
-            <button class="btn" data-frame="moving" type="button" title="Sphere moving along the axis of a tube of still fluid (seen from the sphere)">Moving sphere</button>
+            <button class="btn" data-frame="moving" type="button" title="Body moving along the axis of a tube of still fluid (seen from the body)">Moving body</button>
+          </div>
+        </div>
+        <div class="field" id="inflow-row">
+          <label for="inflow">Inflow</label>
+          <select id="inflow">
+            <option value="parabolic">Developed pipe flow (parabolic)</option>
+            <option value="uniform">Uniform plug, develops along the tube</option>
+            <option value="pulsatile">Pulsatile: oscillating flow rate</option>
+          </select>
+        </div>
+        <div class="sub-group" id="pulse-opts" hidden>
+          <div class="ctrl-row">
+            <div class="row-head"><span class="name">Pulse amplitude</span><span class="val" id="pamp-val">30%</span></div>
+            <div class="slider-track"><span class="bound">0%</span><input type="range" id="pamp" min="0" max="90" value="30" aria-label="Pulse amplitude as a share of the mean flow"><span class="bound right">90%</span></div>
+          </div>
+          <div class="ctrl-row">
+            <div class="row-head"><span class="name">Womersley α</span><span class="val" id="wom-val">8.0</span></div>
+            <div class="slider-track"><span class="bound">0.5</span><input type="range" id="wom" min="0" max="100" value="82" aria-label="Womersley number of the pulse"><span class="bound right">15</span></div>
+            <div class="note" id="pulse-note"></div>
           </div>
         </div>
         <div class="note" id="re-note"></div>
@@ -422,7 +492,7 @@ footer.foot .consult a{color:var(--accent);}
         <div class="switch-row"><span class="name">Dye</span><div class="switch on" id="sw-dye" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div></div>
         <div class="field-select" id="dye-opts">
           <button class="btn active" data-dye="rake" type="button" title="Streaks from a grid of nozzles upstream">From a rake</button>
-          <button class="btn" data-dye="sphere" type="button" title="Released from the sphere's surface, like electrolytic dye">From the sphere</button>
+          <button class="btn" data-dye="sphere" type="button" title="Released from the body's surface, like electrolytic dye">From the body</button>
         </div>
         <div class="switch-row"><span class="name">Tracers</span><div class="switch on" id="sw-tracers" role="switch" aria-checked="true" tabindex="0"><div class="knob"></div></div></div>
         <div class="ctrl-row" id="tracer-opts">
@@ -495,7 +565,11 @@ footer.foot .consult a{color:var(--accent);}
     <div class="inst-head">
       <h2>Measurements</h2>
       <span class="regime-badge settling" id="regime-badge">not started</span>
-      <button class="small-btn" id="btn-csv" type="button">Export CSV</button>
+      <span style="flex:1 1 auto"></span>
+      <button class="small-btn" id="btn-save" type="button" title="Keep this run's case and results to compare later">Save run</button>
+      <button class="small-btn" id="btn-csv" type="button" title="Forces, coefficients, pressure drop and wake length over time">CSV</button>
+      <button class="small-btn" id="btn-json" type="button" title="Case, grid, results and the full time series">JSON</button>
+      <button class="small-btn" id="btn-vtk" type="button" title="Velocity, pressure and solid mask on the grid, for ParaView">VTK</button>
     </div>
     <div class="tiles" id="tiles"></div>
     <div class="chart-wrap">
@@ -503,6 +577,37 @@ footer.foot .consult a{color:var(--accent);}
       <div class="chart-legend"><span><i style="background:#7be0c4"></i>drag coefficient C_d</span><span><i style="background:#ffcf4a"></i>lift coefficient C_l (×10)</span><span id="chart-time"></span></div>
     </div>
     <p class="ref" id="ref"></p>
+
+    <div class="workbench">
+      <div class="wb-card" id="sweep-card">
+        <div class="wb-head"><h3>Reynolds sweep</h3><span class="note" id="sweep-status">Runs this case at several Reynolds numbers, each until it settles, and plots the results against published curves.</span></div>
+        <div class="wb-form">
+          <label>Re from <input type="number" id="sw-from" value="10" min="0.01" step="any"></label>
+          <label>to <input type="number" id="sw-to" value="200" min="0.01" step="any"></label>
+          <label>points <input type="number" id="sw-n" value="5" min="2" max="12" step="1"></label>
+          <label>at most <input type="number" id="sw-ft" value="6" min="2" max="40" step="1"> flow-throughs each</label>
+          <button class="small-btn" id="sw-run" type="button">Run sweep</button>
+          <button class="small-btn" id="sw-export" type="button" disabled>Export sweep CSV</button>
+        </div>
+        <div class="wb-charts">
+          <canvas id="sw-cd" width="640" height="260" aria-label="Drag coefficient against Reynolds number"></canvas>
+          <canvas id="sw-ld" width="640" height="260" aria-label="Wake length and Strouhal number against Reynolds number"></canvas>
+        </div>
+        <div class="table-wrap"><table class="wb-table" id="sw-table"></table></div>
+      </div>
+      <div class="wb-card" id="runs-card">
+        <div class="wb-head"><h3>Saved runs</h3><span class="note">Kept in this browser. Tick runs to compare them; export to keep or share.</span></div>
+        <div class="wb-form">
+          <button class="small-btn" id="runs-export" type="button">Export all (JSON)</button>
+          <label class="small-btn file-btn">Import JSON<input type="file" id="runs-import" accept=".json,application/json" hidden></label>
+        </div>
+        <div id="runs-list"><div class="note">No saved runs yet: press <b>Save run</b> once a case has settled.</div></div>
+        <div id="compare" hidden>
+          <canvas id="cmp-chart" width="1200" height="230" aria-label="Drag coefficient of the compared runs over flow-throughs" style="margin-top:12px"></canvas>
+          <div class="table-wrap"><table class="wb-table" id="cmp-table"></table></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="explainer">
@@ -549,8 +654,21 @@ footer.foot .consult a{color:var(--accent);}
           (6–14 cells across the sphere) still handles steady flows.
         </p>
         <p>
+          <b>Experiments.</b> Besides the sphere, the body can be an ellipsoid or a cylinder of any length, a face-on disc, a
+          cube, a bar spanning the tube, or <b>your own shape</b> from an STL file (any closed mesh, scaled to the chosen width;
+          every lattice link finds where it crosses the surface, so curved and slanted faces are not staircased). The Reynolds
+          number and the coefficients use the body's width and frontal area. The inflow can be developed pipe flow, a uniform
+          plug that develops along the tube, or <b>pulsatile</b>, with the flow rate swinging about its mean at a chosen
+          Womersley number <code>α = R·√(ω/ν)</code>. A <b>Reynolds sweep</b> runs the case at several Reynolds numbers, waits
+          for each to settle, and plots the drag coefficient against Schiller–Naumann (open flow) and, for a body moving
+          through the tube at low Re, against Stokes drag with the Haberman–Sayre wall correction. Runs can be <b>saved</b>,
+          compared side by side, and exported as JSON, CSV, or <b>VTK</b> for ParaView. The tests check the new shapes against
+          their volumes, an imported STL cube cell for cell against the cube, the Stokes drag of an STL sphere against the
+          exact sphere (0.1%), and the uniform and pulsatile inflows; the GPU solver matches the CPU solver on these cases.
+        </p>
+        <p>
           <b>Seeing the flow.</b> <b>Dye</b> is carried by the same velocity field the solver computes — released from a
-          rake of nozzles upstream or from the sphere's surface, the way water-tunnel experiments show wakes.
+          rake of nozzles upstream or from the body's surface, the way water-tunnel experiments show wakes.
           <b>Vortex surfaces</b> are where rotation beats strain (the Q-criterion), coloured by which way the fluid
           turns about the tube axis. <b>Streamlines</b> start from a rake you can rotate. The <b>axial slice</b> can be
           time-averaged to show the mean flow of an unsteady wake, and the <b>cross-section</b> can be moved along the tube.
@@ -562,7 +680,7 @@ footer.foot .consult a{color:var(--accent);}
 
   <footer class="foot">
     <span class="consult">Tube Flow <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    A validated lattice-Boltzmann flow lab: a sphere in a tube, real fluids and units, live measurements. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    A validated lattice-Boltzmann flow lab: bodies in a tube, real fluids and units, live measurements, sweeps and saved runs. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 </div>
 
@@ -587,7 +705,10 @@ import { createView } from "./src/view.js";
   //          rake or the sphere, Q-criterion vortex surfaces, streamlines, movable cross-section, time-averaged
   //          slice, video recording; orbit controls
   //   4.0.1  video recording restarts the recorder if the encoder delivers nothing at first
-  var APP_VERSION = "4.0.1";
+  //   5.0.0  experiment workbench: bodies (ellipsoid, cylinder, disc, cube, bar, STL import), inflow (parabolic,
+  //          uniform, pulsatile at a Womersley number), Reynolds sweeps against published curves, saved runs and
+  //          comparison, JSON and VTK export
+  var APP_VERSION = "5.0.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -599,7 +720,9 @@ import { createView } from "./src/view.js";
     glycerol: {label:'Glycerol',                    nu:1.12e-3,  rho:1261}
   };
   var GRIDS = { cpu:[['low','Low',20],['medium','Medium',28],['high','High',36]], gpu:[['g40','40',40],['g64','64',64],['g96','96',96]] };
-  var state = {fluid:'water', tubeMM:20, ratio:0.30, speed:0.005, frame:'pipe', res:'g64', disturb:'kick', particles:3000, sliceOn:false, field:'speed', running:false};
+  var state = {fluid:'water', tubeMM:20, ratio:0.30, speed:0.005, frame:'pipe', res:'g64', disturb:'kick', particles:3000, sliceOn:false, field:'speed', running:false,
+               body:'sphere', aspect:2, stl:null, stlName:'', stlAxis:'x', inflow:'parabolic', pulseAmp:0.3, womersley:8};
+  var SHAPES = {sphere:'Sphere', ellipsoid:'Ellipsoid', cylinder:'Cylinder', disc:'Disc', cube:'Cube', bar:'Bar', mesh:'STL shape'};
   var L = null, G = null, F = null, series = [], lastT = 0;
   var fluidSel = document.getElementById('fluid');
   Object.keys(FLUIDS).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=FLUIDS[k].label+' — ν '+FLUIDS[k].nu.toExponential(2)+' m²/s'; fluidSel.appendChild(o); });
@@ -650,6 +773,7 @@ import { createView } from "./src/view.js";
     b.init=function(o){ w.postMessage({type:'init', opts:o}); };
     b.flow=function(u,nu){ w.postMessage({type:'flow', u:u, nu:nu}); };
     b.disturb=function(m){ w.postMessage({type:'disturb', mode:m}); };
+    b.pulse=function(p){ w.postMessage({type:'pulse', pulse:p}); };
     b.reset=function(){ w.postMessage({type:'reset'}); };
     b.run=function(on){ w.postMessage({type:'run', on:on}); };
     b.step=function(n){ w.postMessage({type:'step', n:n}); };
@@ -666,9 +790,9 @@ import { createView } from "./src/view.js";
       S=g; cycles=0; k=8;
       var Nx=S.Nx, Ny=S.Ny, Nz=S.Nz, idx=function(x,y,z){ return x+Nx*(y+Ny*z); }, NONE=0xffffffff;
       // cross-sections for the pressure drop, the wake axis, the axis-plane slice, a downsampled field
-      var pa=Math.max(1,Math.round(S.sx-2*S.R)), pb=Math.min(Nx-2,Math.round(S.sx+4*S.R)), planes=[], na=0;
+      var pa=Math.max(1,Math.round(S.sx-2*S.R)), pb=Math.min(S.cpu.spongeX-2,Math.round(S.xRear-S.r+4*S.R)), planes=[], na=0;
       [pa,pb].forEach(function(x,j){ for (var z=0;z<Nz;z++) for (var y=0;y<Ny;y++){ var n=idx(x,y,z); if(!S.solid[n]){ planes.push(n); if(!j) na++; } } });
-      var ay=Math.round(S.cy), az=Math.round(S.cz), ax0=Math.ceil(S.sx+S.r), axis=[];
+      var ay=Math.round(S.cy), az=Math.round(S.cz), ax0=Math.ceil(S.xRear), axis=[];
       for (var x=ax0;x<Nx-1;x++) axis.push(idx(x,ay,az));
       var slice=new Uint32Array(Nx*Ny);
       for (var yy=0;yy<Ny;yy++) for (var xx=0;xx<Nx;xx++){ var nn=idx(xx,yy,az); slice[xx+Nx*yy]=S.solid[nn]?NONE:nn; }
@@ -676,7 +800,7 @@ import { createView } from "./src/view.js";
       for (var z2=0;z2<fz;z2++) for (var y2=0;y2<fy;y2++) for (var x2=0;x2<fx;x2++){ var n2=idx(Math.min(Nx-1,x2*st),Math.min(Ny-1,y2*st),Math.min(Nz-1,z2*st)); field[x2+fx*(y2+fy*z2)]=S.solid[n2]?NONE:n2; }
       S.gatherer('planes', planes); S.gatherer('axis', axis); S.gatherer('slice', slice); S.gatherer('field', field);
       meta={pa:pa, pb:pb, na:na, nb:planes.length-na, ax0:ax0, st:st, fx:fx, fy:fy, fz:fz};
-      onGeometry({Nx:Nx, Ny:Ny, Nz:Nz, R:S.R, cy:S.cy, cz:S.cz, sx:S.sx, r:S.r, solid:S.solid});
+      onGeometry({Nx:Nx, Ny:Ny, Nz:Nz, R:S.R, cy:S.cy, cz:S.cz, sx:S.sx, r:S.r, xRear:S.xRear, body:S.bodyInfo(), solid:S.solid});
       await frame();
       if (running) pump();
     };
@@ -691,7 +815,7 @@ import { createView } from "./src/view.js";
       for (var j=m.na;j<m.na+m.nb;j++) rb+=r.planes[4*j];
       var last=-1, ua=0, ub=0;
       for (var q=0;q<r.axis.length/4;q++){ var ux=r.axis[4*q+1]; if (r.axis[4*q]===0) continue; if (ux<0){ last=q; ua=ux; } else if (last>=0){ ub=ux; break; } }
-      var rec = last<0 ? 0 : Math.max(0, m.ax0+last+(ub!==ua?-ua/(ub-ua):0) - (S.sx+S.r));
+      var rec = last<0 ? 0 : Math.max(0, m.ax0+last+(ub!==ua?-ua/(ub-ua):0) - S.xRear);
       var Nx=S.Nx, Ny=S.Ny, sl={ux:new Float32Array(Nx*Ny), uy:new Float32Array(Nx*Ny), rho:new Float32Array(Nx*Ny)};
       for (var k2=0;k2<Nx*Ny;k2++){ sl.rho[k2]=r.slice[4*k2]; sl.ux[k2]=r.slice[4*k2+1]; sl.uy[k2]=r.slice[4*k2+2]; }
       var nf=m.fx*m.fy*m.fz, fd={ux:new Float32Array(nf), uy:new Float32Array(nf), uz:new Float32Array(nf), rho:new Float32Array(nf), s:m.st, nx:m.fx, ny:m.fy, nz:m.fz};
@@ -719,6 +843,7 @@ import { createView } from "./src/view.js";
     b.step=function(n){ if (S){ S.step(n); frame(); } };
     b.flow=function(u,nu){ if (S) S.setFlow(u,nu); };
     b.disturb=function(m){ if (S) S.disturb=m; };
+    b.pulse=function(p){ if (S) S.setPulse(p); };
     b.reset=function(){ if (S){ S.reset(); frame(); } };
     b.dispose=function(){ gen++; running=false; if (S){ S.destroy(); S=null; } };
     return b;
@@ -726,6 +851,8 @@ import { createView } from "./src/view.js";
   function onGeometry(m){ G=m; buildScene(); }
   function onFrame(m){
     F=m;
+    // time going backwards means the solver was reset: drop what came before
+    if (m.samples.length && series.length && m.samples[0][0] < series[series.length-1][0]) series = [];
     for (var i=0;i<m.samples.length;i++) series.push(m.samples[i]);
     if (series.length > 20000) series.splice(0, series.length - 20000);
     document.getElementById('hud-sps').textContent = Math.round(m.stepsPerSec||0);
@@ -737,13 +864,15 @@ import { createView } from "./src/view.js";
     L = TF.caseToLattice(caseOf());
     var tc = tubeCells();
     series = []; lastT = 0; F = null;
-    backend.init({R:tc/2, length:Math.round(tc*4.5), ratio:state.ratio, sphereX:0.3, mode:state.frame, u:L.u, nu:L.nu, disturbance:state.disturb});
+    backend.init({R:tc/2, length:Math.round(tc*4.5), ratio:state.ratio, sphereX:0.3, mode:state.frame, u:L.u, nu:L.nu, disturbance:state.disturb,
+                  body:bodySpec(), inflow:state.frame==='pipe' ? state.inflow : 'uniform', pulse:pulseSpec()});
     if (state.running) backend.run(true);
     showCase();
   }
   function retune(){                       // speed/fluid/tube change: same grid, new lattice speed & viscosity
     L = TF.caseToLattice(caseOf());
     backend.flow(L.u, L.nu);
+    if (state.inflow==='pulsatile' && backend.pulse) backend.pulse(pulseSpec());
     series = [];
     showCase();
   }
@@ -759,7 +888,9 @@ import { createView } from "./src/view.js";
     speedNum.value = +state.speed.toPrecision(4);
     speedEl.value = sliderFromSpeed(state.speed);
     document.getElementById('ratio-val').textContent = Math.round(state.ratio*100)+'% of tube · '+(state.ratio*state.tubeMM).toPrecision(3)+' mm';
-    document.getElementById('speed-name').textContent = state.frame === 'pipe' ? 'Centre-line speed' : 'Sphere speed';
+    document.getElementById('ratio-name').textContent = state.body==='sphere' ? 'Sphere diameter' : state.body==='bar' ? 'Bar diameter' : 'Body width';
+    document.getElementById('speed-name').textContent = state.frame !== 'pipe' ? 'Body speed' : state.inflow==='uniform' ? 'Inflow speed' : state.inflow==='pulsatile' ? 'Mean centre-line speed' : 'Centre-line speed';
+    showPulse();
     document.getElementById('hud-re').textContent = re<10 ? re.toFixed(2) : Math.round(re).toLocaleString('en-US');
     document.getElementById('hud-resim-line').hidden = L.resolved;
     document.getElementById('hud-resim').textContent = 'Re '+Math.round(L.ReSim);
@@ -787,12 +918,75 @@ import { createView } from "./src/view.js";
     document.querySelectorAll('#frame .btn').forEach(function(x){ x.classList.toggle('active', x===b); });
     state.frame=b.getAttribute('data-frame'); buildSim(); }); });
   document.getElementById('disturb').addEventListener('change', function(e){ state.disturb=e.target.value; backend.disturb(state.disturb); });
-  document.querySelectorAll('[data-re]').forEach(function(b){ b.addEventListener('click', function(){
-    var t=b.getAttribute('data-re'), c=caseOf(), d=c.ratio*c.tubeDiameter;
-    var re = t==='max' ? Math.floor(TF.caseToLattice(c).ReMax) : +t;
+  function applyRe(re){
+    var c=caseOf(), d=c.ratio*c.tubeDiameter;
     state.speed = Math.min(SP_MAX, Math.max(SP_MIN, re*c.nu/d));
-    retune(); backend.reset(); series=[];
+    retune(); backend.reset(); series=[]; view.frameReset();
+  }
+  document.querySelectorAll('[data-re]').forEach(function(b){ b.addEventListener('click', function(){
+    var t=b.getAttribute('data-re');
+    applyRe(t==='max' ? Math.floor(TF.caseToLattice(caseOf()).ReMax) : +t);
   }); });
+
+  // ------------------------------------------------------------------ body and inflow (v5)
+  function bodySpec(){
+    var b={shape:state.body};
+    if (state.body==='ellipsoid' || state.body==='cylinder') b.aspect=state.aspect;
+    if (state.body==='mesh'){ if (!state.stl) return {shape:'sphere'}; b.mesh=state.stl; b.axis=state.stlAxis; }
+    return b;
+  }
+  // pulse period in lattice steps for the chosen Womersley number α = R·√(ω/ν)
+  function pulseSpec(){
+    if (state.frame!=='pipe' || state.inflow!=='pulsatile' || !L) return null;
+    var R=tubeCells()/2; return {amp:state.pulseAmp, period:2*Math.PI*R*R/(state.womersley*state.womersley*L.nu)};
+  }
+  function showPulse(){
+    document.getElementById('inflow-row').hidden = state.frame!=='pipe';
+    document.getElementById('pulse-opts').hidden = state.frame!=='pipe' || state.inflow!=='pulsatile';
+    var f=FLUIDS[state.fluid], R=state.tubeMM/2000, T=2*Math.PI*R*R/(state.womersley*state.womersley*f.nu);
+    document.getElementById('pamp-val').textContent=Math.round(state.pulseAmp*100)+'%';
+    document.getElementById('wom-val').textContent=state.womersley.toFixed(1);
+    document.getElementById('pulse-note').textContent='period '+fmtSI(T,'s')+' ('+fmtSI(1/T,'Hz')+')'+(L ? ' · '+Math.round(T/L.dt).toLocaleString('en-US')+' steps' : '')+
+      (state.womersley<1 ? ' · quasi-steady: the profile stays parabolic' : state.womersley>6 ? ' · inertial: flat core, thin oscillating wall layers' : '');
+  }
+  var aspectFrom=function(v){ return 0.25*Math.pow(16, v/100); }, aspectTo=function(a){ return Math.round(100*Math.log(a/0.25)/Math.log(16)); };
+  var womFrom=function(v){ return 0.5*Math.pow(30, v/100); }, womTo=function(a){ return Math.round(100*Math.log(a/0.5)/Math.log(30)); };
+  function syncBodyUI(){
+    document.getElementById('body').value=state.body;
+    document.getElementById('aspect-row').hidden = !(state.body==='ellipsoid' || state.body==='cylinder');
+    document.getElementById('aspect').value=aspectTo(state.aspect);
+    document.getElementById('aspect-val').textContent=state.aspect.toFixed(2);
+    document.getElementById('stl-row').hidden = state.body!=='mesh';
+    document.getElementById('stl-axis').value=state.stlAxis;
+  }
+  document.getElementById('body').addEventListener('change', function(e){
+    state.body=e.target.value; syncBodyUI();
+    if (state.body==='mesh' && !state.stl){ document.getElementById('stl-note').textContent='Choose an STL file: until then the body stays a sphere.'; }
+    buildSim();
+  });
+  var aspectEl=document.getElementById('aspect');
+  aspectEl.addEventListener('input', function(){ state.aspect=aspectFrom(+aspectEl.value); document.getElementById('aspect-val').textContent=state.aspect.toFixed(2); });
+  aspectEl.addEventListener('change', function(){ buildSim(); });
+  document.getElementById('stl-axis').addEventListener('change', function(e){ state.stlAxis=e.target.value; if (state.stl) buildSim(); });
+  document.getElementById('stl-file').addEventListener('change', function(e){
+    var file=e.target.files[0], note=document.getElementById('stl-note'); if (!file) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try {
+        var tris=TF.parseSTL(rd.result), n=tris.length/9;
+        if (n>400000) throw new Error('too many triangles ('+n.toLocaleString('en-US')+'; up to 400,000)');
+        for (var i=0;i<tris.length;i++) if (!isFinite(tris[i])) throw new Error('the file has invalid coordinates');
+        state.stl=tris; state.stlName=file.name;
+        note.className='note'; note.textContent=file.name+' · '+n.toLocaleString('en-US')+' triangles';
+        buildSim();
+      } catch(err){ note.className='note warn'; note.textContent='Could not read '+file.name+': '+err.message; }
+    };
+    rd.readAsArrayBuffer(file);
+  });
+  document.getElementById('inflow').addEventListener('change', function(e){ state.inflow=e.target.value; buildSim(); });
+  var pampEl=document.getElementById('pamp'), womEl=document.getElementById('wom');
+  pampEl.addEventListener('input', function(){ state.pulseAmp=+pampEl.value/100; showPulse(); if (backend.pulse) backend.pulse(pulseSpec()); });
+  womEl.addEventListener('input', function(){ state.womersley=womFrom(+womEl.value); showPulse(); if (backend.pulse) backend.pulse(pulseSpec()); });
 
   // ------------------------------------------------------------------ playback
   var statusPill=document.getElementById('status-pill'), btnPlay=document.getElementById('btn-play');
@@ -805,7 +999,16 @@ import { createView } from "./src/view.js";
   var view = createView(document.getElementById('stage'));
   var captionEl=document.querySelector('.caption span'), CAPTION=captionEl.textContent;
   view.onCaption = function(slow){ captionEl.textContent = slow ? 'Drawing slowed down on this device so the solver keeps full speed · drag to orbit · scroll to zoom' : CAPTION; };
-  function buildScene(){ view.setGeometry(G); view.resize(); document.getElementById('hud-grid').textContent=G.Nx+'×'+G.Ny+'×'+G.Nz+' · sphere '+(2*G.r).toFixed(1)+' cells'; }
+  function buildScene(){
+    view.setGeometry(G); view.resize();
+    var B=G.body, nm=B ? SHAPES[B.shape].toLowerCase() : 'sphere';
+    document.getElementById('hud-grid').textContent=G.Nx+'×'+G.Ny+'×'+G.Nz+' · '+nm+' '+(2*G.r).toFixed(1)+' cells';
+    if (B && B.shape==='mesh'){
+      var note=document.getElementById('stl-note');
+      if (B.leaky>0.01){ note.className='note warn'; note.textContent=state.stlName+': the mesh has gaps ('+(B.leaky*100).toFixed(0)+'% of lines through it cross it an odd number of times): the body may come out ragged. Close the mesh for a clean result.'; }
+      else { note.className='note'; note.textContent=state.stlName+' · '+(B.tris.length/9).toLocaleString('en-US')+' triangles · length/width '+B.aspect.toFixed(2)+' · watertight'; }
+    }
+  }
   document.getElementById('btn-reset-view').addEventListener('click', function(){ view.resetView(); });
   function resetParticles(){ view.frameReset(); }
   var legend=document.getElementById('legend');
@@ -847,7 +1050,8 @@ import { createView } from "./src/view.js";
 
   // ------------------------------------------------------------------ measurements
   // sample = [t, Fx, Fy, Fz, Δρ, recirculation, mass, a, b] in lattice units
-  function coeffScale(){ return 0.5 * L.u * L.u * Math.PI * Math.pow(G.r, 2); }       // ½ρU²·A, lattice (ρ = 1)
+  function frontArea(){ return G.body && G.body.area ? G.body.area : Math.PI * G.r * G.r; }   // cells²
+  function coeffScale(){ return 0.5 * L.u * L.u * frontArea(); }       // ½ρU²·A, lattice (ρ = 1), A = frontal area
   function stats(){
     if (!G || !series.length || !G.r) return null;
     var ft = G.Nx / L.u;                                   // steps per flow-through
@@ -885,6 +1089,7 @@ import { createView } from "./src/view.js";
     // start-up disturbance has had three flow-throughs to die out
     var oscillating = isFinite(st) && clr > 0.004*Math.abs(cd);
     var regime = !prev.length ? 'settling' : (oscillating && t/ft >= 3) ? 'unsteady' : settled && !oscillating ? 'steady' : 'settling';
+    if (state.frame==='pipe' && state.inflow==='pulsatile' && state.pulseAmp>0) regime = t/ft >= 2 ? 'unsteady' : 'settling';
     var massChange = win.length > 1 ? win[win.length-1][6]/win[0][6] - 1 : 0;
     var clMean = Math.hypot(my, mz) / q;
     return { st2:st2, clMean:clMean, massChange:massChange, tw:tw, t:t, ft:t/ft, cd:cd, cdPrev:cdPrev, clr:clr, st:st, settled:settled, rec:rec, dp:last[4]/3, fx:mean(win,1), regime:regime, a:last[7], b:last[8] };
@@ -904,23 +1109,29 @@ import { createView } from "./src/view.js";
     badge.className='regime-badge '+S.regime;
     // a steady wake can lose its axial symmetry (steady oblique wake with a constant side force)
     var asym = S.clMean > 0.01 && S.clMean > 0.05 * Math.abs(S.cd);
-    badge.textContent = S.regime==='settling' ? 'settling — '+(S.t/S.tw).toFixed(1)+' settling times' : S.regime==='steady' ? (asym ? 'steady · asymmetric wake' : S.rec>0.02 ? 'steady · separated wake' : 'steady · attached flow') : 'unsteady wake';
+    var pulsing = state.frame==='pipe' && state.inflow==='pulsatile' && state.pulseAmp>0;
+    badge.textContent = S.regime==='settling' ? 'settling — '+(S.t/S.tw).toFixed(1)+' settling times' : S.regime==='steady' ? (asym ? 'steady · asymmetric wake' : S.rec>0.02 ? 'steady · separated wake' : 'steady · attached flow') : pulsing ? 'pulsatile · forced' : 'unsteady wake';
     var dot=document.getElementById('regime-dot'), lbl=document.getElementById('regime-label');
     lbl.textContent = badge.textContent; dot.style.background = S.regime==='unsteady' ? '#7dd3fc' : S.regime==='steady' ? '#3ddc97' : '#ffcf4a';
     var h = '';
-    h += tile('Drag force', fmtSI(Freal,'N'), L.resolved ? 'on the sphere, '+(state.frame==='pipe'?'in pipe flow':'moving') : 'at the simulated Re');
-    h += tile('Drag coefficient C_d', S.cd.toPrecision(3), 'F / (½ρU²·πd²/4)'+(S.settled?'':' · settling'));
+    var bn = G.body ? SHAPES[G.body.shape].toLowerCase() : 'sphere';
+    h += tile('Drag force', fmtSI(Freal,'N'), L.resolved ? (pulsing ? 'mean ' : '')+'on the '+bn+', '+(state.frame==='pipe'?'in pipe flow':'moving') : 'at the simulated Re');
+    h += tile('Drag coefficient C_d', S.cd.toPrecision(3), (bn==='sphere' ? 'F / (½ρU²·πd²/4)' : 'F / (½ρU²·A), A = frontal area')+(S.settled?'':' · settling'));
     h += tile('Lift C_l', S.clMean < 1e-4 ? '≈ 0' : S.clMean.toPrecision(2), (S.clr < 0.01*Math.abs(S.cd) ? 'steady' : 'oscillating, rms '+S.clr.toPrecision(2)) + (S.clMean > 0.01 ? ' · wake leans to one side' : ' · symmetric'));
     var stTxt = isFinite(S.st) ? S.st.toFixed(3) + (isFinite(S.st2) ? ' · ' + S.st2.toFixed(3) : '') : '—';
     h += tile('Strouhal St', stTxt, isFinite(S.st) ? 'f·d/U, f = '+fmtSI(S.st*Ureal/d,'Hz') + (isFinite(S.st2) ? ' (two peaks: shedding and a slower wandering)' : '') : 'no oscillation');
-    h += tile('Recirculation', S.rec>0.005 ? (S.rec).toFixed(2)+' d' : 'none', S.rec>0.005 ? fmtSI(S.rec*d,'m')+' behind the sphere' : 'flow stays attached');
-    h += tile('Pressure drop', fmtSI(dpReal,'Pa'), 'across the sphere ('+((S.b-S.a)/(2*G.R)).toFixed(1)+' tube Ø)');
+    h += tile('Recirculation', S.rec>0.005 ? (S.rec).toFixed(2)+' d' : 'none', S.rec>0.005 ? fmtSI(S.rec*d,'m')+' behind the '+bn : 'flow stays attached');
+    h += tile('Pressure drop', fmtSI(dpReal,'Pa'), 'across the '+bn+' ('+((S.b-S.a)/(2*G.R)).toFixed(1)+' tube Ø)');
     h += tile('Mass balance', (S.massChange*100).toExponential(1)+' %', 'change over the last window — no corrections applied');
     document.getElementById('tiles').innerHTML = h;
     drawChart();
+    sweepTick(S);
     // references
     var ref = '', Re = L.ReSim;
-    if (state.frame==='moving' && Re < 1){
+    if (G.body && G.body.shape!=='sphere'){
+      ref = '<b>Reference:</b> there is no closed-form drag law for this shape in a tube — compare it with a sphere of the same width with <b>Save run</b>, or run a <b>Reynolds sweep</b>.'+
+            (state.frame==='pipe' && state.inflow==='pulsatile' ? ' With a pulsatile inflow the coefficients are averages over the pulse.' : '');
+    } else if (state.frame==='moving' && Re < 1){
       var lam=state.ratio, K=(1-0.75857*Math.pow(lam,5))/(1-2.1050*lam+2.0865*Math.pow(lam,3)-1.7068*Math.pow(lam,5)+0.72603*Math.pow(lam,6));
       var Fst = 6*Math.PI*FLUIDS[state.fluid].nu*FLUIDS[state.fluid].rho*(d/2)*Ureal*K;
       ref = '<b>Reference:</b> Stokes drag with the Haberman–Sayre wall correction K(λ = '+lam.toFixed(2)+') = '+K.toFixed(3)+' gives '+fmtSI(Fst,'N')+
@@ -951,13 +1162,220 @@ import { createView } from "./src/view.js";
     if (!series.length) return;
     var q=coeffScale(), rows=['time_s,step,drag_N,lift_y_N,lift_z_N,Cd,Cl_y,Cl_z,pressure_drop_Pa,recirculation_over_d'];
     series.forEach(function(s){ rows.push([(s[0]*L.dt).toPrecision(6), s[0], (s[1]*L.forceScale).toPrecision(6), (s[2]*L.forceScale).toPrecision(6), (s[3]*L.forceScale).toPrecision(6), (s[1]/q).toPrecision(6), (s[2]/q).toPrecision(6), (s[3]/q).toPrecision(6), (s[4]/3*L.pressureScale).toPrecision(6), (s[5]/(2*G.r)).toPrecision(4)].join(',')); });
-    var meta='# Tube Flow v'+APP_VERSION+' · '+FLUIDS[state.fluid].label+' · tube '+state.tubeMM+' mm · sphere '+Math.round(state.ratio*100)+'% · '+state.frame+' · U '+state.speed+' m/s · Re '+L.Re.toPrecision(4)+' (simulated '+L.ReSim.toPrecision(4)+') · grid '+G.Nx+'x'+G.Ny+'x'+G.Nz;
+    var meta='# Tube Flow v'+APP_VERSION+' · '+FLUIDS[state.fluid].label+' · tube '+state.tubeMM+' mm · '+caseLabel()+' · U '+state.speed+' m/s · Re '+L.Re.toPrecision(4)+' (simulated '+L.ReSim.toPrecision(4)+') · grid '+G.Nx+'x'+G.Ny+'x'+G.Nz;
     var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([meta+'\n'+rows.join('\n')],{type:'text/csv'})); a.download='tube-flow-measurements.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   });
 
+  // ------------------------------------------------------------------ workbench: exports, saved runs, sweeps (v5)
+  function download(name, blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
+  function caseLabel(){
+    var b = SHAPES[state.body==='mesh' && !state.stl ? 'sphere' : state.body] + (state.body==='mesh' && state.stlName ? ' ('+state.stlName+')' : '') + ((state.body==='ellipsoid'||state.body==='cylinder') ? ' '+state.aspect.toFixed(1)+':1' : '');
+    var re = L.ReSim<10 ? L.ReSim.toFixed(2) : Math.round(L.ReSim);
+    return b+' '+Math.round(state.ratio*100)+'% · Re '+re+' · '+(state.frame==='pipe' ? state.inflow : 'moving');
+  }
+  function caseState(){
+    var c={}; ['fluid','tubeMM','ratio','speed','frame','body','aspect','stlName','stlAxis','inflow','pulseAmp','womersley','disturb','res'].forEach(function(k){ c[k]=state[k]; });
+    c.backend=backend.kind; return c;
+  }
+  function snapshot(){
+    var S=stats(); if (!S) return null;
+    var ft=G.Nx/L.u, q=coeffScale(), t1=series[series.length-1][0], pts=series.filter(function(x){ return x[0]>=t1-6*ft; }), every=Math.max(1, Math.ceil(pts.length/400));
+    var c=caseOf(), d=c.ratio*c.tubeDiameter;
+    return { id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), name:caseLabel(), savedAt:new Date().toISOString(), app:'Tube Flow v'+APP_VERSION,
+      case:caseState(), grid:{Nx:G.Nx, Ny:G.Ny, Nz:G.Nz, bodyWidthCells:+(2*G.r).toFixed(2), frontalAreaCells:+frontArea().toFixed(2)},
+      lattice:{Re:L.Re, ReSim:L.ReSim, resolved:L.resolved, u:L.u, nu:L.nu, tau:L.tau, mach:L.mach, dx_m:L.dx, dt_s:L.dt},
+      results:{regime:S.regime, settled:S.settled, flowThroughs:+S.ft.toFixed(2), Cd:S.cd, Cl_mean:S.clMean, Cl_rms:S.clr, St:isFinite(S.st)?S.st:null, St2:isFinite(S.st2)?S.st2:null,
+               recirculation_over_d:S.rec, drag_N:S.fx*L.forceScale, pressure_drop_Pa:S.dp*L.pressureScale, width_m:d},
+      trace:pts.filter(function(x,i){ return i%every===0; }).map(function(x){ return [+(x[0]/ft).toFixed(4), +(x[1]/q).toPrecision(5), +(x[2]/q).toPrecision(5), +(x[3]/q).toPrecision(5)]; }) };
+  }
+  document.getElementById('btn-json').addEventListener('click', function(){
+    var snap=snapshot(); if (!snap) return;
+    var q=coeffScale();
+    snap.series={columns:['time_s','drag_N','lift_y_N','lift_z_N','Cd','Cl_y','Cl_z','pressure_drop_Pa','recirculation_over_d'],
+      rows:series.map(function(x){ return [x[0]*L.dt, x[1]*L.forceScale, x[2]*L.forceScale, x[3]*L.forceScale, x[1]/q, x[2]/q, x[3]/q, x[4]/3*L.pressureScale, x[5]/(2*G.r)]; })};
+    download('tube-flow-run.json', new Blob([JSON.stringify(snap, null, 1)], {type:'application/json'}));
+  });
+  // legacy VTK (binary, big-endian), structured points: velocity (m/s), gauge pressure (Pa), solid mask — opens in ParaView
+  function vtkBlob(){
+    if (!F || !F.field || !G) return null;
+    var Fd=F.field, nx=Fd.nx, ny=Fd.ny, nz=Fd.nz, n=nx*ny*nz, s=Fd.s, h=s*L.dx, us=L.dx/L.dt;
+    var vel=new DataView(new ArrayBuffer(12*n)), pr=new DataView(new ArrayBuffer(4*n)), sol=new Uint8Array(n);
+    for (var z=0, k=0; z<nz; z++) for (var y=0; y<ny; y++) for (var x=0; x<nx; x++, k++){
+      var ln=Math.min(G.Nx-1,x*s)+G.Nx*(Math.min(G.Ny-1,y*s)+G.Ny*Math.min(G.Nz-1,z*s)), solid=G.solid[ln]===1 || !(Fd.rho[k]>0);
+      sol[k]=solid?1:0;
+      vel.setFloat32(12*k, solid?0:Fd.ux[k]*us); vel.setFloat32(12*k+4, solid?0:Fd.uy[k]*us); vel.setFloat32(12*k+8, solid?0:Fd.uz[k]*us);
+      pr.setFloat32(4*k, solid?0:(Fd.rho[k]-1)/3*L.pressureScale);
+    }
+    var head='# vtk DataFile Version 3.0\nTube Flow v'+APP_VERSION+' '+caseLabel().replace(/[^\x20-\x7e]/g,'-')+' t='+(F.t*L.dt).toPrecision(5)+'s\nBINARY\nDATASET STRUCTURED_POINTS\nDIMENSIONS '+nx+' '+ny+' '+nz+'\nORIGIN 0 '+(-G.cy*L.dx)+' '+(-G.cz*L.dx)+'\nSPACING '+h+' '+h+' '+h+'\nPOINT_DATA '+n+'\nVECTORS velocity float\n';
+    return new Blob([head, vel.buffer, '\nSCALARS pressure float 1\nLOOKUP_TABLE default\n', pr.buffer, '\nSCALARS solid unsigned_char 1\nLOOKUP_TABLE default\n', sol, '\n'], {type:'application/octet-stream'});
+  }
+  document.getElementById('btn-vtk').addEventListener('click', function(){ var b=vtkBlob(); if (b) download('tube-flow-field.vtk', b); });
+
+  // saved runs: this browser's storage when it's available (and always in memory for this visit)
+  var RUNS_KEY='tubeflow.runs.v1', runs=[], compareIds={}, PAL=['#7be0c4','#ffcf4a','#7dd3fc','#ff8fa3','#c4a7ff','#9be37a'];
+  try { runs=JSON.parse(localStorage.getItem(RUNS_KEY)||'[]'); if (!Array.isArray(runs)) runs=[]; } catch(e){ runs=[]; }
+  function storeRuns(){ try { localStorage.setItem(RUNS_KEY, JSON.stringify(runs)); } catch(e){} }
+  function esc(t){ return String(t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function renderRuns(){
+    var box=document.getElementById('runs-list');
+    if (!runs.length){ box.innerHTML='<div class="note">No saved runs yet: press <b>Save run</b> once a case has settled.</div>'; document.getElementById('compare').hidden=true; return; }
+    var ci=0;
+    box.innerHTML=runs.map(function(r){
+      var on=!!compareIds[r.id], col=on?PAL[(ci++)%PAL.length]:'transparent';
+      return '<div class="run-row" data-id="'+r.id+'"><input type="checkbox" '+(on?'checked':'')+' aria-label="Compare this run"><span class="sw" style="background:'+col+'"></span><span class="nm" title="'+esc(r.name)+'">'+esc(r.name)+'</span>'+
+        '<span class="dt">C_d '+(+r.results.Cd).toPrecision(3)+'</span><button type="button" data-act="load" title="Set up this case again">load</button><button type="button" data-act="del" title="Delete">×</button></div>';
+    }).join('');
+    box.querySelectorAll('.run-row').forEach(function(row){
+      var id=row.getAttribute('data-id');
+      row.querySelector('input').addEventListener('change', function(e){ if (e.target.checked) compareIds[id]=1; else delete compareIds[id]; renderRuns(); });
+      row.querySelector('[data-act=del]').addEventListener('click', function(){ runs=runs.filter(function(r){ return r.id!==id; }); delete compareIds[id]; storeRuns(); renderRuns(); });
+      row.querySelector('[data-act=load]').addEventListener('click', function(){ loadRun(runs.filter(function(r){ return r.id===id; })[0]); });
+    });
+    renderCompare();
+  }
+  function renderCompare(){
+    var sel=runs.filter(function(r){ return compareIds[r.id]; }), box=document.getElementById('compare');
+    box.hidden=!sel.length; if (!sel.length) return;
+    var f=function(v,p){ return v===null || v===undefined || !isFinite(v) ? '—' : (+v).toPrecision(p||3); };
+    var rows=[['Case',function(r){ return esc(r.name); }],['Fluid · tube',function(r){ return esc(FLUIDS[r.case.fluid] ? FLUIDS[r.case.fluid].label : r.case.fluid)+' · '+r.case.tubeMM+' mm'; }],
+      ['Re (simulated)',function(r){ return f(r.lattice.ReSim,4); }],['Grid',function(r){ return r.grid.Nx+'×'+r.grid.Ny+'×'+r.grid.Nz+' · '+r.case.backend; }],
+      ['Regime',function(r){ return esc(r.results.regime); }],['C_d',function(r){ return f(r.results.Cd,4); }],['C_l mean · rms',function(r){ return f(r.results.Cl_mean,2)+' · '+f(r.results.Cl_rms,2); }],
+      ['St',function(r){ return f(r.results.St,3); }],['Wake L/d',function(r){ return f(r.results.recirculation_over_d,3); }],
+      ['Drag',function(r){ return fmtSI(r.results.drag_N,'N'); }],['Pressure drop',function(r){ return fmtSI(r.results.pressure_drop_Pa,'Pa'); }]];
+    document.getElementById('cmp-table').innerHTML='<tr><th></th>'+sel.map(function(r,i){ return '<th style="color:'+PAL[i%PAL.length]+'">run '+(i+1)+'</th>'; }).join('')+'</tr>'+
+      rows.map(function(rw){ return '<tr><td>'+rw[0]+'</td>'+sel.map(function(r){ return '<td>'+rw[1](r)+'</td>'; }).join('')+'</tr>'; }).join('');
+    // drag coefficient traces against flow-throughs (each from its own last few flow-throughs)
+    var cv=document.getElementById('cmp-chart'), g=cv.getContext('2d'), Wd=cv.width, Ht=cv.height; g.clearRect(0,0,Wd,Ht);
+    var tr=sel.map(function(r){ var t=r.trace||[]; var t0=t.length?t[0][0]:0; return t.map(function(p){ return [p[0]-t0, p[1]]; }); });
+    var all=[].concat.apply([], tr); if (!all.length) return;
+    var xmax=Math.max.apply(null, all.map(function(p){ return p[0]; }))||1, lo=Math.min(0, Math.min.apply(null, all.map(function(p){ return p[1]; }))), hi=Math.max.apply(null, all.map(function(p){ return p[1]; }))*1.1+1e-9;
+    var X=function(x){ return 46+x/xmax*(Wd-60); }, Y=function(v){ return Ht-24-(v-lo)/(hi-lo)*(Ht-36); };
+    g.font='12px IBM Plex Mono, monospace'; g.fillStyle='#6fa8c9'; g.fillText(hi.toPrecision(2),4,16); g.fillText(lo.toPrecision(2),4,Ht-26); g.fillText('C_d over the last '+xmax.toFixed(1)+' flow-throughs of each run', 50, Ht-6);
+    tr.forEach(function(t,i){ g.strokeStyle=PAL[i%PAL.length]; g.lineWidth=2; g.beginPath(); t.forEach(function(p,j){ if (j) g.lineTo(X(p[0]),Y(p[1])); else g.moveTo(X(p[0]),Y(p[1])); }); g.stroke(); });
+  }
+  function syncCaseUI(){
+    fluidSel.value=state.fluid; document.getElementById('tube').value=state.tubeMM; ratioEl.value=Math.round(state.ratio*100);
+    document.querySelectorAll('#frame .btn').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-frame')===state.frame); });
+    document.getElementById('inflow').value=state.inflow; pampEl.value=Math.round(state.pulseAmp*100); womEl.value=womTo(state.womersley);
+    document.getElementById('disturb').value=state.disturb; syncBodyUI();
+  }
+  function loadRun(r){
+    if (!r) return;
+    var c=r.case;
+    ['fluid','tubeMM','ratio','speed','frame','body','aspect','stlAxis','inflow','pulseAmp','womersley','disturb'].forEach(function(k){ if (c[k]!==undefined) state[k]=c[k]; });
+    if (state.body==='mesh' && (!state.stl || state.stlName!==c.stlName)){
+      var note=document.getElementById('stl-note'); note.className='note warn'; note.textContent='This run used '+(c.stlName||'an STL file')+': choose that file to load its shape (showing a sphere meanwhile).';
+      state.stl=null;
+    }
+    if (backend.disturb) backend.disturb(state.disturb);
+    syncCaseUI(); buildSim();
+  }
+  document.getElementById('btn-save').addEventListener('click', function(){
+    var snap=snapshot(); if (!snap) return;
+    runs.unshift(snap); if (runs.length>60) runs.length=60; compareIds[snap.id]=1; storeRuns(); renderRuns();
+  });
+  document.getElementById('runs-export').addEventListener('click', function(){ download('tube-flow-runs.json', new Blob([JSON.stringify({app:'Tube Flow v'+APP_VERSION, runs:runs}, null, 1)], {type:'application/json'})); });
+  document.getElementById('runs-import').addEventListener('change', function(e){
+    var file=e.target.files[0]; if (!file) return;
+    file.text().then(function(t){
+      var d=JSON.parse(t), list=Array.isArray(d) ? d : d.runs ? d.runs : [d];
+      var have={}; runs.forEach(function(r){ have[r.id]=1; });
+      list.forEach(function(r){ if (r && r.id && r.case && r.results && !have[r.id]){ delete r.series; runs.push(r); } });
+      storeRuns(); renderRuns();
+    }).catch(function(err){ alert('Could not import: '+err.message); });
+    e.target.value='';
+  });
+
+  // Reynolds sweep: the current case at several Reynolds numbers, each run until it settles
+  var sweep=null, sweepLast=null;
+  function refCd(Re){
+    var o={};
+    if (G.body && G.body.shape!=='sphere') return o;
+    if (Re<800) o.sn=24/Re*(1+0.15*Math.pow(Re,0.687));
+    if (state.frame==='moving' && Re<2){ var lam=state.ratio; o.hs=24/Re*(1-0.75857*Math.pow(lam,5))/(1-2.1050*lam+2.0865*Math.pow(lam,3)-1.7068*Math.pow(lam,5)+0.72603*Math.pow(lam,6)); }
+    return o;
+  }
+  function startSweep(){
+    if (sweep){ sweep=null; setRunning(false); document.getElementById('sw-run').textContent='Run sweep'; document.getElementById('sweep-status').textContent='Sweep stopped.'; return; }
+    var a=+document.getElementById('sw-from').value, b=+document.getElementById('sw-to').value, n=Math.max(2,Math.min(12,Math.round(+document.getElementById('sw-n').value)||5)), mx=Math.max(2,+document.getElementById('sw-ft').value||6);
+    var lim=Math.floor(TF.caseToLattice(caseOf()).ReMax), note='';
+    if (!(a>0) || !(b>0)) return;
+    if (b<a){ var t=a; a=b; b=t; }
+    if (b>lim){ b=lim; note=' (capped at this grid\'s limit, Re '+lim+')'; }
+    if (a>=b) a=b/10;
+    var list=[]; for (var i=0;i<n;i++) list.push(+(a*Math.pow(b/a, i/(n-1))).toPrecision(3));
+    sweep={list:list, i:0, results:[], maxFt:mx, label:caseLabel().replace(/ · Re [^·]+/,''), frame:state.frame, shape:G.body?G.body.shape:'sphere', note:note};
+    sweepLast=sweep;
+    document.getElementById('sw-run').textContent='Stop sweep';
+    applyRe(list[0]); setRunning(true); renderSweep();
+  }
+  function sweepTick(S){
+    if (!sweep || !S || !series.length) return;
+    var ft=G.Nx/L.u;
+    if (series[0][0] > 0.5*ft) return;                       // samples from before the last reset
+    var done=(S.regime==='steady' && S.settled && S.ft>=2) || S.ft>=sweep.maxFt;
+    if (!done) return;
+    var ref=refCd(L.ReSim);
+    sweep.results.push({Re:L.ReSim, ReCase:L.Re, Cd:S.cd, sn:ref.sn, hs:ref.hs, rec:S.rec, St:isFinite(S.st)?S.st:null, clMean:S.clMean, clr:S.clr, regime:S.regime, settled:S.settled, ft:S.ft});
+    sweep.i++;
+    if (sweep.i>=sweep.list.length){
+      sweep.done=true; sweep=null; setRunning(false);
+      document.getElementById('sw-run').textContent='Run sweep';
+    } else applyRe(sweep.list[sweep.i]);
+    renderSweep();
+  }
+  function renderSweep(){
+    var sw=sweepLast; if (!sw) return;
+    document.getElementById('sweep-status').textContent = (sw.done ? 'Done: ' : 'Running point '+Math.min(sw.i+1, sw.list.length)+' of '+sw.list.length+': ')+sw.label+' at Re '+sw.list.join(', ')+sw.note;
+    document.getElementById('sw-export').disabled=!sw.results.length;
+    var f=function(v,p){ return v===null || v===undefined || !isFinite(v) ? '—' : (+v).toPrecision(p||3); };
+    document.getElementById('sw-table').innerHTML='<tr><th>Re</th><th>C_d</th><th>Schiller–Naumann</th>'+(sw.frame==='moving'?'<th>Stokes·K(λ)</th>':'')+'<th>wake L/d</th><th>St</th><th>C_l mean</th><th>regime</th></tr>'+
+      sw.results.map(function(r){ return '<tr><td>'+f(r.Re,4)+'</td><td>'+f(r.Cd,4)+'</td><td>'+f(r.sn,4)+'</td>'+(sw.frame==='moving'?'<td>'+f(r.hs,4)+'</td>':'')+'<td>'+f(r.rec,3)+'</td><td>'+f(r.St,3)+'</td><td>'+f(r.clMean,2)+'</td><td>'+r.regime+(r.settled||r.regime!=='steady'?'':' (not settled)')+'</td></tr>'; }).join('');
+    drawSweep(sw);
+  }
+  function logAxis(lo, hi){ var t=[]; for (var e=Math.floor(Math.log10(lo)); e<=Math.ceil(Math.log10(hi)); e++) [1,2,5].forEach(function(m){ var v=m*Math.pow(10,e); if (v>=lo*0.999 && v<=hi*1.001) t.push(v); }); return t; }
+  function drawSweep(sw){
+    var res=sw.results, cv=document.getElementById('sw-cd'), g=cv.getContext('2d'), Wd=cv.width, Ht=cv.height; g.clearRect(0,0,Wd,Ht);
+    var ra=Math.min.apply(null, sw.list)/1.4, rb=Math.max.apply(null, sw.list)*1.4;
+    var refs=function(Re){ return refCd.call(null, Re); };
+    var ys=res.map(function(r){ return r.Cd; }).filter(function(v){ return v>0; });
+    for (var k=0;k<=60;k++){ var R=ra*Math.pow(rb/ra,k/60), o=sw.shape==='sphere'?refs(R):{}; if (o.sn) ys.push(o.sn); if (o.hs) ys.push(o.hs); }
+    if (!ys.length) return;
+    var ya=Math.min.apply(null, ys)/1.5, yb=Math.max.apply(null, ys)*1.5;
+    var X=function(v){ return 52+Math.log(v/ra)/Math.log(rb/ra)*(Wd-66); }, Y=function(v){ return Ht-30-Math.log(v/ya)/Math.log(yb/ya)*(Ht-46); };
+    g.font='12px IBM Plex Mono, monospace'; g.strokeStyle='#1d4470'; g.lineWidth=1; g.fillStyle='#6fa8c9';
+    logAxis(ra,rb).forEach(function(v){ g.beginPath(); g.moveTo(X(v),12); g.lineTo(X(v),Ht-30); g.stroke(); g.fillText(String(v), X(v)-8, Ht-14); });
+    logAxis(ya,yb).forEach(function(v){ g.beginPath(); g.moveTo(52,Y(v)); g.lineTo(Wd-14,Y(v)); g.stroke(); g.fillText(v>=1?String(v):v.toPrecision(1), 4, Y(v)+4); });
+    g.fillText('C_d vs Re', Wd-90, 24);
+    var curve=function(key, col, dash){ g.strokeStyle=col; g.setLineDash(dash); g.lineWidth=2; g.beginPath(); var on=false;
+      for (var k=0;k<=120;k++){ var R=ra*Math.pow(rb/ra,k/120), o=refs(R), v=o[key]; if (!v){ on=false; continue; } if (on) g.lineTo(X(R),Y(v)); else { g.moveTo(X(R),Y(v)); on=true; } } g.stroke(); g.setLineDash([]); };
+    if (sw.shape==='sphere'){ curve('sn','#ffcf4a',[6,4]); if (sw.frame==='moving') curve('hs','#7dd3fc',[2,3]); }
+    g.fillStyle='#7be0c4'; res.forEach(function(r){ if (r.Cd>0){ g.beginPath(); g.arc(X(r.Re),Y(r.Cd),4.5,0,7); g.fill(); } });
+    var ly=Ht-50; g.font='11px IBM Plex Mono, monospace';
+    g.fillStyle='#7be0c4'; g.fillText('● simulation (in the tube)', 60, 24);
+    if (sw.shape==='sphere'){ g.fillStyle='#ffcf4a'; g.fillText('-- Schiller–Naumann, open flow', 60, 40); if (sw.frame==='moving'){ g.fillStyle='#7dd3fc'; g.fillText('·· Stokes × Haberman–Sayre wall factor', 60, 56); } }
+    // wake length and Strouhal number
+    var c2=document.getElementById('sw-ld'), h=c2.getContext('2d'); h.clearRect(0,0,Wd,Ht);
+    var lmax=Math.max(0.5, Math.max.apply(null, res.map(function(r){ return r.rec||0; }))*1.2), smax=0.3;
+    var Y2=function(v){ return Ht-30-v/lmax*(Ht-46); }, Y3=function(v){ return Ht-30-v/smax*(Ht-46); };
+    h.font='12px IBM Plex Mono, monospace'; h.strokeStyle='#1d4470'; h.fillStyle='#6fa8c9';
+    logAxis(ra,rb).forEach(function(v){ h.beginPath(); h.moveTo(X(v),12); h.lineTo(X(v),Ht-30); h.stroke(); h.fillText(String(v), X(v)-8, Ht-14); });
+    [0,0.25,0.5,0.75,1].forEach(function(f){ h.fillText((lmax*f).toFixed(2), 4, Y2(lmax*f)+4); h.fillText((smax*f).toFixed(2), Wd-40, Y2(lmax*f)+4); });
+    h.fillStyle='#7be0c4'; h.fillText('● wake length L/d (left)', 60, 24); h.fillStyle='#ff8fa3'; h.fillText('◆ Strouhal number (right)', 60, 40);
+    res.forEach(function(r){ h.fillStyle='#7be0c4'; h.beginPath(); h.arc(X(r.Re),Y2(r.rec||0),4.5,0,7); h.fill(); if (r.St){ h.fillStyle='#ff8fa3'; h.save(); h.translate(X(r.Re),Y3(r.St)); h.rotate(Math.PI/4); h.fillRect(-4,-4,8,8); h.restore(); } });
+  }
+  document.getElementById('sw-run').addEventListener('click', startSweep);
+  document.getElementById('sw-export').addEventListener('click', function(){
+    var sw=sweepLast; if (!sw) return;
+    var rows=['Re_simulated,Re_case,Cd,Cd_SchillerNaumann,Cd_Stokes_HabermanSayre,recirculation_over_d,St,Cl_mean,Cl_rms,regime,flow_throughs'];
+    sw.results.forEach(function(r){ rows.push([r.Re,r.ReCase,r.Cd,r.sn||'',r.hs||'',r.rec,r.St||'',r.clMean,r.clr,r.regime,r.ft.toFixed(2)].join(',')); });
+    download('tube-flow-sweep.csv', new Blob(['# Tube Flow v'+APP_VERSION+' sweep · '+sw.label+' · '+FLUIDS[state.fluid].label+' · tube '+state.tubeMM+' mm\n'+rows.join('\n')], {type:'text/csv'}));
+  });
+  renderRuns();
+
   // ------------------------------------------------------------------ main loop
   function animate(){ requestAnimationFrame(animate); view.tick(state.running, F && F.stepsPerSec); }
-  window.tubeDebug = { view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
+  window.tubeDebug = { snapshot:snapshot, vtkBlob:vtkBlob, runs:function(){ return runs; }, sweep:function(){ return sweepLast; }, applyRe:applyRe, view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
 
   // pick the solver: the GPU when WebGPU is available, otherwise the CPU worker
   (async function(){

@@ -28,6 +28,7 @@ struct P {
   u: f32, vy: f32, vz: f32, mode: u32,
   cy: f32, cz: f32, R: f32, uw: f32,
   nIn: u32, nOut: u32, nLinks: u32, seed: u32,
+  us: array<vec4<f32>, 2>,             // inflow speed for each step of the batch (pulsatile inflow)
 };
 @group(0) @binding(0) var<uniform> p: P;
 const CX = array<i32, 19>(${CX.join(",")});
@@ -132,15 +133,17 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 @group(0) @binding(2) var<storage, read> nodes: array<u32>;
 fn hash(a: u32) -> f32 { var x = a * 747796405u + 2891336453u; x = ((x >> ((x >> 28u) + 4u)) ^ x) * 277803737u; x = (x >> 22u) ^ x; return f32(x) / 4294967295.0; }
 @compute @workgroup_size(${WG})
-fn inlet(@builtin(global_invocation_id) gid: vec3<u32>) {
-  if (gid.x >= p.nIn) { return; }
+fn inlet(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nw: vec3<u32>) {
+  // dispatched with (groups, s + 1) for step s of the batch: only the last row runs, and knows its step
+  if (gid.x >= p.nIn || gid.y + 1u != nw.y) { return; }
+  let sp = p.us[gid.y >> 2u][gid.y & 3u];
   let n = nodes[gid.x]; let nb = n + 1u;
   var rho = 0.0; var ux = 0.0; var uy = 0.0; var uz = 0.0;
   for (var i = 0u; i < 19u; i++) { let v = fn2[i * p.N + nb]; rho += v; ux += v * f32(CX[i]); uy += v * f32(CY[i]); uz += v * f32(CZ[i]); }
   ux /= rho; uy /= rho; uz /= rho;
   let y = f32((n / p.Nx) % p.Ny); let z = f32(n / (p.Nx * p.Ny));
-  var ub = p.u;
-  if (p.mode == 0u) { let r2 = ((y - p.cy) * (y - p.cy) + (z - p.cz) * (z - p.cz)) / (p.R * p.R); ub = p.u * max(0.0, 1.0 - r2); }
+  var ub = sp;
+  if (p.mode == 0u) { let r2 = ((y - p.cy) * (y - p.cy) + (z - p.cz) * (z - p.cz)) / (p.R * p.R); ub = sp * max(0.0, 1.0 - r2); }
   var vy = p.vy; var vz = p.vz;
   if (p.seed != 0u) { vy = vy * (hash(n * 7u + p.seed) * 2.0 - 1.0); vz = vz * (hash(n * 13u + p.seed * 3u) * 2.0 - 1.0); }
   for (var i = 0u; i < 19u; i++) { fn2[i * p.N + n] = feq(i, rho, ub, vy, vz) + (fn2[i * p.N + nb] - feq(i, rho, ux, uy, uz)); }
@@ -202,7 +205,7 @@ fn mass(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
     // geometry from the CPU solver (no populations allocated beyond what it needs)
     const S = new TF.Solver(Object.assign({}, opts, { geometryOnly: true }));
     g.cpu = S;
-    Object.assign(g, { Nx: S.Nx, Ny: S.Ny, Nz: S.Nz, N: S.N, R: S.R, cy: S.cy, cz: S.cz, sx: S.sx, r: S.r, mode: S.mode, solid: S.solid });
+    Object.assign(g, { Nx: S.Nx, Ny: S.Ny, Nz: S.Nz, N: S.N, R: S.R, cy: S.cy, cz: S.cz, sx: S.sx, r: S.r, xRear: S.xRear, mode: S.mode, solid: S.solid, inflowKind: S.inflowKind, pulse: S.pulse });
     g.u = opts.u; g.nu = opts.nu; g.uCur = opts.u; g.t = 0; g.disturb = opts.disturbance || "kick"; g.collisionMode = opts.collision || "auto";
     const N = S.N, buf = (size, usage) => device.createBuffer({ size: Math.max(16, size), usage: usage });
     const ST = GPUBufferUsage.STORAGE, CP = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
@@ -217,7 +220,7 @@ fn mass(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
     g.lf = buf(S.nLinks * 16, ST | CP);
     g.inNodes = buf(S.inlet.length * 4, ST | CP); device.queue.writeBuffer(g.inNodes, 0, S.inlet);
     g.outNodes = buf(S.outlet.length * 4, ST | CP); device.queue.writeBuffer(g.outNodes, 0, S.outlet);
-    g.uni = buf(80, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
+    g.uni = buf(112, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST);
     g.linkGroups = Math.ceil(S.nLinks / WG); g.nodeGroups = Math.ceil(N / WG);
     g.part = buf(Math.max(g.linkGroups * 2, g.nodeGroups) * 16, ST | CP);
     // pipelines
@@ -248,6 +251,8 @@ fn mass(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
   GPUSolver.prototype.rampSteps = function () { return Math.max(100, Math.min(2 * this.R / Math.max(this.u, 1e-6), this.R * this.R / this.nu)); };
   GPUSolver.prototype.pickCollision = function () { this.collision = this.collisionMode !== "auto" ? this.collisionMode : (this.u / this.nu > 4 ? "reg" : "trt"); };
   GPUSolver.prototype.setFlow = function (u, nu) { this.u = u; this.nu = nu; this.pickCollision(); };
+  GPUSolver.prototype.setPulse = function (pulse) { this.pulse = pulse; this.cpu.pulse = pulse; };
+  GPUSolver.prototype.bodyInfo = function () { return this.cpu.bodyInfo(); };
 
   // start from the undisturbed inflow, like the CPU solver
   GPUSolver.prototype.reset = function () {
@@ -272,12 +277,13 @@ fn mass(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
       const t0 = this.rampSteps(), dur = 2 * this.R / Math.max(this.u, 1e-4);
       if (this.t > t0 && this.t < t0 + dur) vy = 0.03 * this.u * Math.sin(Math.PI * (this.t - t0) / dur);
     } else if (this.disturb === "noise") { vy = vz = 0.01 * this.u; seed = (this.t * 2654435761 >>> 0) | 1; }
-    const b = new ArrayBuffer(80), u = new Uint32Array(b), fl = new Float32Array(b);
+    const b = new ArrayBuffer(112), u = new Uint32Array(b), fl = new Float32Array(b);
     u[0] = this.N; u[1] = this.Nx; u[2] = this.Ny; u[3] = this.Nz;
     fl[4] = wp; fl[5] = wm; fl[6] = ws; u[7] = this.collision === "reg" ? 1 : 0;
-    fl[8] = this.uCur; fl[9] = vy; fl[10] = vz; u[11] = this.mode === "moving" ? 1 : 0;
+    fl[8] = this.uCur; fl[9] = vy; fl[10] = vz; u[11] = this.inflowKind === "uniform" || this.mode === "moving" ? 1 : 0;
     fl[12] = this.cy; fl[13] = this.cz; fl[14] = this.R; fl[15] = this.mode === "moving" ? this.uCur : 0;
     u[16] = this.cpu.inlet.length; u[17] = this.cpu.outlet.length; u[18] = this.nLinks; u[19] = seed;
+    for (let s = 0; s < 8; s++) fl[20 + s] = this.uCur * TF.pulseFactor(this.inflowKind, this.pulse, this.t + s);
     this.device.queue.writeBuffer(this.uni, 0, b);
   };
 
@@ -298,7 +304,7 @@ fn mass(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
         pass.setPipeline(this.pCollide); pass.setBindGroup(0, B.collide); pass.dispatchWorkgroups(this.nodeGroups);
         pass.setPipeline(this.pStream); pass.setBindGroup(0, B.stream); pass.dispatchWorkgroups(this.nodeGroups);
         pass.setPipeline(this.pLink); pass.setBindGroup(0, B.link); pass.dispatchWorkgroups(this.linkGroups);
-        pass.setPipeline(this.pIn); pass.setBindGroup(0, B.inlet); pass.dispatchWorkgroups(Math.ceil(this.cpu.inlet.length / WG));
+        pass.setPipeline(this.pIn); pass.setBindGroup(0, B.inlet); pass.dispatchWorkgroups(Math.ceil(this.cpu.inlet.length / WG), s + 1);
         pass.setPipeline(this.pOut); pass.setBindGroup(0, B.outlet); pass.dispatchWorkgroups(Math.ceil(this.cpu.outlet.length / WG));
         pass.end();
         this.phase ^= 1;

@@ -1,6 +1,9 @@
 /*
  * lbm.js — D3Q19 lattice-Boltzmann solver for flow through a tube past a sphere.
  *
+ * Bodies: a sphere (exact), ellipsoid, axial cylinder, disc, cube, a bar across the tube, or any
+ * closed triangle mesh (STL) — see makeBody(). Inflow: developed (parabolic), uniform or pulsatile.
+ *
  * Numerics (all standard, chosen for accuracy and robustness at low viscosity):
  *   - TRT collision (two relaxation times, "magic" Λ = 3/16): as cheap as BGK but
  *     stable much closer to τ = 1/2, and its wall position doesn't drift with viscosity.
@@ -110,18 +113,159 @@
     };
   }
 
+  // ------------------------------------------------------------------ STL
+  // Binary or ASCII STL → Float32Array of triangle corners (9 numbers per triangle).
+  function parseSTL(buf) {
+    const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+    if (u8.length >= 84) {
+      const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), n = dv.getUint32(80, true);
+      if (84 + 50 * n === u8.length) {
+        const out = new Float32Array(9 * n);
+        for (let t = 0; t < n; t++) for (let k = 0; k < 9; k++) out[9 * t + k] = dv.getFloat32(84 + 50 * t + 12 + 4 * k, true);
+        return out;
+      }
+    }
+    let text = "";
+    for (let i = 0; i < u8.length; i += 65536) text += String.fromCharCode.apply(null, u8.subarray(i, i + 65536));
+    const v = [], re = /vertex\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)/g;
+    let m; while ((m = re.exec(text))) v.push(+m[1], +m[2], +m[3]);
+    if (!v.length || v.length % 9) throw new Error("not an STL file");
+    return Float32Array.from(v);
+  }
+
+  // ------------------------------------------------------------------ bodies
+  // A body sits on the tube axis at x = sx. Its half-width across the flow is a = R·ratio (so the
+  // Reynolds number and C_d use the width d = 2a and the frontal area); `aspect` = length / width
+  // for the elongated shapes. Each body answers inside(x, y, z) and, for links into it, where the
+  // link crosses its surface: analytic for the sphere and ellipsoid, by bisection otherwise.
+  //   spec: { shape: "sphere" | "ellipsoid" | "cylinder" | "disc" | "cube" | "bar" | "mesh",
+  //           ratio, aspect, mesh: Float32Array (STL triangles), axis: "x" | "y" | "z" (mesh axis along the flow) }
+  function makeBody(spec, R, sx, cy, cz) {
+    const shape = spec.shape || "sphere", a = R * (spec.ratio || 0);
+    if (!(a > 0)) return null;
+    const asp = shape === "sphere" || shape === "cube" ? 1 : shape === "disc" ? 0.2 : shape === "bar" ? 1 : Math.max(0.1, spec.aspect || 1);
+    let b = a * asp;
+    const B = { shape: shape, a: a, b: b, sx: sx, aspect: asp };
+    if (shape === "sphere") {
+      const r2 = a * a;
+      B.inside = (x, y, z) => { const p = x - sx, q = y - cy, w = z - cz; return p * p + q * q + w * w <= r2; };
+      B.hit = (x, y, z, dx, dy, dz) => {
+        const px = x - sx, py = y - cy, pz = z - cz, aa = dx * dx + dy * dy + dz * dz, bb = 2 * (px * dx + py * dy + pz * dz), cc = px * px + py * py + pz * pz - r2;
+        const disc = bb * bb - 4 * aa * cc; return disc >= 0 ? (-bb - Math.sqrt(disc)) / (2 * aa) : Infinity;
+      };
+      B.area = Math.PI * a * a;
+    } else if (shape === "ellipsoid") {
+      B.inside = (x, y, z) => { const p = (x - sx) / b, q = (y - cy) / a, w = (z - cz) / a; return p * p + q * q + w * w <= 1; };
+      B.hit = (x, y, z, dx, dy, dz) => {
+        const px = (x - sx) / b, py = (y - cy) / a, pz = (z - cz) / a, ex = dx / b, ey = dy / a, ez = dz / a;
+        const aa = ex * ex + ey * ey + ez * ez, bb = 2 * (px * ex + py * ey + pz * ez), cc = px * px + py * py + pz * pz - 1;
+        const disc = bb * bb - 4 * aa * cc; return disc >= 0 ? (-bb - Math.sqrt(disc)) / (2 * aa) : Infinity;
+      };
+      B.area = Math.PI * a * a;
+    } else if (shape === "cylinder" || shape === "disc") {           // axis along the flow
+      B.inside = (x, y, z) => { const q = y - cy, w = z - cz; return Math.abs(x - sx) <= b && q * q + w * w <= a * a; };
+      B.area = Math.PI * a * a;
+    } else if (shape === "cube") {
+      B.inside = (x, y, z) => Math.abs(x - sx) <= b && Math.abs(y - cy) <= a && Math.abs(z - cz) <= a;
+      B.area = 4 * a * a;
+    } else if (shape === "bar") {                                      // circular bar across the tube (along y), wall to wall
+      B.inside = (x, y, z) => { const p = x - sx, w = z - cz; return p * p + w * w <= a * a; };
+      B.area = 2 * (a * Math.sqrt(Math.max(0, R * R - a * a)) + R * R * Math.asin(Math.min(1, a / R)));
+      B.halfSpan = R;
+    } else if (shape === "mesh") {
+      const src = spec.mesh, nT = src.length / 9, axis = spec.axis || "x";
+      // the chosen mesh axis becomes the flow direction (cyclic relabelling keeps the mesh right-handed)
+      const map = axis === "y" ? [1, 2, 0] : axis === "z" ? [2, 0, 1] : [0, 1, 2];
+      const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      for (let i = 0; i < src.length; i += 3) for (let c = 0; c < 3; c++) { const v = src[i + map[c]]; if (v < lo[c]) lo[c] = v; if (v > hi[c]) hi[c] = v; }
+      const half = [(hi[0] - lo[0]) / 2, (hi[1] - lo[1]) / 2, (hi[2] - lo[2]) / 2], mid = [(hi[0] + lo[0]) / 2, (hi[1] + lo[1]) / 2, (hi[2] + lo[2]) / 2];
+      const k = a / Math.max(half[1], half[2], 1e-12), ctr = [sx, cy, cz];
+      const P = new Float64Array(src.length);
+      for (let i = 0; i < src.length; i += 3) for (let c = 0; c < 3; c++) P[i + c] = ctr[c] + k * (src[i + map[c]] - mid[c]);
+      b = k * half[0]; B.b = b; B.aspect = b / a; B.tris = P; B.nTris = nT;
+      B.ay = k * half[1]; B.az = k * half[2];
+      // triangles binned by their (y, z) footprint, one bin per cell
+      const y0 = cy - k * half[1] - 1, z0 = cz - k * half[2] - 1, nb = Math.ceil(2 * a) + 3, bins = [];
+      for (let i = 0; i < nb * nb; i++) bins.push([]);
+      for (let t = 0; t < nT; t++) {
+        const o = 9 * t, ya = Math.min(P[o + 1], P[o + 4], P[o + 7]), yb = Math.max(P[o + 1], P[o + 4], P[o + 7]), za = Math.min(P[o + 2], P[o + 5], P[o + 8]), zb = Math.max(P[o + 2], P[o + 5], P[o + 8]);
+        for (let j = Math.max(0, Math.floor(za - z0)); j <= Math.min(nb - 1, Math.floor(zb - z0)); j++)
+          for (let i = Math.max(0, Math.floor(ya - y0)); i <= Math.min(nb - 1, Math.floor(yb - y0)); i++) bins[i + nb * j].push(o);
+      }
+      // x where the line through (y, z) along the flow crosses each triangle above it
+      const crossings = (y, z) => {
+        y += 1.37e-7; z += 2.71e-7;                                   // off any edge or vertex of a regular mesh
+        const i = Math.floor(y - y0), j = Math.floor(z - z0), out = [];
+        if (i < 0 || j < 0 || i >= nb || j >= nb) return out;
+        const L = bins[i + nb * j];
+        for (let m = 0; m < L.length; m++) {
+          const o = L[m], ay = P[o + 1], az = P[o + 2], by = P[o + 4] - ay, bz = P[o + 5] - az, cY = P[o + 7] - ay, cZ = P[o + 8] - az;
+          const det = by * cZ - bz * cY; if (det === 0) continue;
+          const py = y - ay, pz = z - az, u = (py * cZ - pz * cY) / det, v = (by * pz - bz * py) / det;
+          if (u < 0 || v < 0 || u + v > 1) continue;
+          out.push(P[o] + u * (P[o + 3] - P[o]) + v * (P[o + 6] - P[o]));
+        }
+        return out;
+      };
+      const rows = new Map();
+      B.crossings = crossings;
+      B.inside = (x, y, z) => {
+        if (x < sx - b - 1e-9 || x > sx + b + 1e-9) return false;
+        let xs;
+        if (y === Math.round(y) && z === Math.round(z)) { const key = y * 100003 + z; xs = rows.get(key); if (!xs) { xs = crossings(y, z); rows.set(key, xs); } }
+        else xs = crossings(y, z);
+        let c = 0; for (let m = 0; m < xs.length; m++) if (xs[m] > x) c++;
+        return (c & 1) === 1;
+      };
+      // frontal area (and how watertight the mesh looks: lines that cross it an odd number of times)
+      let cov = 0, odd = 0, tot = 0;
+      const st = 0.25;
+      const ny = Math.ceil(2 * B.ay / st), nz = Math.ceil(2 * B.az / st), hy = 2 * B.ay / ny, hz = 2 * B.az / nz;   // cell-centred samples
+      for (let j = 0; j < nz; j++) for (let i = 0; i < ny; i++) { const n = crossings(cy - B.ay + (i + 0.5) * hy, cz - B.az + (j + 0.5) * hz).length; if (n) { cov++; tot++; if (n & 1) odd++; } }
+      B.area = cov * hy * hz; B.leaky = tot ? odd / tot : 0;
+    } else throw new Error("unknown body shape " + shape);
+    B.xFront = sx - b; B.xRear = sx + b;
+    B.d = 2 * a;
+    // where a link from (x, y, z) along (dx, dy, dz) first enters the body, as a fraction of the link
+    B.cross = function (x, y, z, dx, dy, dz) {
+      if (B.hit) { const t = B.hit(x, y, z, dx, dy, dz); return t > 1e-9 && t <= 1 + 1e-9 ? t : Infinity; }
+      if (!B.inside(x + dx, y + dy, z + dz)) return Infinity;
+      let lo = 0, hi = 1;
+      for (let it = 0; it < 30; it++) { const m = 0.5 * (lo + hi); if (B.inside(x + m * dx, y + m * dy, z + m * dz)) hi = m; else lo = m; }
+      return Math.max(1e-6, 0.5 * (lo + hi));
+    };
+    // what the view and the instruments need (no functions)
+    B.info = function () {
+      const o = { shape: shape, a: a, b: b, sx: sx, aspect: B.aspect, area: B.area, xFront: B.xFront, xRear: B.xRear, d: B.d };
+      if (B.tris) { o.tris = Float32Array.from(B.tris); o.leaky = B.leaky; }
+      return o;
+    };
+    return B;
+  }
+
+  // pulsatile inflow: the flow rate swings sinusoidally about its mean
+  function pulseFactor(inflow, pulse, t) {
+    return inflow === "pulsatile" && pulse && pulse.period > 0 ? 1 + (pulse.amp || 0) * Math.sin(2 * Math.PI * t / pulse.period) : 1;
+  }
+
   // ------------------------------------------------------------------ solver
   // opts: { R (tube radius, cells), length (cells), ratio (sphere/tube diameter),
-  //         sphereX (fraction of length), mode: "pipe" | "moving", u, nu }
+  //         sphereX (fraction of length), mode: "pipe" | "moving", u, nu,
+  //         body: { shape, aspect, mesh, axis } (default a sphere; its width comes from ratio),
+  //         inflow: "parabolic" | "uniform" | "pulsatile", pulse: { amp, period (steps) } }
   function Solver(opts) {
     const R = opts.R;
     const Ny = Math.ceil(2 * R) + 2, Nz = Ny, Nx = Math.round(opts.length);
     this.Nx = Nx; this.Ny = Ny; this.Nz = Nz; this.N = Nx * Ny * Nz;
     this.R = R; this.cy = (Ny - 1) / 2; this.cz = (Nz - 1) / 2;
     this.ratio = opts.ratio || 0;
-    this.r = R * this.ratio;                          // sphere radius (cells)
     this.sx = (opts.sphereX === undefined ? 0.3 : opts.sphereX) * Nx;
+    this.body = makeBody(Object.assign({ ratio: this.ratio }, opts.body || {}), R, this.sx, this.cy, this.cz);
+    this.r = this.body ? this.body.a : 0;            // body half-width (cells); the sphere's radius
+    this.xRear = this.body ? this.body.xRear : this.sx;
     this.mode = opts.mode || "pipe";
+    this.inflowKind = this.mode === "moving" ? "uniform" : (opts.inflow || "parabolic");
+    this.pulse = opts.pulse || null;
     this.u = opts.u; this.nu = opts.nu;
     this.disturb = opts.disturbance || "kick";
     // collision: TRT where the grid Reynolds number (u·Δx/ν) is low — its walls sit exactly where they
@@ -132,8 +276,9 @@
 
     const N = this.N, solid = this.solid = new Uint8Array(N), self = this;
     const inTube = function (y, z) { const dy = y - self.cy, dz = z - self.cz; return dy * dy + dz * dz < R * R; };
-    const inSphere = function (x, y, z) { if (!self.r) return false; const a = x - self.sx, b = y - self.cy, c = z - self.cz; return a * a + b * b + c * c <= self.r * self.r; };
-    this.isSolidAt = function (x, y, z) { return !inTube(y, z) || inSphere(x, y, z); };
+    const body = this.body;
+    const inBody = function (x, y, z) { return !!body && body.inside(x, y, z); };
+    this.isSolidAt = function (x, y, z) { return !inTube(y, z) || inBody(x, y, z); };
     for (let z = 0; z < Nz; z++) for (let y = 0; y < Ny; y++) for (let x = 0; x < Nx; x++) solid[x + Nx * (y + Ny * z)] = this.isSolidAt(x, y, z) ? 1 : 0;
 
     // fluid node lists: everything, interior (streamed), inlet and outlet layers
@@ -165,13 +310,8 @@
         const disc = b * b - 4 * a * c;
         if (disc >= 0) { const t = (-b + Math.sqrt(disc)) / (2 * a); if (t > 1e-9 && t <= 1 + 1e-9 && t < best) { best = t; which = 1; } }
       }
-      if (self.r) {
-        const px = x - self.sx, py = y - self.cy, pz = z - self.cz;
-        const aa = CX[j] * CX[j] + CY[j] * CY[j] + CZ[j] * CZ[j], bb = 2 * (px * CX[j] + py * CY[j] + pz * CZ[j]), cc = px * px + py * py + pz * pz - self.r * self.r;
-        const disc = bb * bb - 4 * aa * cc;
-        if (disc >= 0) { const t = (-bb - Math.sqrt(disc)) / (2 * aa); if (t > 1e-9 && t <= 1 + 1e-9 && t < best) { best = t; which = 2; } }
-      }
-      return best === Infinity ? { q: 0.5, which: inSphere(x + CX[j], y + CY[j], z + CZ[j]) ? 2 : 1 } : { q: Math.min(1, best), which: which };
+      if (body) { const t = body.cross(x, y, z, CX[j], CY[j], CZ[j]); if (t < best) { best = t; which = 2; } }
+      return best === Infinity ? { q: 0.5, which: inBody(x + CX[j], y + CY[j], z + CZ[j]) ? 2 : 1 } : { q: Math.min(1, best), which: which };
     };
     for (let k = 0; k < all.length; k++) {
       const n = all[k], x = n % Nx, y = Math.floor(n / Nx) % Ny, z = Math.floor(n / (Nx * Ny));
@@ -213,14 +353,14 @@
   Solver.prototype.idx = function (x, y, z) { return x + this.Nx * (y + this.Ny * z); };
 
   // inflow velocity at a node of the inlet plane (with a start-up ramp and the optional disturbance)
-  // axial flow speed at (y, z) for speed U: parabolic (pipe) or uniform (moving sphere)
+  // axial flow speed at (y, z) for speed U: parabolic (developed pipe flow) or uniform (plug inflow, moving sphere)
   Solver.prototype.profile = function (y, z, U) {
-    if (this.mode === "moving") return U;
+    if (this.inflowKind === "uniform" || this.mode === "moving") return U;
     const r2 = ((y - this.cy) * (y - this.cy) + (z - this.cz) * (z - this.cz)) / (this.R * this.R);
     return U * Math.max(0, 1 - r2);
   };
   Solver.prototype.inflow = function (y, z, out) {
-    out[0] = this.profile(y, z, this.uCur); out[1] = 0; out[2] = 0;
+    out[0] = this.profile(y, z, this.uCur * pulseFactor(this.inflowKind, this.pulse, this.t)); out[1] = 0; out[2] = 0;
     // a brief asymmetric pulse (like any real rig's imperfections) lets unstable wakes break symmetry
     if (this.disturb === "kick") {
       const t0 = this.rampSteps(), dur = 2 * this.R / Math.max(this.u, 1e-4);
@@ -251,6 +391,9 @@
   };
   // a new speed is eased in over about one convective time across the tube (no pressure shock)
   Solver.prototype.setFlow = function (u, nu) { this.u = u; this.nu = nu; this.pickCollision(); };
+  // a new pulse (amplitude, period in steps) takes effect at once; the inflow shape needs a rebuild
+  Solver.prototype.setPulse = function (pulse) { this.pulse = pulse; };
+  Solver.prototype.bodyInfo = function () { return this.body ? this.body.info() : null; };
   Solver.prototype.pickCollision = function () {
     this.collision = this.collisionMode !== "auto" ? this.collisionMode : (this.u / this.nu > 4 ? "reg" : "trt");
   };
@@ -345,7 +488,7 @@
   };
   Solver.prototype.recirculationF = function () {
     if (!this.r) return 0;
-    const tmp = [0, 0], y = Math.round(this.cy), z = Math.round(this.cz), x0 = Math.ceil(this.sx + this.r);
+    const tmp = [0, 0], y = Math.round(this.cy), z = Math.round(this.cz), x0 = Math.ceil(this.xRear);
     let last = -1, a = 0, b = 0;
     for (let x = x0; x < this.Nx - 1; x++) {
       const n = this.idx(x, y, z); if (this.solid[n]) continue;
@@ -353,7 +496,7 @@
       if (u < 0) { last = x; a = u; } else if (last >= 0) { b = u; break; }
     }
     if (last < 0) return 0;
-    return Math.max(0, last + (b !== a ? -a / (b - a) : 0) - (this.sx + this.r));
+    return Math.max(0, last + (b !== a ? -a / (b - a) : 0) - this.xRear);
   };
   // total mass of the fluid
   Solver.prototype.mass = function () { let m = 0; const f = this.f, fl = this.fluid; for (let k = 0; k < fl.length; k++) { const b = fl[k] * Q; for (let i = 0; i < Q; i++) m += f[b + i]; } return m; };
@@ -372,14 +515,14 @@
   // length of the recirculation bubble behind the sphere, measured on the axis (cells; 0 if none)
   Solver.prototype.recirculation = function () {
     if (!this.r) return 0;
-    const y = Math.round(this.cy), z = Math.round(this.cz), x0 = Math.ceil(this.sx + this.r);
+    const y = Math.round(this.cy), z = Math.round(this.cz), x0 = Math.ceil(this.xRear);
     let last = -1;
     for (let x = x0; x < this.Nx - 1; x++) { const n = this.idx(x, y, z); if (this.solid[n]) continue; if (this.ux[n] < 0) last = x; else if (last >= 0) break; }
     if (last < 0) return 0;
     const a = this.ux[this.idx(last, y, z)], b = this.ux[this.idx(last + 1, y, z)];
     const xz = last + (b !== a ? -a / (b - a) : 0);           // where u crosses zero
-    return Math.max(0, xz - (this.sx + this.r));
+    return Math.max(0, xz - this.xRear);
   };
 
-  return { Solver: Solver, caseToLattice: caseToLattice, Q: Q, CX: CX, CY: CY, CZ: CZ, W: W, OPP: OPP, NU_MIN: NU_MIN, U_MAX: U_MAX, U_TARGET: U_TARGET };
+  return { Solver: Solver, caseToLattice: caseToLattice, makeBody: makeBody, parseSTL: parseSTL, pulseFactor: pulseFactor, Q: Q, CX: CX, CY: CY, CZ: CZ, W: W, OPP: OPP, NU_MIN: NU_MIN, U_MAX: U_MAX, U_TARGET: U_TARGET };
 });

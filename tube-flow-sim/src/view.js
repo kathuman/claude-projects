@@ -7,13 +7,15 @@
  *   - tracers, advected through the field;
  *   - dye, like the coloured streaks in a real water tunnel: a passive concentration
  *     carried by the same field (MacCormack semi-Lagrangian advection), released from a
- *     rake upstream or from the sphere's surface, drawn by ray-marching a 3D texture;
+ *     rake upstream or from the body's surface, drawn by ray-marching a 3D texture;
  *   - vortex surfaces: isosurfaces of the Q-criterion (where rotation beats strain),
  *     meshed with surface nets;
  *   - streamlines from a movable rake (RK2 through the field);
  *   - the axial slice (speed, vorticity or pressure; optionally time-averaged) and a
  *     movable cross-section;
  *   - video recording of the canvas.
+ * The body (sphere, ellipsoid, cylinder, disc, cube, bar or an imported mesh) is drawn from
+ * the solver's description of it (G.body); masks come from the solver's solid nodes.
  * Coordinates: scene x along the tube, the tube radius is 1 scene unit.
  */
 import * as THREE from "three";
@@ -47,8 +49,23 @@ export function createView(stageEl) {
     drawCost: 16, justDrew: false, lastDraw: 0, lastTick: 0, onCaption: null
   };
   const tubeGroup = new THREE.Group(); scene.add(tubeGroup);
-  const sphereMesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 48, 32), new THREE.MeshStandardMaterial({ color: 0x223140, roughness: 0.3, metalness: 0.55 }));
-  scene.add(sphereMesh);
+  const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 48, 32), new THREE.MeshStandardMaterial({ color: 0x223140, roughness: 0.3, metalness: 0.55, side: THREE.DoubleSide }));
+  scene.add(bodyMesh);
+  // the body's surface in scene units, centred on the body
+  function bodyGeometry(G, sc) {
+    const B = G.body || { shape: "sphere", a: G.r, b: G.r }, a = Math.max(0.01, B.a * sc), b = Math.max(0.01, B.b * sc);
+    let g;
+    if (B.shape === "ellipsoid") { g = new THREE.SphereGeometry(1, 64, 40); g.scale(b, a, a); }
+    else if (B.shape === "cylinder" || B.shape === "disc") { g = new THREE.CylinderGeometry(a, a, 2 * b, 64, 1); g.rotateZ(Math.PI / 2); }
+    else if (B.shape === "cube") g = new THREE.BoxGeometry(2 * b, 2 * a, 2 * a);
+    else if (B.shape === "bar") g = new THREE.CylinderGeometry(a, a, 2 * G.R * sc, 48, 1);
+    else if (B.shape === "mesh" && B.tris) {
+      const t = B.tris, pos = new Float32Array(t.length);
+      for (let i = 0; i < t.length; i += 3) { pos[i] = (t[i] - B.sx) * sc; pos[i + 1] = (t[i + 1] - G.cy) * sc; pos[i + 2] = (t[i + 2] - G.cz) * sc; }
+      g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3)); g.computeVertexNormals();
+    } else g = new THREE.SphereGeometry(a, 64, 40);
+    return g;
+  }
 
   // ---------------------------------------------------------------- geometry
   V.setGeometry = function (G) {
@@ -62,9 +79,10 @@ export function createView(stageEl) {
     const rings = Math.max(4, Math.round(len / 1.5));
     for (let k = 0; k <= rings; k++) { const r = new THREE.Line(new THREE.BufferGeometry().setFromPoints(circle), ringMat); r.position.x = -len / 2 + len * k / rings; tubeGroup.add(r); }
     [[0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].forEach((d) => { tubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-len / 2, d[1], d[2]), new THREE.Vector3(len / 2, d[1], d[2])]), ringMat)); });
-    sphereMesh.visible = G.r > 0;
-    sphereMesh.geometry.dispose(); sphereMesh.geometry = new THREE.SphereGeometry(Math.max(0.01, G.r * V.scale), 64, 40);
-    sphereMesh.position.set((G.sx - G.Nx / 2) * V.scale, 0, 0);
+    bodyMesh.visible = G.r > 0;
+    bodyMesh.geometry.dispose(); bodyMesh.geometry = bodyGeometry(G, V.scale);
+    bodyMesh.position.set((G.sx - G.Nx / 2) * V.scale, 0, 0);
+    V.bodySources = null;
     axial.setup(); cross.setup();
     V.resetDye(); resetTracers(); V.resetAverage();
     V.resetView();
@@ -92,7 +110,11 @@ export function createView(stageEl) {
     for (let k = 0; k < 8; k++) { const n = id[k]; if (!(Fd.rho[n] > 0)) continue; o[0] += Fd.ux[n] * w[k]; o[1] += Fd.uy[n] * w[k]; o[2] += Fd.uz[n] * w[k]; }
     return o;
   }
-  const inFluid = (x, y, z) => { const G = V.G, a = x - G.sx, b = y - G.cy, c = z - G.cz; return b * b + c * c < G.R * G.R * 0.97 && a * a + b * b + c * c >= G.r * G.r && x > 0 && x < G.Nx - 1; };
+  const solidAt = (x, y, z) => { const G = V.G, i = Math.round(x), j = Math.round(y), k = Math.round(z); return i < 0 || j < 0 || k < 0 || i >= G.Nx || j >= G.Ny || k >= G.Nz || G.solid[i + G.Nx * (j + G.Ny * k)] === 1; };
+  const inFluid = (x, y, z) => { const G = V.G, b = y - G.cy, c = z - G.cz; return b * b + c * c < G.R * G.R * 0.97 && x > 0 && x < G.Nx - 1 && !solidAt(x, y, z); };
+  // a solid node that belongs to the body (not the tube wall)
+  const bodyAt = (x, y, z) => { const G = V.G, b = y - G.cy, c = z - G.cz; return b * b + c * c < (G.R - 1.2) * (G.R - 1.2) && solidAt(x, y, z); };
+  const frontX = () => V.G.body ? V.G.body.xFront : V.G.sx - V.G.r;
 
   // ---------------------------------------------------------------- tracers
   const pGeo = new THREE.BufferGeometry();
@@ -178,8 +200,8 @@ export function createView(stageEl) {
     const o = [0, 0, 0], o2 = [0, 0, 0], o3 = [0, 0, 0], h = 0.5;
     for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
       const yy = G.cy + (i / (W - 1) * 2 - 1) * G.R, zz = G.cz + ((W - 1 - j) / (W - 1) * 2 - 1) * G.R, di = (j * W + i) * 4;
-      const a = yy - G.cy, b = zz - G.cz, dx = x - G.sx;
-      if (a * a + b * b >= G.R * G.R || dx * dx + a * a + b * b < G.r * G.r) { d[di + 3] = 0; continue; }
+      const a = yy - G.cy, b = zz - G.cz;
+      if (a * a + b * b >= G.R * G.R || bodyAt(x, yy, zz)) { d[di + 3] = 0; continue; }
       if (V.opts.field === "vorticity") {             // streamwise vorticity ω_x = ∂uz/∂y − ∂uy/∂z
         velAt(x, yy + h, zz, o); velAt(x, yy - h, zz, o2); const duz = (o[2] - o2[2]) / (2 * h);
         velAt(x, yy, zz + h, o); velAt(x, yy, zz - h, o3); const duy = (o[1] - o3[1]) / (2 * h);
@@ -267,7 +289,7 @@ export function createView(stageEl) {
     const G = V.G;
     if (V.opts.dyeSource === "rake") {
       // a cross of nozzles: one row across the tube, one up the middle
-      const xs = Math.max(1, Math.round((G.sx - 3 * G.r) / s)), rr = (G.R * 0.8) / s, pts = [];
+      const xs = Math.max(1, Math.round((frontX() - 2 * G.r) / s)), rr = (G.R * 0.8) / s, pts = [];
       for (let a = -4; a <= 4; a++) { pts.push([a, 0]); if (a) pts.push([0, a]); }
       for (const [a, b] of pts) {
         const y = Math.round(G.cy / s + a * rr / 4.5), z = Math.round(G.cz / s + b * rr / 4.5);
@@ -275,12 +297,22 @@ export function createView(stageEl) {
         const n = xs + nx * (y + ny * z); if (rho[n] > 0) c[n] = 1;
       }
     } else {
-      const rr = (G.r + 1.2 * s) / s, cxs = G.sx / s, cys = G.cy / s, czs = G.cz / s;
-      for (let z = Math.floor(czs - rr); z <= Math.ceil(czs + rr); z++) for (let y = Math.floor(cys - rr); y <= Math.ceil(cys + rr); y++) for (let x = Math.floor(cxs - rr); x <= Math.ceil(cxs + rr); x++) {
-        if (x < 0 || y < 0 || z < 0 || x >= nx || y >= ny || z >= nz) continue;
-        const n = x + nx * (y + ny * z), dd = Math.hypot(x - cxs, y - cys, z - czs);
-        if (rho[n] > 0 && dd <= rr) c[n] = 1;
+      // fluid cells of the dye grid touching the body (found once per grid)
+      if (!V.bodySources || V.bodySources.s !== s || V.bodySources.nx !== nx) {
+        const list = [], B = G.body, xa = Math.floor(((B ? B.xFront : G.sx - G.r) - 2 * s) / s), xb = Math.ceil(((B ? B.xRear : G.sx + G.r) + 2 * s) / s);
+        const ya = Math.floor((G.cy - G.R) / s), yb = Math.ceil((G.cy + G.R) / s), h = 1.2 * s;
+        for (let z = ya; z <= yb; z++) for (let y = ya; y <= yb; y++) for (let x = Math.max(0, xa); x <= Math.min(nx - 1, xb); x++) {
+          if (y < 0 || z < 0 || y >= ny || z >= nz) continue;
+          const X = x * s, Y = y * s, Z = z * s;
+          if (solidAt(X, Y, Z)) continue;
+          let touch = false;
+          for (let dz = -1; dz <= 1 && !touch; dz++) for (let dy = -1; dy <= 1 && !touch; dy++) for (let dx = -1; dx <= 1 && !touch; dx++) if ((dx || dy || dz) && bodyAt(X + dx * h, Y + dy * h, Z + dz * h)) touch = true;
+          if (touch) list.push(x + nx * (y + ny * z));
+        }
+        V.bodySources = { s: s, nx: nx, list: list };
       }
+      const L = V.bodySources.list;
+      for (let k = 0; k < L.length; k++) if (rho[L[k]] > 0) c[L[k]] = 1;
     }
     for (let n = 0; n < c.length; n++) dye.u8[n] = Math.min(255, c[n] * 255);
     dye.tex.needsUpdate = true;
@@ -296,7 +328,7 @@ export function createView(stageEl) {
       const n = x + nx * (y + ny * z);
       if (!(rho[n] > 0)) { Q[n] = -1e9; continue; }
       // central differences, one-sided where a neighbour is inside a wall (walls have zero velocity,
-      // so leaving them out avoids false vortex surfaces wrapped around the sphere)
+      // so leaving them out avoids false vortex surfaces wrapped around the body)
       const D = (arr, st) => { const p = rho[n + st] > 0, m = rho[n - st] > 0; return p && m ? (arr[n + st] - arr[n - st]) / (2 * s) : p ? (arr[n + st] - arr[n]) / s : m ? (arr[n] - arr[n - st]) / s : 0; };
       const sy = nx, sz = nx * ny;
       const a11 = D(ux, 1), a12 = D(ux, sy), a13 = D(ux, sz), a21 = D(uy, 1), a22 = D(uy, sy), a23 = D(uy, sz), a31 = D(uz, 1), a32 = D(uz, sy), a33 = D(uz, sz);
@@ -359,7 +391,7 @@ export function createView(stageEl) {
   streamMesh.visible = false; streamMesh.frustumCulled = false; scene.add(streamMesh);
   function updateStreamlines() {
     const G = V.G, pos = [], col = [], o = [0, 0, 0], o2 = [0, 0, 0], a = [0, 0, 0], b = [0, 0, 0], c = [0, 0, 0], norm = Math.max(1e-6, V.L.u * 1.15);
-    const x0 = Math.max(2, G.sx - 3 * G.r), nSeeds = 28, h = 0.6;
+    const x0 = Math.max(2, frontX() - 2 * G.r), nSeeds = 28, h = 0.6;
     for (let i = 0; i < nSeeds; i++) {
       const t = (i + 0.5) / nSeeds * 2 - 1, ang = V.opts.rakeY * Math.PI / 2;
       let x = x0, y = G.cy + t * G.R * 0.92 * Math.cos(ang), z = G.cz + t * G.R * 0.92 * Math.sin(ang);

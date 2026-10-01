@@ -108,5 +108,80 @@ const pct = (a, b) => (a / b - 1) * 100;
   check("case: creeping flow in glycerol runs slow but within limits", slow.resolved && slow.tau <= 1.25 + 1e-9 && slow.u < 0.05, "u " + slow.u.toExponential(2));
 }
 
+// ---------------------------------------------------------------- 6. Bodies other than a sphere, and STL import
+{
+  const R = 10, opts = (body, ratio) => ({ R: R, length: 60, ratio: ratio, sphereX: 0.5, u: 0.02, nu: 0.1, disturbance: "none", body: body, geometryOnly: true });
+  // solid cells inside the body (away from the tube wall) vs. its volume
+  const bodyCells = (s) => { let c = 0; for (let z = 0; z < s.Nz; z++) for (let y = 0; y < s.Ny; y++) for (let x = 0; x < s.Nx; x++) if (s.body.inside(x, y, z)) c++; return c; };
+  const a = R * 0.42;            // faces off the grid nodes (a node on a face is in or out by rounding)
+  const shapes = [
+    ["ellipsoid, length 2 × width", { shape: "ellipsoid", aspect: 2 }, 4 / 3 * Math.PI * a * a * 2 * a],
+    ["cylinder along the flow, length 1.5 × width", { shape: "cylinder", aspect: 1.5 }, Math.PI * a * a * 3 * a],
+    ["cube", { shape: "cube" }, 8 * a * a * a]
+  ];
+  for (const [name, body, vol] of shapes) {
+    const s = new TF.Solver(opts(body, 0.42)), c = bodyCells(s);
+    check("body: " + name + " — solid cells match its volume within 6%", Math.abs(pct(c, vol)) < 6, pct(c, vol).toFixed(2) + "%");
+  }
+  // generic surface crossing (bisection) agrees with the exact one: an ellipsoid of aspect 1 is a sphere
+  const sph = new TF.Solver(opts({ shape: "sphere" }, 0.37)), ell = TF.makeBody({ shape: "ellipsoid", ratio: 0.37, aspect: 1 }, R, sph.sx, sph.cy, sph.cz);
+  ell.hit = null;
+  let worst = 0, nb = 0;
+  for (let k = 0; k < sph.nLinks; k++) {
+    if (sph.lWhich[k] !== 2) continue;
+    const n = sph.lNode[k], j = sph.lDir[k], x = n % sph.Nx, y = Math.floor(n / sph.Nx) % sph.Ny, z = Math.floor(n / (sph.Nx * sph.Ny));
+    worst = Math.max(worst, Math.abs(ell.cross(x, y, z, TF.CX[j], TF.CY[j], TF.CZ[j]) - sph.lQ[k])); nb++;
+  }
+  check("body: wall crossings by bisection match the exact sphere (" + nb + " links) within 1e-6", worst < 1e-6, worst.toExponential(2));
+
+  // STL: a cube as 12 triangles, binary and ASCII, imported as a mesh → the same cells as the cube primitive
+  const V = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+  const F = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [2, 3, 7], [2, 7, 6], [1, 2, 6], [1, 6, 5], [0, 4, 7], [0, 7, 3]];
+  const bin = new ArrayBuffer(84 + 50 * F.length), dv = new DataView(bin); dv.setUint32(80, F.length, true);
+  F.forEach((f, t) => f.forEach((vi, k) => V[vi].forEach((c, m) => dv.setFloat32(84 + 50 * t + 12 + 12 * k + 4 * m, c * 7.5, true))));
+  const ascii = "solid cube\n" + F.map((f) => "facet normal 0 0 0\nouter loop\n" + f.map((vi) => "vertex " + V[vi].map((c) => c * 7.5).join(" ")).join("\n") + "\nendloop\nendfacet").join("\n") + "\nendsolid cube\n";
+  const tb = TF.parseSTL(bin), ta = TF.parseSTL(Buffer.from(ascii));
+  check("STL: binary and ASCII files read the same 12 triangles", tb.length === 108 && ta.length === 108 && tb.every((v, i) => v === ta[i]));
+  const cubeP = new TF.Solver(opts({ shape: "cube" }, 0.42)), cubeM = new TF.Solver(opts({ shape: "mesh", mesh: tb }, 0.42));
+  let same = 0, diff = 0;
+  for (let n = 0; n < cubeP.N; n++) { if (cubeP.solid[n] === cubeM.solid[n]) same++; else diff++; }
+  check("STL: an imported cube fills exactly the cells of the cube primitive", diff === 0, diff + " cells differ");
+  check("STL: frontal area of the imported cube = (2a)² within 2%, mesh watertight", Math.abs(pct(cubeM.body.area, 4 * 4.2 * 4.2)) < 2 && cubeM.body.leaky === 0, pct(cubeM.body.area, 4 * 4.2 * 4.2).toFixed(2) + "%");
+}
+
+// ---------------------------------------------------------------- 7. A meshed sphere (STL) has the drag of the exact sphere (Stokes, moving frame)
+{
+  // icosphere, 4 subdivisions (5120 triangles)
+  let verts = [], faces = [];
+  { const t = (1 + Math.sqrt(5)) / 2;
+    verts = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t], [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map((v) => { const l = Math.hypot(...v); return v.map((c) => c / l); });
+    faces = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+    for (let it = 0; it < 4; it++) {
+      const cache = new Map(), mid = (a, b) => { const k = a < b ? a + "_" + b : b + "_" + a; if (cache.has(k)) return cache.get(k); const m = verts[a].map((c, i) => (c + verts[b][i]) / 2), l = Math.hypot(...m); verts.push(m.map((c) => c / l)); cache.set(k, verts.length - 1); return verts.length - 1; };
+      const nf = []; for (const [a, b, c] of faces) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); nf.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); } faces = nf;
+    }
+  }
+  const tris = new Float32Array(faces.length * 9); faces.forEach((f, i) => f.forEach((v, k) => verts[v].forEach((c, m) => { tris[9 * i + 3 * k + m] = c; })));
+  const R = 10, lam = 0.3, nu = 0.25, d = 2 * R * lam, u = 0.05 * nu / d;
+  const run = (body) => { const s = new TF.Solver({ R: R, length: 12 * R, ratio: lam, sphereX: 0.5, mode: "moving", u: u, nu: nu, disturbance: "none", body: body }); for (let k = 0; k < 5000; k++) s.step(); return s; };
+  const exact = run({ shape: "sphere" }), mesh = run({ shape: "mesh", mesh: tris });
+  check("STL sphere (" + faces.length + " triangles): Stokes drag within 1.5% of the exact sphere's", Math.abs(pct(mesh.force[0], exact.force[0])) < 1.5, pct(mesh.force[0], exact.force[0]).toFixed(2) + "%");
+}
+
+// ---------------------------------------------------------------- 8. Inflow: uniform inflow develops into pipe flow; pulsatile flow rate follows the pulse
+{
+  const R = 6, s = new TF.Solver({ R: R, length: 160, ratio: 0, u: 0.08, nu: 0.02, inflow: "uniform", disturbance: "none" });
+  for (let k = 0; k < 6000; k++) s.step();
+  s.macroscopic();
+  const cl = (x) => s.ux[s.idx(x, Math.round(s.cy), Math.round(s.cz))] / s.planeU(x);
+  check("uniform inflow (tube Re 48): flat at the inlet (centre/mean < 1.1), developed downstream (> 1.8; parabolic 2)", cl(1) < 1.1 && cl(130) > 1.8, cl(1).toFixed(2) + " → " + cl(130).toFixed(2));
+  const T = 2000, A = 0.4, p = new TF.Solver({ R: R, length: 60, ratio: 0, u: 0.04, nu: 0.1, inflow: "pulsatile", pulse: { amp: A, period: T }, disturbance: "none" });
+  // fit c0 + c1 sin ωt + c2 cos ωt to the flow rate near the inlet over the fourth period
+  let c0 = 0, c1 = 0, c2 = 0; const M = 40;
+  for (let k = 0; k < M; k++) { const t = 3 * T + k * T / M; while (p.t < t) p.step(); p.macroscopic(); const q = p.planeU(3), w = 2 * Math.PI * t / T; c0 += q / M; c1 += 2 * q * Math.sin(w) / M; c2 += 2 * q * Math.cos(w) / M; }
+  const amp = Math.hypot(c1, c2) / c0, lag = Math.atan2(-c2, c1) * 180 / Math.PI;
+  check("pulsatile inflow (amplitude 40%): flow-rate amplitude within 3%, in phase within 5°", Math.abs(amp / A - 1) < 0.03 && Math.abs(lag) < 5, "amplitude " + amp.toFixed(3) + ", lag " + lag.toFixed(1) + "°");
+}
+
 console.log(pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail ? 1 : 0);

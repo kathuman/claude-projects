@@ -1,11 +1,16 @@
 # Tube Flow — a validated lattice-Boltzmann flow lab
 
-By [kathuman](https://github.com/kathuman). Flow through a tube past a sphere, in 3D, with real fluids
-and units and live measurements. Live: https://kathuman.github.io/claude-projects/tube-flow-sim/
+By [kathuman](https://github.com/kathuman). Flow through a tube past a sphere — or an ellipsoid, cylinder,
+disc, cube, a bar across the tube, or your own STL shape — in 3D, with real fluids and units, live
+measurements, Reynolds sweeps against published curves, saved runs and VTK export. Live: https://kathuman.github.io/claude-projects/tube-flow-sim/
 
 ## Files
 
-- `index.html` — the page: case setup, 3D view (three.js), tracers, slices, measurements panel.
+- `index.html` — the page: case setup (fluid, tube, body, inflow), 3D view, measurements, and the
+  workbench: Reynolds sweeps plotted against Schiller–Naumann and the Haberman–Sayre wall-corrected
+  Stokes drag, saved runs (this browser's storage, plus JSON export/import) with side-by-side comparison,
+  and exports — CSV and JSON time series, VTK (legacy binary structured points: velocity, gauge pressure,
+  solid mask, in SI units) for ParaView.
 - `src/lbm.js` — the solver (browser + Node), D3Q19 lattice Boltzmann:
   - TRT collision where the grid Reynolds number u·Δx/ν is low (its walls sit exactly where they
     should at any viscosity), regularised BGK where it is high (stability at τ → ½);
@@ -15,7 +20,13 @@ and units and live measurements. Live: https://kathuman.github.io/claude-project
     renormalisation; an outlet sponge (raised viscosity in the last 12%) damps pressure waves;
   - the flow starts from the inflow profile and speed changes are eased in, so there are no
     start-up shocks;
-  - forces on the sphere and the wall by momentum exchange; per-cross-section wall force.
+  - forces on the body and the wall by momentum exchange; per-cross-section wall force.
+  - bodies (`makeBody`): sphere and ellipsoid with exact link crossings; cylinder, disc, cube and a bar
+    across the tube by bisection on an inside test; closed triangle meshes (`parseSTL`, binary or ASCII)
+    scaled to the chosen width, with an inside test by ray parity over binned triangles and a
+    watertightness check. Re and C_d use the body's width and frontal area.
+  - inflow: developed (parabolic), uniform plug, or pulsatile — the flow rate swings sinusoidally at a
+    chosen amplitude and Womersley number α = R√(ω/ν).
   - `caseToLattice()` maps a physical case (fluid, tube, sphere, speed) onto the grid at Mach ≤ 0.17
     and τ ≥ 0.51, and flags cases the grid can't resolve instead of running them wrongly.
 - `src/lbm-gpu.js` — the same scheme on the GPU (WebGPU compute: collide, stream, per-link
@@ -47,13 +58,20 @@ and units and live measurements. Live: https://kathuman.github.io/claude-project
 | Recirculation bubble | absent at Re 5, grows from Re 60 to 120 | yes |
 | Steady state at Re 100, speed changes | no lingering waves | steady to 1%, inlet density within 1.5% |
 | Case mapping | Re, Mach, τ, force/pressure scales | exact |
+| Ellipsoid 2:1, axial cylinder 1.5:1, cube | solid cells vs. volume | −0.1%, −3.2%, −2.8% |
+| Link crossings by bisection (generic shapes) | exact sphere intersections | 3·10⁻⁸ |
+| STL cube (binary = ASCII) | cube primitive | identical cells; frontal area exact |
+| STL sphere (5120 triangles), Stokes drag | exact sphere | −0.1% |
+| Uniform inflow | develops into Poiseuille flow | centre/mean 1.07 at the inlet → 1.94 (2 exact) |
+| Pulsatile inflow, 40% amplitude | imposed flow rate | amplitude 0.397, lag 2.9° |
 
 ### GPU solver
 
 `tests/gpu.test.js` (Playwright + a WebGPU-capable Chromium) runs both solvers on the same cases —
 pipe flow with TRT and with regularised collision, and the moving-sphere frame — and requires the
-same flow: velocity within 2·10⁻⁵ (5·10⁻⁴ of the speed at Re 1, float32 summation order), sphere drag
-within 0.01%, mass within 10⁻⁶. On a laptop's integrated GPU (Intel Xe) it runs ~160 million lattice
+same flow: velocity within 2·10⁻⁵ (5·10⁻⁴ of the speed at Re 1, float32 summation order), body drag
+within 0.01%, mass within 10⁻⁶ — also for a cube with pulsatile inflow and a bar across the tube with
+uniform inflow (the inflow speed of every step in a batch is passed to the GPU, so pulses match exactly). On a laptop's integrated GPU (Intel Xe) it runs ~160 million lattice
 updates per second — a 1.25-million-cell grid at ~130 steps/s.
 
 ### Benchmark: sphere in nearly unbounded flow (GPU)
@@ -85,8 +103,8 @@ clear by Re 500 — the GPU "Unsteady wake" preset.
 - **v3** — GPU solver (WebGPU), parity-tested against the CPU solver; grids up to 96 cells
   across the tube (sphere ~20–30 cells); wake symmetry-breaking and unsteady wakes resolved; benchmark against Johnson & Patel.
   (LES for higher Reynolds numbers moves to a later version.)
-- **v4 (current)** — visualisation: dye, vortex surfaces, streamlines, movable cross-section,
+- **v4** — visualisation: dye, vortex surfaces, streamlines, movable cross-section,
   time-averaged slice, video recording, three.js r186.
-- **v5** — experiment workbench: shapes and STL import, inflow options, parameter sweeps against
-  literature curves, batch runs, saved runs, VTK/CSV/JSON export.
+- **v5 (current)** — experiment workbench: shapes and STL import, inflow options (parabolic, uniform,
+  pulsatile), Reynolds sweeps against literature curves, saved runs and comparison, VTK/CSV/JSON export.
 - **v6** — trust and teaching: validation report page, grid-convergence studies, guided labs.

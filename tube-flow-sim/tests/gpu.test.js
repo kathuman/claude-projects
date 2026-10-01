@@ -12,7 +12,9 @@ function check(name, cond, detail) { if (cond) pass++; else fail++; console.log(
   const cases = [
     ["pipe, Re 30", { R: 8, length: 48, ratio: 0.35, u: 0.05, nu: 0.05 * 5.6 / 30, mode: "pipe", disturbance: "none" }],
     ["pipe, regularised, Re 150", { R: 8, length: 48, ratio: 0.35, u: 0.08, nu: 0.08 * 5.6 / 150, mode: "pipe", disturbance: "none" }],
-    ["moving sphere, TRT, Re 1", { R: 8, length: 48, ratio: 0.3, u: 0.01, nu: 0.01 * 4.8, mode: "moving", disturbance: "none" }]
+    ["moving sphere, TRT, Re 1", { R: 8, length: 48, ratio: 0.3, u: 0.01, nu: 0.01 * 4.8, mode: "moving", disturbance: "none" }],
+    ["cube, pulsatile inflow, Re 40", { R: 8, length: 48, ratio: 0.42, u: 0.05, nu: 0.05 * 6.72 / 40, mode: "pipe", disturbance: "none", body: { shape: "cube" }, inflow: "pulsatile", pulse: { amp: 0.4, period: 150 } }],
+    ["bar across the tube, uniform inflow, Re 60", { R: 8, length: 48, ratio: 0.25, u: 0.06, nu: 0.06 * 4 / 60, mode: "pipe", disturbance: "none", body: { shape: "bar" }, inflow: "uniform" }]
   ];
   for (const [name, o] of cases) {
     const r = await p.evaluate(([o]) => window.parity(o, 400), [o]);
@@ -20,7 +22,7 @@ function check(name, cond, detail) { if (cond) pass++; else fail++; console.log(
     console.log("   " + name + ": " + r.adapter + ", " + r.nodes + " nodes, " + r.links + " links, " + r.collision);
     check(name + ": velocity field matches the CPU solver (max diff < 5e-4 of max speed; float32 summation order)", r.maxVelocityDiff < 5e-4, r.maxVelocityDiff.toExponential(2));
     check(name + ": density matches (max diff < 1e-5)", r.maxDensityDiff < 1e-5, r.maxDensityDiff.toExponential(2));
-    check(name + ": drag on the sphere matches (0.01%)", Math.abs(r.dragGPU / r.dragCPU - 1) < 1e-4, r.dragGPU.toExponential(5) + " vs " + r.dragCPU.toExponential(5));
+    check(name + ": drag on the body matches (0.01%)", Math.abs(r.dragGPU / r.dragCPU - 1) < 1e-4, r.dragGPU.toExponential(5) + " vs " + r.dragCPU.toExponential(5));
     // the wall force sums ~13k nearly-cancelling link terms: float32 on the GPU vs double on the CPU
     check(name + ": wall force matches (0.5%)", Math.abs(r.wallGPU / r.wallCPU - 1) < 5e-3, r.wallGPU.toExponential(4) + " vs " + r.wallCPU.toExponential(4));
     check(name + ": mass matches (1e-6)", Math.abs(r.massGPU / r.massCPU - 1) < 1e-6, (r.massGPU / r.massCPU - 1).toExponential(2));
