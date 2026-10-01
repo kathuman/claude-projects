@@ -1,5 +1,13 @@
 [
   {
+    "title": "Plumb",
+    "description": "A parametrized 3D simulator for a two-wheeled, single-axis balancing robot. Real Lagrangian dynamics (derived and energy-conservation-tested, not a bolted-on physics engine), 4th-order Runge-Kutta integration, and a cascaded PID controller like real cheap hardware runs — tune the gains, the control-loop rate, sensor noise and delay live, drag-orbit the 3D view, and drive it with the arrow keys. Change wheel radius, track width, body mass and dimensions on the fly, or pick a verified preset (nimble, heavy, tall-and-tippy, tiny wheels, noisy sensor, too-slow control loop). Physical parameters can also be sourced from an actual FreeCAD parametric model — a spreadsheet-driven macro computes real mass/inertia from solid geometry instead of a box approximation. 7 passing tests validate the physics and controller against the written-out derivation.",
+    "date": "2026-10-01",
+    "tags": ["javascript", "web", "3d", "simulation", "robotics", "controls", "freecad", "python"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/balancebot-sim",
+    "demoUrl": "https://kathuman.github.io/claude-projects/balancebot-sim/"
+  },
+  {
     "title": "Linkage",
     "description": "A real-time 3D robotic arm simulator. Drive a 5-axis cobot by hand with per-joint sliders, or run canned Home / Wave / Pick & Place routines with an async tween engine. Live HUD reads the end-effector's actual forward-kinematics position off the joint hierarchy, an optional tip trace draws its path through space, and a cannon.js rigid-body world means anything the gripper releases actually falls, bounces and settles on the floor instead of snapping into place. Drag to orbit, scroll to zoom. Single page, vendored three.js + cannon.js, no runtime CDN dependency.",
     "date": "2026-09-17",

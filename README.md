@@ -80,7 +80,14 @@ real-options/index.html            — https://kathuman.github.io/claude-project
 othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
 robotic-arm-sim/index.html         — https://kathuman.github.io/claude-projects/robotic-arm-sim/
+balancebot-sim/index.html          — https://kathuman.github.io/claude-projects/balancebot-sim/
 ```
+
+`balancebot-sim/` is structured differently from the others — it's a small
+real project (web app + Python/FreeCAD tooling + a test suite + CI), not a
+single HTML file — with its own [README](balancebot-sim/README.md). Its
+`index.html` at the folder root is just a redirect into `web/index.html`,
+kept so its demo URL matches the pattern above.
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
 app has no runtime CDN dependency); the licence sits beside it.
