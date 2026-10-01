@@ -422,7 +422,6 @@ export function createView(stageEl) {
     V.lastTick = now;
     controls.update();
     renderer.render(scene, camera);
-    if (recTrack && recTrack.requestFrame) recTrack.requestFrame();
     V.frames = (V.frames || 0) + 1;
     V.lastDraw = now; V.justDrew = true;
   };
@@ -430,21 +429,34 @@ export function createView(stageEl) {
   // ---------------------------------------------------------------- recording
   let rec = null, recTrack = null;
   V.recording = () => !!rec;
+  // The first recorder of a page session sometimes never receives data (the video encoder is slow to
+  // start); if nothing has arrived after a second, it is replaced by a fresh one, transparently.
   V.record = function (on, done) {
     if (on && !rec) {
       // VP8 first: VP9 encoding of a WebGL canvas can silently produce an empty file
       const types = ["video/webm;codecs=vp8", "video/webm", "video/webm;codecs=vp9"];
       const type = types.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
       if (!type) { done && done(null, "This browser can't record video."); return false; }
-      // frames are pushed explicitly after each render (requestFrame), so the video holds exactly what was drawn
-      const stream = renderer.domElement.captureStream(0), chunks = [], mr = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 });
-      recTrack = stream.getVideoTracks()[0];
-      mr.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-      mr.onstop = () => { done && done(new Blob(chunks, { type: "video/webm" })); };
-      mr.start(500); rec = mr;
+      const session = { chunks: [], bytes: 0, done: done, live: true };
+      const begin = function () {
+        const stream = renderer.domElement.captureStream(30), mr = new MediaRecorder(stream, { mimeType: type });
+        recTrack = stream.getVideoTracks()[0];
+        mr.ondataavailable = (e) => { if (e.data.size && mr === session.mr) { session.chunks.push(e.data); session.bytes += e.data.size; } };
+        mr.onstop = () => { if (mr === session.mr && !session.live) session.done && session.done(new Blob(session.chunks, { type: "video/webm" })); };
+        session.mr = mr; mr.start(250);
+      };
+      begin();
+      session.retry = setTimeout(function check(tries) {
+        tries = tries || 0;
+        if (!session.live || session.bytes > 0 || tries >= 3) return;
+        const old = session.mr; session.mr = null; try { old.stop(); } catch (e) {}
+        begin();
+        session.retry = setTimeout(function () { check(tries + 1); }, 1200);
+      }, 1200);
+      rec = session;
       return true;
     }
-    if (!on && rec) { rec.stop(); rec = null; recTrack = null; }
+    if (!on && rec) { const s2 = rec; clearTimeout(s2.retry); s2.live = false; rec = null; recTrack = null; try { s2.mr.stop(); } catch (e) {} }
     return false;
   };
   V.set("dye", V.opts.dye);

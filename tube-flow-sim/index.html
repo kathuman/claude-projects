@@ -586,7 +586,8 @@ import { createView } from "./src/view.js";
   //   4.0.0  visualisation: three.js r186 view module — dye (MacCormack advection, ray-marched volume) from a
   //          rake or the sphere, Q-criterion vortex surfaces, streamlines, movable cross-section, time-averaged
   //          slice, video recording; orbit controls
-  var APP_VERSION = "4.0.0";
+  //   4.0.1  video recording restarts the recorder if the encoder delivers nothing at first
+  var APP_VERSION = "4.0.1";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
