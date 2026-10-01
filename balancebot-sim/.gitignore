@@ -1,0 +1,17 @@
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+
+# FreeCAD's own document + lock/backup files -- regenerate with
+# cad/parametric_robot.py rather than committing a binary CAD file.
+cad/*.FCStd
+cad/*.FCStd1
+cad/*.FCBak
+
+# The live CAD export the simulator reads. Not committed: its absence is
+# the honest "FreeCAD hasn't been run in this checkout yet" state, and the
+# simulator falls back to the analytic defaults automatically. Mesh
+# exports are regenerated alongside it.
+web/cad/robot_params.json
+cad/exported/*.stl

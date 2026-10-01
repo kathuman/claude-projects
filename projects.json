@@ -1,5 +1,13 @@
 [
   {
+    "title": "Plumb",
+    "description": "A parametrized 3D simulator for a two-wheeled, single-axis balancing robot. Real Lagrangian dynamics (derived and energy-conservation-tested, not a bolted-on physics engine), 4th-order Runge-Kutta integration, and a cascaded PID controller like real cheap hardware runs — tune the gains, the control-loop rate, sensor noise and delay live, drag-orbit the 3D view, and drive it with the arrow keys. Change wheel radius, track width, body mass and dimensions on the fly, or pick a verified preset (nimble, heavy, tall-and-tippy, tiny wheels, noisy sensor, too-slow control loop). Physical parameters can also be sourced from an actual FreeCAD parametric model — a spreadsheet-driven macro computes real mass/inertia from solid geometry instead of a box approximation. 7 passing tests validate the physics and controller against the written-out derivation.",
+    "date": "2026-10-01",
+    "tags": ["javascript", "web", "3d", "simulation", "robotics", "controls", "freecad", "python"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/balancebot-sim",
+    "demoUrl": "https://kathuman.github.io/claude-projects/balancebot-sim/"
+  },
+  {
     "title": "Xiangqi",
     "description": "Xiangqi (Chinese chess) against a friend on one screen, or against the open-source Fairy-Stockfish engine — one of the strongest Xiangqi engines, compiled to WebAssembly and running entirely in your browser — at eight strength levels from beginner to full strength. Full rules: generals confined to the palace and the flying-general rule, hobbled horses, blocked elephants that can't cross the river, cannons that capture over a screen, soldiers that step sideways once across the river, stalemate-loses, and perpetual check adjudicated from threefold repetition. Plus a Classic problems mode: mating problems from 《适情雅趣》 (Shiqing Yaqu, 1570), the oldest surviving Xiangqi problem book, graded by length, and the Four Great Endgames (江湖四大名局) as draw-holding studies against the engine. Every problem was scraped, replayed through the app's own rules and confirmed by Fairy-Stockfish; alternative solutions are judged live by the engine, with hints, a step-through solution viewer and solved-problem tracking. Traditional Chinese-character pieces or Western letters, five board styles, a 3D view you can tilt and turn by dragging, WXF move notation, undo and board flip. The move generator is verified against the published perft counts to depth 4 (3,290,240 positions). A small service worker supplies the cross-origin-isolation headers the multi-threaded engine needs, since GitHub Pages can't.",
     "date": "2026-09-28",

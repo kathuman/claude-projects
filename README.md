@@ -86,11 +86,18 @@ cobot-lab/index.html               — https://kathuman.github.io/claude-project
 tube-flow-sim/index.html           — https://kathuman.github.io/claude-projects/tube-flow-sim/
 warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/
 face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/
+balancebot-sim/index.html          — https://kathuman.github.io/claude-projects/balancebot-sim/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules
 alongside the page, not just a single HTML file) — their entry points are `web/index.html`,
 not the folder root. See each folder's own `README.md` for its architecture.
+
+`balancebot-sim/` is structured the same way, and goes further — it's a small
+real project (web app + Python/FreeCAD tooling + a test suite + CI), not just
+a multi-file page — with its own [README](balancebot-sim/README.md). Its
+`index.html` at the folder root is just a redirect into `web/index.html`,
+kept so its demo URL matches the pattern above.
 
 Sub-apps may vendor third-party code under `<folder>/vendor/` (kept in-repo so the
 app has no runtime CDN dependency); the licence sits beside it.

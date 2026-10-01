@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "source": "analytic-default",
+  "geometry": {
+    "wheelRadius": 0.04,
+    "wheelWidth": 0.026,
+    "trackWidth": 0.16,
+    "bodyWidth": 0.09,
+    "bodyDepth": 0.05,
+    "bodyHeight": 0.2,
+    "comHeight": 0.14
+  },
+  "mass": {
+    "wheelMass": 0.15682830526720248,
+    "bodyMass": 0.54
+  },
+  "inertia": {
+    "wheelInertia": 0.000125462644213762,
+    "bodyPitchInertia": 0.0019125000000000008,
+    "yawInertia": 0.002627534274027392
+  },
+  "motor": {
+    "maxTorque": 0.35,
+    "timeConstant": 0.02
+  },
+  "environment": {
+    "gravity": 9.81,
+    "rollingResistance": 0.02,
+    "pitchDamping": 0.0008,
+    "yawDamping": 0.01
+  }
+}
