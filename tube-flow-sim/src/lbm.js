@@ -192,6 +192,10 @@
     this.lWhich = new Uint8Array(this.nLinks); this.lBack = new Int32Array(this.nLinks);
     for (let k = 0; k < this.nLinks; k++) { this.lNode[k] = links[5 * k]; this.lDir[k] = links[5 * k + 1]; this.lQ[k] = links[5 * k + 2]; this.lWhich[k] = links[5 * k + 3]; this.lBack[k] = links[5 * k + 4]; }
 
+    this.force = [0, 0, 0]; this.wallForce = [0, 0, 0];
+    this.wallFx = new Float64Array(Nx);
+    this.uCur = this.u;
+    if (opts.geometryOnly) { this.pickCollision(); return; }   // the GPU solver only needs the geometry
     // streaming sources for every interior node and direction (−1 where the source is a wall)
     this.src = new Int32Array(this.interior.length * Q);
     for (let k = 0; k < this.interior.length; k++) {
