@@ -23,6 +23,12 @@ and units and live measurements. Live: https://kathuman.github.io/claude-project
   direction-major). Geometry comes from the CPU solver (`geometryOnly`), readouts (forces, cross-
   sections, wake axis, slice, a downsampled field, mass) are gathered on the GPU and read back a few
   times a second. Used automatically when the browser has WebGPU; the CPU worker is the fallback.
+- `src/view.js` — the 3D view (three.js r186, vendored in `vendor/three`): tracers; dye carried by the
+  flow (MacCormack semi-Lagrangian advection on the streamed velocity field, released from a rake or
+  the sphere, ray-marched as a 3D texture); Q-criterion vortex surfaces (surface nets, one-sided
+  differences at walls, coloured by the sense of rotation); streamlines from a rake (RK2); axial slice
+  (speed, vorticity, pressure, optionally time-averaged) and a movable cross-section; WebM recording.
+  It runs on whatever the solver streams, so every view works on both the GPU and the CPU solver.
 - `src/sim-worker.js` — runs the CPU solver in a Web Worker and streams the field and the measurements.
 - `tests/lbm.test.js` — validation (below); `tests/gpu.test.js` + `gpu-parity.html` — GPU vs CPU
   parity; `tests/benchmark.js` + `gpu-bench.html` — long GPU runs against published sphere data.
@@ -76,10 +82,11 @@ clear by Re 500 — the GPU "Unsteady wake" preset.
 
 - **v2** — validated solver, real units, measurements (drag, lift, Strouhal, pressure drop,
   recirculation, mass balance), measured regime, CSV export, kathuman credit.
-- **v3 (current)** — GPU solver (WebGPU), parity-tested against the CPU solver; grids up to 96 cells
+- **v3** — GPU solver (WebGPU), parity-tested against the CPU solver; grids up to 96 cells
   across the tube (sphere ~20–30 cells); wake symmetry-breaking and unsteady wakes resolved; benchmark against Johnson & Patel.
   (LES for higher Reynolds numbers moves to a later version.)
-- **v4** — visualisation: dye, vortex isosurfaces, streamlines, movable slices, time averages, video.
+- **v4 (current)** — visualisation: dye, vortex surfaces, streamlines, movable cross-section,
+  time-averaged slice, video recording, three.js r186.
 - **v5** — experiment workbench: shapes and STL import, inflow options, parameter sweeps against
   literature curves, batch runs, saved runs, VTK/CSV/JSON export.
 - **v6** — trust and teaching: validation report page, grid-convergence studies, guided labs.
