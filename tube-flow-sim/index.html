@@ -551,7 +551,8 @@ footer.foot .consult a{color:var(--accent);}
   //          measured regime; CSV export; tests; kathuman credit and version badge
   //   3.0.0  GPU solver (WebGPU compute, same scheme — parity-tested against the CPU solver): grids up to
   //          96 cells across the tube, resolved vortex shedding; CPU worker kept as the fallback
-  var APP_VERSION = "3.0.0";
+  //   3.0.1  "unsteady" only once the oscillation outlasts the start-up disturbance (3 flow-throughs)
+  var APP_VERSION = "3.0.1";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -943,8 +944,10 @@ footer.foot .consult a{color:var(--accent);}
     }
     var settled = prev.length > 5 && Math.abs(cd/cdPrev-1) < 0.005;
     var rec = last[5]/(2*G.r);
-    // unsteady: the lift oscillates (rms above 0.4% of the drag) at a clear frequency
-    var regime = !prev.length ? 'settling' : (isFinite(st) && clr > 0.004*Math.abs(cd)) ? 'unsteady' : settled ? 'steady' : 'settling';
+    // unsteady: the lift keeps oscillating (rms above 0.4% of the drag, at a clear frequency) after the
+    // start-up disturbance has had three flow-throughs to die out
+    var oscillating = isFinite(st) && clr > 0.004*Math.abs(cd);
+    var regime = !prev.length ? 'settling' : (oscillating && t/ft >= 3) ? 'unsteady' : settled && !oscillating ? 'steady' : 'settling';
     var massChange = win.length > 1 ? win[win.length-1][6]/win[0][6] - 1 : 0;
     var clMean = Math.hypot(my, mz) / q;
     return { st2:st2, clMean:clMean, massChange:massChange, tw:tw, t:t, ft:t/ft, cd:cd, cdPrev:cdPrev, clr:clr, st:st, settled:settled, rec:rec, dp:last[4]/3, fx:mean(win,1), regime:regime, a:last[7], b:last[8] };
