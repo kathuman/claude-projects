@@ -367,7 +367,9 @@ fn mass(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(local_invocation
     const st = dev.createBuffer({ size: partBytes, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
     enc.copyBufferToBuffer(this.part, 0, st, 0, partBytes);
     jobs.push(["force", st, partBytes]);
-    const names = ["planes", "axis"].concat(want.slice ? ["slice"] : []).concat(want.field ? ["field"] : []);
+    // want.slice: true (the gatherer named "slice"), a gatherer's name, or a list of names
+    const sl = want.slice === true ? ["slice"] : Array.isArray(want.slice) ? want.slice : want.slice ? [want.slice] : [];
+    const names = ["planes", "axis"].concat(sl).concat(want.field ? ["field"] : []);
     names.forEach((nm) => {
       const gth = this.gathers && this.gathers[nm]; if (!gth || !gth.n) return;
       const p2 = enc.beginComputePass(); p2.setPipeline(this.pGather); p2.setBindGroup(0, gth.bg.get(latest)); p2.dispatchWorkgroups(gth.groups); p2.end();

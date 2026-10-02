@@ -32,6 +32,7 @@ export function createView(stageEl) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.localClippingEnabled = true;
   renderer.toneMapping = THREE.NeutralToneMapping;
   stageEl.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
@@ -48,9 +49,12 @@ export function createView(stageEl) {
     opts: { tracers: true, nTracers: 3000, axial: false, field: "speed", average: false, cross: false, crossX: 0.55, dye: true, dyeSource: "rake", vortex: false, vortexLevel: 0.6, streamlines: false, rakeY: 0 },
     drawCost: 16, justDrew: false, lastDraw: 0, lastTick: 0, onCaption: null
   };
-  const tubeGroup = new THREE.Group(); scene.add(tubeGroup);
+  // everything placed in lattice coordinates lives in `world`; for a wing the world is turned so that the
+  // lift direction (lattice z) points up on screen and the default view looks along the span, at the profile
+  const world = new THREE.Group(); scene.add(world);
+  const tubeGroup = new THREE.Group(); world.add(tubeGroup);
   const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 48, 32), new THREE.MeshStandardMaterial({ color: 0x223140, roughness: 0.3, metalness: 0.55, side: THREE.DoubleSide }));
-  scene.add(bodyMesh);
+  world.add(bodyMesh);
   // the body's surface in scene units, centred on the body
   function bodyGeometry(G, sc) {
     const B = G.body || { shape: "sphere", a: G.r, b: G.r }, a = Math.max(0.01, B.a * sc), b = Math.max(0.01, B.b * sc);
@@ -85,17 +89,23 @@ export function createView(stageEl) {
     const rings = Math.max(4, Math.round(len / 1.5));
     for (let k = 0; k <= rings; k++) { const r = new THREE.Line(new THREE.BufferGeometry().setFromPoints(circle), ringMat); r.position.x = -len / 2 + len * k / rings; tubeGroup.add(r); }
     [[0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].forEach((d) => { tubeGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-len / 2, d[1], d[2]), new THREE.Vector3(len / 2, d[1], d[2])]), ringMat)); });
+    world.rotation.x = G.body && G.body.shape === "wing" ? -Math.PI / 2 : 0;
     bodyMesh.visible = G.r > 0;
     bodyMesh.geometry.dispose(); bodyMesh.geometry = bodyGeometry(G, V.scale);
     bodyMesh.position.set((G.sx - G.Nx / 2) * V.scale, 0, 0);
     V.bodySources = null;
-    axial.setup(); cross.setup();
+    axial.setup(); cross.setup(); updateCut();
     V.resetDye(); resetTracers(); V.resetAverage();
     V.resetView();
   };
   V.resetView = function () {
     if (!V.G) return;
     const len = V.G.Nx * V.scale;
+    if (isWing()) {                                     // straight from the side, along the span, framed on the profile
+      const B = V.G.body, tx = ((B.xFront + B.xRear) / 2 - V.G.Nx / 2) * V.scale;
+      camera.position.set(tx, 0.18, Math.max(3.2, B.chord * V.scale * 4.2));
+      controls.target.set(tx, 0, 0); controls.update(); return;
+    }
     camera.position.set(-len * 0.12, len * 0.32, len * 0.78);
     controls.target.set((V.G.sx - V.G.Nx / 2) * V.scale + len * 0.12, 0, 0);
     controls.update();
@@ -125,7 +135,7 @@ export function createView(stageEl) {
   // ---------------------------------------------------------------- tracers
   const pGeo = new THREE.BufferGeometry();
   const pMat = new THREE.PointsMaterial({ size: 0.022, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
-  const points = new THREE.Points(pGeo, pMat); points.frustumCulled = false; scene.add(points);
+  const points = new THREE.Points(pGeo, pMat); points.frustumCulled = false; world.add(points);
   const P = {};
   function seed(i, anywhere) {
     const G = V.G, r = G.R * Math.sqrt(Math.random()) * 0.94, th = Math.random() * Math.PI * 2;
@@ -159,10 +169,12 @@ export function createView(stageEl) {
     const canvas = document.createElement("canvas"), ctx = canvas.getContext("2d"), tex = new THREE.CanvasTexture(canvas);
     tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter; tex.colorSpace = THREE.SRGBColorSpace;
     const mesh = new THREE.Mesh(planeGeom(), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
-    mesh.visible = false; mesh.renderOrder = 2; scene.add(mesh);
+    mesh.visible = false; mesh.renderOrder = 2; world.add(mesh);
     return { canvas, ctx, tex, mesh };
   }
-  // axial plane through the axis (x, y at z = centre), optionally time-averaged
+  // axial plane through the axis, optionally time-averaged: horizontal (x, y at z = centre) or vertical
+  // (x, z at y = centre — for a wing, the plane of its profile); F.slice carries its plane, `uy` being
+  // the in-plane component across the tube (u_y or u_z)
   const axial = makeSlice(() => new THREE.PlaneGeometry(1, 1));
   let avg = null;
   V.resetAverage = function () { avg = null; };
@@ -170,17 +182,20 @@ export function createView(stageEl) {
     const G = V.G;
     axial.mesh.geometry.dispose(); axial.mesh.geometry = new THREE.PlaneGeometry(G.Nx * V.scale, G.Ny * V.scale);
     axial.canvas.width = G.Nx; axial.canvas.height = G.Ny;
+    axial.plane = "xy"; axial.mesh.rotation.x = 0;
   };
   axial.draw = function () {
-    const G = V.G, F = V.F, Nx = G.Nx, Ny = G.Ny, z = Math.round(G.cz), img = axial.ctx.createImageData(Nx, Ny), d = img.data, c = [0, 0, 0];
+    const G = V.G, F = V.F, Nx = G.Nx, Ny = G.Ny, z = Math.round(G.cz), yc = Math.round(G.cy), img = axial.ctx.createImageData(Nx, Ny), d = img.data, c = [0, 0, 0];
     let P2 = F.slice;
+    const plane = F.slice.plane || "xy";
+    if (plane !== axial.plane) { axial.plane = plane; axial.mesh.rotation.x = plane === "xz" ? Math.PI / 2 : 0; avg = null; updateCut(); }
     if (V.opts.average) {
       if (!avg || avg.ux.length !== Nx * Ny) avg = { n: 0, ux: new Float32Array(Nx * Ny), uy: new Float32Array(Nx * Ny), rho: new Float32Array(Nx * Ny) };
       avg.n++; const w = 1 / avg.n;
       for (let k = 0; k < Nx * Ny; k++) { avg.ux[k] += (F.slice.ux[k] - avg.ux[k]) * w; avg.uy[k] += (F.slice.uy[k] - avg.uy[k]) * w; avg.rho[k] += (F.slice.rho[k] - avg.rho[k]) * w; }
       P2 = avg;
     }
-    const solid = (x, y) => G.solid[x + Nx * (y + Ny * z)];
+    const solid = plane === "xz" ? (x, j) => G.solid[x + Nx * (yc + Ny * j)] : (x, y) => G.solid[x + Nx * (y + Ny * z)];
     const sn = Math.max(1e-6, V.L.u * 1.15), vn = Math.max(1e-6, V.L.u * 2 / Math.max(1, G.r));
     let pmin = Infinity, pmax = -Infinity;
     if (V.opts.field === "pressure") for (let q = 0; q < Nx * Ny; q++) { if (!solid(q % Nx, (q / Nx) | 0)) { const r = P2.rho[q]; if (r < pmin) pmin = r; if (r > pmax) pmax = r; } }
@@ -197,6 +212,17 @@ export function createView(stageEl) {
     }
     axial.ctx.putImageData(img, 0, 0); axial.tex.needsUpdate = true;
   };
+  const isWing = () => !!(V.G && V.G.body && V.G.body.shape === "wing");
+  const cutFacing = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0), cutTop = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+  function updateCut() {
+    let planes = [];
+    if (V.opts.axial && V.G) {
+      const pl = axial.plane || "xy", facing = isWing() ? pl === "xz" : pl === "xy";
+      planes = [facing ? cutFacing : cutTop];
+    }
+    bodyMesh.material.clippingPlanes = planes; bodyMesh.material.needsUpdate = true;
+  }
+  V.updateCut = updateCut;
   // movable cross-section (y, z at a chosen x), drawn from the field
   const cross = makeSlice(() => new THREE.PlaneGeometry(2, 2));
   cross.setup = function () { const Fd = V.F && V.F.field; cross.canvas.width = 64; cross.canvas.height = 64; cross.mesh.rotation.y = Math.PI / 2; };
@@ -222,13 +248,13 @@ export function createView(stageEl) {
   // ---------------------------------------------------------------- dye (concentration on the field's grid)
   const dye = { c: null, tmp: null, back: null, tex: null, dims: null };
   const volMat = new THREE.ShaderMaterial({
-    uniforms: { tex: { value: null }, boxMin: { value: new THREE.Vector3() }, boxMax: { value: new THREE.Vector3() }, color: { value: new THREE.Color(0xff5fa2) }, gain: { value: 1.6 } },
-    vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    uniforms: { toLocal: { value: new THREE.Matrix4() }, tex: { value: null }, boxMin: { value: new THREE.Vector3() }, boxMax: { value: new THREE.Vector3() }, color: { value: new THREE.Color(0xff5fa2) }, gain: { value: 1.6 } },
+    vertexShader: `uniform mat4 toLocal; varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = (toLocal * w).xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `precision highp float; precision highp sampler3D;
-      uniform sampler3D tex; uniform vec3 boxMin, boxMax, color; uniform float gain; varying vec3 vW;
+      uniform mat4 toLocal; uniform sampler3D tex; uniform vec3 boxMin, boxMax, color; uniform float gain; varying vec3 vW;
       vec2 hitBox(vec3 o, vec3 d){ vec3 t0=(boxMin-o)/d, t1=(boxMax-o)/d; vec3 a=min(t0,t1), b=max(t0,t1); return vec2(max(max(a.x,a.y),a.z), min(min(b.x,b.y),b.z)); }
       void main(){
-        vec3 o = cameraPosition, dir = normalize(vW - cameraPosition);
+        vec3 o = (toLocal * vec4(cameraPosition, 1.0)).xyz, dir = normalize(vW - o);
         vec2 t = hitBox(o, dir); t.x = max(t.x, 0.0); if (t.x >= t.y) discard;
         float acc = 0.0; vec3 col = vec3(0.0); const int STEPS = 160; float dt = (t.y - t.x) / float(STEPS);
         for (int i = 0; i < STEPS; i++){
@@ -245,7 +271,7 @@ export function createView(stageEl) {
       }`,
     transparent: true, depthWrite: false, side: THREE.BackSide
   });
-  const volMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), volMat); volMesh.renderOrder = 3; volMesh.frustumCulled = false; scene.add(volMesh);
+  const volMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), volMat); volMesh.renderOrder = 3; volMesh.frustumCulled = false; world.add(volMesh);
   V.resetDye = function () { dye.c = null; };
   function ensureDye() {
     const Fd = V.F.field, n = Fd.nx * Fd.ny * Fd.nz;
@@ -326,7 +352,7 @@ export function createView(stageEl) {
 
   // ---------------------------------------------------------------- vortex surfaces (Q-criterion, surface nets)
   const vortexMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.05, transparent: true, opacity: 0.88, side: THREE.DoubleSide }));
-  vortexMesh.visible = false; scene.add(vortexMesh);
+  vortexMesh.visible = false; world.add(vortexMesh);
   function qField() {
     const Fd = V.F.field, nx = Fd.nx, ny = Fd.ny, nz = Fd.nz, s = Fd.s, Q = new Float32Array(nx * ny * nz), ux = Fd.ux, uy = Fd.uy, uz = Fd.uz, rho = Fd.rho;
     const ref = Math.pow(V.L.u / Math.max(1, 2 * V.G.r), 2);
@@ -401,7 +427,7 @@ export function createView(stageEl) {
 
   // ---------------------------------------------------------------- streamlines
   const streamMesh = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 }));
-  streamMesh.visible = false; streamMesh.frustumCulled = false; scene.add(streamMesh);
+  streamMesh.visible = false; streamMesh.frustumCulled = false; world.add(streamMesh);
   function updateStreamlines() {
     const G = V.G, pos = [], col = [], o = [0, 0, 0], o2 = [0, 0, 0], a = [0, 0, 0], b = [0, 0, 0], c = [0, 0, 0], norm = Math.max(1e-6, V.L.u * 1.15);
     const x0 = Math.max(2, frontX() - 2 * G.r), nSeeds = 28, h = 0.6;
@@ -444,6 +470,7 @@ export function createView(stageEl) {
     if (k === "average" || k === "field") V.resetAverage();
     if (k === "dyeSource") V.resetDye();
     points.visible = V.opts.tracers; axial.mesh.visible = V.opts.axial; cross.mesh.visible = V.opts.cross;
+    if (k === "axial") updateCut();
     volMesh.visible = V.opts.dye; vortexMesh.visible = V.opts.vortex; streamMesh.visible = V.opts.streamlines;
     if (V.F && V.L && V.G) {
       if (V.opts.axial) axial.draw(); if (V.opts.cross) cross.draw();
@@ -466,6 +493,7 @@ export function createView(stageEl) {
     }
     V.lastTick = now;
     controls.update();
+    world.updateMatrixWorld(); volMat.uniforms.toLocal.value.copy(world.matrixWorld).invert();
     renderer.render(scene, camera);
     V.frames = (V.frames || 0) + 1;
     V.lastDraw = now; V.justDrew = true;

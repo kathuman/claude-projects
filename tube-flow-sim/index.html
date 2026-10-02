@@ -573,6 +573,10 @@ footer.foot .consult a{color:var(--accent);}
           <button class="btn" data-field="vorticity" type="button">Vorticity</button>
           <button class="btn" data-field="pressure" type="button">Pressure</button>
         </div>
+        <div class="field-select" id="plane-select" hidden>
+          <button class="btn active" data-plane="xy" type="button" title="Slice through the axis">Side</button>
+          <button class="btn" data-plane="xz" type="button" title="Slice through the axis, at right angles to the other">Top</button>
+        </div>
         <div class="switch-row" id="avg-row" hidden><span class="name">Time-averaged</span><div class="switch" id="sw-avg" role="switch" aria-checked="false" tabindex="0"><div class="knob"></div></div></div>
         <button class="btn" id="btn-record" type="button">● Record video</button>
       </div>
@@ -628,6 +632,10 @@ footer.foot .consult a{color:var(--accent);}
     <div class="chart-wrap">
       <canvas id="chart" width="1200" height="200" aria-label="Drag and lift coefficients over time"></canvas>
       <div class="chart-legend"><span><i style="background:#7be0c4"></i>drag coefficient C_d</span><span><i style="background:#ffcf4a"></i>lift coefficient C_l (×10)</span><span id="chart-time"></span></div>
+    </div>
+    <div class="chart-wrap" id="cp-wrap" hidden style="margin-top:12px; position:relative;">
+      <canvas id="cp-chart" width="1200" height="260" aria-label="Pressure coefficient along the wing's upper and lower surfaces at mid-span"></canvas>
+      <div class="chart-legend"><span><i style="background:#e8577a"></i>upper surface</span><span><i style="background:#0b96d4"></i>lower surface</span><span>pressure coefficient C_p = (p − p∞)/(½ρU²) along the chord, at mid-span · −C_p up (suction up), averaged over the last frames</span><span id="cp-block"></span><span id="cp-hover"></span></div>
     </div>
     <p class="ref" id="ref"></p>
 
@@ -730,7 +738,10 @@ footer.foot .consult a{color:var(--accent);}
           chord × span, and the Reynolds number the chord. The measurements show C_L, C_D and the lift-to-drag ratio, compared
           with thin-airfoil theory C_L = 2π(α − α_L0) — inviscid and two-dimensional, so at these Reynolds numbers (hundreds to
           about a thousand: insect and small-drone flight, not airliners) the measured lift slope is lower, while the tube's
-          walls close above and below the wing raise it. Sweep the <b>angle of attack</b> for the lift curve.
+          walls close above and below the wing raise it. Sweep the <b>angle of attack</b> for the lift curve. For a wing the view
+          turns so its profile is seen side-on with the lift pointing up, the axial slice can be laid in the profile plane
+          (speed, vorticity or pressure around the section), and a chart shows the <b>pressure distribution</b> C_p along the
+          chord on the upper and lower surfaces at mid-span — suction peak, stagnation point, and how they move with the angle.
         </p>
         <p>
           <b>Labs and validation.</b> Five <b>guided labs</b> (Stokes' law and the walls, separation and the wake bubble, how
@@ -788,7 +799,9 @@ import { createLabs } from "./src/labs.js";
   //          (observed order, Richardson extrapolation, GCI) and GPU parity; five guided labs
   //   6.1.0  wing sections: NACA 4-digit airfoils at an angle of attack, wall to wall or finite span; links through
   //          parts thinner than a cell; C_L, L/D, thin-airfoil comparison; angle-of-attack sweeps; wing lab
-  var APP_VERSION = "6.1.0";
+  //   6.2.0  wings: the view turns so the profile is seen side-on (lift up); slices in the vertical (profile) plane;
+  //          surface pressure distribution C_p along the chord at mid-span
+  var APP_VERSION = "6.2.0";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -801,7 +814,7 @@ import { createLabs } from "./src/labs.js";
   };
   var GRIDS = { cpu:[['low','Low',20],['medium','Medium',28],['high','High',36]], gpu:[['g40','40',40],['g64','64',64],['g96','96',96]] };
   var state = {fluid:'water', tubeMM:20, ratio:0.30, speed:0.005, frame:'pipe', res:'g64', disturb:'kick', particles:3000, sliceOn:false, field:'speed', running:false,
-               body:'sphere', aspect:2, stl:null, stlName:'', stlAxis:'x', inflow:'parabolic', pulseAmp:0.3, womersley:8, naca:'0012', alpha:5, span:1};
+               body:'sphere', aspect:2, stl:null, stlName:'', stlAxis:'x', inflow:'parabolic', pulseAmp:0.3, womersley:8, naca:'0012', alpha:5, span:1, slicePlane:'xy'};
   var SHAPES = {sphere:'Sphere', ellipsoid:'Ellipsoid', cylinder:'Cylinder', disc:'Disc', cube:'Cube', bar:'Bar', wing:'Wing', mesh:'STL shape'};
   var L = null, G = null, F = null, series = [], lastT = 0;
   var fluidSel = document.getElementById('fluid');
@@ -839,15 +852,21 @@ import { createLabs } from "./src/labs.js";
     document.getElementById('grid-note').textContent = (backend.kind==='gpu' ? 'GPU: '+[gpuInfo.info.vendor, gpuInfo.info.architecture].filter(Boolean).join(' ')+' · ' : 'CPU · ') +
       (n/1e6).toFixed(2)+' million cells, '+(2*n*19*4/1048576).toFixed(0)+' MB';
   }
+  // the axis-plane slice from full fields: horizontal (x, y at z = centre) or vertical (x, z at y = centre)
+  function cpuSlice(m, plane){
+    var Nx=G.Nx, Ny=G.Ny, H=plane==='xz'?G.Nz:Ny, zc=Math.round(G.cz), yc=Math.round(G.cy), sl={plane:plane, ux:new Float32Array(Nx*H), uy:new Float32Array(Nx*H), rho:new Float32Array(Nx*H)}, tr=plane==='xz'?m.uz:m.uy;
+    for (var j=0;j<H;j++) for (var x=0;x<Nx;x++){ var n=plane==='xz' ? x+Nx*(yc+Ny*j) : x+Nx*(j+Ny*zc), k=x+Nx*j; sl.ux[k]=m.ux[n]; sl.uy[k]=tr[n]; sl.rho[k]=m.rho[n]; }
+    return sl;
+  }
+  function isWingG(){ return !!(G && G.body && G.body.shape==='wing'); }
   function makeCPU(){
     var w=new Worker('src/sim-worker.js'), b={kind:'cpu'};
     w.onmessage=function(e){
       var m=e.data;
       if (m.type==='geometry') onGeometry(m);
       else if (m.type==='frame' && G){
-        var Nx=G.Nx, Ny=G.Ny, z=Math.round(G.cz), sl={ux:new Float32Array(Nx*Ny), uy:new Float32Array(Nx*Ny), rho:new Float32Array(Nx*Ny)};
-        for (var y=0;y<Ny;y++) for (var x=0;x<Nx;x++){ var n=x+Nx*(y+Ny*z), k=x+Nx*y; sl.ux[k]=m.ux[n]; sl.uy[k]=m.uy[n]; sl.rho[k]=m.rho[n]; }
-        onFrame({t:m.t, stepsPerSec:m.stepsPerSec, collision:m.collision, samples:m.samples, slice:sl, field:{ux:m.ux, uy:m.uy, uz:m.uz, rho:m.rho, s:1, nx:Nx, ny:Ny, nz:G.Nz}});
+        var sl=cpuSlice(m, state.slicePlane), prof = isWingG() ? (state.slicePlane==='xz' ? sl : cpuSlice(m,'xz')) : null;
+        onFrame({t:m.t, stepsPerSec:m.stepsPerSec, collision:m.collision, samples:m.samples, slice:sl, profile:prof, field:{ux:m.ux, uy:m.uy, uz:m.uz, rho:m.rho, s:1, nx:G.Nx, ny:G.Ny, nz:G.Nz}});
       }
     };
     b.init=function(o){ w.postMessage({type:'init', opts:o}); };
@@ -878,11 +897,12 @@ import { createLabs } from "./src/labs.js";
       [pa,pb].forEach(function(x,j){ for (var z=0;z<Nz;z++) for (var y=0;y<Ny;y++){ var n=idx(x,y,z); if(!S.solid[n]){ planes.push(n); if(!j) na++; } } });
       var ay=Math.round(S.cy), az=Math.round(S.cz), ax0=Math.ceil(S.xRear), axis=[];
       for (var x=ax0;x<Nx-1;x++) axis.push(idx(x,ay,az));
-      var slice=new Uint32Array(Nx*Ny);
+      var slice=new Uint32Array(Nx*Ny), sliceV=new Uint32Array(Nx*Nz);
       for (var yy=0;yy<Ny;yy++) for (var xx=0;xx<Nx;xx++){ var nn=idx(xx,yy,az); slice[xx+Nx*yy]=S.solid[nn]?NONE:nn; }
+      for (var zz=0;zz<Nz;zz++) for (var xv=0;xv<Nx;xv++){ var nv=idx(xv,ay,zz); sliceV[xv+Nx*zz]=S.solid[nv]?NONE:nv; }
       var st=Math.max(1, Math.ceil(Math.cbrt(S.N/300000))), fx=Math.ceil(Nx/st), fy=Math.ceil(Ny/st), fz=Math.ceil(Nz/st), field=new Uint32Array(fx*fy*fz);
       for (var z2=0;z2<fz;z2++) for (var y2=0;y2<fy;y2++) for (var x2=0;x2<fx;x2++){ var n2=idx(Math.min(Nx-1,x2*st),Math.min(Ny-1,y2*st),Math.min(Nz-1,z2*st)); field[x2+fx*(y2+fy*z2)]=S.solid[n2]?NONE:n2; }
-      S.gatherer('planes', planes); S.gatherer('axis', axis); S.gatherer('slice', slice); S.gatherer('field', field);
+      S.gatherer('planes', planes); S.gatherer('axis', axis); S.gatherer('slice', slice); S.gatherer('sliceV', sliceV); S.gatherer('field', field);
       meta={pa:pa, pb:pb, na:na, nb:planes.length-na, ax0:ax0, st:st, fx:fx, fy:fy, fz:fz};
       onGeometry({Nx:Nx, Ny:Ny, Nz:Nz, R:S.R, cy:S.cy, cz:S.cz, sx:S.sx, r:S.r, xRear:S.xRear, body:S.bodyInfo(), solid:S.solid});
       await frame();
@@ -891,7 +911,10 @@ import { createLabs } from "./src/labs.js";
     async function frame(forces){
       if (!S) return;
       var my=gen, withMass=(cycles++ % 25===0);
-      var r=await S.read({slice:true, field:true, mass:withMass});
+      var plane = state.slicePlane;            // fixed for this frame: the button may change it while the GPU reads
+      var wantV = plane==='xz' || (S.cpu.body && S.cpu.body.shape==='wing'), names = [plane==='xz' ? 'sliceV' : 'slice'];
+      if (wantV && names[0]!=='sliceV') names.push('sliceV');
+      var r=await S.read({slice:names, field:true, mass:withMass});
       if (my!==gen || !S) return;
       if (withMass) lastMass=r.mass;
       var m=meta, ra=0, rb=0;
@@ -900,13 +923,15 @@ import { createLabs } from "./src/labs.js";
       var last=-1, ua=0, ub=0;
       for (var q=0;q<r.axis.length/4;q++){ var ux=r.axis[4*q+1]; if (r.axis[4*q]===0) continue; if (ux<0){ last=q; ua=ux; } else if (last>=0){ ub=ux; break; } }
       var rec = last<0 ? 0 : Math.max(0, m.ax0+last+(ub!==ua?-ua/(ub-ua):0) - S.xRear);
-      var Nx=S.Nx, Ny=S.Ny, sl={ux:new Float32Array(Nx*Ny), uy:new Float32Array(Nx*Ny), rho:new Float32Array(Nx*Ny)};
-      for (var k2=0;k2<Nx*Ny;k2++){ sl.rho[k2]=r.slice[4*k2]; sl.ux[k2]=r.slice[4*k2+1]; sl.uy[k2]=r.slice[4*k2+2]; }
+      var Nx=S.Nx, Ny=S.Ny;
+      var gslice=function(a, plane){ var n=a.length/4, o={plane:plane, ux:new Float32Array(n), uy:new Float32Array(n), rho:new Float32Array(n)}, c=plane==='xz'?3:2;
+        for (var k2=0;k2<n;k2++){ o.rho[k2]=a[4*k2]; o.ux[k2]=a[4*k2+1]; o.uy[k2]=a[4*k2+c]; } return o; };
+      var sl = plane==='xz' ? gslice(r.sliceV,'xz') : gslice(r.slice,'xy'), prof = r.sliceV ? (plane==='xz' ? sl : gslice(r.sliceV,'xz')) : null;
       var nf=m.fx*m.fy*m.fz, fd={ux:new Float32Array(nf), uy:new Float32Array(nf), uz:new Float32Array(nf), rho:new Float32Array(nf), s:m.st, nx:m.fx, ny:m.fy, nz:m.fz};
       for (var k3=0;k3<nf;k3++){ fd.rho[k3]=r.field[4*k3]; fd.ux[k3]=r.field[4*k3+1]; fd.uy[k3]=r.field[4*k3+2]; fd.uz[k3]=r.field[4*k3+3]; }
       var dr = ra/Math.max(1,m.na)-rb/Math.max(1,m.nb);
       var smp = (forces && forces.length ? forces : [[r.t, r.force[0], r.force[1], r.force[2]]]).map(function(fz){ return [fz[0], fz[1], fz[2], fz[3], dr, rec, lastMass, m.pa, m.pb]; });
-      onFrame({t:r.t, stepsPerSec:rate, collision:S.collision, samples:smp, slice:sl, field:fd});
+      onFrame({t:r.t, stepsPerSec:rate, collision:S.collision, samples:smp, slice:sl, profile:prof, field:fd});
     }
     async function pump(){
       if (pumping) return; pumping=true;
@@ -1045,6 +1070,11 @@ import { createLabs } from "./src/labs.js";
     document.getElementById('stl-axis').value=state.stlAxis;
     var wing=state.body==='wing';
     document.getElementById('wing-opts').hidden=!wing;
+    // slice planes named as seen in the default view (a wing's view is turned to look at its profile)
+    var pb=document.querySelectorAll('#plane-select .btn');
+    pb[0].textContent = wing ? 'Planform · top' : 'Side'; pb[1].textContent = wing ? 'Profile · side' : 'Top';
+    pb[0].title = wing ? 'Through the chord plane of the wing, seen from above' : 'Through the axis, facing the default view';
+    pb[1].title = wing ? 'Through the profile of the wing at mid-span, facing the default view' : 'Through the axis, seen from above';
     document.getElementById('naca').value=state.naca;
     document.getElementById('alpha').value=state.alpha; document.getElementById('alpha-val').textContent=(+state.alpha).toFixed(1)+'°';
     document.getElementById('span').value=Math.round(state.span*100); document.getElementById('span-val').textContent=state.span>=0.995?'wall to wall':Math.round(state.span*100)+'% of the tube';
@@ -1069,7 +1099,7 @@ import { createLabs } from "./src/labs.js";
   document.getElementById('body').addEventListener('change', function(e){
     state.body=e.target.value;
     // a wing is tested in a uniform stream, flying through still air, with a chord big enough to resolve its section
-    if (state.body==='wing'){ state.frame='moving'; if (state.ratio<0.6) state.ratio=0.7; syncCaseUI(); }
+    if (state.body==='wing'){ state.frame='moving'; if (state.ratio<0.6) state.ratio=0.7; syncCaseUI(); setPlane('xz'); } else setPlane('xy');
     syncBodyUI();
     if (state.body==='mesh' && !state.stl){ document.getElementById('stl-note').textContent='Choose an STL file: until then the body stays a sphere.'; }
     buildSim();
@@ -1140,7 +1170,7 @@ import { createLabs } from "./src/labs.js";
   [['sw-dye','dye','dye-opts'],['sw-tracers','tracers','tracer-opts'],['sw-vortex','vortex','vortex-opts'],['sw-stream','streamlines','stream-opts'],['slice-switch','axial',null],['sw-cross','cross','cross-opts'],['sw-avg','average',null]].forEach(function(sw){
     var el=document.getElementById(sw[0]);
     var sync=function(){ var on=!!view.opts[sw[1]]; el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); if (sw[2]) document.getElementById(sw[2]).hidden = !on;
-      var sl = view.opts.axial || view.opts.cross; document.getElementById('field-select').hidden = !sl; document.getElementById('avg-row').hidden = !view.opts.axial; showLegend(); };
+      var sl = view.opts.axial || view.opts.cross; document.getElementById('field-select').hidden = !sl; document.getElementById('avg-row').hidden = !view.opts.axial; document.getElementById('plane-select').hidden = !view.opts.axial; showLegend(); };
     var flip=function(){ view.set(sw[1], !view.opts[sw[1]]); sync(); };
     el.addEventListener('click', flip);
     el.addEventListener('keydown', function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } });
@@ -1156,6 +1186,11 @@ import { createLabs } from "./src/labs.js";
     document.querySelectorAll('#dye-opts .btn').forEach(function(x){ x.classList.toggle('active', x===b); }); view.set('dyeSource', b.getAttribute('data-dye')); }); });
   document.querySelectorAll('#field-select .btn').forEach(function(b){ b.addEventListener('click', function(){
     document.querySelectorAll('#field-select .btn').forEach(function(x){ x.classList.toggle('active', x===b); }); view.set('field', b.getAttribute('data-field')); showLegend(); }); });
+  function setPlane(pl){
+    state.slicePlane=pl;
+    document.querySelectorAll('#plane-select .btn').forEach(function(x){ x.classList.toggle('active', x.getAttribute('data-plane')===pl); });
+  }
+  document.querySelectorAll('#plane-select .btn').forEach(function(b){ b.addEventListener('click', function(){ setPlane(b.getAttribute('data-plane')); }); });
   document.getElementById('particles').addEventListener('input', function(e){ document.getElementById('particles-val').textContent=e.target.value; view.set('nTracers', +e.target.value); });
   var qlev=function(v){ return 0.05*Math.pow(100, v/100); };
   document.getElementById('qlevel').addEventListener('input', function(e){ var q=qlev(+e.target.value); document.getElementById('qlevel-val').textContent=q.toFixed(2); view.set('vortexLevel', q); });
@@ -1258,6 +1293,7 @@ import { createLabs } from "./src/labs.js";
     h += tile('Mass balance', (S.massChange*100).toExponential(1)+' %', 'change over the last window — no corrections applied');
     document.getElementById('tiles').innerHTML = h;
     drawChart();
+    updateCp();
     sweepTick(S);
     // references
     var ref = '', Re = L.ReSim;
@@ -1281,6 +1317,58 @@ import { createLabs } from "./src/labs.js";
     }
     document.getElementById('ref').innerHTML = ref;
   }
+  // Pressure coefficient along the wing's surface at mid-span, from the profile-plane slice: pressure read
+  // 1.5 cells off the surface along the outward normal (bilinear over fluid nodes only), against the mean
+  // pressure on a cross-line 1.5 chords ahead of the wing (closer, the nose's stagnation raises it); smoothed.
+  var cp = null, cpChart=document.getElementById('cp-chart'), cpx=cpChart.getContext('2d');
+  function updateCp(){
+    var wrap=document.getElementById('cp-wrap');
+    if (!isWingG() || !F || !F.profile){ wrap.hidden=true; cp=null; return; }
+    wrap.hidden=false;
+    var B=G.body, P=F.profile, Nx=G.Nx, H=G.Nz, yc=Math.round(G.cy), out=B.outline, n=out.length;
+    var fluid=function(x,j){ return x>=0 && j>=0 && x<Nx && j<H && G.solid[x+Nx*(yc+G.Ny*j)]!==1; };
+    var rhoAt=function(X,Z){ var x0=Math.floor(X), z0=Math.floor(Z), fx=X-x0, fz=Z-z0, s=0, w=0;
+      [[0,0,(1-fx)*(1-fz)],[1,0,fx*(1-fz)],[0,1,(1-fx)*fz],[1,1,fx*fz]].forEach(function(q){ var x=x0+q[0], j=z0+q[1]; if (fluid(x,j) && q[2]>0){ s+=P.rho[x+Nx*j]*q[2]; w+=q[2]; } });
+      return w>0 ? s/w : NaN; };
+    var xr=Math.max(3, Math.round(B.xFront - 1.5*B.chord)), rs=0, rc=0;          // free stream, well ahead of the wing
+    for (var j=0;j<H;j++) if (fluid(xr,j)){ rs+=P.rho[xr+Nx*j]; rc++; }
+    var rinf=rs/Math.max(1,rc), q=0.5*L.u*L.u, al=B.alpha*Math.PI/180, ca=Math.cos(al), sa=Math.sin(al), pts=[];
+    for (var i=0;i<n;i++){
+      var a=out[(i-1+n)%n], b=out[(i+1)%n], tx=b[0]-a[0], tz=b[1]-a[1], tl=Math.hypot(tx,tz)||1, nx=-tz/tl, nz=tx/tl;      // outline runs clockwise: (−t_z, t_x) points out
+      var X=B.sx+out[i][0]+1.5*nx, Z=G.cz+out[i][1]+1.5*nz, r=rhoAt(X,Z);
+      var xc=(out[i][0]*ca - out[i][1]*sa)/B.chord + 0.25;                                     // position along the chord
+      pts.push([xc, isFinite(r) ? (r-rinf)/3/q : NaN, i<=n/2 ? 0 : 1]);
+    }
+    if (!cp || cp.n!==n || cp.key!==B.naca+B.alpha+B.chord){ cp={n:n, key:B.naca+B.alpha+B.chord, v:pts.map(function(p){ return p[1]; }), pts:pts}; }
+    else pts.forEach(function(p,i){ if (isFinite(p[1])) cp.v[i] = isFinite(cp.v[i]) ? cp.v[i]+0.15*(p[1]-cp.v[i]) : p[1]; });
+    cp.pts=pts; drawCp();
+    // the wing's share of the tube's cross-section: the walls speed the flow past it, lowering C_p all round
+    var zs=out.map(function(o){ return o[1]; }), blk=(Math.max.apply(null,zs)-Math.min.apply(null,zs))*B.span/(Math.PI*G.R*G.R);
+    document.getElementById('cp-block').textContent = blk>0.05 ? 'blockage '+Math.round(blk*100)+'%: the tube’s walls speed the flow past the wing, so C_p is lower all round than in open air' : '';
+  }
+  function drawCp(){
+    var Wd=cpChart.width, Ht=cpChart.height, g=cpx; g.clearRect(0,0,Wd,Ht);
+    var vals=cp.v.filter(isFinite); if (!vals.length) return;
+    var lo=Math.min(-0.5, Math.min.apply(null, vals.map(function(v){ return -v; }))), hi=Math.max(0.5, Math.max.apply(null, vals.map(function(v){ return -v; })));
+    var X=function(x){ return 56+x*(Wd-76); }, Y=function(v){ return Ht-30-(v-lo)/(hi-lo)*(Ht-44); };
+    g.font='12px IBM Plex Mono, monospace'; g.strokeStyle='#1d4470'; g.lineWidth=1; g.fillStyle='#6fa8c9';
+    [0,0.25,0.5,0.75,1].forEach(function(x){ g.beginPath(); g.moveTo(X(x),10); g.lineTo(X(x),Ht-30); g.stroke(); g.fillText(x.toFixed(2), X(x)-14, Ht-12); });
+    var step=(hi-lo)>3?1:0.5; for (var v=Math.ceil(lo/step)*step; v<=hi; v+=step){ g.beginPath(); g.moveTo(56,Y(v)); g.lineTo(Wd-20,Y(v)); g.stroke(); g.fillText(v.toFixed(1), 8, Y(v)+4); }
+    g.strokeStyle='#3d6f99'; g.beginPath(); g.moveTo(56,Y(0)); g.lineTo(Wd-20,Y(0)); g.stroke();
+    g.fillText('x / c →', Wd-84, 24); g.fillText('−C_p', 8, 14);
+    [[0,'#e8577a','upper'],[1,'#0b96d4','lower']].forEach(function(sd){
+      var ser=cp.pts.map(function(p,i){ return [p[0], -cp.v[i], p[2]]; }).filter(function(p){ return p[2]===sd[0] && isFinite(p[1]); }).sort(function(a,b){ return a[0]-b[0]; });
+      g.strokeStyle=sd[1]; g.lineWidth=2; g.beginPath(); ser.forEach(function(p,i){ if (i) g.lineTo(X(p[0]),Y(p[1])); else g.moveTo(X(p[0]),Y(p[1])); }); g.stroke();
+      if (ser.length){ var m=ser[Math.floor(ser.length*0.35)]; g.fillStyle='#bfe4ff'; g.fillText(sd[2], X(m[0])+6, Y(m[1])+(sd[0]?16:-8)); }
+    });
+  }
+  cpChart.addEventListener('mousemove', function(e){
+    if (!cp) return; var rc=cpChart.getBoundingClientRect(), x=((e.clientX-rc.left)/rc.width*cpChart.width-56)/(cpChart.width-76);
+    var best=[null,null]; cp.pts.forEach(function(p,i){ if (!isFinite(cp.v[i])) return; var d=Math.abs(p[0]-x); if (!best[p[2]] || d<best[p[2]].d) best[p[2]]={d:d, v:cp.v[i]}; });
+    document.getElementById('cp-hover').textContent = x>=0 && x<=1 && best[0] && best[1] ? 'x/c '+x.toFixed(2)+' · C_p upper '+best[0].v.toFixed(2)+' · lower '+best[1].v.toFixed(2) : '';
+  });
+  cpChart.addEventListener('mouseleave', function(){ document.getElementById('cp-hover').textContent=''; });
+
   // drag and lift coefficients over the last few flow-throughs
   var chart=document.getElementById('chart'), cx=chart.getContext('2d');
   function drawChart(){
@@ -1576,7 +1664,7 @@ import { createLabs } from "./src/labs.js";
 
   // ------------------------------------------------------------------ main loop
   function animate(){ requestAnimationFrame(animate); view.tick(state.running, F && F.stepsPerSec); }
-  window.tubeDebug = { labs:function(){ return labs; }, app:app, snapshot:snapshot, vtkBlob:vtkBlob, runs:function(){ return runs; }, sweep:function(){ return sweepLast; }, applyRe:applyRe, view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
+  window.tubeDebug = { cp:function(){ return cp; }, labs:function(){ return labs; }, app:app, snapshot:snapshot, vtkBlob:vtkBlob, runs:function(){ return runs; }, sweep:function(){ return sweepLast; }, applyRe:applyRe, view:function(){ return view; }, backend:function(){ return backend; }, drawCost:function(){ return view.drawCost; }, state:state, lattice:function(){ return L; }, stats:stats, series:function(){ return series; }, geometry:function(){ return G; }, setRunning:setRunning };
 
   // pick the solver: the GPU when WebGPU is available, otherwise the CPU worker
   (async function(){

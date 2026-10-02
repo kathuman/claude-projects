@@ -30,6 +30,13 @@ measurements, Reynolds sweeps against published curves, saved runs and VTK expor
     Links between two fluid nodes that pass through a part thinner than a cell (the trailing edge) bounce back
     too (`crossThin`, wings and meshes) — without them flow leaks through the trailing edge and camber makes
     almost no lift. `thinAirfoil(naca)` gives α_L0 and 2π(α − α_L0) for comparison.
+    On the page, a wing turns the view (the world group rotates so lift points up and the default camera
+    looks along the span at the profile); the axial slice can lie in the profile plane (mid-span) or the
+    planform plane, with the body cut away on the camera's side of the slice; and a chart shows the
+    surface pressure coefficient C_p along the chord at mid-span (read 1.5 cells off the surface, p∞ from
+    1.5 chords upstream). Integrated around the section it gives C_L 0.73 against 0.78 from the total
+    force (NACA 0012, 8°, Re 400; the rest is skin friction). The wing blocks 15% of the tube (more, counting
+    the thick boundary layers at Re 400), so the flow speeds up past it and C_p is lower all round than in open air.
   - inflow: developed (parabolic), uniform plug, or pulsatile — the flow rate swings sinusoidally at a
     chosen amplitude and Womersley number α = R√(ω/ν).
   - `caseToLattice()` maps a physical case (fluid, tube, sphere, speed) onto the grid at Mach ≤ 0.17
