@@ -132,6 +132,7 @@ function renderGrid() {
   for (const project of filtered) {
     els.grid.appendChild(buildCard(project));
   }
+  updateMoreButtons();
 }
 
 function buildCard(project) {
@@ -172,8 +173,45 @@ function buildCard(project) {
     linksEl.appendChild(span);
   }
 
+  // the whole card opens the project (live demo, else the repo); links and buttons inside keep their own action
+  const card = node.querySelector(".card");
+  const href = project.demoUrl || project.repoUrl;
+  if (href) {
+    card.dataset.href = href;
+    card.tabIndex = 0;
+    card.setAttribute("role", "link");
+    card.setAttribute("aria-label", `Open ${project.title || "project"}`);
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a, button")) return;
+      if (window.getSelection && String(window.getSelection())) return;   // selecting text, not choosing
+      window.open(href, "_blank", "noopener");
+    });
+    card.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target === card) window.open(href, "_blank", "noopener");
+    });
+  }
+
+  // "More" / "Less" for descriptions longer than the first few lines
+  const more = node.querySelector(".card-more");
+  more.addEventListener("click", () => {
+    const open = card.classList.toggle("expanded");
+    more.textContent = open ? "Less" : "More";
+    more.setAttribute("aria-expanded", String(open));
+  });
+
   return node;
 }
+
+// show "More" only where the description is actually cut off (re-checked when the layout changes)
+function updateMoreButtons() {
+  for (const card of els.grid.querySelectorAll(".card")) {
+    if (card.classList.contains("expanded")) continue;
+    const desc = card.querySelector(".card-desc");
+    card.querySelector(".card-more").hidden = desc.scrollHeight <= desc.clientHeight + 1;
+  }
+}
+window.addEventListener("resize", updateMoreButtons);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(updateMoreButtons);
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
