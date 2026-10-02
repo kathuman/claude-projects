@@ -68,7 +68,7 @@
     "description": "A native Android app that turns a spoken or typed problem description into a structured record — title, summary, category, short-term mitigation, long-term solution — via a forced tool-call to Claude, with every generated field editable before you save it. Records live in an on-device SQLite database; the only network call is your phone talking straight to the Anthropic API with your own key, held in the Android Keystore. No backend, no account. Built with Flutter — bring your own API key to run it.",
     "date": "2026-09-12",
     "tags": ["dart", "flutter", "android", "ai", "tool"],
-    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/problemlog-android",
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/8b96c8b66ac28f037989d78b0b1d251bbae5e5c3/problemlog-android",
     "demoUrl": null
   },
   {
