@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use these tools or models, please cite them as below."
+title: "Claude Projects: validated simulation and decision tools for engineering and supply chains"
+type: software
+authors:
+  - family-names: "Sepulveda Estay"
+    given-names: "Daniel Alberto"
+license: GPL-3.0
+repository-code: "https://github.com/kathuman/claude-projects"
+url: "https://kathuman.github.io/claude-projects/"
+keywords:
+  - lattice Boltzmann
+  - computational fluid dynamics
+  - robotics
+  - inverse kinematics
+  - warehouse design
+  - supply chain network design
+  - discrete-event simulation

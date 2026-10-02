@@ -1,0 +1,28 @@
+name: Cobot Lab tests
+
+# Kinematics (forward/inverse, all 8 IK solutions), motion profiles, RRT-Connect planner, URDF import.
+on:
+  push:
+    paths:
+      - 'cobot-lab/**'
+      - '.github/workflows/cobot-lab-ci.yml'
+  pull_request:
+    paths:
+      - 'cobot-lab/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: cobot-lab
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: for f in tests/*.test.js; do echo "== $f"; node "$f" || exit 1; done
+        shell: bash

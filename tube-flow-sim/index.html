@@ -801,7 +801,8 @@ import { createLabs } from "./src/labs.js";
   //          parts thinner than a cell; C_L, L/D, thin-airfoil comparison; angle-of-attack sweeps; wing lab
   //   6.2.0  wings: the view turns so the profile is seen side-on (lift up); slices in the vertical (profile) plane;
   //          surface pressure distribution C_p along the chord at mid-span
-  var APP_VERSION = "6.2.0";
+  //   6.2.1  a wing set up by a lab, a saved run or the app API also gets the profile-plane slice
+  var APP_VERSION = "6.2.1";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -969,7 +970,11 @@ import { createLabs } from "./src/labs.js";
     view.setFrame(m, L);
     updateInstruments();
   }
+  var builtBody = null;
   function buildSim(){
+    // a new kind of body gets its natural slice plane: the profile for a wing, the side view otherwise
+    // (here rather than in the Body menu, so labs, saved runs and the app API get it too)
+    if (state.body !== builtBody){ setPlane(state.body==='wing' ? 'xz' : 'xy'); builtBody = state.body; }
     L = TF.caseToLattice(caseOf());
     var tc = tubeCells();
     series = []; lastT = 0; F = null;
@@ -1099,7 +1104,7 @@ import { createLabs } from "./src/labs.js";
   document.getElementById('body').addEventListener('change', function(e){
     state.body=e.target.value;
     // a wing is tested in a uniform stream, flying through still air, with a chord big enough to resolve its section
-    if (state.body==='wing'){ state.frame='moving'; if (state.ratio<0.6) state.ratio=0.7; syncCaseUI(); setPlane('xz'); } else setPlane('xy');
+    if (state.body==='wing'){ state.frame='moving'; if (state.ratio<0.6) state.ratio=0.7; syncCaseUI(); }
     syncBodyUI();
     if (state.body==='mesh' && !state.stl){ document.getElementById('stl-note').textContent='Choose an STL file: until then the body stays a sphere.'; }
     buildSim();

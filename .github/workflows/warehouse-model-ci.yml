@@ -1,0 +1,32 @@
+name: Warehouse Model tests
+
+# Calculations, simulation, optimiser, data import, exporters (IFC/DXF/glTF) and the parity test that
+# proves the FreeCAD model's layout and the web app's agree. Checks that need FreeCAD itself skip here.
+on:
+  push:
+    paths:
+      - 'warehouse-model/**'
+      - '.github/workflows/warehouse-model-ci.yml'
+  pull_request:
+    paths:
+      - 'warehouse-model/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: warehouse-model
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: for f in tests/*.test.js; do echo "== $f"; node "$f" || exit 1; done
+        shell: bash
