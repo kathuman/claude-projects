@@ -7,7 +7,7 @@
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 Simulation and decision tools for engineering and supply chains, built with [Claude](https://claude.com) by
-[Daniel Sepulveda Estay](https://kathuman.github.io/estay-dynamics/about.html) — each one runs in the browser, and
+[Daniel Sepulveda Estay](https://kathuman.github.io/estay-dynamics/about.html) — almost all run in the browser, and
 the serious ones are tested against exact solutions, published data or an independent model.
 
 **Browse them all → [kathuman.github.io/claude-projects](https://kathuman.github.io/claude-projects/)**
