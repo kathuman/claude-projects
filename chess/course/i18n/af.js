@@ -32,6 +32,7 @@
   "ui.hint": "Wenk",
   "ui.solution": "Wys die oplossing",
   "ui.retry": "Probeer weer",
+  "ui.playEngine": "Speel hierdie stelling teen Stockfish",
   "ui.correct": "Reg!",
   "ui.wrong": "Nie heeltemal nie. Probeer weer.",
   "ui.illegal": "Daardie skuif is nie hier moontlik nie.",

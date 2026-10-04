@@ -32,6 +32,7 @@
   "ui.hint": "Tipp",
   "ui.solution": "Lösung zeigen",
   "ui.retry": "Noch einmal",
+  "ui.playEngine": "Diese Stellung gegen Stockfish spielen",
   "ui.correct": "Richtig!",
   "ui.wrong": "Nicht ganz. Versuche es noch einmal.",
   "ui.illegal": "Dieser Zug ist hier nicht möglich.",

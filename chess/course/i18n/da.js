@@ -32,6 +32,7 @@
   "ui.hint": "Tip",
   "ui.solution": "Vis løsningen",
   "ui.retry": "Prøv igen",
+  "ui.playEngine": "Spil denne stilling mod Stockfish",
   "ui.correct": "Rigtigt!",
   "ui.wrong": "Ikke helt. Prøv igen.",
   "ui.illegal": "Det træk er ikke muligt her.",

@@ -32,6 +32,7 @@
   "ui.hint": "Pista",
   "ui.solution": "Ver la solución",
   "ui.retry": "Intentar de nuevo",
+  "ui.playEngine": "Jugar esta posición contra Stockfish",
   "ui.correct": "¡Correcto!",
   "ui.wrong": "No exactamente. Inténtalo de nuevo.",
   "ui.illegal": "Esa jugada no es posible aquí.",

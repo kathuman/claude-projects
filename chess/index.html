@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess</title>
-  <meta name="description" content="Play chess against a friend on one screen or against the Stockfish engine (eight strength levels) — full rules including castling, en passant, promotion, check, checkmate and stalemate. Undo, flip board, move log, board themes." />
+  <meta name="description" content="Play chess against a friend on one screen or against the Stockfish engine (eight strength levels) — full rules including every draw rule; resign and draw offers, clocks with increment, typed moves, PGN/FEN import and export, shareable game links. Undo, flip board, board themes, 3D." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9818;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -224,6 +224,34 @@
 
     .banner { min-height: 22px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); text-align: center; }
     .banner.win { color: var(--accent); font-size: 15px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+    /* clocks sit in the side pills; the running one is lit, under 20 s it turns red */
+    .side-score .clock { font-family: var(--font-mono); font-size: 13.5px; font-weight: 600; color: var(--ink-2); padding: 1px 7px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); min-width: 54px; text-align: center; }
+    .side-score .clock.running { color: var(--ink); border-color: var(--accent); }
+    .side-score .clock.low { color: #c0392b; }
+    :root[data-theme="dark"] .side-score .clock.low { color: #ff7a6b; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .side-score .clock.low { color: #ff7a6b; } }
+
+    .offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+    .offer[hidden] { display: none; }
+    .btn.mini { width: auto; padding: 6px 12px; font-size: 12.5px; }
+    .btn.mini + .btn.mini { margin-top: 0; }
+    .move-entry { display: flex; gap: 8px; width: min(100%, 420px); }
+    .move-entry input { flex: 1; min-width: 0; padding: 7px 11px; font: inherit; font-family: var(--font-mono); font-size: 13px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .move-entry input:focus { outline: none; border-color: var(--accent); }
+    .move-msg { margin: -6px 0 0; min-height: 18px; font-size: 12.5px; color: var(--ink-2); text-align: center; }
+    .move-msg.bad { color: #c0392b; }
+    :root[data-theme="dark"] .move-msg.bad { color: #ff7a6b; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .move-msg.bad { color: #ff7a6b; } }
+    .btn-row, .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+    .btn-grid { margin-top: 0; }
+    .btn-row .btn + .btn, .btn-grid .btn + .btn { margin-top: 0; }
+    .clock-field { margin: 14px 0 0; }
+    details.load { margin-top: 12px; }
+    details.load summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+    details.load textarea { width: 100%; margin: 8px 0; padding: 8px 10px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; resize: vertical; }
+    details.load .move-msg { margin-top: 8px; text-align: left; }
 
     /* -------------------------------------------------------- side panel */
     .panel {
@@ -326,6 +354,9 @@
     }
     @media (max-width: 520px) {
       .brand .sub .sub-rest { display: none; }
+      .brand h1 .ver { display: none; } /* the version stays in the footer */
+      .hactions { gap: 6px; }
+      .hactions .lnk { padding: 5px 9px; font-size: 11.5px; }
       main { padding: 18px 16px 10px; }
       .board-wrap { padding: 12px; }
     }
@@ -358,11 +389,13 @@
             <span class="chip w"></span>
             <span class="lbl" id="lblWhite">White</span>
             <span class="cap" id="capWhite"></span>
+            <span class="clock" id="clockWhite" hidden></span>
           </div>
           <div class="side-score" id="scoreBlack">
             <span class="chip b"></span>
             <span class="lbl" id="lblBlack">Black</span>
             <span class="cap" id="capBlack"></span>
+            <span class="clock" id="clockBlack" hidden></span>
           </div>
           <div class="view-toggle" role="group" aria-label="Board view">
             <button type="button" data-view="2d">2D</button>
@@ -377,6 +410,18 @@
         </div>
 
         <div class="banner" id="banner">White to move</div>
+        <div class="offer" id="offerBox" hidden>
+          <span id="offerText"></span>
+          <button class="btn mini primary" id="acceptDraw" type="button">Accept draw</button>
+          <button class="btn mini" id="declineDraw" type="button">Decline</button>
+        </div>
+        <form class="move-entry" id="moveForm" autocomplete="off">
+          <label class="sr-only" for="moveInput">Type a move</label>
+          <input id="moveInput" type="text" spellcheck="false" autocapitalize="off" placeholder="Type a move — e4, Nf3, e2e4, O-O" />
+          <button class="btn mini" type="submit">Play</button>
+        </form>
+        <p class="move-msg" id="moveMsg" aria-live="polite"></p>
+        <div class="sr-only" id="srLive" aria-live="polite"></div>
       </section>
 
       <aside>
@@ -417,6 +462,39 @@
           <button class="btn primary" id="newBtn">New game</button>
           <button class="btn" id="undoBtn">Undo</button>
           <button class="btn" id="flipBtn">Flip board</button>
+          <div class="btn-row">
+            <button class="btn" id="drawBtn" type="button">Offer draw</button>
+            <button class="btn" id="resignBtn" type="button">Resign</button>
+          </div>
+          <div class="field clock-field">
+            <label for="clockSel">Clock</label>
+            <select class="sel" id="clockSel">
+              <option value="none">No clock</option>
+              <option value="1+0">1 min — bullet</option>
+              <option value="3+2">3 min + 2 s — blitz</option>
+              <option value="5+0">5 min — blitz</option>
+              <option value="5+3">5 min + 3 s — blitz</option>
+              <option value="10+5">10 min + 5 s — rapid</option>
+              <option value="15+10">15 min + 10 s — rapid</option>
+              <option value="30+20">30 min + 20 s — classical</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Save &amp; share</h3>
+          <div class="btn-grid">
+            <button class="btn" id="copyPgn" type="button">Copy PGN</button>
+            <button class="btn" id="dlPgn" type="button">Download PGN</button>
+            <button class="btn" id="copyFen" type="button">Copy FEN</button>
+            <button class="btn" id="copyLink" type="button" title="A link that opens this game, move by move">Copy link</button>
+          </div>
+          <details class="load">
+            <summary>Load a game or position</summary>
+            <textarea id="loadText" rows="4" spellcheck="false" placeholder="Paste a PGN (a whole game) or a FEN (a position)"></textarea>
+            <button class="btn" id="loadBtn" type="button">Load</button>
+            <p class="move-msg" id="loadMsg" hidden></p>
+          </details>
         </div>
 
         <div class="panel">
@@ -490,8 +568,35 @@
       <p>
         A king in check is ringed in red; you must get out of check immediately. Checkmate ends
         the game for the side with no way out; if the side to move has no legal move but isn't in
-        check, it's stalemate — a draw. Undo steps back one move at a time; Flip board turns
-        the board around for the other player without changing whose turn it is.
+        check, it's stalemate — a draw. The game is also drawn automatically when the same position
+        occurs for the third time (threefold repetition), after 50 moves by each side without a capture
+        or a pawn move (the 50-move rule), and when neither side has enough material left to mate.
+        Undo steps back one move at a time; Flip board turns the board around for the other player
+        without changing whose turn it is.
+      </p>
+      <p>
+        <b>Resign and draw offers.</b> Resign asks for a second click. Against a friend, Offer draw asks the
+        other player to accept or decline (a move instead of an answer declines). Stockfish takes a careful
+        look at the position and accepts only when it isn't better.
+      </p>
+      <p>
+        <b>Typing moves.</b> Start typing anywhere on the page and the move box takes it: algebraic
+        notation (<b>e4</b>, <b>Nf3</b>, <b>exd5</b>, <b>O-O</b>, <b>e8=Q</b>, upper or lower case) or
+        from-and-to squares (<b>e2e4</b>). Press Enter to play. A pawn reaching the last rank becomes a queen
+        unless you name another piece.
+      </p>
+      <p>
+        <b>Clocks.</b> Choose a time control under Game. Each clock starts with that side's opponent's first
+        move, and every move adds the increment. A player whose time runs out loses, unless the other side has
+        too little left to mate — then it's a draw.
+      </p>
+      <p>
+        <b>Save and share.</b> Copy or download the game as PGN, the standard format every chess program
+        reads, or copy the current position as FEN. <b>Copy link</b> gives an address that replays the game
+        move by move. <b>Load a game or position</b> accepts a pasted PGN or FEN; against the computer you
+        take over the side to move. Links can also carry <code>?fen=</code>, <code>?moves=</code> or
+        <code>?pgn=</code>, plus <code>&amp;opponent=engine</code> — the course uses this for its
+        “Play this position against Stockfish” buttons.
       </p>
       <p>
         To play the computer, set <b>Play against</b> to <b>Computer — Stockfish</b>, pick your colour
@@ -520,16 +625,20 @@
         </p>
         <ul>
           <li>
-            <b>The rules</b> (<code>BOARD LOGIC</code>) — pure functions over an 8×8 array of
-            single-letter piece codes (uppercase White, lowercase Black, <code>null</code> empty).
-            No DOM, no shared state: <code>pseudoMovesFor</code>, <code>applyMoveTo</code>,
-            <code>generateLegalMoves</code>, <code>attackedBy</code>.
+            <b>The rules</b> live in one shared file, <code>src/rules.js</code>, used by this page, the
+            course and the tests. They are pure functions over an 8×8 array of single-letter piece codes
+            (uppercase White, lowercase Black, <code>null</code> empty), with no DOM and no shared state:
+            move generation (<code>pseudoMovesFor</code>, <code>generateLegalMoves</code>,
+            <code>attackedBy</code>), positions to and from FEN, <code>play(position, move)</code>,
+            algebraic notation, the draw rules, and PGN. <code>tests/rules.test.js</code> checks move generation
+            by <em>perft</em>: counting every move sequence to a fixed depth and comparing with published counts
+            for standard test positions (197,281 sequences four plies from the start, for example).
           </li>
           <li>
-            <b>Notation</b> (<code>moveToSAN</code>) — turns a move object into algebraic
+            <b>Notation</b> (<code>toSAN</code>) — turns a move into algebraic
             notation (<code>Nf3</code>, <code>exd5</code>, <code>O-O</code>, <code>e8=Q+</code>),
             disambiguating with a file or rank only when another legal move of the same piece
-            type shares the destination square.
+            type shares the destination square. <code>parseMove</code> reads typed moves leniently.
           </li>
           <li>
             <b>The screen &amp; the glue</b> (<code>RENDER</code>, <code>ANIMATION</code>,
@@ -577,7 +686,7 @@
           is only downloaded the first time you pick the computer as opponent. The page talks to it in
           plain-text <em>UCI</em>, the protocol every chess GUI uses: it sends
           <code>position startpos moves e2e4 e7e5 …</code> (the whole game, so the engine also sees
-          repetitions), then <code>go depth N</code>, and waits for a <code>bestmove g1f3</code> line.
+          repetitions; a game that began from a loaded position sends <code>position fen …</code> instead), then <code>go depth N</code>, and waits for a <code>bestmove g1f3</code> line.
           That string is matched against this page's own legal-move list, and played through the same
           <code>makeMove</code> a click uses — so the engine can never make a move the rules here don't allow.
         </p>
@@ -586,6 +695,24 @@
           deliberately choose weaker moves) together with a search-depth cap. If you undo or start a new
           game while it's thinking, the page sends <code>stop</code> and throws away the answer that
           comes back.
+        </p>
+
+        <h4>Draws are counted, not guessed</h4>
+        <p>
+          After every move the page stores a <em>position key</em>: the pieces, the side to move, the castling
+          rights, and the en-passant square, but only when an en-passant capture is actually possible (that is
+          the FIDE definition of "the same position"). Threefold repetition means the newest key occurs three
+          times. The 50-move rule reads the FEN half-move counter, which resets on every capture and pawn move.
+          Insufficient material means only kings remain, plus at most one knight or bishop, or bishops that all
+          stand on squares of one colour. The checks run in that order after the test for mate, so a move that
+          mates always wins.
+        </p>
+
+        <h4>Clocks run on timestamps</h4>
+        <p>
+          Each side's remaining time is stored as a number. The clock that is running is that number minus the
+          time since its <code>Date.now()</code> start, so a slow or throttled browser tab can't make it drift.
+          A 100&nbsp;ms timer only repaints the display and notices when a flag falls.
         </p>
 
         <h4>Undo is snapshots, not reverse moves</h4>
@@ -657,6 +784,7 @@
     Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Staunton SVG pieces by Colin M.L. Burnett (GPL); 3D via <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (MIT). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
+  <script src="src/rules.js"></script>
   <script>
   (function () {
     "use strict";
@@ -667,7 +795,10 @@
     //   1.2.0  3D board view; author credit + version in the header and footer
     //   1.3.0  Staunton pieces: Cburnett SVGs in 2D, lathe-modelled WebGL pieces in 3D
     //   1.4.0  link to the chess course (course/): five levels, interactive exercises, six languages + speech
-    var APP_VERSION = "1.4.0";
+    //   1.5.0  rules from the shared, perft-verified src/rules.js; draws by repetition, the 50-move rule and
+    //          insufficient material; resign and draw offers; PGN/FEN in and out, game links; clocks with
+    //          increment; typed moves; "play this position" links from the course
+    var APP_VERSION = "1.5.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -691,263 +822,37 @@
     }
     function writeLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
-    // ========================================================== CONSTANTS
-    var FILES = "abcdefgh";
+    // ========================================================== RULES
+    // The rules are src/rules.js — the same, perft-verified module the course and the tests use.
+    // `state` below is itself a position object ({ board, turn, castling, enPassant, halfmove,
+    // fullmove }), so it can be handed to the rules directly. A move is [fr, fc, tr, tc, flag, extra].
+    var R = window.ChessRules;
+    var FILES = R.FILES, colorOf = R.colorOf, squareName = R.squareName, kingPos = R.kingPos;
     var UNICODE_PIECES = {
       K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
       k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
     };
     var PIECE_VALUE = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
-    var KNIGHT_DELTAS = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
-    var DIAG_DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
-    var STRAIGHT_DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
-
-    function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
-    function colorOf(piece) { if (piece == null) return null; return piece === piece.toUpperCase() ? "w" : "b"; }
     function opponent(color) { return color === "w" ? "b" : "w"; }
-    function squareName(r, c) { return FILES[c] + (8 - r); }
     function cloneBoard(b) { return b.map(function (row) { return row.slice(); }); }
-
-    function initialBoard() {
-      var board = [];
-      for (var r = 0; r < 8; r++) { board.push([null, null, null, null, null, null, null, null]); }
-      var backRank = ["R", "N", "B", "Q", "K", "B", "N", "R"];
-      for (var c = 0; c < 8; c++) {
-        board[0][c] = backRank[c].toLowerCase();
-        board[1][c] = "p";
-        board[6][c] = "P";
-        board[7][c] = backRank[c];
-      }
-      return board;
-    }
-
-    // ========================================================== BOARD LOGIC
-    // A move is [fr, fc, tr, tc, flag, extra]; flag in
-    // {null, "double", "ep", "promo", "O-O", "O-O-O"}.
-
-    function kingPos(board, color) {
-      var target = color === "w" ? "K" : "k";
-      for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) if (board[r][c] === target) return [r, c];
-      return null;
-    }
-
-    function attackedBy(board, r, c, byColor) {
-      var knightPiece = byColor === "w" ? "N" : "n";
-      for (var i = 0; i < KNIGHT_DELTAS.length; i++) {
-        var rr = r + KNIGHT_DELTAS[i][0], cc = c + KNIGHT_DELTAS[i][1];
-        if (inBounds(rr, cc) && board[rr][cc] === knightPiece) return true;
-      }
-      var kingPiece = byColor === "w" ? "K" : "k";
-      for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
-        if (dr === 0 && dc === 0) continue;
-        var r2 = r + dr, c2 = c + dc;
-        if (inBounds(r2, c2) && board[r2][c2] === kingPiece) return true;
-      }
-      var pawnPiece = byColor === "w" ? "P" : "p";
-      var pawnDr = byColor === "w" ? 1 : -1;
-      for (var pdc = -1; pdc <= 1; pdc += 2) {
-        var pr = r + pawnDr, pc = c + pdc;
-        if (inBounds(pr, pc) && board[pr][pc] === pawnPiece) return true;
-      }
-      var bishopLike = byColor === "w" ? "BQ" : "bq";
-      for (var d1 = 0; d1 < DIAG_DIRS.length; d1++) {
-        var brr = r + DIAG_DIRS[d1][0], bcc = c + DIAG_DIRS[d1][1];
-        while (inBounds(brr, bcc)) {
-          var p1 = board[brr][bcc];
-          if (p1 != null) { if (bishopLike.indexOf(p1) !== -1) return true; break; }
-          brr += DIAG_DIRS[d1][0]; bcc += DIAG_DIRS[d1][1];
-        }
-      }
-      var rookLike = byColor === "w" ? "RQ" : "rq";
-      for (var d2 = 0; d2 < STRAIGHT_DIRS.length; d2++) {
-        var rrr = r + STRAIGHT_DIRS[d2][0], rcc = c + STRAIGHT_DIRS[d2][1];
-        while (inBounds(rrr, rcc)) {
-          var p2 = board[rrr][rcc];
-          if (p2 != null) { if (rookLike.indexOf(p2) !== -1) return true; break; }
-          rrr += STRAIGHT_DIRS[d2][0]; rcc += STRAIGHT_DIRS[d2][1];
-        }
-      }
-      return false;
-    }
-
-    function pseudoMovesFor(board, r, c, castling, enPassant) {
-      var piece = board[r][c];
-      if (piece == null) return [];
-      var color = colorOf(piece);
-      var ptype = piece.toUpperCase();
-      var moves = [];
-
-      if (ptype === "P") {
-        var dr = color === "w" ? -1 : 1;
-        var startRow = color === "w" ? 6 : 1;
-        var promoRow = color === "w" ? 0 : 7;
-
-        var rr = r + dr, cc = c;
-        if (inBounds(rr, cc) && board[rr][cc] == null) {
-          if (rr === promoRow) { ["Q","R","B","N"].forEach(function (pp) { moves.push([r,c,rr,cc,"promo",pp]); }); }
-          else moves.push([r, c, rr, cc, null, null]);
-          if (r === startRow) {
-            var rr2 = r + 2 * dr;
-            if (board[rr2][cc] == null) moves.push([r, c, rr2, cc, "double", null]);
-          }
-        }
-        [-1, 1].forEach(function (dc) {
-          var rr2 = r + dr, cc2 = c + dc;
-          if (!inBounds(rr2, cc2)) return;
-          var target = board[rr2][cc2];
-          if (target != null && colorOf(target) !== color) {
-            if (rr2 === promoRow) { ["Q","R","B","N"].forEach(function (pp) { moves.push([r,c,rr2,cc2,"promo",pp]); }); }
-            else moves.push([r, c, rr2, cc2, null, null]);
-          } else if (enPassant && enPassant[0] === rr2 && enPassant[1] === cc2) {
-            moves.push([r, c, rr2, cc2, "ep", null]);
-          }
-        });
-      } else if (ptype === "N") {
-        for (var i = 0; i < KNIGHT_DELTAS.length; i++) {
-          var nrr = r + KNIGHT_DELTAS[i][0], ncc = c + KNIGHT_DELTAS[i][1];
-          if (inBounds(nrr, ncc)) {
-            var nt = board[nrr][ncc];
-            if (nt == null || colorOf(nt) !== color) moves.push([r, c, nrr, ncc, null, null]);
-          }
-        }
-      } else if (ptype === "B" || ptype === "R" || ptype === "Q") {
-        var dirs = [];
-        if (ptype === "B" || ptype === "Q") dirs = dirs.concat(DIAG_DIRS);
-        if (ptype === "R" || ptype === "Q") dirs = dirs.concat(STRAIGHT_DIRS);
-        for (var d = 0; d < dirs.length; d++) {
-          var srr = r + dirs[d][0], scc = c + dirs[d][1];
-          while (inBounds(srr, scc)) {
-            var st = board[srr][scc];
-            if (st == null) moves.push([r, c, srr, scc, null, null]);
-            else { if (colorOf(st) !== color) moves.push([r, c, srr, scc, null, null]); break; }
-            srr += dirs[d][0]; scc += dirs[d][1];
-          }
-        }
-      } else if (ptype === "K") {
-        for (var kdr = -1; kdr <= 1; kdr++) for (var kdc = -1; kdc <= 1; kdc++) {
-          if (kdr === 0 && kdc === 0) continue;
-          var krr = r + kdr, kcc = c + kdc;
-          if (inBounds(krr, kcc)) {
-            var kt = board[krr][kcc];
-            if (kt == null || colorOf(kt) !== color) moves.push([r, c, krr, kcc, null, null]);
-          }
-        }
-        var row = color === "w" ? 7 : 0;
-        if (r === row && c === 4) {
-          var kside = color === "w" ? "K" : "k";
-          var qside = color === "w" ? "Q" : "q";
-          var rook = color === "w" ? "R" : "r";
-          var opp = opponent(color);
-          if (castling[kside] && board[row][5] == null && board[row][6] == null && board[row][7] === rook) {
-            if (!(attackedBy(board, row, 4, opp) || attackedBy(board, row, 5, opp) || attackedBy(board, row, 6, opp))) {
-              moves.push([r, c, row, 6, "O-O", null]);
-            }
-          }
-          if (castling[qside] && board[row][1] == null && board[row][2] == null && board[row][3] == null && board[row][0] === rook) {
-            if (!(attackedBy(board, row, 4, opp) || attackedBy(board, row, 3, opp) || attackedBy(board, row, 2, opp))) {
-              moves.push([r, c, row, 2, "O-O-O", null]);
-            }
-          }
-        }
-      }
-      return moves;
-    }
-
-    function applyMoveTo(board, move, castling) {
-      var r = move[0], c = move[1], rr = move[2], cc = move[3], flag = move[4], extra = move[5];
-      var piece = board[r][c];
-      var color = colorOf(piece);
-
-      if (piece.toUpperCase() === "K") {
-        if (color === "w") { castling.K = false; castling.Q = false; } else { castling.k = false; castling.q = false; }
-      }
-      if (piece.toUpperCase() === "R") {
-        if (r === 7 && c === 0) castling.Q = false;
-        else if (r === 7 && c === 7) castling.K = false;
-        else if (r === 0 && c === 0) castling.q = false;
-        else if (r === 0 && c === 7) castling.k = false;
-      }
-      var captured = board[rr][cc];
-      if (captured && captured.toUpperCase() === "R") {
-        if (rr === 7 && cc === 0) castling.Q = false;
-        else if (rr === 7 && cc === 7) castling.K = false;
-        else if (rr === 0 && cc === 0) castling.q = false;
-        else if (rr === 0 && cc === 7) castling.k = false;
-      }
-
-      board[r][c] = null;
-      if (flag === "ep") { board[r][cc] = null; board[rr][cc] = piece; }
-      else if (flag === "promo") { board[rr][cc] = color === "w" ? extra : extra.toLowerCase(); }
-      else { board[rr][cc] = piece; }
-
-      if (flag === "O-O") { board[r][5] = board[r][7]; board[r][7] = null; }
-      else if (flag === "O-O-O") { board[r][3] = board[r][0]; board[r][0] = null; }
-    }
-
-    function generateLegalMoves(board, castling, enPassant, color) {
-      var legal = [];
-      for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
-        var p = board[r][c];
-        if (p && colorOf(p) === color) {
-          var pm = pseudoMovesFor(board, r, c, castling, enPassant);
-          for (var i = 0; i < pm.length; i++) {
-            var b2 = cloneBoard(board);
-            var cast2 = Object.assign({}, castling);
-            applyMoveTo(b2, pm[i], cast2);
-            var kp = kingPos(b2, color);
-            if (kp && !attackedBy(b2, kp[0], kp[1], opponent(color))) legal.push(pm[i]);
-          }
-        }
-      }
-      return legal;
-    }
-
-    function inCheck(board, color) {
-      var kp = kingPos(board, color);
-      return kp != null && attackedBy(board, kp[0], kp[1], opponent(color));
-    }
-
-    // ========================================================== NOTATION
-    function moveToSAN(move, boardBefore, legalMovesBefore, isCheck, isMate) {
-      var r = move[0], c = move[1], rr = move[2], cc = move[3], flag = move[4], extra = move[5];
-      var suffix = isMate ? "#" : (isCheck ? "+" : "");
-      if (flag === "O-O") return "O-O" + suffix;
-      if (flag === "O-O-O") return "O-O-O" + suffix;
-
-      var piece = boardBefore[r][c];
-      var ptype = piece.toUpperCase();
-      var dest = squareName(rr, cc);
-      var captured = boardBefore[rr][cc] != null || flag === "ep";
-
-      if (ptype === "P") {
-        var base = captured ? (FILES[c] + "x" + dest) : dest;
-        if (flag === "promo") base += "=" + extra;
-        return base + suffix;
-      }
-
-      var sameDest = legalMovesBefore.filter(function (m) {
-        if (m[2] !== rr || m[3] !== cc) return false;
-        if (m[0] === r && m[1] === c) return false;
-        var op = boardBefore[m[0]][m[1]];
-        return op && op.toUpperCase() === ptype;
-      });
-      var dis = "";
-      if (sameDest.length) {
-        var sameFile = sameDest.some(function (m) { return m[1] === c; });
-        var sameRank = sameDest.some(function (m) { return m[0] === r; });
-        if (!sameFile) dis = FILES[c];
-        else if (!sameRank) dis = String(8 - r);
-        else dis = FILES[c] + String(8 - r);
-      }
-      return ptype + dis + (captured ? "x" : "") + dest + suffix;
-    }
+    function inCheck(board, color) { return R.inCheck({ board: board, turn: color }); }
 
     // ========================================================== STATE
+    var START_POS = R.fromFEN(R.START_FEN);
     var state = {
-      board: initialBoard(),
+      // the position (what the rules read)
+      board: cloneBoard(START_POS.board),
       turn: "w",
       castling: { K: true, Q: true, k: true, q: true },
       enPassant: null,
+      halfmove: 0,          // plies since the last capture or pawn move (50-move rule)
+      fullmove: 1,
+      // the game
+      startFen: R.START_FEN, // where this game began (a shared link or a loaded game can start elsewhere)
+      positionKeys: [],     // every position reached, for threefold repetition
+      result: "*",          // PGN result: "1-0", "0-1", "1/2-1/2" or "*" while playing
+      overReason: null,     // mate | stalemate | repetition | fifty | material | resign | agreed | time
+      drawOffer: null,      // the colour whose draw offer is waiting for an answer
       history: [],
       lastMove: null,
       selected: null,
@@ -966,7 +871,16 @@
       thinking: false,
       gameId: 0             // bumped by New game, so a move still animating from the old game is dropped
     };
-    state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
+    state.positionKeys = [R.positionKey(state)];
+    state.legalCache = R.legalMoves(state);
+
+    // Clocks: remaining time per side in ms; the side to move's clock runs from its `since` timestamp.
+    // A clock starts with the first move and each move adds the increment to the side that made it.
+    var TIME_CONTROLS = {
+      none: null, "1+0": [1, 0], "3+2": [3, 2], "5+0": [5, 0], "5+3": [5, 3],
+      "10+5": [10, 5], "15+10": [15, 10], "30+20": [30, 20]
+    };
+    var clock = { tc: "none", base: 0, inc: 0, w: 0, b: 0, running: null, since: 0, timer: null };
 
     (function loadSettings() {
       var b = readLS("chess-board", "classic");
@@ -977,6 +891,8 @@
       state.humanColor = readLS("chess-side", "w") === "b" ? "b" : "w";
       var lv = parseInt(readLS("chess-level", "3"), 10);
       state.level = lv >= 1 && lv <= 8 ? lv : 3;
+      var tc = readLS("chess-clock", "none");
+      clock.tc = TIME_CONTROLS.hasOwnProperty(tc) ? tc : "none";
       state.flipped = state.opponent === "engine" && state.humanColor === "b";
     })();
 
@@ -1044,10 +960,14 @@
           setEngineStatus("ready", engineIdleText());
           var q = engine.onReady; engine.onReady = [];
           q.forEach(function (f) { f(); });
+        } else if (line.indexOf("info") === 0 && line.indexOf(" score ") > 0) {
+          // the latest score, from the point of view of the side to move: { cp } or { mate }
+          var sc = /score (cp|mate) (-?\d+)/.exec(line);
+          if (sc) engine.lastScore = sc[1] === "cp" ? { cp: +sc[2] } : { mate: +sc[2] };
         } else if (line.indexOf("bestmove") === 0) {
           engine.bestsSeen++;
           var p = engine.pending;
-          if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1]); }
+          if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1], engine.lastScore); }
         }
       };
       engineSend("uci");
@@ -1065,12 +985,26 @@
       render();
     }
 
-    function engineSearch(cb) {
-      var lv = LEVELS[state.level];
+    // The whole game goes to the engine (so it sees repetitions), from wherever the game started.
+    function enginePosition() {
+      return "position " + (state.startFen === R.START_FEN ? "startpos" : "fen " + state.startFen) +
+        (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : "");
+    }
+    function engineGo(skill, go, cb) {
       engine.pending = { id: ++engine.gosSent, cb: cb };
-      engineSend("setoption name Skill Level value " + lv.skill);
-      engineSend("position startpos" + (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : ""));
-      engineSend("go " + lv.go);
+      engine.lastScore = null;
+      engineSend("setoption name Skill Level value " + skill);
+      engineSend(enginePosition());
+      engineSend("go " + go);
+    }
+    function engineSearch(cb) {
+      var lv = LEVELS[state.level], go = lv.go;
+      // at full strength under a clock, the engine manages its own time
+      if (clock.tc !== "none" && state.level === 8) {
+        go = "wtime " + Math.max(0, Math.round(clockLeft("w"))) + " btime " + Math.max(0, Math.round(clockLeft("b"))) +
+          " winc " + clock.inc + " binc " + clock.inc;
+      }
+      engineGo(lv.skill, go, cb);
     }
 
     function cancelEngine() {
@@ -1108,16 +1042,36 @@
       });
     }
 
-    function moveToUCI(m) {
-      return squareName(m[0], m[1]) + squareName(m[2], m[3]) + (m[4] === "promo" ? m[5].toLowerCase() : "");
-    }
     // Map the engine's answer back onto our own legal-move list, so it can only play legal moves.
     function uciToMove(uci) {
       if (!uci || uci === "(none)") return null;
       for (var i = 0; i < state.legalCache.length; i++) {
-        if (moveToUCI(state.legalCache[i]) === uci) return state.legalCache[i];
+        if (R.toUCI(state.legalCache[i]) === uci) return state.legalCache[i];
       }
       return null;
+    }
+
+    // A draw offer to the computer: a full-strength look at the position; Stockfish accepts when it
+    // isn't better (a score of +0.30 or less for itself) and declines otherwise.
+    function offerDrawToEngine() {
+      state.thinking = true;
+      var token = engine.searchToken;
+      setNotice("You offer a draw — Stockfish is considering…");
+      render();
+      ensureEngine(function () {
+        if (token !== engine.searchToken) return;
+        setEngineStatus("ready", "Stockfish is considering the draw offer…");
+        engineGo(20, "depth 12", function (uci, score) {
+          if (token !== engine.searchToken) return;
+          state.thinking = false;
+          setEngineStatus("ready", engineIdleText());
+          // the score is for the side to move — you; Stockfish's view is the opposite
+          var accept = !score || (score.mate != null ? score.mate > 0 : -score.cp <= 30);
+          if (accept) endGame("1/2-1/2", "agreed", "Stockfish accepts — draw agreed.");
+          else setNotice("Stockfish declines the draw. Play on.");
+          render();
+        });
+      });
     }
 
     // ========================================================== RENDER
@@ -1222,12 +1176,22 @@
       var turnName = state.turn === "w" ? "White" : "Black";
       document.getElementById("scoreWhite").classList.toggle("active", !state.over && state.turn === "w");
       document.getElementById("scoreBlack").classList.toggle("active", !state.over && state.turn === "b");
-      document.getElementById("stMove").textContent = Math.floor(state.moveList.length / 2) + 1;
+      document.getElementById("stMove").textContent = state.fullmove;
       document.getElementById("stTurn").textContent = turnName;
       document.getElementById("stLast").textContent = state.moveList.length ? state.moveList[state.moveList.length - 1] : "—";
-      document.getElementById("undoBtn").disabled = state.history.length === 0 || state.animating;
+      // a result by resignation, agreement or the clock isn't a move, so it can't be taken back
+      var finalResult = state.over && (state.overReason === "resign" || state.overReason === "agreed" || state.overReason === "time");
+      document.getElementById("undoBtn").disabled = state.history.length === 0 || state.animating || finalResult;
       var vsEngine = state.opponent === "engine";
+      var canAct = !state.over && !state.animating && !state.thinking && !(vsEngine && isEngineTurn());
+      document.getElementById("resignBtn").disabled = !canAct || state.moveList.length === 0 && !vsEngine;
+      document.getElementById("drawBtn").disabled = !canAct || !!state.drawOffer;
+      document.getElementById("resignBtn").textContent = resignArmed ? "Confirm: resign" : (vsEngine ? "Resign" : (state.turn === "w" ? "White" : "Black") + " resigns");
+      var offer = document.getElementById("offerBox");
+      offer.hidden = !(state.drawOffer && !state.over);
+      if (!offer.hidden) document.getElementById("offerText").textContent = (state.drawOffer === "w" ? "White" : "Black") + " offers a draw. " + (state.drawOffer === "w" ? "Black" : "White") + ":";
       document.getElementById("lblWhite").textContent = "White" + (vsEngine ? (state.humanColor === "w" ? " · you" : " · Stockfish") : "");
+      renderClocks();
       document.getElementById("lblBlack").textContent = "Black" + (vsEngine ? (state.humanColor === "b" ? " · you" : " · Stockfish") : "");
 
       var banner = document.getElementById("banner");
@@ -1235,6 +1199,8 @@
       if (state.over) {
         banner.classList.add("win");
         banner.textContent = state.overText;
+      } else if (state.notice) {
+        banner.textContent = state.notice;
       } else if (isEngineTurn()) {
         banner.textContent = engine.status === "error" ? "Engine unavailable — switch to a friend, or undo"
           : (inCheck(state.board, state.turn) ? "Check! " : "") + "Stockfish is thinking…";
@@ -1322,72 +1288,89 @@
     }
 
     // ========================================================== FLOW
+    var resignArmed = false, resignTimer = null;
+
+    function setPosition(pos) {
+      state.board = pos.board; state.turn = pos.turn; state.castling = pos.castling;
+      state.enPassant = pos.enPassant; state.halfmove = pos.halfmove; state.fullmove = pos.fullmove;
+    }
+    function setNotice(text) { state.notice = text; }
+    function colorName(c) { return c === "w" ? "White" : "Black"; }
+
     function pushHistory() {
       state.history.push({
-        board: cloneBoard(state.board),
-        turn: state.turn,
-        castling: Object.assign({}, state.castling),
-        enPassant: state.enPassant,
+        pos: R.clonePos(state),
         lastMove: state.lastMove,
         moveList: state.moveList.slice(),
         uciMoves: state.uciMoves.slice(),
+        positionKeys: state.positionKeys.slice(),
         captured: { w: state.captured.w.slice(), b: state.captured.b.slice() },
-        over: state.over,
-        overText: state.overText
+        over: state.over, overText: state.overText, overReason: state.overReason, result: state.result
       });
     }
 
-    function finishMove(move, isMate, isCheckAfter) {
-      var san = moveToSAN(move, move._boardBefore, move._legalBefore, isCheckAfter, isMate);
+    // Against the computer a result reads as "you" and "Stockfish".
+    function winText(winner, how) {
+      if (state.opponent === "engine") return how + " — " + (winner === state.humanColor ? "you win!" : "Stockfish wins.");
+      return how + " — " + colorName(winner) + " wins.";
+    }
+
+    function endGame(result, reason, text) {
+      state.over = true; state.result = result; state.overReason = reason; state.overText = text;
+      state.drawOffer = null; state.notice = null;
+      stopClock();
+    }
+
+    // After every move the rules decide whether the game is over. Mate comes first: a move that mates
+    // wins even if it is also the 100th quiet ply. Draws are applied automatically.
+    function checkGameEnd() {
+      var mover = opponent(state.turn);
+      if (!state.legalCache.length) {
+        if (R.inCheck(state)) endGame(mover === "w" ? "1-0" : "0-1", "mate", winText(mover, "Checkmate"));
+        else endGame("1/2-1/2", "stalemate", "Stalemate — draw.");
+        return;
+      }
+      var key = state.positionKeys[state.positionKeys.length - 1];
+      var reps = state.positionKeys.filter(function (k) { return k === key; }).length;
+      if (R.insufficientMaterial(state)) endGame("1/2-1/2", "material", "Draw — neither side has enough material left to checkmate.");
+      else if (reps >= 3) endGame("1/2-1/2", "repetition", "Draw by threefold repetition.");
+      else if (state.halfmove >= 100) endGame("1/2-1/2", "fifty", "Draw by the 50-move rule — 50 moves each without a capture or a pawn move.");
+    }
+
+    // A move's bookkeeping, without animation — shared by clicks, typed moves, the engine and loading a
+    // game (which passes quiet, and checks for the end of the game once, after the last move).
+    function applyMove(move, quiet) {
+      var before = R.clonePos(state);
+      var san = R.toSAN(before, move);
+      var captured = state.board[move[2]][move[3]];
+      if (move[4] === "ep") captured = state.turn === "w" ? "p" : "P";
+      pushHistory();
+      if (captured) state.captured[state.turn].push(captured); // by the side moving
+      state.uciMoves.push(R.toUCI(move));
       state.moveList.push(san);
+      setPosition(R.play(before, move));
+      state.positionKeys.push(R.positionKey(state));
+      state.lastMove = [move[0], move[1], move[2], move[3]];
       state.selected = null;
       state.legalTargets = [];
-      state.lastMove = [move[0], move[1], move[2], move[3]];
-      state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
-      if (state.legalCache.length === 0) {
-        state.over = true;
-        if (isCheckAfter) {
-          var winner = state.turn === "w" ? "Black" : "White";
-          state.overText = "Checkmate! " + winner + " wins.";
-          if (state.opponent === "engine") {
-            state.overText = state.turn === state.humanColor ? "Checkmate — Stockfish wins." : "Checkmate — you win!";
-          }
-        } else {
-          state.overText = "Stalemate! Draw.";
-        }
-      }
-      render();
-      maybeEngineMove();
+      state.legalCache = R.legalMoves(state);
+      // an offer lapses when the other side moves instead of answering it; your own move keeps yours open
+      if (state.drawOffer && state.drawOffer !== before.turn) state.drawOffer = null;
+      state.notice = null;
+      if (!quiet) checkGameEnd();
+      return san;
     }
 
     function makeMove(move) {
-      var r = move[0], c = move[1], rr = move[2], cc = move[3], flag = move[4];
-      var legalBefore = state.legalCache;
-      var captured = state.board[rr][cc];
-      if (flag === "ep") captured = state.turn === "w" ? "p" : "P";
-
-      pushHistory();
-      state.uciMoves.push(moveToUCI(move));
-      var preBoard = cloneBoard(state.board);
-      var boardBefore = preBoard;
-      applyMoveTo(state.board, move, state.castling);
-      state.enPassant = flag === "double" ? [(r + rr) / 2, c] : null;
-      if (captured) {
-        var by = state.turn; // side that just moved
-        state.captured[by].push(captured);
-      }
-      state.turn = opponent(state.turn);
-
-      move._boardBefore = boardBefore;
-      move._legalBefore = legalBefore;
-
+      var preBoard = cloneBoard(state.board), mover = state.turn;
+      var san = applyMove(move);
+      clockAfterMove(mover);
+      announce(colorName(mover) + " played " + san + (state.over ? ". " + state.overText : ""));
       var gameId = state.gameId;
       animateMove(move, preBoard, function () {
         if (gameId !== state.gameId) { maybeEngineMove(); return; }
-        var stillLegal = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
-        var isCheckAfter = inCheck(state.board, state.turn);
-        var isMate = stillLegal.length === 0 && isCheckAfter;
-        finishMove(move, isMate, isCheckAfter);
+        render();
+        maybeEngineMove();
       });
     }
 
@@ -1396,43 +1379,256 @@
       cancelEngine();
       var snap = state.history.pop();
       // vs the computer, step back to the human's turn (their move + the engine's reply)
-      if (state.opponent === "engine" && snap.turn !== state.humanColor && state.history.length) snap = state.history.pop();
-      state.board = snap.board;
-      state.turn = snap.turn;
-      state.castling = snap.castling;
-      state.enPassant = snap.enPassant;
+      if (state.opponent === "engine" && snap.pos.turn !== state.humanColor && state.history.length) snap = state.history.pop();
+      setPosition(snap.pos);
       state.lastMove = snap.lastMove;
       state.moveList = snap.moveList;
       state.uciMoves = snap.uciMoves;
+      state.positionKeys = snap.positionKeys;
       state.captured = snap.captured;
       state.over = snap.over;
       state.overText = snap.overText;
+      state.overReason = snap.overReason;
+      state.result = snap.result;
+      state.drawOffer = null;
+      state.notice = null;
       state.selected = null;
       state.legalTargets = [];
-      state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
+      state.legalCache = R.legalMoves(state);
+      // the clocks keep their times; the side now to move is the one whose clock runs
+      if (clock.started && !state.over) runClock(state.turn);
       render();
       maybeEngineMove();
     }
 
-    function newGame() {
+    var FULL_SET = { Q: 1, R: 2, B: 2, N: 2, P: 8 };
+    // pieces missing from a full set count as captured (for games that start from a position)
+    function capturedFromBoard(board) {
+      var n = {}, out = { w: [], b: [] };
+      board.forEach(function (row) { row.forEach(function (p) { if (p) n[p] = (n[p] || 0) + 1; }); });
+      Object.keys(FULL_SET).forEach(function (t) {
+        for (var i = n[t.toLowerCase()] || 0; i < FULL_SET[t]; i++) out.w.push(t.toLowerCase());
+        for (var j = n[t] || 0; j < FULL_SET[t]; j++) out.b.push(t);
+      });
+      return out;
+    }
+
+    function resetGame(pos, startFen) {
       cancelEngine();
       state.gameId++;
-      state.board = initialBoard();
-      state.turn = "w";
-      state.castling = { K: true, Q: true, k: true, q: true };
-      state.enPassant = null;
+      setPosition(pos);
+      state.startFen = startFen;
+      state.positionKeys = [R.positionKey(state)];
       state.history = [];
       state.lastMove = null;
       state.selected = null;
       state.legalTargets = [];
       state.over = false;
       state.overText = "";
+      state.overReason = null;
+      state.result = "*";
+      state.drawOffer = null;
+      state.notice = null;
       state.moveList = [];
       state.uciMoves = [];
-      state.captured = { w: [], b: [] };
-      state.legalCache = generateLegalMoves(state.board, state.castling, state.enPassant, state.turn);
+      state.captured = startFen === R.START_FEN ? { w: [], b: [] } : capturedFromBoard(pos.board);
+      state.legalCache = R.legalMoves(state);
+      resetClock();
+    }
+
+    function newGame() {
+      resetGame(R.fromFEN(R.START_FEN), R.START_FEN);
+      clearGameURL();
       render();
       maybeEngineMove();
+    }
+
+    // Start a game from a position (FEN) and moves (SAN or UCI) — from a shared link or the Load box.
+    // Everything is checked before the current game is touched. Returns an error message, or null.
+    function loadGame(startFen, moves) {
+      var loaded = R.loadFEN(startFen);
+      if (loaded.error) return "That position can't be played: " + loaded.error + ".";
+      var pos = loaded.pos, list = [];
+      for (var i = 0; i < moves.length; i++) {
+        var m = R.parseMove(pos, moves[i]);
+        if (!m) return "Move " + pos.fullmove + (pos.turn === "w" ? ". " : "... ") + moves[i] + " isn't legal there.";
+        list.push(m);
+        pos = R.play(pos, m);
+      }
+      resetGame(loaded.pos, R.toFEN(loaded.pos));
+      list.forEach(function (mv) { applyMove(mv, true); });
+      checkGameEnd();
+      // against the computer, you take over the side to move
+      if (state.opponent === "engine") state.humanColor = state.turn;
+      state.flipped = state.opponent === "engine" ? state.humanColor === "b" : state.turn === "b";
+      applyOpponentUI();
+      buildGrid();
+      render();
+      maybeEngineMove();
+      return null;
+    }
+
+    // a FEN (one line, eight ranks) or a PGN
+    function loadText(text) {
+      text = text.trim();
+      if (!text) return "Paste a FEN or a PGN first.";
+      if (/^[1-8kqrbnpKQRBNP]+(\/[1-8kqrbnpKQRBNP]+){7}(\s|$)/.test(text)) return loadGame(text, []);
+      var g = R.parsePGN(text);
+      if (g.error) return "Couldn't read that PGN: " + g.error + ".";
+      return loadGame(g.startFen, g.sans);
+    }
+
+    function currentPGN() {
+      var d = new Date();
+      function pad(n) { return (n < 10 ? "0" : "") + n; }
+      var tags = {
+        Event: state.opponent === "engine" ? "Game against Stockfish" : "Casual game",
+        Site: location.origin + location.pathname,
+        Date: d.getFullYear() + "." + pad(d.getMonth() + 1) + "." + pad(d.getDate())
+      };
+      if (state.opponent === "engine") {
+        var sf = "Stockfish 18 (level " + state.level + ")";
+        tags.White = state.humanColor === "w" ? "You" : sf;
+        tags.Black = state.humanColor === "b" ? "You" : sf;
+      }
+      if (clock.tc !== "none") tags.TimeControl = (clock.base / 1000) + "+" + (clock.inc / 1000);
+      if (state.over) tags.Termination = state.overReason === "time" ? "Time forfeit" : "Normal";
+      return R.toPGN({ tags: tags, startFen: state.startFen, sans: state.moveList, result: state.result });
+    }
+
+    // a link that replays this game: ?fen= (only if it didn't start from the usual position) & moves=
+    function shareURL() {
+      var p = new URLSearchParams();
+      if (state.startFen !== R.START_FEN) p.set("fen", state.startFen);
+      if (state.moveList.length) p.set("moves", state.moveList.map(function (s) { return s.replace(/[+#]$/, ""); }).join(" "));
+      var q = p.toString();
+      return location.origin + location.pathname + (q ? "?" + q : "");
+    }
+    function clearGameURL() {
+      if (location.search) { try { history.replaceState(null, "", location.pathname); } catch (e) {} }
+    }
+
+    // ?fen=  ?moves=e4 e5 Nf3  ?pgn=  — plus ?opponent=engine|human, ?side=w|b, ?level=1-8 (not remembered)
+    function loadFromURL() {
+      var q = new URLSearchParams(location.search), err = null;
+      if (q.get("opponent") === "engine" || q.get("opponent") === "human") state.opponent = q.get("opponent");
+      var lv = parseInt(q.get("level"), 10);
+      if (lv >= 1 && lv <= 8) state.level = lv;
+      if (q.has("pgn")) {
+        var g = R.parsePGN(q.get("pgn"));
+        err = g.error ? "Couldn't read the game in the link: " + g.error + "." : loadGame(g.startFen, g.sans);
+      } else if (q.has("fen") || q.has("moves")) {
+        var moves = (q.get("moves") || "").split(/[\s,]+/).filter(Boolean);
+        err = loadGame(q.get("fen") || R.START_FEN, moves);
+      }
+      var side = q.get("side");
+      if (side === "w" || side === "b") {
+        state.humanColor = side;
+        state.flipped = side === "b";
+        buildGrid();
+      }
+      applyOpponentUI();
+      if (err) setNotice(err);
+      if (state.opponent === "engine" && engine.status === "off") ensureEngine(function () {});
+    }
+
+    // ---- clocks
+    function clockLeft(color) {
+      var t = clock[color];
+      if (clock.running === color) t -= Date.now() - clock.since;
+      return t;
+    }
+    function resetClock() {
+      var tc = TIME_CONTROLS[clock.tc];
+      stopClock();
+      clock.started = false;
+      clock.base = tc ? tc[0] * 60000 : 0;
+      clock.inc = tc ? tc[1] * 1000 : 0;
+      clock.w = clock.b = clock.base;
+      renderClocks();
+    }
+    function stopClock() {
+      if (clock.running) { clock[clock.running] = clockLeft(clock.running); clock.running = null; }
+      if (clock.timer) { clearInterval(clock.timer); clock.timer = null; }
+    }
+    function runClock(color) {
+      if (clock.tc === "none" || state.over) return;
+      stopClock();
+      clock.started = true;
+      clock.running = color;
+      clock.since = Date.now();
+      clock.timer = setInterval(tickClock, 100);
+      renderClocks();
+    }
+    // the mover's clock stops and gains the increment; the opponent's starts (the first move starts the clocks)
+    function clockAfterMove(mover) {
+      if (clock.tc === "none") return;
+      var wasRunning = clock.running === mover;
+      stopClock();
+      if (wasRunning) clock[mover] += clock.inc;
+      if (!state.over) runClock(opponent(mover));
+      renderClocks();
+    }
+    function tickClock() {
+      var c = clock.running;
+      if (!c) return;
+      if (clockLeft(c) > 0) { renderClocks(); return; }
+      clock[c] = 0;
+      clock.running = null;
+      cancelEngine();
+      var winner = opponent(c);
+      var who = state.opponent === "engine" ? (c === state.humanColor ? "You" : "Stockfish") : colorName(c);
+      if (R.canMate(state, winner)) {
+        endGame(winner === "w" ? "1-0" : "0-1", "time", winText(winner, who + " ran out of time"));
+      } else {
+        // running out of time only loses if the other side could still mate (FIDE art. 6.9)
+        endGame("1/2-1/2", "time", who + " ran out of time, but the other side can't checkmate — draw.");
+      }
+      announce(state.overText);
+      render();
+    }
+    function fmtClock(ms) {
+      ms = Math.max(0, ms);
+      if (ms < 20000) {
+        var tenths = Math.floor(ms / 100), secs = Math.floor(tenths / 10);
+        return "0:" + (secs < 10 ? "0" : "") + secs + "." + (tenths % 10);
+      }
+      var s = Math.ceil(ms / 1000);
+      return Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+    }
+    function renderClocks() {
+      ["w", "b"].forEach(function (c) {
+        var el = document.getElementById(c === "w" ? "clockWhite" : "clockBlack");
+        el.hidden = clock.tc === "none";
+        if (el.hidden) return;
+        var left = clockLeft(c);
+        el.textContent = fmtClock(left);
+        el.classList.toggle("running", clock.running === c);
+        el.classList.toggle("low", left < 20000);
+      });
+    }
+
+    // screen readers hear each move and the result
+    function announce(text) { document.getElementById("srLive").textContent = text; }
+
+    // ---- typed moves: SAN or UCI, read leniently ("nf3", "e2e4", "0-0", "e8q")
+    function playTyped(text) {
+      if (state.over) return "The game is over — start a new one, or undo.";
+      if (state.animating) return "One moment…";
+      if (state.thinking || isEngineTurn()) return "Wait for Stockfish's move.";
+      var m = R.parseMove(state, text);
+      if (!m && /^[a-h](x?[a-h])?[18]$/i.test(text)) m = R.parseMove(state, text + "=Q"); // promotion: a queen unless named
+      if (m) { makeMove(m); return null; }
+      // a piece move that more than one piece can make: say which ones
+      var t = text.replace(/[+#!?]/g, ""), pm = /^([nbrqkNBRQK])x?([a-h][1-8])$/.exec(t);
+      if (pm) {
+        var type = pm[1].toUpperCase(), to = R.parseSquare(pm[2].toLowerCase());
+        var cands = state.legalCache.filter(function (mv) {
+          return mv[2] === to[0] && mv[3] === to[1] && state.board[mv[0]][mv[1]].toUpperCase() === type;
+        });
+        if (cands.length > 1) return "More than one piece can go there — type " + cands.map(function (mv) { return R.toSAN(state, mv); }).join(" or ") + ".";
+      }
+      return "“" + text + "” isn't a legal move here.";
     }
 
     function askPromotion(color, cb) {
@@ -1461,7 +1657,7 @@
     }
 
     function onCellClick(e) {
-      if (state.over || state.animating || isEngineTurn()) return;
+      if (state.over || state.animating || state.thinking || isEngineTurn()) return;
       var row = +this.dataset.r, col = +this.dataset.c;
       var board = state.board;
 
@@ -1507,6 +1703,104 @@
       state.flipped = !state.flipped;
       buildGrid();
       render();
+    });
+
+    // Resign takes a second click within three seconds, so a stray tap can't end the game.
+    document.getElementById("resignBtn").addEventListener("click", function () {
+      if (!resignArmed) {
+        resignArmed = true;
+        clearTimeout(resignTimer);
+        resignTimer = setTimeout(function () { resignArmed = false; render(); }, 3000);
+        render();
+        return;
+      }
+      resignArmed = false;
+      clearTimeout(resignTimer);
+      var vs = state.opponent === "engine", loser = vs ? state.humanColor : state.turn, winner = opponent(loser);
+      endGame(winner === "w" ? "1-0" : "0-1", "resign",
+        vs ? "You resigned — Stockfish wins." : colorName(loser) + " resigns — " + colorName(winner) + " wins.");
+      announce(state.overText);
+      render();
+    });
+    document.getElementById("drawBtn").addEventListener("click", function () {
+      if (state.opponent === "engine") { offerDrawToEngine(); return; }
+      state.drawOffer = state.turn;
+      render();
+    });
+    document.getElementById("acceptDraw").addEventListener("click", function () {
+      endGame("1/2-1/2", "agreed", "Draw agreed.");
+      announce(state.overText);
+      render();
+    });
+    document.getElementById("declineDraw").addEventListener("click", function () {
+      state.drawOffer = null;
+      setNotice("Draw declined — play on.");
+      render();
+    });
+
+    var clockSel = document.getElementById("clockSel");
+    clockSel.addEventListener("change", function () {
+      clock.tc = this.value; writeLS("chess-clock", this.value);
+      resetClock(); // both clocks start full, and run from the next move
+      render();
+    });
+
+    // ---- save & share
+    function copyText(text, btn) {
+      var label = btn.textContent;
+      function done(ok) {
+        btn.textContent = ok ? "Copied ✓" : "Copy failed";
+        setTimeout(function () { btn.textContent = label; }, 1400);
+      }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallback()); });
+      } else done(fallback());
+      function fallback() {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        var ok = false;
+        try { ok = document.execCommand("copy"); } catch (e) {}
+        ta.remove();
+        return ok;
+      }
+    }
+    document.getElementById("copyPgn").addEventListener("click", function () { copyText(currentPGN(), this); });
+    document.getElementById("copyFen").addEventListener("click", function () { copyText(R.toFEN(state), this); });
+    document.getElementById("copyLink").addEventListener("click", function () { copyText(shareURL(), this); });
+    document.getElementById("dlPgn").addEventListener("click", function () {
+      var blob = new Blob([currentPGN()], { type: "application/x-chess-pgn" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "chess-" + new Date().toISOString().slice(0, 10) + ".pgn";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    });
+    document.getElementById("loadBtn").addEventListener("click", function () {
+      var msg = document.getElementById("loadMsg");
+      var err = loadText(document.getElementById("loadText").value);
+      msg.hidden = false;
+      msg.classList.toggle("bad", !!err);
+      msg.textContent = err || "Loaded — " + (state.moveList.length ? state.moveList.length + " moves, " : "") + colorName(state.turn) + " to move.";
+      if (!err) clearGameURL();
+    });
+
+    // ---- typed moves; typing a move letter anywhere on the page starts one
+    var moveInput = document.getElementById("moveInput"), moveMsg = document.getElementById("moveMsg");
+    document.getElementById("moveForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = moveInput.value.trim();
+      if (!text) return;
+      var err = playTyped(text);
+      moveMsg.textContent = err || "";
+      moveMsg.classList.toggle("bad", !!err);
+      if (!err) moveInput.value = "";
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || !/[a-hnrqkoNBRQKO0]/.test(e.key)) return;
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      moveInput.focus(); // the key itself then lands in the box
     });
 
     var oppSel = document.getElementById("oppSel");
@@ -2088,6 +2382,9 @@
     applyView(false);
     applyOpponentUI();
     buildGrid();
+    clockSel.value = clock.tc;
+    resetClock();
+    loadFromURL();
     render();
     maybeEngineMove();
   })();

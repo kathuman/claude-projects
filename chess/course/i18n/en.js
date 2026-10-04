@@ -37,6 +37,7 @@
   "ui.hint": "Hint",
   "ui.solution": "Show solution",
   "ui.retry": "Try again",
+  "ui.playEngine": "Play this position against Stockfish",
   "ui.correct": "Correct!",
   "ui.wrong": "Not quite. Try again.",
   "ui.illegal": "That move is not possible here.",

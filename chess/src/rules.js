@@ -1,9 +1,9 @@
 /*
- * rules.js — chess rules for the course (and anything else that needs them), browser + Node.
+ * rules.js — the chess rules for the play app (chess/index.html), the course and the tests; browser + Node.
  *
- * The move generation is the main app's (chess/index.html), extracted unchanged; on top of it:
- * positions from and to FEN, making moves on a position object, SAN, checkmate/stalemate, and
- * squares attacked by a piece. tests/rules.test.js checks it by perft against published counts.
+ * Move generation, positions from and to FEN, making moves on a position object, SAN and lenient move
+ * input, checkmate/stalemate, the draw rules (repetition keys, insufficient material), PGN in and out,
+ * and squares attacked by a piece. tests/rules.test.js checks it by perft against published counts.
  *
  * Board: board[r][c], r = 0 is rank 8, c = 0 is file a; pieces "KQRBNP" white, "kqrbnp" black.
  * A move is [fr, fc, tr, tc, flag, extra]; flag in {null, "double", "ep", "promo", "O-O", "O-O-O"}.
@@ -288,6 +288,145 @@
     }
     return moves.filter(function (m) { return toSAN(pos, m).replace(/[+#]$/, "") === t; })[0] || null;
   }
+  // A typed move, read leniently: "nf3", "e2-e4", "0-0", "e8q", "exd5". SAN is tried first; a lowercase
+  // "b" is a pawn move when one fits ("bxc3") and otherwise a bishop move. null if nothing legal matches.
+  function parseMove(pos, text) {
+    var t = String(text).trim().replace(/[+#!?]+$/, "").replace(/0/g, "O").replace(/^o-o(-o)?$/i, function (s) { return s.toUpperCase(); });
+    if (!t) return null;
+    var u = t.replace(/^([a-h][1-8])[-x:]?([a-h][1-8])=?([qrbnQRBN])?$/, function (_, a, b, p) { return a + b + (p ? p.toLowerCase() : ""); });
+    var m = findMove(pos, u);
+    if (m) return m;
+    var san = t.replace(/^([a-h](?:x[a-h])?[18])=?([qrbnQRBN])$/, function (_, s, p) { return s + "=" + p.toUpperCase(); });
+    m = findMove(pos, san);
+    if (m) return m;
+    if (/^[nrqkb]/.test(san)) return findMove(pos, san[0].toUpperCase() + san.slice(1));
+    return null;
+  }
+
+  // ---------------------------------------------------------------- draws
+  // The position as it counts for repetition: pieces, side to move, castling rights, and the en-passant
+  // square only when an en-passant capture is actually legal (FIDE art. 9.2).
+  function positionKey(pos) {
+    var f = toFEN(pos).split(" ");
+    var ep = pos.enPassant && legalMoves(pos).some(function (m) { return m[4] === "ep"; }) ? f[3] : "-";
+    return f[0] + " " + f[1] + " " + f[2] + " " + ep;
+  }
+  // No sequence of legal moves can mate: K v K, K + one minor v K, or only bishops all on one square colour.
+  function insufficientMaterial(pos) {
+    var minors = [], bishopColours = {};
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var p = pos.board[r][c];
+      if (!p || p.toUpperCase() === "K") continue;
+      if ("PRQprq".indexOf(p) >= 0) return false;
+      minors.push(p);
+      if (p.toUpperCase() === "B") bishopColours[(r + c) % 2] = true;
+    }
+    if (minors.length <= 1) return true;
+    var onlyBishops = minors.every(function (p) { return p.toUpperCase() === "B"; });
+    return onlyBishops && Object.keys(bishopColours).length === 1;
+  }
+  // Can this side still mate at all? (used when the other side's flag falls: FIDE art. 6.9)
+  function canMate(pos, color) {
+    var pieces = [];
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var p = pos.board[r][c];
+      if (p && colorOf(p) === color && p.toUpperCase() !== "K") pieces.push(p.toUpperCase());
+    }
+    if (!pieces.length) return false;
+    if (pieces.length === 1 && (pieces[0] === "B" || pieces[0] === "N")) {
+      // a lone minor mates only with help from the opponent's own pieces
+      for (var r2 = 0; r2 < 8; r2++) for (var c2 = 0; c2 < 8; c2++) {
+        var q = pos.board[r2][c2];
+        if (q && colorOf(q) !== color && q.toUpperCase() !== "K") return true;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  // A FEN that can be played from: parses, one king each, no pawns on the first or last rank, and the side
+  // that just moved is not in check. Castling rights that the pieces contradict are dropped.
+  // Returns { pos } or { error }.
+  function loadFEN(fen) {
+    var pos;
+    try { pos = fromFEN(fen); } catch (e) { return { error: e.message }; }
+    var count = { K: 0, k: 0 };
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var p = pos.board[r][c];
+      if (p === "K" || p === "k") count[p]++;
+      if ((p === "P" || p === "p") && (r === 0 || r === 7)) return { error: "a pawn on the first or last rank" };
+    }
+    if (count.K !== 1 || count.k !== 1) return { error: "each side needs exactly one king" };
+    if (inCheckBoard(pos.board, opponent(pos.turn))) return { error: "the side not to move is in check" };
+    var b = pos.board, cs = pos.castling;
+    if (b[7][4] !== "K") { cs.K = false; cs.Q = false; }
+    if (b[0][4] !== "k") { cs.k = false; cs.q = false; }
+    if (b[7][7] !== "R") cs.K = false;
+    if (b[7][0] !== "R") cs.Q = false;
+    if (b[0][7] !== "r") cs.k = false;
+    if (b[0][0] !== "r") cs.q = false;
+    if (pos.enPassant) {
+      var er = pos.enPassant[0], ec = pos.enPassant[1], pawn = pos.turn === "w" ? "p" : "P";
+      var ok = (pos.turn === "w" ? er === 2 : er === 5) && b[pos.turn === "w" ? 3 : 4][ec] === pawn;
+      if (!ok) pos.enPassant = null;
+    }
+    return { pos: pos };
+  }
+
+  // ---------------------------------------------------------------- PGN
+  // Reads one game. Tags, comments, variations, NAGs and move numbers are understood; the main line is
+  // replayed through the rules, so an illegal move is reported with its number.
+  // Returns { tags, startFen, moves, sans, result } or { error }.
+  function parsePGN(text) {
+    var tags = {}, body = String(text).replace(/\r/g, "");
+    body = body.replace(/^\s*\[(\w+)\s+"((?:[^"\\]|\\.)*)"\]\s*$/gm, function (_, k, v) { tags[k] = v.replace(/\\(.)/g, "$1"); return ""; });
+    body = body.replace(/\{[^}]*\}/g, " ").replace(/;[^\n]*/g, " ");
+    var prev;
+    do { prev = body; body = body.replace(/\([^()]*\)/g, " "); } while (body !== prev);
+    body = body.replace(/\$\d+/g, " ");
+    var startFen = tags.FEN || START_FEN, loaded = loadFEN(startFen);
+    if (loaded.error) return { error: "the starting position (FEN tag): " + loaded.error };
+    var pos = loaded.pos, moves = [], sans = [], result = tags.Result || "*";
+    var tokens = body.split(/\s+/).filter(Boolean);
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i];
+      if (/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t)) { result = t; continue; }
+      t = t.replace(/^\d+\.+/, "");
+      if (!t || /^\.+$/.test(t)) continue;
+      var m = parseMove(pos, t);
+      if (!m) {
+        return { error: "move " + pos.fullmove + (pos.turn === "w" ? ". " : "... ") + t + " is not legal here" };
+      }
+      sans.push(toSAN(pos, m));
+      moves.push(m);
+      pos = play(pos, m);
+    }
+    return { tags: tags, startFen: startFen, moves: moves, sans: sans, result: result };
+  }
+  // game: { tags (any extra), startFen, sans, result }. Seven-tag roster first, movetext wrapped at 80.
+  function toPGN(game) {
+    var start = game.startFen || START_FEN, pos = fromFEN(start), result = game.result || "*";
+    var tags = Object.assign({ Event: "Casual game", Site: "?", Date: "????.??.??", Round: "-", White: "?", Black: "?" }, game.tags || {});
+    tags.Result = result;
+    if (start !== START_FEN) { tags.SetUp = "1"; tags.FEN = start; }
+    var order = ["Event", "Site", "Date", "Round", "White", "Black", "Result"];
+    Object.keys(tags).forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); });
+    var head = order.map(function (k) { return "[" + k + ' "' + String(tags[k]).replace(/(["\\])/g, "\\$1") + '"]'; }).join("\n");
+    var words = [], n = pos.fullmove, white = pos.turn === "w";
+    game.sans.forEach(function (s, i) {
+      if (white) words.push(n + ". " + s);
+      else { words.push(i === 0 ? n + "... " + s : s); n++; }
+      white = !white;
+    });
+    words.push(result);
+    var lines = [], line = "";
+    words.join(" ").split(" ").forEach(function (w) {
+      if (line && line.length + 1 + w.length > 80) { lines.push(line); line = w; } else line = line ? line + " " + w : w;
+    });
+    lines.push(line);
+    return head + "\n\n" + lines.join("\n") + "\n";
+  }
+
   // squares a piece on (r, c) attacks (for lessons on piece movement)
   function attacks(board, r, c) {
     var out = [], piece = board[r][c]; if (!piece) return out;
@@ -310,7 +449,9 @@
 
   return {
     START_FEN: START_FEN, FILES: FILES, fromFEN: fromFEN, toFEN: toFEN, legalMoves: legalMoves, play: play, status: status,
-    inCheck: inCheck, isMate: isMate, toSAN: toSAN, toUCI: toUCI, findMove: findMove, attacks: attacks, perft: perft,
-    squareName: squareName, parseSquare: parseSquare, colorOf: colorOf, attackedBy: attackedBy, kingPos: kingPos
+    inCheck: inCheck, isMate: isMate, toSAN: toSAN, toUCI: toUCI, findMove: findMove, parseMove: parseMove, attacks: attacks, perft: perft,
+    squareName: squareName, parseSquare: parseSquare, colorOf: colorOf, attackedBy: attackedBy, kingPos: kingPos,
+    positionKey: positionKey, insufficientMaterial: insufficientMaterial, canMate: canMate, loadFEN: loadFEN,
+    parsePGN: parsePGN, toPGN: toPGN, clonePos: clonePos
   };
 });

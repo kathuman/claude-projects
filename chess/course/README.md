@@ -14,7 +14,8 @@ https://kathuman.github.io/claude-projects/chess/course/
 Each lesson is a short series of steps: explanations on the board, "click every square this piece can reach"
 (the answer is computed from the rules), moves to find (with hints, the solution on request, scripted
 replies for multi-move tactics, and a warning when a move would give stalemate instead of mate), and quizzes.
-Progress is kept in the browser.
+Every move exercise has a *Play this position against Stockfish* button that opens the position in the play app
+(`../index.html?fen=…&opponent=engine`). Progress is kept in the browser.
 
 ## Files
 
@@ -22,7 +23,7 @@ Progress is kept in the browser.
 - `i18n/<code>.js` — all wording, by key; `en.js` is the source. Bundled: English, Spanish (`es`),
   Afrikaans (`af`), German (`de`), Danish (`da`), Dutch (`nl`).
 - `app.js` — the page: board, steps, progress, languages and speech.
-- `../src/rules.js` — the chess rules (the app's move generator, with FEN and SAN), shared with the tests.
+- `../src/rules.js` — the chess rules (moves, FEN, SAN, draw rules, PGN), shared with the play app and the tests.
 
 ## Languages
 

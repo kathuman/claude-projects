@@ -9,7 +9,8 @@
  */
 (function () {
   "use strict";
-  var VERSION = "1.0.0";
+  // 1.0.0 launch · 1.1.0 "Play this position against Stockfish" on move exercises (opens the play app)
+  var VERSION = "1.1.0";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];
@@ -290,6 +291,10 @@
     $("nextBtn").disabled = !S.solved || (last && S.gi === LESSONS.length - 1 && progress[ls.lesson.id]);
     var link = $("linkBtn");
     if (st.link) { link.hidden = false; link.href = st.link; link.textContent = T(st.k + ".link"); } else link.hidden = true;
+    // a move exercise from a legal game position can be played out against the engine in the play app
+    var play = $("playBtn"), playable = st.type === "move" && st.fen && !R.loadFEN(st.fen).error;
+    play.hidden = !playable;
+    if (playable) play.href = "../index.html?fen=" + encodeURIComponent(st.fen) + "&opponent=engine";
     drawBoard();
     if (!keepState && autoRead) speak(currentSpeech());
   }
