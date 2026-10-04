@@ -10,7 +10,8 @@
 (function () {
   "use strict";
   // 1.0.0 launch · 1.1.0 "Play this position against Stockfish" on move exercises (opens the play app)
-  var VERSION = "1.1.0";
+  // 1.1.1 speech on phones: unlock on the first tap, late-loading voices, cancel/speak race, sentence chunks
+  var VERSION = "1.1.1";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];
@@ -156,16 +157,54 @@
       })
       .replace(/–/g, " ").replace(/\s+/g, " ");
   }
+  // Phones need more care than desktops:
+  // - iOS (and some Android browsers) only start speech from a tap; one silent utterance during the first
+  //   tap unlocks it, so automatic reading after a scripted reply or on Next works later too;
+  // - voices load late (getVoices() is empty at first, and iOS may never fire voiceschanged), so with no
+  //   list yet we speak with just the language set and let the device pick its voice;
+  // - speak() straight after cancel() is often dropped, so a new text waits a moment after a cancel;
+  // - utterances that nothing references can be garbage-collected mid-sentence, and long ones are cut
+  //   off, so the text goes out in sentence-sized pieces that are kept until they finish.
+  var spoken = [], speakToken = 0, unlocked = false, reading = false;
+  function unlockSpeech() {
+    if (unlocked || !synth) return;
+    unlocked = true;
+    try { var u = new SpeechSynthesisUtterance(" "); u.volume = 0; spoken = [u]; synth.speak(u); } catch (e) {}
+  }
+  document.addEventListener("pointerdown", unlockSpeech, true);
+  document.addEventListener("keydown", unlockSpeech, true);
+  function chunks(text) {
+    var out = [], cur = "";
+    text.replace(/([.!?:;])\s+/g, "$1\u0001").split("\u0001").forEach(function (s) {
+      if (cur && (cur + " " + s).length > 180) { out.push(cur); cur = s; } else cur = cur ? cur + " " + s : s;
+    });
+    if (cur.trim()) out.push(cur);
+    return out;
+  }
   function speak(text) {
     if (!synth) return;
-    synth.cancel();
-    var v = voiceFor(speechCode());
-    if (!v) { var n = $("voiceNote"); n.hidden = false; n.textContent = T("ui.noVoice"); return; }
-    var u = new SpeechSynthesisUtterance(speakable(text));
-    u.voice = v; u.lang = v.lang; u.rate = rate;
-    synth.speak(u);
+    var code = speechCode(), v = voiceFor(code), n = $("voiceNote");
+    // the list is loaded and has nothing for this language: say so rather than read it in a wrong accent
+    if (!v && synth.getVoices().length) { n.hidden = false; n.textContent = T("ui.noVoice"); return; }
+    var tok = ++speakToken, parts = chunks(speakable(text));
+    function start() {
+      if (tok !== speakToken) return;
+      if (synth.paused) synth.resume(); // Chrome on Android can be left paused
+      spoken = parts.map(function (t) {
+        var u = new SpeechSynthesisUtterance(t);
+        if (v) u.voice = v;
+        u.lang = v ? v.lang.replace("_", "-") : code;
+        u.rate = rate;
+        return u;
+      });
+      reading = true;
+      var last = spoken[spoken.length - 1];
+      last.onend = last.onerror = function () { if (tok === speakToken) reading = false; };
+      spoken.forEach(function (u) { synth.speak(u); });
+    }
+    if (synth.speaking || synth.pending) { synth.cancel(); setTimeout(start, 150); } else start();
   }
-  function stopSpeech() { if (synth) synth.cancel(); }
+  function stopSpeech() { speakToken++; reading = false; if (synth) synth.cancel(); }
   function setAutoRead(on) {
     autoRead = on; writeLS("chess-course-autoread", on ? "1" : "0");
     $("autoRead").checked = on; $("audioBtn").setAttribute("aria-pressed", String(on));
@@ -175,7 +214,7 @@
   $("audioBtn").addEventListener("click", function () { setAutoRead(!autoRead); });
   $("rate").addEventListener("input", function () { rate = +this.value; writeLS("chess-course-rate", String(rate)); });
   $("listenBtn").addEventListener("click", function () {
-    if (synth && synth.speaking) { stopSpeech(); return; }
+    if (reading) { stopSpeech(); return; }
     speak(currentSpeech());
   });
 
