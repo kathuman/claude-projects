@@ -1,0 +1,28 @@
+name: Chess tests
+
+# The rules (perft against published counts) and the course (positions, solutions, mates, wording and
+# translations). The Stockfish checks of the course's puzzles need a browser and run locally.
+on:
+  push:
+    paths:
+      - 'chess/**'
+      - '.github/workflows/chess-ci.yml'
+  pull_request:
+    paths:
+      - 'chess/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node chess/tests/rules.test.js
+      - run: node chess/tests/course.test.js
+      - name: Syntax-check the browser scripts
+        run: for f in chess/course/*.js chess/course/i18n/*.js chess/src/*.js; do node --check "$f"; done
+        shell: bash

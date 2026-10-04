@@ -1,0 +1,43 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>Engine probe</title>
+<!-- Test helper: window.analyse(fen, depth, multipv) runs the app's Stockfish build and resolves with
+     the best lines; used by tests/course.test.js to check the course's puzzles. -->
+<script>
+(function () {
+  var worker = null, queue = Promise.resolve();
+  function start() {
+    if (worker) return Promise.resolve();
+    worker = new Worker("../engine/stockfish-18-lite-single.js");
+    return new Promise(function (res) {
+      worker.onmessage = function (e) { if (e.data === "uciok") { worker.postMessage("isready"); } else if (e.data === "readyok") res(); };
+      worker.postMessage("uci");
+    });
+  }
+  window.analyse = function (fen, depth, multipv) {
+    queue = queue.then(function () {
+      return start().then(function () {
+        return new Promise(function (res) {
+          var lines = {};
+          worker.onmessage = function (e) {
+            var s = String(e.data);
+            if (s.indexOf("info") === 0 && s.indexOf(" pv ") > 0) {
+              var mpv = +(/ multipv (\d+)/.exec(s) || [0, 1])[1];
+              var cp = / score cp (-?\d+)/.exec(s), mate = / score mate (-?\d+)/.exec(s);
+              lines[mpv] = { cp: cp ? +cp[1] : null, mate: mate ? +mate[1] : null, pv: s.split(" pv ")[1].split(" "), depth: +(/ depth (\d+)/.exec(s) || [0, 0])[1] };
+            } else if (s.indexOf("bestmove") === 0) {
+              res({ best: s.split(" ")[1], lines: Object.keys(lines).sort().map(function (k) { return lines[k]; }) });
+            }
+          };
+          worker.postMessage("ucinewgame");
+          worker.postMessage("setoption name MultiPV value " + (multipv || 1));
+          worker.postMessage("position fen " + fen);
+          worker.postMessage("go depth " + (depth || 18));
+        });
+      });
+    });
+    return queue;
+  };
+})();
+</script>
