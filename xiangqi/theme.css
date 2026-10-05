@@ -1,0 +1,68 @@
+/*
+ * theme.css — the Cobot Lab "blueprint" look for Xiangqi (same palette as chess/theme.css).
+ * Loaded after the page's own <style>, so it only redefines the shared tokens and a few
+ * header/typography rules; layout stays in the page.
+ *
+ * Dark (the default, as in Cobot Lab): navy panels, pale-cyan ink, sky-blue accent.
+ * Light (theme toggle): the same palette on blueprint paper.
+ * Fonts: Rajdhani (headings, brand, links), Barlow (text), IBM Plex Mono (numbers, labels).
+ */
+
+/* ---------- dark: the default, also when the system asks for dark ---------- */
+:root, :root[data-theme="dark"] {
+  --bg: #0a2f52; --panel: #0d3a63; --panel-2: #082444; --surface: #082444; --border: #2a5580; --line-soft: #1d4470;
+  --ink: #bfe4ff; --ink-2: #8fd0f2; --muted: #6fa8c9;
+  --accent: #7dd3fc; --accent-soft: #14496f; --accent-ink: #04202b;
+  --good: #3ddc97; --ok: #3ddc97; --warn: #ffcf4a; --bad: #ff6b5c;
+  --good-soft: #0f4a45; --ok-soft: #0f4a45; --bad-soft: #4a2c3c;
+  --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -12px rgba(0,0,0,.55);
+  --header-bg: linear-gradient(180deg, #0d3a63, #0a2f52);
+  --font-sans: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-head: "Rajdhani", "Arial Narrow", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --k-inacc: #ffcf4a; --k-mist: #ffa45c; --k-blund: #ff6b5c; --k-best: #3ddc97; --g-line: #6fa8c9;
+  color-scheme: dark;
+}
+/* default board: blueprint. Plain :root so a board picked in Look (:root[data-board]) still wins. */
+:root { --bd-bg: #d3e5f2; --bd-line: #1d4f7a; --bd-edge: #4b7aa3; --bd-river: #1d4f7a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a2f52; --panel: #0d3a63; --panel-2: #082444; --surface: #082444; --border: #2a5580;
+    --ink: #bfe4ff; --ink-2: #8fd0f2; --muted: #6fa8c9;
+    --accent: #7dd3fc; --accent-soft: #14496f; --accent-ink: #04202b;
+    --good: #3ddc97; --ok: #3ddc97; --warn: #ffcf4a; --bad: #ff6b5c;
+    --good-soft: #0f4a45; --ok-soft: #0f4a45; --bad-soft: #4a2c3c;
+    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -12px rgba(0,0,0,.55);
+    --k-inacc: #ffcf4a; --k-mist: #ffa45c; --k-blund: #ff6b5c; --k-best: #3ddc97; --g-line: #6fa8c9;
+    color-scheme: dark;
+  }
+}
+
+/* ---------- light: blueprint paper ---------- */
+:root[data-theme="light"] {
+  --bg: #e9f1f8; --panel: #ffffff; --panel-2: #f3f8fc; --surface: #f6fafd; --border: #c3d7e8; --line-soft: #dbe8f3;
+  --ink: #0a2f52; --ink-2: #2d5677; --muted: #587a96;
+  --accent: #0b6aa2; --accent-soft: #d8ebf7; --accent-ink: #ffffff;
+  --good: #13804f; --ok: #13804f; --warn: #9a6f00; --bad: #c0392b;
+  --good-soft: #dcf1e6; --ok-soft: #dcf1e6; --bad-soft: #f8e0dc;
+  --shadow: 0 1px 2px rgba(10,47,82,.06), 0 10px 30px -8px rgba(10,47,82,.16);
+  --header-bg: linear-gradient(180deg, #ffffff, #eef5fb);
+  --k-inacc: #9a6f00; --k-mist: #c45a10; --k-blund: #c0392b; --k-best: #13804f; --g-line: #587a96;
+  color-scheme: light;
+}
+
+/* ---------- typography and the header bar ---------- */
+html, body { font-family: var(--font-sans); }
+header.bar { background: var(--header-bg); border-bottom: 1px solid var(--border); backdrop-filter: none; }
+.brand h1 { font-family: var(--font-head); font-weight: 700; font-size: 21px; letter-spacing: .04em; line-height: 1.15; }
+.brand .mk { background: var(--accent); color: var(--accent-ink); }
+.brand .sub, .ver { font-family: var(--font-mono); }
+.ver { color: var(--muted); border-color: var(--border); }
+.lnk { font-family: var(--font-head); font-weight: 600; font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; }
+.lnk:hover { color: var(--accent); border-color: var(--accent); }
+.icon-btn { border-radius: 6px; }
+h2, h3, .panel h2, .card h2 { font-family: var(--font-head); letter-spacing: .03em; }
+@media (max-width: 560px) {
+  .brand h1 { font-size: 19px; }
+  .lnk { font-size: 11.5px; letter-spacing: .04em; }
+}

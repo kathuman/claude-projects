@@ -14,7 +14,7 @@
   <script src="coi-serviceworker.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" crossorigin="anonymous" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&display=swap&text=%E5%B8%A5%E4%BB%95%E7%9B%B8%E5%82%8C%E4%BF%A5%E7%82%AE%E5%85%B5%E5%B0%87%E5%A3%AB%E8%B1%A1%E9%A6%AC%E8%BB%8A%E7%A0%B2%E5%8D%92%E6%A5%9A%E6%B2%B3%E6%BC%A2%E7%95%8C" rel="stylesheet" crossorigin="anonymous" />
   <style>
     /* ------------------------------------------------------------------
@@ -67,6 +67,7 @@
     }
 
     /* ---- board palettes ---- */
+    :root[data-board="wood"]     { --bd-bg: #e9c88f; --bd-line: #6b4424; --bd-edge: #8a5a30; --bd-river: #6b4424; }
     :root[data-board="bamboo"]   { --bd-bg: #e6dcaa; --bd-line: #4f5a2a; --bd-edge: #6f7a3a; --bd-river: #4f5a2a; }
     :root[data-board="paper"]    { --bd-bg: #f3ede0; --bd-line: #3b3a36; --bd-edge: #5c5a52; --bd-river: #3b3a36; }
     :root[data-board="jade"]     { --bd-bg: #bcd9c6; --bd-line: #1f4a37; --bd-edge: #2e6a50; --bd-river: #1f4a37; }
@@ -335,6 +336,7 @@
       .pc { font-size: min(5.8vw, 30px); }
     }
   </style>
+  <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
   <header class="bar">
@@ -462,6 +464,7 @@
           <div class="field">
             <label for="boardSel">Board</label>
             <select class="sel" id="boardSel">
+              <option value="blueprint">Blueprint</option>
               <option value="wood">Wood</option>
               <option value="bamboo">Bamboo</option>
               <option value="paper">Rice paper</option>
@@ -702,7 +705,9 @@
     //   1.1.0  Classic problems (适情雅趣 mates + Four Great Endgames)
     //   1.2.0  author credit + version shown in the header and footer
     //   1.3.0  3D board view: tilt and rotate by dragging or with sliders
-    var APP_VERSION = "1.3.0";
+    //   1.4.0  Cobot Lab blueprint theme (theme.css): navy panels, cyan ink, Rajdhani/Barlow/IBM Plex Mono, dark by
+    //          default; blueprint board by default (wood kept in Look)
+    var APP_VERSION = "1.4.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -710,7 +715,7 @@
     (function initTheme() {
       var s = null;
       try { s = localStorage.getItem("xiangqi-theme"); } catch (e) {}
-      if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s);
+      document.documentElement.setAttribute("data-theme", s === "light" ? "light" : "dark");
     })();
     document.getElementById("themeToggle").addEventListener("click", function () {
       var root = document.documentElement;
@@ -920,15 +925,15 @@
       gameId: 0,
       startFen: null,       // null = the standard opening position; set by a problem
       mode: "play",         // "play" | "puzzle"
-      _board: "wood",
+      _board: "blueprint",
       _pieces: "chars"
     };
     state.keys = [positionKey(state.board, state.turn)];
     state.legalCache = generateLegalMoves(state.board, state.turn);
 
     (function loadSettings() {
-      var b = readLS("xiangqi-board", "wood");
-      state._board = ["wood", "bamboo", "paper", "jade", "charcoal"].indexOf(b) >= 0 ? b : "wood";
+      var b = readLS("xiangqi-board", "blueprint");
+      state._board = ["blueprint", "wood", "bamboo", "paper", "jade", "charcoal"].indexOf(b) >= 0 ? b : "blueprint";
       state._pieces = readLS("xiangqi-pieces", "chars") === "letters" ? "letters" : "chars";
       state.opponent = readLS("xiangqi-opponent", "human") === "engine" ? "engine" : "human";
       state.humanColor = readLS("xiangqi-side", "w") === "b" ? "b" : "w";
@@ -1931,7 +1936,7 @@
 
     function applyLook() {
       var root = document.documentElement;
-      if (state._board === "wood") root.removeAttribute("data-board"); else root.setAttribute("data-board", state._board);
+      if (state._board === "blueprint") root.removeAttribute("data-board"); else root.setAttribute("data-board", state._board);
       if (state._pieces === "chars") root.removeAttribute("data-pieces"); else root.setAttribute("data-pieces", state._pieces);
     }
     // ---- 3D view ----
