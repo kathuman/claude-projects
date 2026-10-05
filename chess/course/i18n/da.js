@@ -33,6 +33,8 @@
   "ui.solution": "Vis løsningen",
   "ui.retry": "Prøv igen",
   "ui.playEngine": "Spil denne stilling mod Stockfish",
+  "ui.practise": "Øv dig med opgaver på dit niveau",
+  "ui.puzzles": "Opgaver",
   "ui.correct": "Rigtigt!",
   "ui.wrong": "Ikke helt. Prøv igen.",
   "ui.illegal": "Det træk er ikke muligt her.",

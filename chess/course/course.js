@@ -73,17 +73,17 @@
         ]}
       ]},
       { id: "basic", lessons: [
-        { id: "castling", steps: [
+        { id: "castling", practice: "castling", steps: [
           { k: "castling.intro", type: "explain", fen: "4k3/8/8/8/8/8/PPPPPPPP/R3K2R w KQ - 0 1", arrows: "e1g1 h1f1" },
           { k: "castling.short", type: "move", fen: "4k3/8/8/8/8/8/PPPPPPPP/R3K2R w KQ - 0 1", solution: ["O-O"] },
           { k: "castling.long", type: "move", fen: "4k3/8/8/8/8/8/PPPPPPPP/R3K2R w KQ - 0 1", solution: ["O-O-O"] },
           { k: "castling.quiz", type: "quiz", options: 3, answer: 2 }
         ]},
-        { id: "enpassant", steps: [
+        { id: "enpassant", practice: "enPassant", steps: [
           { k: "enpassant.intro", type: "explain", fen: "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", arrows: "d7d5 e5d6" },
           { k: "enpassant.task", type: "move", fen: "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", solution: ["exd6"] }
         ]},
-        { id: "promotion", steps: [
+        { id: "promotion", practice: "promotion", steps: [
           { k: "promotion.intro", type: "explain", fen: "4k3/1P6/8/8/8/8/8/4K3 w - - 0 1", arrows: "b7b8" },
           { k: "promotion.task", type: "move", fen: "4k3/1P6/8/8/8/8/8/4K3 w - - 0 1", solution: ["b8=Q"] }
         ]},
@@ -102,38 +102,38 @@
           { k: "notation.quiz1", type: "quiz", options: 3, answer: 0 },
           { k: "notation.quiz2", type: "quiz", options: 3, answer: 1 }
         ]},
-        { id: "mates", steps: [
+        { id: "mates", practice: "mateIn1", steps: [
           { k: "mates.queen", type: "move", fen: "7k/8/6K1/8/8/3Q4/8/8 w - - 0 1", goal: "mate", solution: ["Qd8"] },
           { k: "mates.rook", type: "move", fen: "6k1/8/6K1/8/8/8/8/R7 w - - 0 1", goal: "mate", solution: ["Ra8"] },
           { k: "mates.scholar", type: "move", fen: "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4", goal: "mate", solution: ["Qxf7"] }
         ]}
       ]},
       { id: "intermediate", lessons: [
-        { id: "opening", steps: [
+        { id: "opening", practice: "opening", steps: [
           { k: "opening.intro", type: "explain", fen: START, marks: "d4 e4 d5 e5" },
           { k: "opening.quiz", type: "quiz", fen: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", options: 3, answer: 0 },
           { k: "opening.develop", type: "move", fen: "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3", solution: ["Bc4"], accept: ["Bb5", "d4", "Nc3"], engine: "accept" }
         ]},
-        { id: "forks", steps: [
+        { id: "forks", practice: "fork", steps: [
           { k: "forks.knight", type: "move", fen: "r3k3/6pp/8/1N6/8/8/PP6/4K3 w - - 0 1", solution: ["Nc7", "Kd7", "Nxa8"], engine: true },
           { k: "forks.pawn", type: "move", fen: "4k3/pp4pp/8/2r1n3/8/3P4/PP4PP/R3K3 w Q - 0 1", solution: ["d4"], engine: true }
         ]},
-        { id: "pins", steps: [
+        { id: "pins", practice: "pin", steps: [
           { k: "pins.intro", type: "explain", fen: "4k3/8/2n5/1B6/8/8/8/4K3 b - - 0 1", arrows: "b5e8" },
           { k: "pins.task", type: "move", fen: "4k3/8/2n5/8/8/8/8/4KB2 w - - 0 1", solution: ["Bb5"] }
         ]},
-        { id: "skewers", steps: [
+        { id: "skewers", practice: "skewer", steps: [
           { k: "skewers.task", type: "move", fen: "8/8/8/8/4k2q/8/8/R1K5 w - - 0 1", solution: ["Ra4", "Kf5", "Rxh4"], engine: true }
         ]},
-        { id: "discovered", steps: [
+        { id: "discovered", practice: "discoveredAttack", steps: [
           { k: "discovered.intro", type: "explain", fen: "3q4/8/7k/8/3N4/8/8/3QK3 w - - 0 1", arrows: "d1d8 d4f5" },
           { k: "discovered.task", type: "move", fen: "3q4/8/7k/8/3N4/8/8/3QK3 w - - 0 1", solution: ["Nf5", "Kg6", "Qxd8"], engine: true }
         ]},
-        { id: "backrank", steps: [
+        { id: "backrank", practice: "backRankMate", steps: [
           { k: "backrank.task", type: "move", fen: "6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1", goal: "mate", solution: ["Rd8"] },
           { k: "backrank.luft", type: "explain", fen: "6k1/5pp1/7p/8/8/7P/5PP1/3R2K1 w - - 0 1", marks: "h6 h3" }
         ]},
-        { id: "kqk", steps: [
+        { id: "kqk", practice: "mateIn2", steps: [
           { k: "kqk.method", type: "explain", fen: "8/8/8/3k4/8/8/2Q5/2K5 w - - 0 1", marks: "c6 c5 c4 c3" },
           { k: "kqk.task", type: "move", fen: "k7/7Q/1K6/8/8/8/8/8 w - - 0 1", goal: "mate", solution: ["Qb7"] }
         ]}
@@ -147,15 +147,15 @@
           { k: "outposts.intro", type: "explain", fen: "r4rk1/pp3ppp/3p4/2pN4/2P1P3/8/PP3PPP/R4RK1 w - - 0 1", marks: "d5" },
           { k: "outposts.quiz", type: "quiz", options: 3, answer: 1 }
         ]},
-        { id: "kingpawn", steps: [
+        { id: "kingpawn", practice: "pawnEndgame", steps: [
           { k: "kingpawn.front", type: "move", fen: "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1", solution: ["Kd6"], accept: ["Kf6"], engine: "accept" },
           { k: "kingpawn.opposition", type: "quiz", fen: "8/8/3k4/8/3K4/3P4/8/8 b - - 0 1", options: 3, answer: 0 }
         ]},
-        { id: "square", steps: [
+        { id: "square", practice: "pawnEndgame", steps: [
           { k: "square.intro", type: "explain", fen: "7k/8/8/8/1p6/8/5K2/8 w - - 0 1", marks: "b4 c4 d4 e4 b1 c1 d1 e1 e3 e2" },
           { k: "square.task", type: "move", fen: "7k/8/8/8/1p6/8/5K2/8 w - - 0 1", solution: ["Ke2"], accept: ["Ke1", "Ke3"], engine: "accept" }
         ]},
-        { id: "defender", steps: [
+        { id: "defender", practice: "capturingDefender", steps: [
           { k: "defender.intro", type: "explain", fen: "5rk1/5ppp/5n2/6BQ/8/3B4/5PPP/6K1 w - - 0 1", arrows: "f6h7 d3h7 h5h7" },
           { k: "defender.task", type: "move", fen: "5rk1/5ppp/5n2/6BQ/8/3B4/5PPP/6K1 w - - 0 1", solution: ["Bxf6", "gxf6", "Qxh7"], goal: "mate", engine: true }
         ]},
@@ -164,15 +164,15 @@
         ]}
       ]},
       { id: "advanced", lessons: [
-        { id: "calculation", steps: [
+        { id: "calculation", practice: "long", steps: [
           { k: "calculation.method", type: "explain", fen: "3r2k1/5ppp/8/8/8/8/4RPPP/4R1K1 w - - 0 1" },
           { k: "calculation.task", type: "move", fen: "3r2k1/5ppp/8/8/8/8/4RPPP/4R1K1 w - - 0 1", solution: ["Re8", "Rxe8", "Rxe8"], goal: "mate", engine: true }
         ]},
-        { id: "lucena", steps: [
+        { id: "lucena", practice: "rookEndgame", steps: [
           { k: "lucena.intro", type: "explain", fen: "1K6/1P2k3/8/8/8/8/2r5/3R4 w - - 0 1", marks: "d1 d2 d3 d4" },
           { k: "lucena.task", type: "move", fen: "1K6/1P2k3/8/8/8/8/2r5/3R4 w - - 0 1", solution: ["Rd4"], engine: "lucena" }
         ]},
-        { id: "philidor", steps: [
+        { id: "philidor", practice: "rookEndgame", steps: [
           { k: "philidor.intro", type: "explain", fen: "4k3/8/r7/4PK2/8/8/8/7R w - - 0 1", marks: "a6 b6 c6 d6 e6 f6 g6 h6" },
           { k: "philidor.quiz", type: "quiz", fen: "4k3/8/r7/4PK2/8/8/8/7R w - - 0 1", options: 3, answer: 2 }
         ]},
@@ -180,7 +180,7 @@
           { k: "prophylaxis.intro", type: "explain", fen: START },
           { k: "prophylaxis.quiz", type: "quiz", options: 3, answer: 1 }
         ]},
-        { id: "converting", steps: [
+        { id: "converting", practice: "crushing", steps: [
           { k: "converting.intro", type: "explain", fen: "4k3/pp3ppp/8/8/8/8/PPR2PPP/4K3 w - - 0 1" },
           { k: "converting.quiz", type: "quiz", options: 3, answer: 0 }
         ]},

@@ -11,7 +11,8 @@
   "use strict";
   // 1.0.0 launch · 1.1.0 "Play this position against Stockfish" on move exercises (opens the play app)
   // 1.1.1 speech on phones: unlock on the first tap, late-loading voices, cancel/speak race, sentence chunks
-  var VERSION = "1.1.1";
+  // 1.2.0 lessons on tactics and endings link to puzzles of their theme (../puzzles/)
+  var VERSION = "1.2.0";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];
@@ -334,6 +335,10 @@
     var play = $("playBtn"), playable = st.type === "move" && st.fen && !R.loadFEN(st.fen).error;
     play.hidden = !playable;
     if (playable) play.href = "../index.html?fen=" + encodeURIComponent(st.fen) + "&opponent=engine";
+    // lessons on a tactic or an ending link to puzzles of that theme at the learner's level
+    var pr = $("practiseBtn");
+    pr.hidden = !ls.lesson.practice;
+    if (ls.lesson.practice) pr.href = "../puzzles/?theme=" + encodeURIComponent(ls.lesson.practice);
     drawBoard();
     if (!keepState && autoRead) speak(currentSpeech());
   }

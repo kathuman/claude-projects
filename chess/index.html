@@ -454,6 +454,7 @@
       </div>
     </div>
     <div class="hactions">
+      <a class="lnk" href="puzzles/" title="45,000 puzzles at your level, with a puzzle rating">Puzzles</a>
       <a class="lnk" href="course/" title="A course in five levels, from the rules to endgame technique">Learn chess</a>
       <a class="lnk" href="../index.html">&larr; All projects</a>
       <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
@@ -747,6 +748,12 @@
         any time when you play a friend.
       </p>
       <p>
+        <b>Puzzles.</b> The <a href="puzzles/">puzzle trainer</a> has 44,943 puzzles from the public-domain Lichess
+        puzzle database. It gives you a personal puzzle rating (Glicko-2) and puzzles near it, and covers 73 themes;
+        the course's tactics and endgame lessons link to their own theme. There's also a daily puzzle and timed runs.
+        A solved puzzle opens here for analysis.
+      </p>
+      <p>
         <b>Save and share.</b> Copy or download the game as PGN, the standard format every chess program
         reads, or copy the current position as FEN. <b>Copy link</b> gives an address that replays the game
         move by move. <b>Load a game or position</b> accepts a pasted PGN or FEN; against the computer you
@@ -983,7 +990,8 @@
     //          increment; typed moves; "play this position" links from the course
     //   1.6.0  game review (evaluation graph, accuracy, graded moves, better-move arrows, retry your mistakes),
     //          step through any game, live engine analysis (3 lines), endgame tablebase, opening names and book moves
-    var APP_VERSION = "1.6.0";
+    //   1.7.0  link to the puzzle trainer (puzzles/): 45,000 Lichess puzzles, Glicko-2 rating, themes, daily, timed runs
+    var APP_VERSION = "1.7.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 

@@ -33,6 +33,8 @@
   "ui.solution": "Ver la solución",
   "ui.retry": "Intentar de nuevo",
   "ui.playEngine": "Jugar esta posición contra Stockfish",
+  "ui.practise": "Practicar con problemas de tu nivel",
+  "ui.puzzles": "Problemas",
   "ui.correct": "¡Correcto!",
   "ui.wrong": "No exactamente. Inténtalo de nuevo.",
   "ui.illegal": "Esa jugada no es posible aquí.",

@@ -33,6 +33,8 @@
   "ui.solution": "Oplossing tonen",
   "ui.retry": "Opnieuw proberen",
   "ui.playEngine": "Speel deze stelling tegen Stockfish",
+  "ui.practise": "Oefen met puzzels op jouw niveau",
+  "ui.puzzles": "Puzzels",
   "ui.correct": "Goed zo!",
   "ui.wrong": "Niet helemaal. Probeer het opnieuw.",
   "ui.illegal": "Die zet is hier niet mogelijk.",

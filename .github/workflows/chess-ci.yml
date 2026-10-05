@@ -24,6 +24,7 @@ jobs:
       - run: node chess/tests/rules.test.js
       - run: node chess/tests/course.test.js
       - run: node chess/tests/review.test.js
+      - run: node chess/tests/puzzles.test.js
       - name: Syntax-check the browser scripts
-        run: for f in chess/course/*.js chess/course/i18n/*.js chess/src/*.js; do node --check "$f"; done
+        run: for f in chess/course/*.js chess/course/i18n/*.js chess/src/*.js chess/puzzles/*.js; do node --check "$f"; done
         shell: bash
