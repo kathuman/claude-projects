@@ -288,6 +288,19 @@
     }
     return moves.filter(function (m) { return toSAN(pos, m).replace(/[+#]$/, "") === t; })[0] || null;
   }
+  // A UCI move from a trusted source (the engine's lines, the opening book) turned into a move array
+  // without generating every legal move: the flag follows from the pieces. Use findMove for anything typed.
+  function fromUCI(pos, uci) {
+    var a = parseSquare(uci.slice(0, 2)), b = parseSquare(uci.slice(2, 4)), piece = pos.board[a[0]][a[1]];
+    if (!piece) return null;
+    var t = piece.toUpperCase(), flag = null, extra = null;
+    if (t === "K" && Math.abs(b[1] - a[1]) === 2) flag = b[1] > a[1] ? "O-O" : "O-O-O";
+    else if (t === "P" && uci.length > 4) { flag = "promo"; extra = uci[4].toUpperCase(); }
+    else if (t === "P" && Math.abs(b[0] - a[0]) === 2) flag = "double";
+    else if (t === "P" && a[1] !== b[1] && !pos.board[b[0]][b[1]]) flag = "ep";
+    return [a[0], a[1], b[0], b[1], flag, extra];
+  }
+
   // A typed move, read leniently: "nf3", "e2-e4", "0-0", "e8q", "exd5". SAN is tried first; a lowercase
   // "b" is a pawn move when one fits ("bxc3") and otherwise a bishop move. null if nothing legal matches.
   function parseMove(pos, text) {
@@ -449,7 +462,7 @@
 
   return {
     START_FEN: START_FEN, FILES: FILES, fromFEN: fromFEN, toFEN: toFEN, legalMoves: legalMoves, play: play, status: status,
-    inCheck: inCheck, isMate: isMate, toSAN: toSAN, toUCI: toUCI, findMove: findMove, parseMove: parseMove, attacks: attacks, perft: perft,
+    inCheck: inCheck, isMate: isMate, toSAN: toSAN, toUCI: toUCI, findMove: findMove, parseMove: parseMove, fromUCI: fromUCI, attacks: attacks, perft: perft,
     squareName: squareName, parseSquare: parseSquare, colorOf: colorOf, attackedBy: attackedBy, kingPos: kingPos,
     positionKey: positionKey, insufficientMaterial: insufficientMaterial, canMate: canMate, loadFEN: loadFEN,
     parsePGN: parsePGN, toPGN: toPGN, clonePos: clonePos

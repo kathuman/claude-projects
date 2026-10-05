@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess</title>
-  <meta name="description" content="Play chess against a friend on one screen or against the Stockfish engine (eight strength levels) — full rules including every draw rule; resign and draw offers, clocks with increment, typed moves, PGN/FEN import and export, shareable game links. Undo, flip board, board themes, 3D." />
+  <meta name="description" content="Play chess against a friend on one screen or against the Stockfish engine (eight strength levels) — full rules including every draw rule; automatic game review (accuracy, graded moves, retry your mistakes), engine analysis, endgame tablebase, opening names; clocks, typed moves, PGN/FEN, shareable game links, 3D." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9818;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -248,6 +248,87 @@
     .btn-grid { margin-top: 0; }
     .btn-row .btn + .btn, .btn-grid .btn + .btn { margin-top: 0; }
     .clock-field { margin: 14px 0 0; }
+    /* ---- replay, review, analysis ---- */
+    .board-frame { position: relative; }
+    .arrows { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); pointer-events: none; z-index: 4; }
+    :root[data-view="3d"] .arrows { transform: translateZ(2px); }
+    .arrow { stroke-width: 18; stroke-linecap: round; opacity: .78; }
+    .arrow.best { stroke: #2f9e57; } .ah-best { fill: #2f9e57; }
+    .arrow.engine { stroke: #2f6fd6; opacity: .6; } .ah-engine { fill: #2f6fd6; }
+    .navbar { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
+    .nav-btn { width: 38px; height: 32px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; font-size: 13px; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); }
+    .nav-btn:disabled { opacity: .35; cursor: default; }
+    .nav-info { min-width: 120px; text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+    .movelog .mv { font: inherit; color: var(--ink-2); background: none; border: 0; padding: 0 3px; margin: 0; border-radius: 4px; cursor: pointer; min-width: 50px; text-align: left; }
+    .movelog .mv:hover { background: var(--accent-soft); color: var(--ink); }
+    .movelog .mv.cur { background: var(--accent); color: var(--accent-ink); }
+    .sym { font-weight: 700; margin-left: 1px; }
+    /* grades use status colours (warning / serious / critical) and always carry their ?!, ?, ?? symbol */
+    :root { --k-inacc: #a87a06; --k-mist: #c95a14; --k-blund: #c62828; --k-best: #23824a;
+            --g-white: #f1eee6; --g-black: #4a4740; --g-line: #8a8478; }
+    :root[data-theme="dark"] { --k-inacc: #e3b341; --k-mist: #f08a4b; --k-blund: #ff6b6b; --k-best: #4cc27a; --g-white: #e9e5da; --g-black: #2b2a30; --g-line: #9d988c; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --k-inacc: #e3b341; --k-mist: #f08a4b; --k-blund: #ff6b6b; --k-best: #4cc27a; --g-white: #e9e5da; --g-black: #2b2a30; --g-line: #9d988c; } }
+    .k-inaccuracy, .movelog .mv.k-inaccuracy .sym { color: var(--k-inacc); }
+    .k-mistake, .movelog .mv.k-mistake .sym { color: var(--k-mist); }
+    .k-blunder, .movelog .mv.k-blunder .sym { color: var(--k-blund); }
+    .movelog .mv.cur .sym { color: inherit; }
+    .review { width: 100%; border-top: 1px solid var(--border); padding-top: 14px; }
+    .review[hidden] { display: none; }
+    .rv-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .review h3 { margin: 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .review h4 { margin: 14px 0 6px; font-size: 12.5px; color: var(--ink); }
+    .rv-opening { font-size: 12.5px; color: var(--ink-2); }
+    .rv-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+    .rv-sides > div { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .rv-sides .chip { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(0,0,0,.35); }
+    .rv-stats { display: flex; gap: 8px; align-items: baseline; margin-left: auto; font-family: var(--font-mono); font-size: 12px; }
+    .rv-stats .acc { font-size: 15px; font-weight: 700; color: var(--ink); }
+    .rv-stats small { font-size: 10px; color: var(--muted); }
+    .rv-graph { position: relative; }
+    .rv-graph svg { display: block; width: 100%; height: auto; border-radius: 8px; cursor: pointer; }
+    .g-white { fill: var(--g-white); } .g-black { fill: var(--g-black); }
+    .g-line { fill: none; stroke: var(--g-line); stroke-width: 2; }
+    .g-mid { stroke: var(--g-line); stroke-width: 1; stroke-dasharray: 4 4; opacity: .7; }
+    .g-cur { stroke: var(--accent); stroke-width: 2; }
+    .dot-inaccuracy { fill: var(--k-inacc); } .dot-mistake { fill: var(--k-mist); } .dot-blunder { fill: var(--k-blund); }
+    .rv-graph circle { stroke: var(--g-white); stroke-width: 2; }
+    .hit { fill: transparent; }
+    .g-tip { position: absolute; top: -26px; padding: 2px 8px; font-family: var(--font-mono); font-size: 11.5px; background: var(--panel); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow); }
+    .g-tip[hidden] { display: none; }
+    .rv-moments { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+    .rv-moments li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .rv-moments li:last-child { border-bottom: 0; }
+    .rv-moments .btn.mini { margin-left: auto; }
+    .link { font: inherit; font-weight: 700; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .linkbtn { font: inherit; font-size: 12px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+    .muted { color: var(--muted); }
+    .rv-retry { margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+    .rv-retry[hidden] { display: none; }
+    .rt-title { margin: 0 0 4px; font-weight: 700; font-size: 13px; }
+    .rt-msg { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); }
+    .rt-msg.good { color: var(--k-best); font-weight: 600; } .rt-msg.bad { color: var(--k-blund); }
+    .rv-progress { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--ink-2); }
+    .rv-progress[hidden] { display: none; }
+    .rv-progress .bar { flex: 1 1 100%; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+    .rv-progress .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+    label.check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+    label.check input { accent-color: var(--accent); }
+    .an { margin-top: 12px; }
+    .an[hidden], .tb[hidden], .opening[hidden], #openMovesWrap[hidden], #studyNote[hidden] { display: none; }
+    .an-head { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 13px; }
+    .an-bar { flex: 1; height: 10px; border-radius: 5px; background: var(--g-black); overflow: hidden; border: 1px solid var(--border); }
+    .an-bar i { display: block; height: 100%; width: 50%; background: var(--g-white); transition: width .3s; }
+    .an-lines { margin: 8px 0 0; padding-left: 18px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); line-height: 1.55; }
+    .an-lines b { color: var(--ink); }
+    .tb { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); }
+    .tb .tag, .op-name .eco { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft); color: var(--ink); }
+    .tb-moves { margin: 6px 0 0; padding-left: 18px; font-family: var(--font-mono); font-size: 11.5px; }
+    .opening { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); }
+    .op-name { margin-bottom: 6px; color: var(--ink); font-weight: 600; }
+    .book-mv { font: inherit; font-family: var(--font-mono); font-size: 11.5px; padding: 2px 7px; margin: 2px 2px 0 0; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
+    .book-mv:hover:not(:disabled) { border-color: var(--accent); }
+    .book-mv:disabled { cursor: default; opacity: .75; }
     details.load { margin-top: 12px; }
     details.load summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
     details.load textarea { width: 100%; margin: 8px 0; padding: 8px 10px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; resize: vertical; }
@@ -345,7 +426,7 @@
     .modal .choices button:hover { border-color: var(--accent); background: var(--accent-soft); }
 
     @media (max-width: 900px) {
-      .layout { grid-template-columns: 1fr; }
+      .layout { grid-template-columns: minmax(0, 1fr); }
       .board { width: min(100%, 520px); }
       .board-frame { width: min(100%, 520px); }
       .turn-row { flex-wrap: wrap; gap: 10px; }
@@ -353,6 +434,7 @@
       .anim-piece { font-size: min(9.5vw, 44px); }
     }
     @media (max-width: 520px) {
+      .rv-sides { grid-template-columns: 1fr; }
       .brand .sub .sub-rest { display: none; }
       .brand h1 .ver { display: none; } /* the version stays in the footer */
       .hactions { gap: 6px; }
@@ -406,6 +488,7 @@
         <div class="stage" id="stage">
           <div class="board-frame" id="boardFrame">
             <div class="board" id="board" role="grid" aria-label="Chess board"></div>
+            <svg class="arrows" id="arrows" viewBox="0 0 800 800" aria-hidden="true"></svg>
           </div>
         </div>
 
@@ -422,6 +505,36 @@
         </form>
         <p class="move-msg" id="moveMsg" aria-live="polite"></p>
         <div class="sr-only" id="srLive" aria-live="polite"></div>
+        <div class="navbar" id="navBar">
+          <button class="nav-btn" id="navFirst" type="button" aria-label="First position" title="First position (Home)">&#x23EE;</button>
+          <button class="nav-btn" id="navPrev" type="button" aria-label="Previous move" title="Previous move (left arrow)">&#x25C0;</button>
+          <span class="nav-info" id="navInfo"></span>
+          <button class="nav-btn" id="navNext" type="button" aria-label="Next move" title="Next move (right arrow)">&#x25B6;</button>
+          <button class="nav-btn" id="navLast" type="button" aria-label="Last position" title="The game now (End)">&#x23ED;</button>
+          <button class="btn mini" id="navLive" type="button" hidden>Back to the game</button>
+        </div>
+        <section class="review" id="reviewBox" hidden aria-label="Game review">
+          <div class="rv-top">
+            <h3>Game review</h3>
+            <span class="rv-opening" id="rvOpening"></span>
+          </div>
+          <div class="rv-sides">
+            <div><span class="chip w"></span><b>White</b><span class="rv-stats" id="rvWhite"></span></div>
+            <div><span class="chip b"></span><b>Black</b><span class="rv-stats" id="rvBlack"></span></div>
+          </div>
+          <div class="rv-graph" id="rvGraph"></div>
+          <div class="rv-retry" id="rvRetry" hidden>
+            <p class="rt-title" id="rtTitle"></p>
+            <p class="rt-msg" id="rtMsg"></p>
+            <button class="btn mini" id="rtShow" type="button">Show the engine's move</button>
+            <button class="btn mini" id="rtDone" type="button">Done</button>
+          </div>
+          <h4>Key moments</h4>
+          <ul class="rv-moments" id="rvMoments"></ul>
+          <p class="fieldnote">Each move is graded by how much it lowers the mover's winning chances, judged by Stockfish at depth 14:
+            <span class="k-inaccuracy">?! inaccuracy</span>, <span class="k-mistake">? mistake</span>, <span class="k-blunder">?? blunder</span>.
+            The green arrow shows the better move. Accuracy is the average of Lichess's per-move accuracy formula.</p>
+        </section>
       </section>
 
       <aside>
@@ -478,6 +591,27 @@
               <option value="15+10">15 min + 10 s — rapid</option>
               <option value="30+20">30 min + 20 s — classical</option>
             </select>
+          </div>
+        </div>
+
+        <div class="panel" id="studyPanel">
+          <h3>Review &amp; analysis</h3>
+          <button class="btn primary" id="reviewBtn" type="button">Review this game</button>
+          <div class="rv-progress" id="rvProgress" hidden>
+            <div class="bar"><i></i></div><span></span>
+            <button class="linkbtn" id="rvCancel" type="button">Cancel</button>
+          </div>
+          <label class="check"><input type="checkbox" id="autoReview" /> Review automatically when a game ends</label>
+          <label class="check"><input type="checkbox" id="analysisToggle" /> Engine analysis of the position shown</label>
+          <p class="fieldnote" id="studyNote" hidden></p>
+          <div class="an" id="anBox" hidden>
+            <div class="an-head"><b id="anEval">&hellip;</b><div class="an-bar" title="White's winning chances"><i id="anBar"></i></div><span class="muted" id="anDepth"></span></div>
+            <ol class="an-lines" id="anLines"></ol>
+          </div>
+          <div class="tb" id="tbBox" hidden></div>
+          <div class="opening" id="openBox" hidden>
+            <div class="op-name" id="openName"></div>
+            <div id="openMovesWrap"><span class="muted">Book moves:</span> <span id="openMoves"></span></div>
           </div>
         </div>
 
@@ -591,6 +725,28 @@
         too little left to mate — then it's a draw.
       </p>
       <p>
+        <b>Review your game.</b> When a game ends, Stockfish goes through it on your device, which takes a few
+        seconds. It draws a graph of White's winning chances and gives each side an accuracy score. Every move is
+        graded: <b>?!</b> inaccuracy, <b>?</b> mistake, <b>??</b> blunder (and "book" for known opening theory).
+        Key moments lists the mistakes. <b>Show</b> puts that position on the board with a green arrow for the
+        better move. <b>Retry</b> asks you to find a better move yourself: Stockfish checks your answer, and it
+        counts if it's about as strong as the engine's choice. You can also review on demand (<b>Review this
+        game</b>) and turn the automatic review off.
+      </p>
+      <p>
+        <b>Step through any game</b> with the arrows under the board, the ← → Home End keys, a click on a move
+        in the move list, or a click on the graph. The board is read-only while you look back; <b>Back to the
+        game</b> returns. A new move also brings you back.
+      </p>
+      <p>
+        <b>Analysis.</b> <b>Engine analysis</b> shows Stockfish's three best lines for the position on the board,
+        with a blue arrow for its first choice. With seven pieces or fewer, the endgame tablebase (Lichess's
+        online service) adds the result with perfect play: win, draw or loss, the moves to mate, and the best
+        moves. In the opening, the panel names the opening and lists the book moves. Against a friend you can
+        click a book move to play it. Analysis and review are available after a game against Stockfish, or at
+        any time when you play a friend.
+      </p>
+      <p>
         <b>Save and share.</b> Copy or download the game as PGN, the standard format every chess program
         reads, or copy the current position as FEN. <b>Copy link</b> gives an address that replays the game
         move by move. <b>Load a game or position</b> accepts a pasted PGN or FEN; against the computer you
@@ -697,6 +853,32 @@
           comes back.
         </p>
 
+        <h4>Game review: winning chances, not centipawns</h4>
+        <p>
+          A second Stockfish worker (so the opponent is never disturbed) evaluates every position of the game at
+          depth 14. <code>src/review.js</code> converts each score into White's <em>winning chances</em>,
+          2&nbsp;/&nbsp;(1&nbsp;+&nbsp;e<sup>−0.00368·cp</sup>)&nbsp;−&nbsp;1, the curve Lichess uses. It then grades each
+          move by how far it lowered the mover's chances: 0.1 is an inaccuracy, 0.2 a mistake, 0.3 a blunder.
+          Working in chances rather than centipawns means a slip from +8 to +6 in a won position barely counts,
+          while +0.3 to −1.0 does. Per-move accuracy follows Lichess's formula, and a side's accuracy is their
+          average. Moves that follow the opening book are labelled "book", unless the engine calls them a mistake:
+          the book contains traps too, fool's mate among them. <code>tests/review.test.js</code> covers the
+          grading, the book and a fast UCI reader checked against the move generator.
+        </p>
+        <p>
+          The engine worker is driven strictly by the UCI rules: a new search waits for the stopped search's
+          <code>bestmove</code> before sending options. Sending options mid-search can make the single-threaded
+          WebAssembly build abort, which is how this was found. A worker the browser kills is restarted.
+        </p>
+
+        <h4>Opening names from a public-domain catalogue</h4>
+        <p>
+          The 3,864 named lines of <a href="https://github.com/lichess-org/chess-openings" target="_blank" rel="noopener">lichess-org/chess-openings</a>
+          (CC0) are replayed through the rules by <code>tests/build-openings.js</code> into
+          <code>src/openings-data.js</code>, which is loaded once the page is idle. Positions are matched by
+          placement, side to move and castling rights, so a transposition finds its name whatever the move order.
+        </p>
+
         <h4>Draws are counted, not guessed</h4>
         <p>
           After every move the page stores a <em>position key</em>: the pieces, the side to move, the castling
@@ -781,10 +963,11 @@
 
   <footer class="foot">
     <span class="consult">Chess <span id="verFooter"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Staunton SVG pieces by Colin M.L. Burnett (GPL); 3D via <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (MIT). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    Classic chess, two players on one screen or against <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> (GPLv3, via <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>). Staunton SVG pieces by Colin M.L. Burnett (GPL); 3D via <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> (MIT). Opening names from <a href="https://github.com/lichess-org/chess-openings" target="_blank" rel="noopener">lichess-org/chess-openings</a> (CC0); endgame tablebase by <a href="https://lichess.org" target="_blank" rel="noopener">Lichess</a>. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
   <script src="src/rules.js"></script>
+  <script src="src/review.js"></script>
   <script>
   (function () {
     "use strict";
@@ -798,7 +981,9 @@
     //   1.5.0  rules from the shared, perft-verified src/rules.js; draws by repetition, the 50-move rule and
     //          insufficient material; resign and draw offers; PGN/FEN in and out, game links; clocks with
     //          increment; typed moves; "play this position" links from the course
-    var APP_VERSION = "1.5.0";
+    //   1.6.0  game review (evaluation graph, accuracy, graded moves, better-move arrows, retry your mistakes),
+    //          step through any game, live engine analysis (3 lines), endgame tablebase, opening names and book moves
+    var APP_VERSION = "1.6.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -968,6 +1153,7 @@
           engine.bestsSeen++;
           var p = engine.pending;
           if (p && p.id === engine.bestsSeen) { engine.pending = null; p.cb(line.split(/\s+/)[1], engine.lastScore); }
+          if (engine.nextGo && engine.bestsSeen === engine.gosSent) { var ng = engine.nextGo; engine.nextGo = null; ng(); }
         }
       };
       engineSend("uci");
@@ -990,7 +1176,10 @@
       return "position " + (state.startFen === R.START_FEN ? "startpos" : "fen " + state.startFen) +
         (state.uciMoves.length ? " moves " + state.uciMoves.join(" ") : "");
     }
+    // UCI forbids options or a new search while one is running (the single-threaded build can abort), so
+    // after a "stop" the next search waits for the stopped one's bestmove.
     function engineGo(skill, go, cb) {
+      if (engine.bestsSeen < engine.gosSent) { engine.nextGo = function () { engineGo(skill, go, cb); }; return; }
       engine.pending = { id: ++engine.gosSent, cb: cb };
       engine.lastScore = null;
       engineSend("setoption name Skill Level value " + skill);
@@ -1011,6 +1200,7 @@
       if (!state.thinking) return;
       state.thinking = false;
       engine.searchToken++;
+      engine.nextGo = null;
       if (engine.pending) { engine.pending = null; engineSend("stop"); }
       if (engine.status === "ready") setEngineStatus("ready", engineIdleText());
     }
@@ -1125,11 +1315,11 @@
     }
 
     function render() {
-      var board = state.board;
+      var sp = shownPos(), board = sp.board, lastMove = shownLastMove(), live = boardInteractive();
       var legalSet = {};
       state.legalTargets.forEach(function (m) { legalSet[m[2] + "," + m[3]] = true; });
       var checkedKingSq = null;
-      if (inCheck(board, state.turn)) checkedKingSq = kingPos(board, state.turn);
+      if (inCheck(board, sp.turn)) checkedKingSq = kingPos(board, sp.turn);
 
       for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
         var cell = cells[r][c];
@@ -1138,7 +1328,7 @@
         old.forEach(function (n) { n.remove(); });
 
         var isSelected = state.selected && state.selected[0] === r && state.selected[1] === c;
-        var isLast = state.lastMove && ((state.lastMove[0] === r && state.lastMove[1] === c) || (state.lastMove[2] === r && state.lastMove[3] === c));
+        var isLast = lastMove && ((lastMove[0] === r && lastMove[1] === c) || (lastMove[2] === r && lastMove[3] === c));
         var isCheck = checkedKingSq && checkedKingSq[0] === r && checkedKingSq[1] === c;
 
         if (isCheck) { var hlc = document.createElement("div"); hlc.className = "hl check"; cell.appendChild(hlc); }
@@ -1162,13 +1352,17 @@
           }
         }
 
-        cell.classList.toggle("playable", !!legalSet[r + "," + c] || (piece != null && colorOf(piece) === state.turn && !state.over && !isEngineTurn()));
+        cell.classList.toggle("playable", !!legalSet[r + "," + c] || (piece != null && colorOf(piece) === sp.turn && live));
       }
 
       boardEl.classList.toggle("has-sel", !!state.selected);
+      boardEl.classList.toggle("viewing", !live && (view.ply != null || !!view.retry));
       renderStatus();
       renderCaptured();
       renderLog();
+      renderNav();
+      renderArrows();
+      renderStudy();
       if (gl.active) glSync();
     }
 
@@ -1196,7 +1390,11 @@
 
       var banner = document.getElementById("banner");
       banner.classList.remove("win");
-      if (state.over) {
+      if (view.retry) {
+        banner.textContent = "Retry: find a better move for " + colorName(view.retry.mover) + " than " + view.retry.label;
+      } else if (view.ply != null) {
+        banner.textContent = (view.ply ? "After " + moveLabel(view.ply - 1) : "The starting position") + " — ▶ or “Back to the game” returns";
+      } else if (state.over) {
         banner.classList.add("win");
         banner.textContent = state.overText;
       } else if (state.notice) {
@@ -1230,16 +1428,26 @@
       else if (diff < 0) capBlack.innerHTML += '<span class="adv">+' + (-diff) + '</span>';
     }
 
+    // Each move is a button that shows the position after it; after a review it carries its grade.
     function renderLog() {
       var el = document.getElementById("movelog");
       if (!state.moveList.length) { el.innerHTML = '<span class="n">—</span>'; return; }
+      var start = R.fromFEN(state.startFen), num = start.fullmove, white = start.turn === "w";
+      var rv = currentReview(), cur = view.ply == null && !view.retry ? -1 : (view.retry ? view.retry.ply + 1 : view.ply);
       var html = "";
       for (var i = 0; i < state.moveList.length; i++) {
-        if (i % 2 === 0) html += '<span class="n">' + (i / 2 + 1) + ".</span> ";
-        html += '<span class="mv">' + state.moveList[i] + "</span> ";
+        if (white) html += '<span class="n">' + num + ".</span> ";
+        else if (i === 0) html += '<span class="n">' + num + "...</span> ";
+        var g = rv && rv.result.moves[i], sym = g && V.SYMBOL[g.kind] ? V.SYMBOL[g.kind] : "";
+        html += '<button type="button" class="mv' + (i + 1 === cur ? " cur" : "") + (g ? " k-" + g.kind : "") + '" data-ply="' + (i + 1) + '">' +
+          state.moveList[i] + (sym ? '<span class="sym">' + sym + "</span>" : "") + "</button> ";
+        if (!white) num++;
+        white = !white;
       }
       el.innerHTML = html;
-      el.scrollTop = el.scrollHeight;
+      var c = el.querySelector(".mv.cur");
+      if (c) { if (c.offsetTop < el.scrollTop || c.offsetTop > el.scrollTop + el.clientHeight - 20) el.scrollTop = c.offsetTop - 40; }
+      else el.scrollTop = el.scrollHeight;
     }
 
     // ========================================================== ANIMATION
@@ -1288,7 +1496,7 @@
     }
 
     // ========================================================== FLOW
-    var resignArmed = false, resignTimer = null;
+    var resignArmed = false, resignTimer = null, loadingGame = false;
 
     function setPosition(pos) {
       state.board = pos.board; state.turn = pos.turn; state.castling = pos.castling;
@@ -1319,6 +1527,8 @@
       state.over = true; state.result = result; state.overReason = reason; state.overText = text;
       state.drawOffer = null; state.notice = null;
       stopClock();
+      // the review starts by itself once the board has settled (it's what turns a game into a lesson)
+      if (autoReview && plyCount() >= 4 && !loadingGame) setTimeout(function () { if (state.over && !currentReview()) startReview(); }, 700);
     }
 
     // After every move the rules decide whether the game is over. Mate comes first: a move that mates
@@ -1362,6 +1572,7 @@
     }
 
     function makeMove(move) {
+      if (view.ply != null || view.retry) { resetView(); render(); } // a new move brings the board back to the game
       var preBoard = cloneBoard(state.board), mover = state.turn;
       var san = applyMove(move);
       clockAfterMove(mover);
@@ -1377,6 +1588,7 @@
     function undo() {
       if (!state.history.length || state.animating) return;
       cancelEngine();
+      resetView();
       var snap = state.history.pop();
       // vs the computer, step back to the human's turn (their move + the engine's reply)
       if (state.opponent === "engine" && snap.pos.turn !== state.humanColor && state.history.length) snap = state.history.pop();
@@ -1415,6 +1627,8 @@
 
     function resetGame(pos, startFen) {
       cancelEngine();
+      resetView();
+      if (review && !review.done) { review = null; stopAnalysis(); }
       state.gameId++;
       setPosition(pos);
       state.startFen = startFen;
@@ -1457,7 +1671,9 @@
       }
       resetGame(loaded.pos, R.toFEN(loaded.pos));
       list.forEach(function (mv) { applyMove(mv, true); });
+      loadingGame = true;   // a finished game that is loaded is reviewed on request, not automatically
       checkGameEnd();
+      loadingGame = false;
       // against the computer, you take over the side to move
       if (state.opponent === "engine") state.humanColor = state.turn;
       state.flipped = state.opponent === "engine" ? state.humanColor === "b" : state.turn === "b";
@@ -1657,15 +1873,17 @@
     }
 
     function onCellClick(e) {
-      if (state.over || state.animating || state.thinking || isEngineTurn()) return;
+      if (!boardInteractive()) return;
       var row = +this.dataset.r, col = +this.dataset.c;
-      var board = state.board;
+      var sp = shownPos(), board = sp.board, legal = view.retry ? R.legalMoves(sp) : state.legalCache;
+      // a move goes to the game, or — while retrying a mistake — to the retry
+      var play = view.retry ? retryMove : makeMove;
 
       if (!state.selected) {
         var piece = board[row][col];
-        if (piece && colorOf(piece) === state.turn) {
+        if (piece && colorOf(piece) === sp.turn) {
           state.selected = [row, col];
-          state.legalTargets = state.legalCache.filter(function (m) { return m[0] === row && m[1] === col; });
+          state.legalTargets = legal.filter(function (m) { return m[0] === row && m[1] === col; });
         }
         render();
         return;
@@ -1675,25 +1893,487 @@
       if (matching.length) {
         var move = matching[0];
         if (move[4] === "promo") {
-          askPromotion(state.turn, function (choice) {
+          askPromotion(sp.turn, function (choice) {
             var chosen = matching.filter(function (m) { return m[5] === choice; })[0] || move;
-            makeMove(chosen);
+            play(chosen);
           });
           return;
         }
-        makeMove(move);
+        play(move);
         return;
       }
 
       var piece2 = board[row][col];
-      if (piece2 && colorOf(piece2) === state.turn) {
+      if (piece2 && colorOf(piece2) === sp.turn) {
         state.selected = [row, col];
-        state.legalTargets = state.legalCache.filter(function (m) { return m[0] === row && m[1] === col; });
+        state.legalTargets = legal.filter(function (m) { return m[0] === row && m[1] === col; });
       } else {
         state.selected = null;
         state.legalTargets = [];
       }
       render();
+    }
+
+    // ========================================================== STUDY: replay, review, analysis
+    // The board normally shows the game as it stands. Stepping through the moves shows an earlier
+    // position (view.ply = moves played so far in it); retrying a mistake shows the position before it.
+    var V = window.ChessReview;
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    var view = { ply: null, retry: null };
+
+    function plyCount() { return state.moveList.length; }
+    // history[k] is the snapshot taken before move k, i.e. the position after k moves
+    function positionAt(k) { return k >= state.history.length ? state : state.history[k].pos; }
+    function lastMoveAt(k) { return k >= state.history.length ? state.lastMove : state.history[k].lastMove; }
+    function shownPly() { return view.ply == null ? plyCount() : view.ply; }
+    function shownPos() { return view.retry ? (view.retry.shown || view.retry.pos) : positionAt(shownPly()); }
+    function shownLastMove() { return view.retry ? (view.retry.shownMove || lastMoveAt(view.retry.ply)) : lastMoveAt(shownPly()); }
+    function boardInteractive() {
+      if (state.animating) return false;
+      if (view.retry) return view.retry.status === "waiting";
+      return view.ply == null && !state.over && !state.thinking && !isEngineTurn();
+    }
+    function resetView() { view.ply = null; view.retry = null; }
+    function goToPly(k) {
+      k = Math.max(0, Math.min(plyCount(), k));
+      view.retry = null;
+      view.ply = k === plyCount() ? null : k;
+      state.selected = null;
+      state.legalTargets = [];
+      render();
+    }
+    // a move's label in the game's own numbering ("14. Qxb7", "14... Nf6")
+    function moveLabel(i) {
+      var p = positionAt(i);
+      return p.fullmove + (p.turn === "w" ? ". " : "... ") + state.moveList[i];
+    }
+
+    function renderNav() {
+      var n = plyCount(), k = shownPly(), lock = !!view.retry;
+      document.getElementById("navFirst").disabled = document.getElementById("navPrev").disabled = lock || k === 0;
+      document.getElementById("navNext").disabled = document.getElementById("navLast").disabled = lock || k === n;
+      document.getElementById("navLive").hidden = view.ply == null && !view.retry;
+      document.getElementById("navInfo").textContent = n ? (k === 0 ? "Start" : moveLabel(k - 1)) + " · " + k + "/" + n : "";
+    }
+
+    // ---- the analysis engine: a second Stockfish worker, so analysis never disturbs the opponent
+    var analyst = { worker: null, status: "off", gos: 0, bests: 0, job: null, onReady: [] };
+    function analystReady(cb) {
+      if (analyst.status === "ready") { cb(); return; }
+      if (analyst.status === "error") return;
+      analyst.onReady.push(cb);
+      if (analyst.status === "loading") return;
+      analyst.status = "loading";
+      try { analyst.worker = new Worker(ENGINE_URL); } catch (e) { analystFailed(); return; }
+      analyst.worker.onerror = analystFailed;
+      analyst.worker.onmessage = function (e) {
+        var line = typeof e.data === "string" ? e.data : "";
+        if (line === "uciok") analyst.worker.postMessage("isready");
+        else if (line === "readyok" && analyst.status === "loading") {
+          analyst.status = "ready";
+          var q = analyst.onReady; analyst.onReady = [];
+          q.forEach(function (f) { f(); });
+        } else if (line.indexOf("info") === 0) onAnalystInfo(line);
+        else if (line.indexOf("bestmove") === 0) {
+          analyst.bests++;
+          var j = analyst.job;
+          if (j && j.id === analyst.bests) { analyst.job = null; j.done(j.lines, line.split(/\s+/)[1]); }
+          if (analyst.next && analyst.bests === analyst.gos) { var nx = analyst.next; analyst.next = null; startAnalysis(nx); }
+        }
+      };
+      analyst.worker.postMessage("uci");
+    }
+    function analystFailed() {
+      if (analyst.worker) { try { analyst.worker.terminate(); } catch (e) {} }
+      analyst.worker = null; analyst.job = null; analyst.next = null; analyst.gos = analyst.bests = 0;
+      analyst.onReady = [];
+      if (review && !review.done) review = null;
+      // a worker the browser killed (phones do, under memory pressure) is restarted on the next request, twice
+      analyst.restarts = (analyst.restarts || 0) + 1;
+      if (analyst.status === "ready" && analyst.restarts <= 2 && location.protocol !== "file:") {
+        analyst.status = "off";
+        studyNote("The analysis engine stopped and will restart — try again.");
+        render();
+        return;
+      }
+      analyst.status = "error";
+      studyNote(location.protocol === "file:" ? "The engine can't start from a local file — serve the folder over http." : "Couldn't load the analysis engine — check your connection.");
+      render();
+    }
+    function onAnalystInfo(line) {
+      var j = analyst.job;
+      if (!j || analyst.bests !== j.id - 1) return; // output of a search that was stopped
+      if (/ (upper|lower)bound/.test(line)) return;
+      var d = /\bdepth (\d+)/.exec(line), sc = /score (cp|mate) (-?\d+)/.exec(line), pv = / pv (.+)$/.exec(line);
+      if (!d || !sc || !pv) return;
+      var k = +((/multipv (\d+)/.exec(line) || [0, 1])[1]) - 1;
+      j.lines[k] = { depth: +d[1], score: sc[1] === "cp" ? { cp: +sc[2] } : { mate: +sc[2] }, pv: pv[1].trim().split(/\s+/) };
+      if (j.info) j.info(j.lines);
+    }
+    // One search at a time; a new one stops the old (its late reply is ignored). While a review runs it
+    // owns the engine, so only calls marked `owner` get through.
+    function analyse(fen, go, multipv, info, done, owner) {
+      if (review && !review.done && !owner) return;
+      analystReady(function () {
+        var req = { fen: fen, go: go, multipv: multipv, info: info, done: done || function () {} };
+        // a search still running is stopped, and this one starts once it has answered (only the latest waits)
+        if (analyst.bests < analyst.gos) {
+          if (analyst.job) { analyst.worker.postMessage("stop"); analyst.job = null; }
+          analyst.next = req;
+          return;
+        }
+        startAnalysis(req);
+      });
+    }
+    function startAnalysis(req) {
+      var w = analyst.worker;
+      analyst.job = { id: ++analyst.gos, lines: [], info: req.info, done: req.done };
+      w.postMessage("setoption name MultiPV value " + req.multipv);
+      w.postMessage("position fen " + req.fen);
+      w.postMessage("go " + req.go);
+    }
+    function stopAnalysis() {
+      analyst.next = null;
+      if (analyst.job && analyst.worker) { analyst.worker.postMessage("stop"); analyst.job = null; }
+    }
+
+    // Review and analysis are for after a game against the computer, or any time with a friend.
+    function canStudy() { return state.opponent !== "engine" || state.over; }
+    function studyNote(text) { var el = document.getElementById("studyNote"); el.textContent = text || ""; el.hidden = !text; }
+
+    // ---- opening book (lichess-org/chess-openings, CC0), loaded once the page is idle
+    var openings = null, openingsWaiting = null;
+    function loadScript(src) {
+      return new Promise(function (ok, fail) {
+        var s = document.createElement("script");
+        s.src = src; s.onload = ok; s.onerror = fail;
+        document.head.appendChild(s);
+      });
+    }
+    function ensureOpenings() {
+      if (!openingsWaiting) {
+        openingsWaiting = loadScript("src/openings-data.js").then(function () { return loadScript("src/openings.js"); }).then(function () {
+          openings = window.ChessOpenings.create(R, window.CHESS_OPENINGS_DATA);
+          render();
+        }).catch(function () { openingsWaiting = null; });
+      }
+      return openingsWaiting;
+    }
+    function standardStart() { return state.startFen === R.START_FEN; }
+
+    // ---- game review: every position at a fixed depth, then each move graded (src/review.js)
+    var REVIEW_DEPTH = 14;
+    var review = null; // { key, n, positions, evals, best, done, at, result }
+    var autoReview = readLS("chess-autoreview", "1") === "1";
+    function gameKey() { return state.startFen + "|" + state.uciMoves.join(" "); }
+    function currentReview() { return review && review.done && review.key === gameKey() ? review : null; }
+    function drawnByRule() { return state.over && /^(repetition|fifty|material|agreed|stalemate)$/.test(state.overReason); }
+
+    function startReview() {
+      if (!plyCount() || !canStudy() || analyst.status === "error") return;
+      var n = plyCount(), key = gameKey(), positions = [];
+      for (var k = 0; k <= n; k++) positions.push(R.clonePos(positionAt(k)));
+      stopAnalysis();
+      review = { key: key, n: n, positions: positions, evals: [], best: [], done: false, at: 0 };
+      var finalDraw = drawnByRule();
+      render();
+      var i = 0;
+      function next() {
+        if (!review || review.key !== key || review.done) return;
+        while (i <= n) {
+          var pos = positions[i], st = R.status(pos);
+          if (st.mate) review.evals[i] = V.fromEngine({ mate: 0 }, pos.turn);
+          else if (st.stalemate || (i === n && finalDraw) || R.insufficientMaterial(pos)) review.evals[i] = { cp: 0, mate: null };
+          else break;
+          i++;
+        }
+        review.at = i;
+        renderStudy();
+        if (i > n) { ensureOpenings().then(finishReview, finishReview); return; }
+        var at = i, p = positions[at];
+        analyse(R.toFEN(p), "depth " + REVIEW_DEPTH, 1, null, function (lines, best) {
+          if (!review || review.key !== key) return;
+          review.evals[at] = lines[0] ? V.fromEngine(lines[0].score, p.turn) : { cp: 0, mate: null };
+          review.best[at] = best;
+          i = at + 1;
+          next();
+        }, true);
+      }
+      next();
+    }
+    function finishReview() {
+      if (!review || review.done) return;
+      var rv = review, inBook = !!openings && standardStart();
+      var moves = state.uciMoves.slice(0, rv.n).map(function (uci, i) {
+        inBook = inBook && openings.inBook(rv.positions[i], uci);
+        return { uci: uci, best: rv.best[i], mover: rv.positions[i].turn, book: inBook };
+      });
+      rv.result = V.review(rv.evals, moves);
+      rv.opening = openings && standardStart() ? openings.opening(rv.positions) : null;
+      rv.done = true;
+      announce("Review ready: White " + fmtAcc(rv.result.w.accuracy) + ", Black " + fmtAcc(rv.result.b.accuracy) + " accuracy.");
+      render();
+    }
+    function cancelReview() { if (review && !review.done) { review = null; stopAnalysis(); render(); } }
+    function fmtAcc(a) { return a == null ? "—" : Math.round(a) + "%"; }
+    function bestSAN(rv, i) {
+      var p = rv.positions[i], m = rv.best[i] && R.fromUCI(p, rv.best[i]);
+      return m ? R.toSAN(p, m) : "—";
+    }
+
+    // ---- retry a mistake: find a move that keeps (nearly) the engine's evaluation
+    function startRetry(i) {
+      var rv = currentReview();
+      if (!rv) return;
+      view.ply = i;
+      view.retry = { ply: i, pos: rv.positions[i], best: rv.best[i], bestEval: rv.evals[i], mover: rv.positions[i].turn,
+        played: state.uciMoves[i], label: moveLabel(i), status: "waiting", msg: "", shown: null, shownMove: null, showBest: false };
+      state.selected = null;
+      state.legalTargets = [];
+      render();
+    }
+    function retryMove(m) {
+      var rt = view.retry, uci = R.toUCI(m), after = R.play(rt.pos, m), st = R.status(after), san = R.toSAN(rt.pos, m);
+      rt.shown = after;
+      rt.shownMove = [m[0], m[1], m[2], m[3]];
+      rt.status = "checking";
+      rt.msg = "Checking " + san + "…";
+      state.selected = null;
+      state.legalTargets = [];
+      function verdict(good, text) {
+        if (view.retry !== rt) return;
+        rt.status = good ? "solved" : "wrong";
+        rt.msg = text;
+        announce(text);
+        render();
+        if (!good) setTimeout(function () {
+          if (view.retry === rt && rt.status === "wrong") { rt.shown = null; rt.shownMove = null; rt.status = "waiting"; render(); }
+        }, 1700);
+      }
+      if (uci === rt.played) { verdict(false, san + " is the move from the game — look for something better."); return; }
+      if (uci === rt.best || st.mate) { verdict(true, san + (st.mate ? " is checkmate!" : " — exactly the engine's choice. Well found.")); return; }
+      render();
+      if (st.stalemate) { verdict(V.drop(rt.bestEval, { cp: 0, mate: null }, rt.mover) < 0.06, san + " is stalemate."); return; }
+      analyse(R.toFEN(after), "depth " + REVIEW_DEPTH, 1, null, function (lines) {
+        var ev = lines[0] ? V.fromEngine(lines[0].score, after.turn) : { cp: 0, mate: null };
+        if (V.drop(rt.bestEval, ev, rt.mover) < 0.06) verdict(true, san + " works too — about as strong as the engine's move (" + V.format(ev) + ").");
+        else verdict(false, san + " isn't good enough: " + V.format(ev) + ", where the best move keeps " + V.format(rt.bestEval) + ". Try again.");
+      }, true);
+    }
+
+    // ---- live analysis of the shown position: three engine lines, the tablebase, the opening book
+    var analysisOn = false, analysedFen = null, live = null, liveTimer = null, liveDrawPending = false;
+    function lineSAN(pos, pv, max) {
+      var out = [], p = pos;
+      for (var i = 0; i < pv.length && i < max; i++) {
+        var m = R.fromUCI(p, pv[i]);
+        if (!m || !p.board[m[0]][m[1]]) break;
+        out.push((p.turn === "w" ? p.fullmove + ". " : i === 0 ? p.fullmove + "... " : "") + R.toSAN(p, m));
+        p = R.play(p, m);
+      }
+      return out.join(" ");
+    }
+    function refreshAnalysis() {
+      var on = analysisOn && canStudy() && !(review && !review.done) && analyst.status !== "error";
+      if (!on) { if (analysedFen) { analysedFen = null; live = null; if (!(review && !review.done)) stopAnalysis(); } return; }
+      var pos = shownPos(), fen = R.toFEN(pos);
+      if (fen === analysedFen) return;
+      analysedFen = fen;
+      live = { pos: pos, lines: [], depth: 0 };
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(function () {
+        if (analysedFen !== fen) return;
+        var st = R.status(pos);
+        if (st.mate || st.stalemate) { stopAnalysis(); live.terminal = st.mate ? "Checkmate" : "Stalemate"; drawAnalysis(); return; }
+        analyse(fen, "depth 18", 3, function (lines) {
+          if (analysedFen !== fen) return;
+          live.lines = lines.slice();
+          if (!liveDrawPending) { liveDrawPending = true; setTimeout(function () { liveDrawPending = false; drawAnalysis(); renderArrows(); }, 200); }
+        }, function (lines) { if (analysedFen === fen) { live.lines = lines.slice(); live.done = true; drawAnalysis(); renderArrows(); } });
+      }, 120);
+    }
+    function drawAnalysis() {
+      var box = document.getElementById("anBox");
+      box.hidden = !live;
+      if (!live) return;
+      var bar = document.getElementById("anBar"), num = document.getElementById("anEval"), list = document.getElementById("anLines");
+      if (live.terminal) {
+        num.textContent = live.terminal;
+        bar.style.width = (live.terminal === "Checkmate" ? (live.pos.turn === "w" ? 0 : 100) : 50) + "%";
+        list.innerHTML = "";
+        return;
+      }
+      var first = live.lines[0];
+      if (!first) { num.textContent = "…"; list.innerHTML = '<li class="muted">Thinking…</li>'; return; }
+      var ev = V.fromEngine(first.score, live.pos.turn);
+      num.textContent = V.format(ev);
+      num.title = "Depth " + first.depth + (live.done ? " (finished)" : "");
+      bar.style.width = (50 + 50 * V.winChance(ev)) + "%";
+      list.innerHTML = live.lines.filter(Boolean).map(function (l) {
+        return "<li><b>" + V.format(V.fromEngine(l.score, live.pos.turn)) + "</b> " + esc(lineSAN(live.pos, l.pv, 8)) + "</li>";
+      }).join("");
+      document.getElementById("anDepth").textContent = "depth " + first.depth;
+    }
+
+    var tbCache = {}, tbFor = null;
+    function tablebase(pos) {
+      var el = document.getElementById("tbBox"), n = 0;
+      pos.board.forEach(function (row) { row.forEach(function (p) { if (p) n++; }); });
+      var cs = pos.castling;
+      if (!analysisOn || !canStudy() || n > 7 || cs.K || cs.Q || cs.k || cs.q) { el.hidden = true; tbFor = null; return; }
+      var fen = R.toFEN(pos);
+      el.hidden = false;
+      if (tbFor === fen) return;
+      tbFor = fen;
+      if (tbCache[fen]) { drawTB(tbCache[fen], pos); return; }
+      el.innerHTML = '<span class="muted">Endgame tablebase: looking up…</span>';
+      fetch("https://tablebase.lichess.ovh/standard?fen=" + encodeURIComponent(fen))
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (d) { tbCache[fen] = d; if (tbFor === fen) drawTB(d, pos); })
+        .catch(function () { if (tbFor === fen) el.innerHTML = '<span class="muted">Endgame tablebase unavailable (offline, or too many requests).</span>'; });
+    }
+    // categories are from the side to move's point of view; a move's category is the opponent's afterwards
+    function tbVerdict(cat, side, d) {
+      var w = colorName(side), l = colorName(opponent(side));
+      var mate = d && d.dtm != null ? ", mate in " + Math.ceil(Math.abs(d.dtm) / 2) : "";
+      return {
+        win: w + " wins" + mate, loss: l + " wins" + mate, draw: "Draw",
+        "cursed-win": "Draw — " + w + " can force mate, but only after the 50-move rule", "blessed-loss": "Draw — saved by the 50-move rule",
+        "maybe-win": w + " probably wins", "maybe-loss": l + " probably wins"
+      }[cat] || "Unknown";
+    }
+    function drawTB(d, pos) {
+      var el = document.getElementById("tbBox");
+      var moves = (d.moves || []).slice(0, 4).map(function (m) {
+        var res = { loss: "wins", win: "loses", draw: "draws", "blessed-loss": "draws", "cursed-win": "draws", "maybe-loss": "wins?", "maybe-win": "loses?" }[m.category] || "?";
+        var mate = m.dtm != null && m.category === "loss" ? " (mate in " + Math.ceil(Math.abs(m.dtm) / 2) + ")" : "";
+        return "<li><b>" + esc(m.san) + "</b> " + res + mate + "</li>";
+      }).join("");
+      el.innerHTML = '<div class="tb-head"><span class="tag">Tablebase</span> ' + esc(tbVerdict(d.category, pos.turn, d)) + ' <span class="muted">· perfect play</span></div>' +
+        (moves ? '<ul class="tb-moves">' + moves + "</ul>" : "");
+    }
+
+    function drawOpening() {
+      var box = document.getElementById("openBox");
+      if (!openings || !standardStart()) { box.hidden = true; return; }
+      var k = view.retry ? view.retry.ply : shownPly(), list = [];
+      for (var i = 0; i <= k; i++) list.push(positionAt(i));
+      var name = openings.opening(list), pos = view.retry ? view.retry.pos : positionAt(k);
+      var book = openings.moves(pos).slice(0, 6);
+      box.hidden = !name && !book.length;
+      document.getElementById("openName").innerHTML = name ? '<span class="eco">' + esc(name.eco) + "</span> " + esc(name.name) : '<span class="muted">Out of the opening book</span>';
+      var canPlay = view.ply == null && !view.retry && boardInteractive();
+      document.getElementById("openMoves").innerHTML = book.map(function (b) {
+        var m = R.fromUCI(pos, b.uci);
+        return '<button type="button" class="book-mv" data-uci="' + b.uci + '"' + (canPlay ? "" : " disabled") + ' title="' +
+          esc(b.name ? b.name.eco + " " + b.name.name : "") + '">' + esc(R.toSAN(pos, m)) + "</button>";
+      }).join("");
+      document.getElementById("openMovesWrap").hidden = !book.length;
+    }
+
+    // ---- arrows: the better move in review and retry, the engine's first choice in analysis
+    function renderArrows() {
+      var svg = document.getElementById("arrows"), arrows = [], rv = currentReview(), k = shownPly();
+      if (view.retry) {
+        if (view.retry.showBest && view.retry.best) arrows.push([view.retry.best, "best"]);
+      } else if (rv && k > 0 && rv.result.moves[k - 1] && /inaccuracy|mistake|blunder/.test(rv.result.moves[k - 1].kind) && rv.best[k - 1]) {
+        arrows.push([rv.best[k - 1], "best"]);
+      }
+      if (analysisOn && live && live.lines[0] && live.lines[0].pv[0] && !view.retry) arrows.push([live.lines[0].pv[0], "engine"]);
+      svg.innerHTML = '<defs><marker id="ahBest" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-best"/></marker>' +
+        '<marker id="ahEngine" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-engine"/></marker></defs>' +
+        arrows.map(function (a) {
+          var f = R.parseSquare(a[0].slice(0, 2)), t = R.parseSquare(a[0].slice(2, 4));
+          function xy(sq) { var vr = state.flipped ? 7 - sq[0] : sq[0], vc = state.flipped ? 7 - sq[1] : sq[1]; return [vc * 100 + 50, vr * 100 + 50]; }
+          var p = xy(f), q = xy(t), dx = q[0] - p[0], dy = q[1] - p[1], len = Math.sqrt(dx * dx + dy * dy) || 1;
+          var ex = q[0] - dx / len * 34, ey = q[1] - dy / len * 34;
+          return '<line class="arrow ' + a[1] + '" x1="' + p[0] + '" y1="' + p[1] + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) + '" marker-end="url(#ah' + (a[1] === "best" ? "Best" : "Engine") + ')"/>';
+        }).join("");
+      svg.dataset.count = arrows.length;
+    }
+
+    // ---- the review panel under the board, and the side panel
+    function renderStudy() {
+      var rv = currentReview(), running = review && !review.done && review.key === gameKey();
+      var allowed = canStudy();
+      var btn = document.getElementById("reviewBtn");
+      btn.disabled = !allowed || !plyCount() || running || analyst.status === "error";
+      btn.textContent = rv ? "Review again" : "Review this game";
+      document.getElementById("analysisToggle").disabled = !allowed;
+      if (!allowed) studyNote("Review and analysis open when the game ends — or any time when you play a friend.");
+      else if (analyst.status !== "error") studyNote("");
+      var prog = document.getElementById("rvProgress");
+      prog.hidden = !running;
+      if (running) {
+        var pct = Math.round(100 * review.at / (review.n + 1));
+        prog.querySelector("i").style.width = pct + "%";
+        prog.querySelector("span").textContent = analyst.status === "loading" ? "Loading Stockfish…" : "Reviewing… " + Math.min(review.at, review.n + 1) + "/" + (review.n + 1) + " positions";
+      }
+      refreshAnalysis();
+      drawAnalysis();
+      tablebase(view.retry ? view.retry.pos : shownPos());
+      drawOpening();
+
+      var box = document.getElementById("reviewBox");
+      box.hidden = !rv;
+      if (!rv) return;
+      var r = rv.result;
+      document.getElementById("rvOpening").textContent = rv.opening ? rv.opening.eco + " " + rv.opening.name : "";
+      ["w", "b"].forEach(function (c) {
+        var s = r[c], el = document.getElementById(c === "w" ? "rvWhite" : "rvBlack");
+        el.innerHTML = '<span class="acc">' + fmtAcc(s.accuracy) + '</span><span class="cnt k-inaccuracy">' + s.inaccuracy +
+          ' <small>inacc.</small></span><span class="cnt k-mistake">' + s.mistake + ' <small>mist.</small></span><span class="cnt k-blunder">' + s.blunder + " <small>blund.</small></span>";
+      });
+      drawGraph(rv);
+      // retry box
+      var rbox = document.getElementById("rvRetry"), rt = view.retry;
+      rbox.hidden = !rt;
+      if (rt) {
+        document.getElementById("rtTitle").textContent = "Find a better move for " + colorName(rt.mover) + " than " + rt.label + ".";
+        var msg = document.getElementById("rtMsg");
+        msg.textContent = rt.showBest && rt.status !== "solved" ? "The engine plays " + bestSAN(rv, rt.ply) + "." : (rt.msg || "Make a move on the board.");
+        msg.className = "rt-msg" + (rt.status === "solved" ? " good" : rt.status === "wrong" ? " bad" : "");
+        document.getElementById("rtShow").hidden = rt.status === "solved" || rt.showBest;
+      }
+      // key moments: mistakes and blunders (inaccuracies too, if that's all there is)
+      var bad = r.moves.map(function (g, i) { return [g, i]; }).filter(function (x) { return x[0].kind === "mistake" || x[0].kind === "blunder"; });
+      if (!bad.length) bad = r.moves.map(function (g, i) { return [g, i]; }).filter(function (x) { return x[0].kind === "inaccuracy"; });
+      document.getElementById("rvMoments").innerHTML = bad.length ? bad.map(function (x) {
+        var g = x[0], i = x[1];
+        return '<li class="k-' + g.kind + '"><button type="button" class="link" data-show="' + (i + 1) + '">' + esc(moveLabel(i)) + V.SYMBOL[g.kind] + "</button>" +
+          ' <span class="muted">' + V.format(rv.evals[i]) + " → " + V.format(rv.evals[i + 1]) + " · best " + esc(bestSAN(rv, i)) + "</span>" +
+          ' <button type="button" class="btn mini" data-retry="' + i + '">Retry</button></li>';
+      }).join("") : '<li class="muted">No mistakes found — well played.</li>';
+    }
+
+    // White's winning chances over the game; dots mark inaccuracies, mistakes and blunders
+    function drawGraph(rv) {
+      var W = 600, H = 110, n = rv.n, mid = H / 2, el = document.getElementById("rvGraph");
+      function x(k) { return n ? k / n * W : 0; }
+      function y(k) { return mid - V.winChance(rv.evals[k]) * (mid - 4); }
+      var pts = [];
+      for (var k = 0; k <= n; k++) pts.push(x(k).toFixed(1) + "," + y(k).toFixed(1));
+      var cur = shownPly(), dots = "", hits = "";
+      rv.result.moves.forEach(function (g, i) {
+        if (/inaccuracy|mistake|blunder/.test(g.kind)) dots += '<circle class="dot-' + g.kind + '" cx="' + x(i + 1).toFixed(1) + '" cy="' + y(i + 1).toFixed(1) + '" r="5"/>';
+      });
+      var colW = n ? W / n : W;
+      for (var j = 0; j <= n; j++) hits += '<rect class="hit" data-ply="' + j + '" x="' + Math.max(0, x(j) - colW / 2).toFixed(1) + '" y="0" width="' + colW.toFixed(1) + '" height="' + H + '"/>';
+      el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Evaluation over the game">' +
+        '<rect class="g-black" x="0" y="0" width="' + W + '" height="' + H + '"/>' +
+        '<polygon class="g-white" points="0,' + H + " " + pts.join(" ") + " " + W + "," + H + '"/>' +
+        '<line class="g-mid" x1="0" y1="' + mid + '" x2="' + W + '" y2="' + mid + '"/>' +
+        '<polyline class="g-line" points="' + pts.join(" ") + '"/>' +
+        '<line class="g-cur" x1="' + x(cur).toFixed(1) + '" y1="0" x2="' + x(cur).toFixed(1) + '" y2="' + H + '"/>' +
+        dots + hits + "</svg>" + '<div class="g-tip" id="gTip" hidden></div>';
+    }
+    function graphTip(k) {
+      var rv = currentReview(), tip = document.getElementById("gTip");
+      if (!rv || k == null) { if (tip) tip.hidden = true; return; }
+      var g = k > 0 ? rv.result.moves[k - 1] : null;
+      tip.textContent = (k === 0 ? "Start" : moveLabel(k - 1) + (g && V.SYMBOL[g.kind] ? V.SYMBOL[g.kind] : "")) + " · " + V.format(rv.evals[k]);
+      tip.hidden = false;
+      tip.style.left = Math.min(88, Math.max(0, k / (rv.n || 1) * 100 - 6)) + "%";
     }
 
     // ========================================================== CONTROLS
@@ -1801,6 +2481,57 @@
       var t = e.target;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
       moveInput.focus(); // the key itself then lands in the box
+    });
+
+    // ---- replay, review and analysis
+    document.getElementById("navFirst").addEventListener("click", function () { goToPly(0); });
+    document.getElementById("navPrev").addEventListener("click", function () { goToPly(shownPly() - 1); });
+    document.getElementById("navNext").addEventListener("click", function () { goToPly(shownPly() + 1); });
+    document.getElementById("navLast").addEventListener("click", function () { goToPly(plyCount()); });
+    document.getElementById("navLive").addEventListener("click", function () { resetView(); state.selected = null; state.legalTargets = []; render(); });
+    document.getElementById("movelog").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-ply]");
+      if (b) goToPly(+b.dataset.ply);
+    });
+    // left/right arrows, Home and End step through the game (not while typing in a box)
+    document.addEventListener("keydown", function (e) {
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable) || view.retry) return;
+      var k = { ArrowLeft: shownPly() - 1, ArrowRight: shownPly() + 1, Home: 0, End: plyCount() }[e.key];
+      if (k == null || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      goToPly(k);
+    });
+    document.getElementById("reviewBtn").addEventListener("click", startReview);
+    document.getElementById("rvCancel").addEventListener("click", cancelReview);
+    var autoBox = document.getElementById("autoReview");
+    autoBox.checked = autoReview;
+    autoBox.addEventListener("change", function () { autoReview = this.checked; writeLS("chess-autoreview", this.checked ? "1" : "0"); });
+    document.getElementById("analysisToggle").addEventListener("change", function () {
+      analysisOn = this.checked;
+      if (analysisOn) ensureOpenings();
+      render();
+    });
+    document.getElementById("rvMoments").addEventListener("click", function (e) {
+      var sh = e.target.closest("[data-show]"), rt = e.target.closest("[data-retry]");
+      if (sh) goToPly(+sh.dataset.show);
+      if (rt) startRetry(+rt.dataset.retry);
+    });
+    var gEl = document.getElementById("rvGraph");
+    gEl.addEventListener("click", function (e) { var h = e.target.closest("[data-ply]"); if (h && !view.retry) goToPly(+h.dataset.ply); });
+    gEl.addEventListener("mousemove", function (e) { var h = e.target.closest("[data-ply]"); graphTip(h ? +h.dataset.ply : null); });
+    gEl.addEventListener("mouseleave", function () { graphTip(null); });
+    document.getElementById("rtShow").addEventListener("click", function () { if (view.retry) { view.retry.showBest = true; render(); } });
+    document.getElementById("rtDone").addEventListener("click", function () {
+      var k = view.retry ? view.retry.ply + 1 : null;
+      view.retry = null;
+      goToPly(k == null ? plyCount() : k);
+    });
+    document.getElementById("openMoves").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-uci]");
+      if (!b || !boardInteractive() || view.ply != null) return;
+      var m = uciToMove(b.dataset.uci);
+      if (m) makeMove(m);
     });
 
     var oppSel = document.getElementById("oppSel");
@@ -2186,8 +2917,9 @@
       var seen = {}, key, r, c;
       var legal = {};
       state.legalTargets.forEach(function (m) { legal[m[2] + "," + m[3]] = true; });
+      var sp = shownPos();
       for (r = 0; r < 8; r++) for (c = 0; c < 8; c++) {
-        var p = state.board[r][c];
+        var p = sp.board[r][c];
         if (!p) continue;
         key = r + "," + c;
         var e = gl.meshes[key];
@@ -2215,12 +2947,12 @@
         me.position.set(sqX(cc), y, sqZ(rr));
         gl.marks.add(me);
       }
-      var lm = state.lastMove;
+      var lm = shownLastMove();
       if (lm) { mark(gl.markGeo.sq, gl.markMat.last, lm[0], lm[1], 0.004); mark(gl.markGeo.sq, gl.markMat.last, lm[2], lm[3], 0.004); }
       if (state.selected) mark(gl.markGeo.sq, gl.markMat.sel, state.selected[0], state.selected[1], 0.006);
-      if (inCheck(state.board, state.turn)) { var kp = kingPos(state.board, state.turn); if (kp) mark(gl.markGeo.sq, gl.markMat.check, kp[0], kp[1], 0.008); }
+      if (inCheck(sp.board, sp.turn)) { var kp = kingPos(sp.board, sp.turn); if (kp) mark(gl.markGeo.sq, gl.markMat.check, kp[0], kp[1], 0.008); }
       state.legalTargets.forEach(function (m) {
-        var occupied = state.board[m[2]][m[3]] != null || m[4] === "ep";
+        var occupied = sp.board[m[2]][m[3]] != null || m[4] === "ep";
         mark(occupied ? gl.markGeo.ring : gl.markGeo.dot, occupied ? gl.markMat.ring : gl.markMat.dot, m[2], m[3], 0.01);
       });
       glCamera();
@@ -2387,6 +3119,10 @@
     loadFromURL();
     render();
     maybeEngineMove();
+    setTimeout(ensureOpenings, 1500); // opening names, once the page has settled
+    // read-only handle for tests and the curious
+    window.chessApp = { version: APP_VERSION, state: state, fen: function () { return R.toFEN(shownPos()); }, review: function () { return currentReview(); },
+      debug: function () { return { analysedFen: analysedFen, live: live && { n: live.lines.length, done: !!live.done }, job: analyst.job && analyst.job.id, gos: analyst.gos, bests: analyst.bests, status: analyst.status, reviewRunning: !!(review && !review.done) }; } };
   })();
   </script>
 </body>
