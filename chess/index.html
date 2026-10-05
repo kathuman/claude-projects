@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9818;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     /* ------------------------------------------------------------------
        Chrome follows the parent site's warm neutrals + accent, stepped
@@ -59,6 +59,7 @@
     }
 
     /* ---- board palettes ---- */
+    :root[data-board="tan"]      { --sq-light: #f0d9b5; --sq-dark: #b58863; --sq-coord: rgba(0,0,0,.35); }
     :root[data-board="walnut"]   { --sq-light: #e4c9a0; --sq-dark: #7a4a26; --sq-coord: rgba(0,0,0,.42); }
     :root[data-board="slate"]    { --sq-light: #cdd6dd; --sq-dark: #44525f; --sq-coord: rgba(0,0,0,.38); }
     :root[data-board="ocean"]    { --sq-light: #cfeae7; --sq-dark: #1a6e77; --sq-coord: rgba(0,0,0,.36); }
@@ -458,6 +459,7 @@
       .board-wrap { padding: 12px; }
     }
   </style>
+  <link rel="stylesheet" href="theme.css" />
 </head>
 <body>
   <header class="bar">
@@ -674,7 +676,8 @@
           <div class="field">
             <label for="boardSel">Board</label>
             <select class="sel" id="boardSel">
-              <option value="classic">Classic — tan &amp; walnut</option>
+              <option value="classic">Blueprint — steel blue</option>
+              <option value="tan">Tan &amp; brown</option>
               <option value="walnut">Walnut</option>
               <option value="slate">Slate</option>
               <option value="ocean">Ocean teal</option>
@@ -1058,7 +1061,9 @@
     //   1.7.0  link to the puzzle trainer (puzzles/): 45,000 Lichess puzzles, Glicko-2 rating, themes, daily, timed runs
     //   1.8.0  coach against Stockfish (warns before mistakes, hints, threats; steps back as you improve); reviews name
     //          the tactic each mistake allowed or missed; reviewed games and mistakes feed the learner profile
-    var APP_VERSION = "1.8.0";
+    //   1.9.0  Cobot Lab blueprint theme shared by every chess page (theme.css): navy panels, cyan ink, Rajdhani/Barlow/
+    //          IBM Plex Mono, dark by default; steel-blue default board (old tan board kept as "Tan & brown")
+    var APP_VERSION = "1.9.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -1066,7 +1071,7 @@
     (function initTheme() {
       var s = null;
       try { s = localStorage.getItem("chess-theme"); } catch (e) {}
-      if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s);
+      document.documentElement.setAttribute("data-theme", s === "light" ? "light" : "dark");
     })();
     document.getElementById("themeToggle").addEventListener("click", function () {
       var root = document.documentElement;
@@ -2856,7 +2861,7 @@
     });
 
     var BOARD_PREVIEW = {
-      classic: ["#f0d9b5", "#b58863"], walnut: ["#e4c9a0", "#7a4a26"], slate: ["#cdd6dd", "#44525f"],
+      classic: ["#d3e5f2", "#4b7aa3"], tan: ["#f0d9b5", "#b58863"], walnut: ["#e4c9a0", "#7a4a26"], slate: ["#cdd6dd", "#44525f"],
       ocean: ["#cfeae7", "#1a6e77"], sand: ["#ecdcb8", "#c09c5c"], charcoal: ["#55555e", "#2a2a30"]
     };
     function applyLook() {

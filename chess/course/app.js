@@ -13,7 +13,8 @@
   // 1.1.1 speech on phones: unlock on the first tap, late-loading voices, cancel/speak race, sentence chunks
   // 1.2.0 lessons on tactics and endings link to puzzles of their theme (../puzzles/)
   // 1.3.0 link to My training (../train/)
-  var VERSION = "1.3.0";
+  // 1.4.0 Cobot Lab blueprint theme (../theme.css)
+  var VERSION = "1.4.0";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];
@@ -26,7 +27,7 @@
   $("ver").textContent = "v" + VERSION; $("verFoot").textContent = "v" + VERSION;
 
   // ---------------------------------------------------------------- theme (shared with the chess app)
-  (function () { var s = readLS("chess-theme", null); if (s === "light" || s === "dark") document.documentElement.setAttribute("data-theme", s); })();
+  (function () { var s = readLS("chess-theme", null); document.documentElement.setAttribute("data-theme", s === "light" ? "light" : "dark"); })();
   $("themeToggle").addEventListener("click", function () {
     var root = document.documentElement, pd = window.matchMedia("(prefers-color-scheme: dark)").matches;
     var next = (root.getAttribute("data-theme") || (pd ? "dark" : "light")) === "dark" ? "light" : "dark";

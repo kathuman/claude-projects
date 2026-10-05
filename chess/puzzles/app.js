@@ -8,7 +8,8 @@
   // 1.0.0 launch: rated, themes (linked from the course), daily, timed run; Glicko-2 rating, theme statistics
   // 1.1.0 spaced repetition ("Review"): missed puzzles and your own game mistakes come back at growing
   //       intervals; every result feeds the learner profile (../train/)
-  var VERSION = "1.1.0";
+  // 1.2.0 Cobot Lab blueprint theme (../theme.css); board rows sized evenly (a flipped board squashed rank 8); header fixes
+  var VERSION = "1.2.0";
   var R = window.ChessRules, P = window.ChessPuzzles, F = window.ChessProfile;
   var prof = F.load(localStorage);
   function saveProf() { F.save(localStorage, prof); }
@@ -16,7 +17,7 @@
   $("ver").textContent = "v" + VERSION; $("verFoot").textContent = "v" + VERSION;
 
   // ---------------------------------------------------------------- theme toggle (shared key with the app)
-  try { var th = localStorage.getItem("chess-theme"); if (th === "light" || th === "dark") document.documentElement.setAttribute("data-theme", th); } catch (e) {}
+  try { var th = localStorage.getItem("chess-theme"); document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark"); } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   $("themeToggle").addEventListener("click", function () {
     var root = document.documentElement, pd = matchMedia("(prefers-color-scheme: dark)").matches;
     var next = (root.getAttribute("data-theme") || (pd ? "dark" : "light")) === "dark" ? "light" : "dark";

@@ -6,11 +6,12 @@
 (function () {
   "use strict";
   // 1.0.0 launch: weekly plan, spaced repetition, themes from puzzles and reviewed games, recent games, coach
-  var VERSION = "1.0.0";
+  // 1.1.0 Cobot Lab blueprint theme (../theme.css)
+  var VERSION = "1.1.0";
   var F = window.ChessProfile, EN = (window.CHESS_I18N || {}).en || {};
   function $(id) { return document.getElementById(id); }
   $("ver").textContent = "v" + VERSION; $("verFoot").textContent = "v" + VERSION;
-  try { var th = localStorage.getItem("chess-theme"); if (th === "light" || th === "dark") document.documentElement.setAttribute("data-theme", th); } catch (e) {}
+  try { var th = localStorage.getItem("chess-theme"); document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark"); } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   $("themeToggle").addEventListener("click", function () {
     var root = document.documentElement, pd = matchMedia("(prefers-color-scheme: dark)").matches;
     var next = (root.getAttribute("data-theme") || (pd ? "dark" : "light")) === "dark" ? "light" : "dark";
