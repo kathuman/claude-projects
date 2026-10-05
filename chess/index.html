@@ -785,6 +785,21 @@
         any time when you play a friend.
       </p>
       <p>
+        <b>The coach</b> (against Stockfish, under Opponent) checks each of your moves before it is played. If a move
+        loses too much, it stops you: "Careful — Qh5 is a blunder: it allows a loose piece". You can take the move back,
+        see why (your move and the punishing reply as arrows), or play it anyway. If the move simply misses something
+        much stronger, it says so. <b>Hint</b> shows the piece to move, then the move. <b>Show threats</b> shows what the
+        opponent would do if it could move again. On "On", the coach warns before mistakes and gives unlimited hints. On
+        "Light", it warns only before blunders and gives three hints a game. After three games where it hardly had to step
+        in, it steps back to Light by itself, and a rough game brings it back.
+      </p>
+      <p>
+        <b>Your training.</b> Reviewed games against Stockfish go into your profile. Each mistake is labelled with the
+        tactic it allowed or missed (the key moments show this, with a link to practise it), and becomes a puzzle that
+        comes back in spaced repetition. <a href="train/">My training</a> shows your strong and weak themes and builds a
+        plan for the week.
+      </p>
+      <p>
         <b>Puzzles.</b> The <a href="puzzles/">puzzle trainer</a> has 44,943 puzzles from the public-domain Lichess
         puzzle database. It gives you a personal puzzle rating (Glicko-2) and puzzles near it, and covers 73 themes;
         the course's tactics and endgame lessons link to their own theme. There's also a daily puzzle and timed runs.
@@ -913,6 +928,17 @@
           The engine worker is driven strictly by the UCI rules: a new search waits for the stopped search's
           <code>bestmove</code> before sending options. Sending options mid-search can make the single-threaded
           WebAssembly build abort, which is how this was found. A worker the browser kills is restarted.
+        </p>
+
+        <h4>The coach is the analysis engine, asked before each move</h4>
+        <p>
+          When you move against Stockfish with the coach on, the move is held while the second Stockfish worker evaluates
+          the positions before and after it at depth 11. The position before has usually been evaluated already, in the
+          background, while you were thinking. If the move costs 0.2 of winning chances (0.3 on Light), the move is not
+          played. <code>src/motifs.js</code> names what the engine's reply would do: fork, pin, skewer, loose piece,
+          discovered attack, back-rank mate and so on. Its rules were tuned against the theme labels of about 11,000 Lichess
+          puzzles. The coach's searches run one at a time through a small queue, because a new search would stop the one
+          running.
         </p>
 
         <h4>Opening names from a public-domain catalogue</h4>

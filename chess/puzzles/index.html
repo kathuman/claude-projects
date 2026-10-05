@@ -61,8 +61,8 @@
     .prompt { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; min-height: 26px; text-align: center; }
     .prompt .chip { width: 15px; height: 15px; border-radius: 50%; border: 1px solid rgba(0,0,0,.35); flex: none; }
     .chip.w { background: #f2efe6; } .chip.b { background: #232120; }
-    .board { position: relative; width: min(82vw, 560px); aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); border: 3px solid var(--sq-dark); border-radius: 6px; overflow: hidden; user-select: none; touch-action: manipulation; }
-    .sq { position: relative; background: var(--sq-light); display: grid; place-items: center; cursor: default; }
+    .board { position: relative; width: min(82vw, 560px); aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border: 3px solid var(--sq-dark); border-radius: 6px; overflow: hidden; user-select: none; touch-action: manipulation; }
+    .sq { position: relative; min-width: 0; min-height: 0; background: var(--sq-light); display: grid; place-items: center; cursor: default; }
     .sq.dark { background: var(--sq-dark); }
     .sq img { width: 90%; height: 90%; pointer-events: none; display: block; }
     .sq.mine { cursor: pointer; }

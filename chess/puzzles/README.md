@@ -12,6 +12,8 @@ Puzzle training for the [Chess](../) app. Live: https://kathuman.github.io/claud
 - **Daily puzzle**, the same for everyone on a given day (`?mode=daily`), and **timed runs**: three minutes,
   rising difficulty, ten seconds off for a wrong move (`?mode=run`).
 - **Your themes**: success rate per theme, weakest first.
+- **Review** (`?mode=review`): spaced repetition of missed puzzles and of mistakes from your reviewed games
+  (1, 3, 7, 16, 35 days; not rated). Every result also feeds the learner profile ([My training](../train/)).
 - Solved puzzles open in the play app for analysis, or on Lichess.
 
 Progress stays in the browser (`localStorage`, key `chess-puzzles-v1`).
