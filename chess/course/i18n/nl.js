@@ -35,6 +35,7 @@
   "ui.playEngine": "Speel deze stelling tegen Stockfish",
   "ui.practise": "Oefen met puzzels op jouw niveau",
   "ui.puzzles": "Puzzels",
+  "ui.training": "Mijn training",
   "ui.correct": "Goed zo!",
   "ui.wrong": "Niet helemaal. Probeer het opnieuw.",
   "ui.illegal": "Die zet is hier niet mogelijk.",

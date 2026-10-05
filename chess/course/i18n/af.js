@@ -35,6 +35,7 @@
   "ui.playEngine": "Speel hierdie stelling teen Stockfish",
   "ui.practise": "Oefen met raaisels op jou vlak",
   "ui.puzzles": "Raaisels",
+  "ui.training": "My oefenplan",
   "ui.correct": "Reg!",
   "ui.wrong": "Nie heeltemal nie. Probeer weer.",
   "ui.illegal": "Daardie skuif is nie hier moontlik nie.",

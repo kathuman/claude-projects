@@ -35,6 +35,7 @@
   "ui.playEngine": "Diese Stellung gegen Stockfish spielen",
   "ui.practise": "Mit Aufgaben auf deinem Niveau üben",
   "ui.puzzles": "Aufgaben",
+  "ui.training": "Mein Training",
   "ui.correct": "Richtig!",
   "ui.wrong": "Nicht ganz. Versuche es noch einmal.",
   "ui.illegal": "Dieser Zug ist hier nicht möglich.",

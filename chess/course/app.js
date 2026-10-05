@@ -12,7 +12,8 @@
   // 1.0.0 launch · 1.1.0 "Play this position against Stockfish" on move exercises (opens the play app)
   // 1.1.1 speech on phones: unlock on the first tap, late-loading voices, cancel/speak race, sentence chunks
   // 1.2.0 lessons on tactics and endings link to puzzles of their theme (../puzzles/)
-  var VERSION = "1.2.0";
+  // 1.3.0 link to My training (../train/)
+  var VERSION = "1.3.0";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];

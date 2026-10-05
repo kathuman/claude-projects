@@ -6,8 +6,12 @@
 (function () {
   "use strict";
   // 1.0.0 launch: rated, themes (linked from the course), daily, timed run; Glicko-2 rating, theme statistics
-  var VERSION = "1.0.0";
-  var R = window.ChessRules, P = window.ChessPuzzles;
+  // 1.1.0 spaced repetition ("Review"): missed puzzles and your own game mistakes come back at growing
+  //       intervals; every result feeds the learner profile (../train/)
+  var VERSION = "1.1.0";
+  var R = window.ChessRules, P = window.ChessPuzzles, F = window.ChessProfile;
+  var prof = F.load(localStorage);
+  function saveProf() { F.save(localStorage, prof); }
   function $(id) { return document.getElementById(id); }
   $("ver").textContent = "v" + VERSION; $("verFoot").textContent = "v" + VERSION;
 
@@ -48,7 +52,7 @@
     queenEndgame: "Queen endgame", bishopEndgame: "Bishop endgame", knightEndgame: "Knight endgame", queenRookEndgame: "Queen and rook endgame",
     oneMove: "One move", short: "Short (2 moves)", long: "Long (3 moves)", veryLong: "Very long (4+ moves)",
     advantage: "Win an advantage", crushing: "Crushing blow", equality: "Save the game",
-    master: "From master games", masterVsMaster: "Master vs master", superGM: "Super-GM games"
+    yourGame: "From your games", master: "From master games", masterVsMaster: "Master vs master", superGM: "Super-GM games"
   };
   var GROUPS = [
     ["Tactics", ["fork", "pin", "skewer", "discoveredAttack", "discoveredCheck", "doubleCheck", "deflection", "attraction", "capturingDefender",
@@ -76,7 +80,7 @@
   // ---------------------------------------------------------------- state
   var params = new URLSearchParams(location.search);
   var S = {
-    mode: /^(rated|theme|daily|run)$/.test(params.get("mode")) ? params.get("mode") : (params.get("theme") ? "theme" : "rated"),
+    mode: /^(rated|theme|daily|run|review)$/.test(params.get("mode")) ? params.get("mode") : (params.get("theme") ? "theme" : "rated"),
     theme: params.get("theme") || "fork",
     puzzle: null, s: null, sel: null, targets: [], last: null, hint: null, flash: null,
     status: "loading",   // loading | opponent | playing | solved | failed | idle
@@ -157,7 +161,7 @@
     var tok = ++S.token;
     S.puzzle = p; S.s = P.start(R, p);
     S.sel = null; S.targets = []; S.last = null; S.hint = null; S.flash = null;
-    S.counted = false; S.mistake = false; S.delta = null; S.status = "opponent";
+    S.counted = false; S.mistake = false; S.delta = null; S.srsNote = null; S.status = "opponent";
     store.seen[p[0]] = 1;
     buildBoard(); draw();
     setPrompt(colorName(S.s.side) + " to play — the opponent moves first", S.s.side);
@@ -180,8 +184,13 @@
       S.flash = { ok: false, sq: key };
       var shown = S.s.pos; S.s.pos = R.play(before, m); draw(); S.s.pos = shown;
       if (S.mode === "run") { runMiss(); return; }
-      count(0);
-      feedback("bad", "That's not it — try again, or see the solution." + deltaHTML());
+      if (!(S.card && S.card.own)) count(0); // an own card waits: the learner may count their move
+      if (S.card && S.card.own) {
+        S.ownAlt = m;
+        feedback("bad", "Not the engine's move. If you think yours is just as good, check it in the play app — or count it." +
+          ' <button class="btn" id="countMine" type="button">Mine was fine — count it</button>');
+        $("countMine").addEventListener("click", function () { S.token++; S.mistake = false; count(1); S.s.done = true; S.status = "solved"; feedback("good", "Counted as solved." + deltaHTML()); finish(); });
+      } else feedback("bad", "That's not it — try again, or see the solution." + deltaHTML());
       S.status = "failed-trying";
       setTimeout(function () { if (tok !== S.token) return; S.s.pos = before; S.flash = null; S.last = null; S.status = "playing"; draw(); renderControls(); }, 800);
       renderControls();
@@ -218,6 +227,19 @@
   function count(score) {
     if (S.counted || S.mode === "run") return;
     S.counted = true;
+    var now = Date.now();
+    if (S.mode === "review") {
+      // reviews aren't rated: they move the card through the spaced-repetition boxes
+      var moved = F.srsResult(prof, S.puzzle[0], !!score, now);
+      F.logPuzzle(prof, S.puzzle, score, "review", now);
+      saveProf();
+      S.srsNote = moved === "learned" ? "Learned — it won't come back." : moved === "up" ? "Next review in " + F.INTERVALS[prof.srs[S.puzzle[0]].box] + " days." : "It comes back tomorrow.";
+      renderStats();
+      return;
+    }
+    F.logPuzzle(prof, S.puzzle, score, S.mode, now);
+    if (!score && !prof.srs[S.puzzle[0]]) F.srsAdd(prof, S.puzzle, now, false); // missed: it comes back
+    saveProf();
     var before = store.rating.r;
     store.rating = P.rate(store.rating, S.puzzle[3], score);
     S.delta = Math.round(store.rating.r) - Math.round(before);
@@ -233,6 +255,7 @@
     renderStats();
   }
   function deltaHTML() {
+    if (S.mode === "review") return S.srsNote ? '<span class="delta">' + S.srsNote + "</span>" : "";
     if (S.delta == null) return "";
     return '<span class="delta">' + (S.delta >= 0 ? "+" : "−") + Math.abs(S.delta) + "</span>";
   }
@@ -266,6 +289,21 @@
     S.status = "loading"; renderControls();
     var target = Math.round(store.rating.r + (Math.random() * 150 - 50)); // a little above your rating, on average
     var job;
+    if (S.mode === "review") {
+      var due = F.srsDue(prof, Date.now());
+      S.card = due[0] || null;
+      if (!S.card) {
+        S.status = "idle"; S.puzzle = null; renderMeta(false);
+        var up = F.srsUpcoming(prof, Date.now(), 7), soon = up.reduce(function (a, b) { return a + b; }, 0);
+        setPrompt("Nothing due right now", "w");
+        feedback("good", "All reviews done." + (soon ? " " + soon + " more come back this week." : " Missed puzzles and your game mistakes will appear here."));
+        renderControls(); renderStats();
+        return;
+      }
+      showPuzzle(S.card.p); renderMeta(false);
+      return;
+    }
+    S.card = null;
     if (S.mode === "daily") {
       var day = todayUTC(), bands = index.bands.filter(function (b) { return b.from === 1400 || b.from === 1600; });
       job = Promise.all(bands.map(loadBand)).then(function (ls) { var all = [].concat.apply([], ls); return all[P.dailyIndex(day, all.length)]; });
@@ -327,7 +365,9 @@
     $("hintBtn").hidden = $("solBtn").hidden = run;
     $("retryBtn").hidden = run || !(st === "solved" || st === "failed");
     $("nextBtn").hidden = run || S.mode === "daily" && !!S.puzzle && !S.s.done;
-    $("nextBtn").textContent = S.mode === "daily" ? "Next: a rated puzzle" : "Next puzzle";
+    $("nextBtn").textContent = S.mode === "daily" ? "Next: a rated puzzle" : S.mode === "review" ? "Next review" : "Next puzzle";
+    var dueN = F.srsDue(prof, Date.now()).length;
+    $("reviewModeBtn").textContent = "Review" + (dueN ? " (" + dueN + " due)" : "");
     $("nextBtn").disabled = st === "loading" || st === "opponent" || st === "showing";
     $("runBtn").hidden = !run || S.run.active;
     $("runBtn").textContent = S.run.marks.length ? "Start another run" : "Start a run";
@@ -339,13 +379,15 @@
       rated: "Puzzles near your rating. Each one moves your rating up or down.",
       theme: "Puzzles of one theme near your rating — rated too. Your weakest themes are listed below.",
       daily: store.daily[todayUTC()] ? "Today's puzzle: " + store.daily[todayUTC()] + ". A new one tomorrow." : "The same puzzle for everyone today. It counts towards your rating.",
-      run: "Three minutes. Puzzles get harder as you go; a wrong move costs 10 seconds. Not rated."
+      run: "Three minutes. Puzzles get harder as you go; a wrong move costs 10 seconds. Not rated.",
+      review: "Puzzles you missed, and mistakes from your reviewed games against Stockfish, come back after 1, 3, 7, 16 and 35 days until they stick. Not rated."
     }[S.mode];
   }
   function renderMeta(reveal) {
     var p = S.puzzle;
     if (!p) { $("meta").textContent = ""; $("afterLinks").hidden = true; return; }
-    var head = (S.mode === "daily" ? "Daily puzzle · " : "") + "Puzzle rating " + p[3];
+    var own = S.card && S.card.own;
+    var head = (S.mode === "daily" ? "Daily puzzle · " : S.mode === "review" ? "Review · " : "") + (own ? "A mistake from one of your games" : "Puzzle rating " + p[3]);
     var tags = reveal ? p[4].split(" ").filter(Boolean).map(function (t) { return '<span class="tag">' + themeName(t) + "</span>"; }).join("") : "";
     $("meta").innerHTML = head + (reveal ? "<br>" + tags : " · themes are shown once it's done");
     $("afterLinks").hidden = !reveal || S.mode === "run";
@@ -376,7 +418,7 @@
     $("themesList").innerHTML = rows.map(function (x) {
       var pct = Math.round(100 * x[1] / x[2]);
       return '<li><button type="button" data-theme="' + x[0] + '" title="Practise ' + themeName(x[0]) + '">' + themeName(x[0]) + "</button>" +
-        '<span class="bar"><i style="width:' + pct + '%"></i></span><span class="pct">' + x[1] + "/" + x[2] + "</span></li>";
+        '<span class="pbar"><i style="width:' + pct + '%"></i></span><span class="pct">' + x[1] + "/" + x[2] + "</span></li>";
     }).join("");
   }
   function buildThemeSelect() {
@@ -410,7 +452,11 @@
     if (!b || S.run.active) return;
     S.mode = "theme"; S.theme = b.dataset.theme; $("themeSel").value = S.theme; syncURL(); next();
   });
-  $("nextBtn").addEventListener("click", function () { if (S.mode === "daily") { S.mode = "rated"; syncURL(); } next(); });
+  $("nextBtn").addEventListener("click", function () {
+    if (S.mode === "review" && S.puzzle && !S.counted) count(0); // skipping a review counts as a miss
+    if (S.mode === "daily") { S.mode = "rated"; syncURL(); }
+    next();
+  });
   $("hintBtn").addEventListener("click", hint);
   $("solBtn").addEventListener("click", showSolution);
   $("retryBtn").addEventListener("click", function () { var p = S.puzzle, c = S.counted, d = S.delta; showPuzzle(p); S.counted = c; S.delta = d; renderMeta(false); });

@@ -66,6 +66,7 @@
     :root[data-board="charcoal"] { --sq-light: #55555e; --sq-dark: #2a2a30; --sq-coord: rgba(255,255,255,.35); }
 
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; } /* an element's own display rule must never beat hidden */
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
     body { font-family: var(--font-sans); line-height: 1.55; -webkit-font-smoothing: antialiased; min-height: 100vh; }
     a { color: var(--accent); }
@@ -329,6 +330,17 @@
     .book-mv { font: inherit; font-family: var(--font-mono); font-size: 11.5px; padding: 2px 7px; margin: 2px 2px 0 0; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
     .book-mv:hover:not(:disabled) { border-color: var(--accent); }
     .book-mv:disabled { cursor: default; opacity: .75; }
+    .arrow.threat { stroke: #d0453a; opacity: .72; } .ah-threat { fill: #d0453a; }
+    .arrow.mine { stroke: #8a8478; opacity: .55; } .ah-mine { fill: #8a8478; }
+    .coachbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .coachbar[hidden], .coachbox[hidden], .rv-saved[hidden] { display: none; }
+    .coachbar .tag { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: var(--accent-soft); color: var(--ink); }
+    .coach-info { font-size: 12.5px; color: var(--ink-2); }
+    .coachbox { width: min(100%, 560px); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--k-blund, #c62828); background: color-mix(in srgb, var(--k-blund, #c62828) 10%, var(--panel)); text-align: center; }
+    .coachbox p { margin: 0 0 8px; font-size: 13.5px; font-weight: 600; }
+    .mtag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); text-decoration: none; }
+    .mtag:hover { border-color: var(--accent); color: var(--ink); }
+    .rv-saved { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-2); }
     details.load { margin-top: 12px; }
     details.load summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
     details.load textarea { width: 100%; margin: 8px 0; padding: 8px 10px; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; resize: vertical; }
@@ -427,6 +439,7 @@
 
     @media (max-width: 900px) {
       .layout { grid-template-columns: minmax(0, 1fr); }
+      .hide-md { display: none; }
       .board { width: min(100%, 520px); }
       .board-frame { width: min(100%, 520px); }
       .turn-row { flex-wrap: wrap; gap: 10px; }
@@ -437,6 +450,8 @@
       .rv-sides { grid-template-columns: 1fr; }
       .brand .sub .sub-rest { display: none; }
       .brand h1 .ver { display: none; } /* the version stays in the footer */
+      .hide-sm { display: none; }
+      .brand .sub { display: none; }
       .hactions { gap: 6px; }
       .hactions .lnk { padding: 5px 9px; font-size: 11.5px; }
       main { padding: 18px 16px 10px; }
@@ -455,8 +470,9 @@
     </div>
     <div class="hactions">
       <a class="lnk" href="puzzles/" title="45,000 puzzles at your level, with a puzzle rating">Puzzles</a>
-      <a class="lnk" href="course/" title="A course in five levels, from the rules to endgame technique">Learn chess</a>
-      <a class="lnk" href="../index.html">&larr; All projects</a>
+      <a class="lnk" href="train/" title="Your strengths, weaknesses and a weekly plan">My training</a>
+      <a class="lnk" href="course/" title="A course in five levels, from the rules to endgame technique">Learn<span class="hide-sm"> chess</span></a>
+      <a class="lnk hide-md" href="../index.html">&larr; All projects</a>
       <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
         <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
@@ -494,6 +510,18 @@
         </div>
 
         <div class="banner" id="banner">White to move</div>
+        <div class="coachbar" id="coachBar" hidden>
+          <span class="tag">Coach</span>
+          <button class="btn mini" id="coachHint" type="button">Hint</button>
+          <button class="btn mini" id="coachThreat" type="button">Show threats</button>
+          <span class="coach-info" id="coachInfo" aria-live="polite"></span>
+        </div>
+        <div class="coachbox" id="coachBox" hidden role="alert">
+          <p id="coachMsg"></p>
+          <button class="btn mini primary" id="coachBack" type="button">Take it back</button>
+          <button class="btn mini" id="coachWhy" type="button">Show why</button>
+          <button class="btn mini" id="coachPlay" type="button">Play it anyway</button>
+        </div>
         <div class="offer" id="offerBox" hidden>
           <span id="offerText"></span>
           <button class="btn mini primary" id="acceptDraw" type="button">Accept draw</button>
@@ -519,6 +547,7 @@
             <h3>Game review</h3>
             <span class="rv-opening" id="rvOpening"></span>
           </div>
+          <p class="rv-saved" id="rvSaved" hidden></p>
           <div class="rv-sides">
             <div><span class="chip w"></span><b>White</b><span class="rv-stats" id="rvWhite"></span></div>
             <div><span class="chip b"></span><b>Black</b><span class="rv-stats" id="rvBlack"></span></div>
@@ -566,6 +595,14 @@
               <option value="6">6 — Expert</option>
               <option value="7">7 — Master</option>
               <option value="8">8 — Full strength</option>
+            </select>
+          </div>
+          <div class="field engine-only">
+            <label for="coachSel">Coach</label>
+            <select class="sel" id="coachSel">
+              <option value="full">On — warns before mistakes, hints</option>
+              <option value="light">Light — warns before blunders, 3 hints</option>
+              <option value="off">Off</option>
             </select>
           </div>
           <div class="engine-status engine-only" id="engineStatus"><span class="led"></span><span id="engineText">Engine not loaded</span></div>
@@ -975,6 +1012,8 @@
 
   <script src="src/rules.js"></script>
   <script src="src/review.js"></script>
+  <script src="src/motifs.js"></script>
+  <script src="src/profile.js"></script>
   <script>
   (function () {
     "use strict";
@@ -991,7 +1030,9 @@
     //   1.6.0  game review (evaluation graph, accuracy, graded moves, better-move arrows, retry your mistakes),
     //          step through any game, live engine analysis (3 lines), endgame tablebase, opening names and book moves
     //   1.7.0  link to the puzzle trainer (puzzles/): 45,000 Lichess puzzles, Glicko-2 rating, themes, daily, timed runs
-    var APP_VERSION = "1.7.0";
+    //   1.8.0  coach against Stockfish (warns before mistakes, hints, threats; steps back as you improve); reviews name
+    //          the tactic each mistake allowed or missed; reviewed games and mistakes feed the learner profile
+    var APP_VERSION = "1.8.0";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -1369,6 +1410,7 @@
       renderCaptured();
       renderLog();
       renderNav();
+      renderCoach();
       renderArrows();
       renderStudy();
       if (gl.active) glSync();
@@ -1535,6 +1577,7 @@
       state.over = true; state.result = result; state.overReason = reason; state.overText = text;
       state.drawOffer = null; state.notice = null;
       stopClock();
+      coachGameOver();
       // the review starts by itself once the board has settled (it's what turns a game into a lesson)
       if (autoReview && plyCount() >= 4 && !loadingGame) setTimeout(function () { if (state.over && !currentReview()) startReview(); }, 700);
     }
@@ -1581,6 +1624,7 @@
 
     function makeMove(move) {
       if (view.ply != null || view.retry) { resetView(); render(); } // a new move brings the board back to the game
+      coachClear(); coach.note = "";
       var preBoard = cloneBoard(state.board), mover = state.turn;
       var san = applyMove(move);
       clockAfterMove(mover);
@@ -1590,6 +1634,7 @@
         if (gameId !== state.gameId) { maybeEngineMove(); return; }
         render();
         maybeEngineMove();
+        coachPrepare();
       });
     }
 
@@ -1597,6 +1642,7 @@
       if (!state.history.length || state.animating) return;
       cancelEngine();
       resetView();
+      coachClear(); coach.checking = false;
       var snap = state.history.pop();
       // vs the computer, step back to the human's turn (their move + the engine's reply)
       if (state.opponent === "engine" && snap.pos.turn !== state.humanColor && state.history.length) snap = state.history.pop();
@@ -1636,6 +1682,7 @@
     function resetGame(pos, startFen) {
       cancelEngine();
       resetView();
+      coachReset();
       if (review && !review.done) { review = null; stopAnalysis(); }
       state.gameId++;
       setPosition(pos);
@@ -1842,7 +1889,7 @@
       if (state.thinking || isEngineTurn()) return "Wait for Stockfish's move.";
       var m = R.parseMove(state, text);
       if (!m && /^[a-h](x?[a-h])?[18]$/i.test(text)) m = R.parseMove(state, text + "=Q"); // promotion: a queen unless named
-      if (m) { makeMove(m); return null; }
+      if (m) { humanMove(m); return null; }
       // a piece move that more than one piece can make: say which ones
       var t = text.replace(/[+#!?]/g, ""), pm = /^([nbrqkNBRQK])x?([a-h][1-8])$/.exec(t);
       if (pm) {
@@ -1884,8 +1931,8 @@
       if (!boardInteractive()) return;
       var row = +this.dataset.r, col = +this.dataset.c;
       var sp = shownPos(), board = sp.board, legal = view.retry ? R.legalMoves(sp) : state.legalCache;
-      // a move goes to the game, or — while retrying a mistake — to the retry
-      var play = view.retry ? retryMove : makeMove;
+      // a move goes to the game (through the coach), or — while retrying a mistake — to the retry
+      var play = view.retry ? retryMove : humanMove;
 
       if (!state.selected) {
         var piece = board[row][col];
@@ -1939,7 +1986,7 @@
     function boardInteractive() {
       if (state.animating) return false;
       if (view.retry) return view.retry.status === "waiting";
-      return view.ply == null && !state.over && !state.thinking && !isEngineTurn();
+      return view.ply == null && !state.over && !state.thinking && !isEngineTurn() && !(typeof coach !== "undefined" && coach.checking);
     }
     function resetView() { view.ply = null; view.retry = null; }
     function goToPly(k) {
@@ -1994,6 +2041,7 @@
     function analystFailed() {
       if (analyst.worker) { try { analyst.worker.terminate(); } catch (e) {} }
       analyst.worker = null; analyst.job = null; analyst.next = null; analyst.gos = analyst.bests = 0;
+      if (typeof coach !== "undefined") { coach.gen++; coach.busy = false; coach.queue = []; coach.waiting = {}; coach.checking = false; }
       analyst.onReady = [];
       if (review && !review.done) review = null;
       // a worker the browser killed (phones do, under memory pressure) is restarted on the next request, twice
@@ -2119,6 +2167,7 @@
       rv.result = V.review(rv.evals, moves);
       rv.opening = openings && standardStart() ? openings.opening(rv.positions) : null;
       rv.done = true;
+      profileFromReview(rv);
       announce("Review ready: White " + fmtAcc(rv.result.w.accuracy) + ", Black " + fmtAcc(rv.result.b.accuracy) + " accuracy.");
       render();
     }
@@ -2288,14 +2337,17 @@
         arrows.push([rv.best[k - 1], "best"]);
       }
       if (analysisOn && live && live.lines[0] && live.lines[0].pv[0] && !view.retry) arrows.push([live.lines[0].pv[0], "engine"]);
+      if (view.ply == null && !view.retry) arrows = arrows.concat(coach.arrows);
       svg.innerHTML = '<defs><marker id="ahBest" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-best"/></marker>' +
-        '<marker id="ahEngine" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-engine"/></marker></defs>' +
+        '<marker id="ahEngine" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-engine"/></marker>' +
+        '<marker id="ahThreat" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-threat"/></marker>' +
+        '<marker id="ahMine" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah-mine"/></marker></defs>' +
         arrows.map(function (a) {
           var f = R.parseSquare(a[0].slice(0, 2)), t = R.parseSquare(a[0].slice(2, 4));
           function xy(sq) { var vr = state.flipped ? 7 - sq[0] : sq[0], vc = state.flipped ? 7 - sq[1] : sq[1]; return [vc * 100 + 50, vr * 100 + 50]; }
           var p = xy(f), q = xy(t), dx = q[0] - p[0], dy = q[1] - p[1], len = Math.sqrt(dx * dx + dy * dy) || 1;
           var ex = q[0] - dx / len * 34, ey = q[1] - dy / len * 34;
-          return '<line class="arrow ' + a[1] + '" x1="' + p[0] + '" y1="' + p[1] + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) + '" marker-end="url(#ah' + (a[1] === "best" ? "Best" : "Engine") + ')"/>';
+          return '<line class="arrow ' + a[1] + '" x1="' + p[0] + '" y1="' + p[1] + '" x2="' + ex.toFixed(1) + '" y2="' + ey.toFixed(1) + '" marker-end="url(#ah' + a[1].charAt(0).toUpperCase() + a[1].slice(1) + ')"/>';
         }).join("");
       svg.dataset.count = arrows.length;
     }
@@ -2327,6 +2379,8 @@
       if (!rv) return;
       var r = rv.result;
       document.getElementById("rvOpening").textContent = rv.opening ? rv.opening.eco + " " + rv.opening.name : "";
+      document.getElementById("rvSaved").hidden = !rv.logged;
+      document.getElementById("rvSaved").innerHTML = rv.logged ? "Your " + (rv.logged === 1 ? "mistake was" : "mistakes were") + ' saved for review — they come back as puzzles in <a href="puzzles/?mode=review">Review</a>, and count in <a href="train/">My training</a>.' : "";
       ["w", "b"].forEach(function (c) {
         var s = r[c], el = document.getElementById(c === "w" ? "rvWhite" : "rvBlack");
         el.innerHTML = '<span class="acc">' + fmtAcc(s.accuracy) + '</span><span class="cnt k-inaccuracy">' + s.inaccuracy +
@@ -2350,10 +2404,16 @@
         var g = x[0], i = x[1];
         return '<li class="k-' + g.kind + '"><button type="button" class="link" data-show="' + (i + 1) + '">' + esc(moveLabel(i)) + V.SYMBOL[g.kind] + "</button>" +
           ' <span class="muted">' + V.format(rv.evals[i]) + " → " + V.format(rv.evals[i + 1]) + " · best " + esc(bestSAN(rv, i)) + "</span>" +
+          motifTags(rv.motifs && rv.motifs[i]) +
           ' <button type="button" class="btn mini" data-retry="' + i + '">Retry</button></li>';
       }).join("") : '<li class="muted">No mistakes found — well played.</li>';
     }
 
+    function motifTags(m) {
+      if (!m) return "";
+      function tag(t, how) { return THEME_NAMES[t] ? '<a class="mtag" href="puzzles/?theme=' + t + '" title="Practise ' + esc(THEME_NAMES[t]) + ' in puzzles">' + how + " " + esc(THEME_NAMES[t]) + "</a>" : ""; }
+      return m.allowed.map(function (t) { return tag(t, "allowed"); }).concat(m.missed.map(function (t) { return tag(t, "missed"); })).join("");
+    }
     // White's winning chances over the game; dots mark inaccuracies, mistakes and blunders
     function drawGraph(rv) {
       var W = 600, H = 110, n = rv.n, mid = H / 2, el = document.getElementById("rvGraph");
@@ -2382,6 +2442,195 @@
       tip.textContent = (k === 0 ? "Start" : moveLabel(k - 1) + (g && V.SYMBOL[g.kind] ? V.SYMBOL[g.kind] : "")) + " · " + V.format(rv.evals[k]);
       tip.hidden = false;
       tip.style.left = Math.min(88, Math.max(0, k / (rv.n || 1) * 100 - 6)) + "%";
+    }
+
+    // ========================================================== COACH and the learner profile
+    // Against Stockfish the coach (src/profile.js keeps its level) checks each of your moves with the analysis
+    // engine before it is played, and warns when it loses too much: winning chances down 0.2 ("On") or 0.3
+    // ("Light"). Hints and "Show threats" on request. Reviewed games feed the learner profile (../train/).
+    var F = window.ChessProfile, M = window.ChessMotifs;
+    var prof = F.load(localStorage);
+    var COACH_DEPTH = 11, COACH_DROP = { full: 0.2, light: 0.3 }, COACH_HINTS = { full: Infinity, light: 3 };
+    var coach = { gen: 0, queue: [], busy: false, waiting: {}, level: prof.coach.level, warnings: 0, hints: 0, cache: {}, checking: false, warn: null, arrows: [], hintStage: 0, threat: null, note: "" };
+    var THEME_NAMES = { fork: "a fork", pin: "a pin", skewer: "a skewer", hangingPiece: "a loose piece", discoveredAttack: "a discovered attack",
+      discoveredCheck: "a discovered check", backRankMate: "a back-rank mate", smotheredMate: "a smothered mate", promotion: "a promotion",
+      mateIn1: "mate in one", mateIn2: "mate in two", mateIn3: "mate in three", mateIn4: "mate in four", mateIn5: "a forced mate" };
+    function themePhrase(list) {
+      var names = list.map(function (t) { return THEME_NAMES[t]; }).filter(Boolean);
+      return names.length ? names.join(" and ") : "";
+    }
+    function coachOn() { return state.opponent === "engine" && coach.level !== "off" && !state.over; }
+    function coachReset() { coach.gen++; coach.queue = []; coach.busy = false; coach.waiting = {}; coach.warnings = 0; coach.hints = 0; coach.checking = false; coach.warn = null; coach.arrows = []; coach.hintStage = 0; coach.threat = null; coach.note = ""; }
+    function coachClear() { coach.warn = null; coach.arrows = []; coach.hintStage = 0; coach.threat = null; }
+    // evaluation of a position, White's view, with the engine's best move; cached by FEN
+    function coachEval(pos, cb) {
+      var fen = R.toFEN(pos), st = R.status(pos);
+      if (coach.cache[fen]) { cb(coach.cache[fen]); return; }
+      if (st.mate) { cb({ ev: V.fromEngine({ mate: 0 }, pos.turn), best: null }); return; }
+      if (st.stalemate || R.insufficientMaterial(pos)) { cb({ ev: { cp: 0, mate: null }, best: null }); return; }
+      // the coach's searches run one at a time (a new search would stop the running one), and a position
+      // already queued is shared by everyone asking for it
+      if (coach.waiting[fen]) { coach.waiting[fen].push(cb); return; }
+      coach.waiting[fen] = [cb];
+      coach.queue.push({ fen: fen, pos: pos });
+      coachPump();
+    }
+    function coachPump() {
+      if (coach.busy || !coach.queue.length) return;
+      var job = coach.queue.shift(), gen = coach.gen;
+      coach.busy = true;
+      analyse(job.fen, "depth " + COACH_DEPTH, 1, null, function (lines, best) {
+        if (gen !== coach.gen) return;
+        coach.busy = false;
+        var r = { ev: lines[0] ? V.fromEngine(lines[0].score, job.pos.turn) : { cp: 0, mate: null }, best: best };
+        coach.cache[job.fen] = r;
+        var cbs = coach.waiting[job.fen] || []; delete coach.waiting[job.fen];
+        cbs.forEach(function (f) { f(r); });
+        coachPump();
+      });
+    }
+    // your turn against the engine: evaluate the position in the background so a check is quick
+    function coachPrepare() {
+      if (coachOn() && state.turn === state.humanColor && view.ply == null) coachEval(R.clonePos(state), function () {});
+    }
+    // every move you make goes through here (clicks, typed moves, book moves)
+    function humanMove(move) {
+      if (!coachOn() || state.turn !== state.humanColor) { makeMove(move); return; }
+      var before = R.clonePos(state), after = R.play(before, move), mover = state.turn, gid = state.gameId;
+      coachClear();
+      coach.checking = true;
+      state.selected = null; state.legalTargets = [];
+      render();
+      coachEval(before, function (eb) {
+        coachEval(after, function (ea) {
+          if (gid !== state.gameId || !coach.checking) return;
+          coach.checking = false;
+          var drop = V.drop(eb.ev, ea.ev, mover);
+          if (drop < COACH_DROP[coach.level]) { makeMove(move); return; }
+          var reply = ea.best && ea.best !== "(none)" ? R.fromUCI(after, ea.best) : null;
+          var why = reply ? themePhrase(M.detect(R, after, reply)) : "";
+          if (!why && ea.ev.mate != null) why = "a forced mate";
+          coach.warnings++;
+          // still fine afterwards? then the move doesn't lose — it misses something much better
+          var stillOk = (mover === "w" ? 1 : -1) * V.winChance(ea.ev) > -0.15;
+          coach.warn = { move: move, san: R.toSAN(before, move), drop: drop, before: eb.ev, after: ea.ev, reply: ea.best, replySan: reply ? R.toSAN(after, reply) : "", why: why, missed: stillOk };
+          announce("Coach: careful, " + coach.warn.san + " is a " + (drop >= 0.3 ? "blunder" : "mistake") + ".");
+          render();
+        });
+      });
+    }
+    function coachHint() {
+      if (!coachOn() || coach.hints >= COACH_HINTS[coach.level] && coach.hintStage === 0) return;
+      var pos = R.clonePos(state);
+      coachEval(pos, function (r) {
+        if (!r.best || R.toFEN(state) !== R.toFEN(pos)) return;
+        var m = R.fromUCI(pos, r.best);
+        if (coach.hintStage === 0) {
+          coach.hints++;
+          coach.hintStage = 1;
+          state.selected = [m[0], m[1]];
+          state.legalTargets = state.legalCache.filter(function (x) { return x[0] === m[0] && x[1] === m[1]; });
+          coach.note = "Hint: move this piece. Press Hint again to see the move.";
+        } else {
+          coach.hintStage = 2;
+          coach.arrows = [[r.best, "engine"]];
+          coach.note = "Hint: " + R.toSAN(pos, m) + ".";
+        }
+        render();
+      });
+    }
+    // what would the opponent do if it could move again right now?
+    function coachThreats() {
+      if (!coachOn()) return;
+      if (R.inCheck(state)) { coach.note = "You're in check — deal with that first."; render(); return; }
+      var pos = R.clonePos(state), flipped = R.clonePos(state);
+      flipped.turn = opponent(flipped.turn); flipped.enPassant = null;
+      coachEval(pos, function (now) {
+        coachEval(flipped, function (r) {
+          if (R.toFEN(state) !== R.toFEN(pos)) return;
+          var m = r.best && r.best !== "(none)" ? R.fromUCI(flipped, r.best) : null;
+          var serious = m && V.drop(now.ev, r.ev, pos.turn) >= 0.1;
+          coach.threat = m ? r.best : null;
+          coach.arrows = serious ? [[r.best, "threat"]] : [];
+          var why = m ? themePhrase(M.detect(R, flipped, m)) : "";
+          coach.note = !m ? "No threats." : serious ? "Threat: " + R.toSAN(flipped, m) + (why ? " — " + why : "") + ". The red arrow shows it." : "No serious threat right now.";
+          render();
+        });
+      });
+    }
+    function renderCoach() {
+      var bar = document.getElementById("coachBar"), box = document.getElementById("coachBox"), on = coachOn();
+      bar.hidden = !on;
+      if (on) {
+        var myTurn = state.turn === state.humanColor && view.ply == null && !state.animating && !coach.checking;
+        var left = COACH_HINTS[coach.level] - coach.hints;
+        document.getElementById("coachHint").disabled = !myTurn || (left <= 0 && coach.hintStage === 0);
+        document.getElementById("coachHint").textContent = coach.hintStage === 1 ? "Show the move" : "Hint" + (isFinite(left) ? " (" + Math.max(0, left) + " left)" : "");
+        document.getElementById("coachThreat").disabled = !myTurn;
+        document.getElementById("coachInfo").textContent = coach.checking ? "Checking your move…" : coach.note || (coach.level === "light" ? "Light: warns before blunders" : "On: warns before mistakes");
+      }
+      box.hidden = !coach.warn;
+      if (coach.warn) {
+        var w = coach.warn;
+        document.getElementById("coachMsg").textContent = w.missed
+          ? "Wait — " + w.san + " misses something much stronger (" + V.format(w.before) + " → " + V.format(w.after) + "). Look again, or ask for a hint."
+          : "Careful — " + w.san + " is a " + (w.drop >= 0.3 ? "blunder" : "mistake") + (w.why ? ": it allows " + w.why : "") + " (" + V.format(w.before) + " → " + V.format(w.after) + ").";
+      }
+    }
+    document.getElementById("coachHint").addEventListener("click", coachHint);
+    document.getElementById("coachThreat").addEventListener("click", coachThreats);
+    document.getElementById("coachBack").addEventListener("click", function () { coachClear(); coach.note = "Taken back — find something better."; render(); });
+    document.getElementById("coachWhy").addEventListener("click", function () {
+      if (!coach.warn) return;
+      coach.arrows = [[R.toUCI(coach.warn.move), "mine"]].concat(coach.warn.reply ? [[coach.warn.reply, "threat"]] : []);
+      document.getElementById("coachMsg").textContent += coach.warn.replySan ? " The reply " + coach.warn.replySan + " is the red arrow." : "";
+      renderArrows();
+    });
+    document.getElementById("coachPlay").addEventListener("click", function () { var m = coach.warn && coach.warn.move; coachClear(); if (m) makeMove(m); });
+    var coachSel = document.getElementById("coachSel");
+    coachSel.value = coach.level;
+    coachSel.addEventListener("change", function () {
+      coach.level = prof.coach.level = this.value; prof.coach.history = []; F.save(localStorage, prof);
+      coachClear(); coach.checking = false; render(); coachPrepare();
+    });
+    // after a game against the engine: the coach steps back (or in)
+    function coachGameOver() {
+      if (state.opponent !== "engine" || coach.level === "off" || plyCount() < 10) return;
+      var change = F.coachAfterGame(prof, coach.warnings);
+      F.save(localStorage, prof);
+      if (change) {
+        coach.level = change; coachSel.value = change;
+        coach.note = change === "light" ? "You've hardly needed the coach lately — it steps back to Light (warnings for blunders only, 3 hints)." : "The coach steps back in fully for now.";
+        setNotice(coach.note);
+      }
+    }
+
+    // a reviewed game against the engine goes into the profile; your mistakes become review puzzles
+    function themesFor(rv) {
+      var data = { positions: rv.positions, evals: rv.evals, best: rv.best, kinds: rv.result.moves.map(function (g) { return g.kind; }) }, out = {};
+      ["w", "b"].forEach(function (side) {
+        F.gameMistakes(R, M, data, state.uciMoves, side).forEach(function (m) { out[m.ply] = m; });
+      });
+      return out;
+    }
+    function profileFromReview(rv) {
+      rv.motifs = themesFor(rv);
+      if (state.opponent !== "engine") return;
+      var key = gameKey();
+      if (prof.games.some(function (g) { return g.key === key; })) return;
+      var now = Date.now(), side = state.humanColor, mine = [];
+      Object.keys(rv.motifs).forEach(function (k) { if (rv.positions[+k].turn === side) mine.push(rv.motifs[k]); });
+      F.logGame(prof, { t: now, key: key, side: side, result: state.result, accuracy: rv.result[side].accuracy, startFen: state.startFen,
+        moves: state.uciMoves.join(" "), opening: rv.opening ? rv.opening.name : null, level: state.level,
+        mistakes: mine, coach: { level: coach.level, warnings: coach.warnings, hints: coach.hints } });
+      var rating = 1500;
+      try { rating = JSON.parse(localStorage.getItem("chess-puzzles-v1")).rating.r; } catch (e) {}
+      mine.sort(function (a, b) { return (b.kind === "blunder") - (a.kind === "blunder"); }).slice(0, 3).forEach(function (m) {
+        var pz = F.mistakePuzzle(R, rv, state.uciMoves, m, rating);
+        if (pz && !prof.srs[pz[0]]) F.srsAdd(prof, pz, now, true);
+      });
+      F.save(localStorage, prof);
+      rv.logged = mine.length;
     }
 
     // ========================================================== CONTROLS
@@ -2539,7 +2788,7 @@
       var b = e.target.closest("[data-uci]");
       if (!b || !boardInteractive() || view.ply != null) return;
       var m = uciToMove(b.dataset.uci);
-      if (m) makeMove(m);
+      if (m) humanMove(m);
     });
 
     var oppSel = document.getElementById("oppSel");
