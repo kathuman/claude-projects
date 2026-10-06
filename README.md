@@ -1,4 +1,4 @@
-# Claude Projects
+# AI Projects
 
 [![Tube Flow tests](https://github.com/kathuman/claude-projects/actions/workflows/tube-flow-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/tube-flow-ci.yml)
 [![Cobot Lab tests](https://github.com/kathuman/claude-projects/actions/workflows/cobot-lab-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/cobot-lab-ci.yml)
