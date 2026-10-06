@@ -4,6 +4,7 @@
 [![Cobot Lab tests](https://github.com/kathuman/claude-projects/actions/workflows/cobot-lab-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/cobot-lab-ci.yml)
 [![Warehouse Model tests](https://github.com/kathuman/claude-projects/actions/workflows/warehouse-model-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/warehouse-model-ci.yml)
 [![balancebot-sim CI](https://github.com/kathuman/claude-projects/actions/workflows/balancebot-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/balancebot-ci.yml)
+[![Sensor Deck tests](https://github.com/kathuman/claude-projects/actions/workflows/phone-sensors-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/phone-sensors-ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 Simulation and decision tools for engineering and supply chains, built with [Claude](https://claude.com) by
@@ -49,7 +50,7 @@ stress tests, time-to-survive / time-to-recover, and adversarial worst-case sear
 </table>
 
 Also here: Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
-simulator, live face morphing, real options for network design, and a library of supply-chain visualisations.
+simulator, a live view of every phone sensor (streamable to a computer), live face morphing, real options for network design, and a library of supply-chain visualisations.
 
 ## Tests
 
@@ -59,6 +60,7 @@ simulator, live face morphing, real options for network design, and a library of
 | Cobot Lab | 1,634 checks: forward/inverse kinematics, motion profiles, path planner, URDF import | CI |
 | Warehouse Model | 300 checks + 400 designs identical in the FreeCAD script and the web app | CI (FreeCAD-only checks locally) |
 | balancebot-sim | dynamics derivation and energy conservation | CI |
+| Sensor Deck | 52 checks: step and shake detection, compass, FFT, GPS distance, CSV, phone-to-computer message checks | CI |
 
 If you use any of this, [CITATION.cff](CITATION.cff) has the citation.
 
@@ -134,6 +136,7 @@ tube-flow-sim/index.html           — https://kathuman.github.io/claude-project
 warehouse-model/web/index.html     — https://kathuman.github.io/claude-projects/warehouse-model/web/
 face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/
 balancebot-sim/index.html          — https://kathuman.github.io/claude-projects/balancebot-sim/
+phone-sensors/index.html           — https://kathuman.github.io/claude-projects/phone-sensors/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules

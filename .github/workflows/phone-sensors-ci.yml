@@ -1,0 +1,27 @@
+name: Sensor Deck tests
+
+# The maths behind the phone sensor page: step and shake detection, compass, spectrum, GPS distance, CSV, and the
+# checks on every message a computer receives from a phone. Real sensors need a real phone.
+on:
+  push:
+    paths:
+      - 'phone-sensors/**'
+      - '.github/workflows/phone-sensors-ci.yml'
+  pull_request:
+    paths:
+      - 'phone-sensors/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node phone-sensors/tests/core.test.js
+      - name: Syntax-check the browser scripts
+        run: for f in phone-sensors/app.js phone-sensors/src/*.js; do node --check "$f"; done
+        shell: bash

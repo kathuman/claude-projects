@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sensor Deck</title>
+  <meta name="description" content="Every sensor on your phone, live in the browser: accelerometer, gyroscope, compass, magnetometer, light, location, microphone, camera, touch, battery and network. Record to CSV, or stream to a computer over WebRTC by scanning a QR code. By kathuman." />
+  <meta name="theme-color" content="#0a2f52" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='8' y='2' width='16' height='28' rx='3' fill='%230a2f52' stroke='%237dd3fc' stroke-width='2'/%3E%3Cpath d='M11 18l3-5 3 7 3-4' fill='none' stroke='%237dd3fc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  <script>try { var t = localStorage.getItem("sensordeck-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <style>
+    /* Cobot Lab blueprint theme: dark by default, blueprint paper when light is chosen */
+    :root, :root[data-theme="dark"] {
+      --bg: #0a2f52; --panel: #0d3a63; --panel-2: #0b3459; --ink: #bfe4ff; --ink-2: #8fd0f2; --muted: #6fa9cf; --line: #2a5580;
+      --accent: #7dd3fc; --accent-ink: #04202b; --accent-soft: #14496f; --grid: rgba(125,211,252,.07);
+      --good: #4ade80; --warn: #fbbf24; --bad: #ff8a7a;
+      /* chart series x, y, z, magnitude: validated for the dark panel (lightness band, colour-blind separation, 3:1) */
+      --s1: #1f9fd8; --s2: #c7820c; --s3: #e0558f; --s4: #4f9f15;
+      --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -12px rgba(0,0,0,.55);
+      color-scheme: dark;
+    }
+    :root[data-theme="light"] {
+      --bg: #e9f1f8; --panel: #ffffff; --panel-2: #f3f8fc; --ink: #0a2f52; --ink-2: #2d5677; --muted: #5a7c99; --line: #c3d7e8;
+      --accent: #0b6aa2; --accent-ink: #ffffff; --accent-soft: #d8ebf7; --grid: rgba(11,106,162,.08);
+      --good: #15803d; --warn: #a16207; --bad: #c2410c;
+      --s1: #0b6aa2; --s2: #b45309; --s3: #c0267a; --s4: #3f7d20;
+      --shadow: 0 1px 2px rgba(10,47,82,.06), 0 10px 30px -8px rgba(10,47,82,.16);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; } }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; }
+    body {
+      background: var(--bg); color: var(--ink); font-family: "Barlow", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.45;
+      background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 32px 32px; min-height: 100vh; display: flex; flex-direction: column;
+    }
+    a { color: var(--accent); }
+    .mono, .num { font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+    h1, h2, h3, .head { font-family: "Rajdhani", "Arial Narrow", sans-serif; letter-spacing: .02em; }
+
+    header.bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 10px 20px; background: linear-gradient(180deg, var(--panel), var(--bg)); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand .mk { width: 30px; height: 30px; border: 2px solid var(--accent); border-radius: 8px; display: grid; place-items: center; color: var(--accent); }
+    .brand h1 { margin: 0; font-size: 22px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; line-height: 1; }
+    .brand .ver { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; margin-left: 6px; vertical-align: 3px; letter-spacing: 0; }
+    .brand .sub { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .brand .sub a { color: var(--ink-2); text-decoration: none; font-weight: 600; }
+    .hact { display: flex; align-items: center; gap: 8px; }
+    .lnk { font-family: "Rajdhani", sans-serif; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; }
+    .lnk:hover { color: var(--accent); border-color: var(--accent); }
+    .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--ink-2); display: grid; place-items: center; cursor: pointer; }
+    .icon-sun { display: none; } :root[data-theme="light"] .icon-sun { display: block; } :root[data-theme="light"] .icon-moon { display: none; }
+
+    main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 18px 20px 28px; flex: 1; }
+    .tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+    .tabs button { font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .05em; text-transform: uppercase; padding: 9px 16px; background: transparent; color: var(--ink-2); border: 0; cursor: pointer; }
+    .tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+    .intro { padding: 14px 16px; margin-bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+    .intro p { margin: 0; color: var(--ink-2); flex: 1 1 320px; }
+    .btn { font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 14px; letter-spacing: .05em; text-transform: uppercase; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); border-radius: 9px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
+    .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn.primary:hover:not(:disabled) { color: var(--accent-ink); filter: brightness(1.08); }
+    .btn.rec[aria-pressed="true"] { background: var(--bad); border-color: var(--bad); color: #2b0600; }
+    .btn.small { font-size: 12px; padding: 5px 9px; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .pill { font-family: "IBM Plex Mono", monospace; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; color: var(--ink-2); white-space: nowrap; }
+    .pill.on { border-color: var(--good); color: var(--good); }
+    .pill.warn { border-color: var(--warn); color: var(--warn); }
+    .pill.bad { border-color: var(--bad); color: var(--bad); }
+    input.code { font-family: "IBM Plex Mono", monospace; font-size: 18px; letter-spacing: .25em; text-transform: uppercase; width: 9.5em; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+    .warnbox { border: 1px solid var(--warn); color: var(--warn); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+
+    /* derived readings */
+    .derived { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .tile { padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-height: 92px; }
+    .tile .lbl { font-family: "Rajdhani", sans-serif; font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .tile .big { font-family: "IBM Plex Mono", monospace; font-size: 26px; font-weight: 600; line-height: 1.15; }
+    .tile .small { font-size: 12.5px; color: var(--ink-2); }
+    .tile.vis { flex-direction: row; align-items: center; gap: 12px; }
+    .rose { width: 64px; height: 64px; flex: none; }
+    .bubble { width: 64px; height: 64px; flex: none; border-radius: 50%; border: 2px solid var(--line); position: relative; background: radial-gradient(circle, transparent 10px, var(--line) 11px, transparent 12px); }
+    .bubble i { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: var(--good); left: 50%; top: 50%; transform: translate(-50%, -50%); transition: transform .08s linear; }
+
+    /* sensor cards */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 12px; }
+    .card { padding: 12px 14px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .card .top { display: flex; align-items: center; gap: 8px; }
+    .card h3 { margin: 0; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; flex: 1; min-width: 0; }
+    .card .rate { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--muted); }
+    .card .msg { font-size: 13px; color: var(--ink-2); min-height: 0; }
+    .card .msg:empty { display: none; }
+    .card .msg.bad { color: var(--bad); }
+    .vals { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 4px 10px; }
+    .val { display: flex; flex-direction: column; min-width: 0; }
+    .val .k { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .val .k i { width: 10px; height: 3px; border-radius: 2px; flex: none; }
+    .val .v { font-family: "IBM Plex Mono", monospace; font-size: 16px; color: var(--ink); white-space: nowrap; }
+    .chartbox { position: relative; height: 120px; }
+    .chartbox canvas { width: 100%; height: 100%; display: block; touch-action: pan-y; }
+    .tip { position: absolute; pointer-events: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink); white-space: nowrap; z-index: 2; box-shadow: var(--shadow); }
+    .tip b { font-weight: 500; color: var(--muted); }
+    .card .src { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--muted); }
+    .card .about { font-size: 12.5px; color: var(--ink-2); }
+    .extra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .extra canvas, .extra video, .extra img { border-radius: 8px; border: 1px solid var(--line); background: var(--bg); max-width: 100%; }
+    .phone3d { width: 70px; height: 110px; perspective: 400px; flex: none; margin: 4px 14px; }
+    .phone3d .body { width: 100%; height: 100%; border: 2px solid var(--accent); border-radius: 10px; background: linear-gradient(160deg, var(--accent-soft), var(--panel-2)); transform-style: preserve-3d; position: relative; }
+    .phone3d .body::after { content: ""; position: absolute; left: 50%; top: 6px; width: 16px; height: 3px; margin-left: -8px; border-radius: 2px; background: var(--accent); }
+    .touchpad { width: 100%; height: 150px; border: 1px dashed var(--line); border-radius: 10px; position: relative; touch-action: none; background: var(--panel-2); overflow: hidden; user-select: none; -webkit-user-select: none; }
+    .touchpad span { position: absolute; border-radius: 50%; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
+    .touchpad em { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-style: normal; font-size: 13px; pointer-events: none; }
+    dl.info { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 13px; }
+    dl.info dt { color: var(--muted); }
+    dl.info dd { margin: 0; font-family: "IBM Plex Mono", monospace; font-size: 12px; word-break: break-word; }
+    .tablewrap { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+    table.data { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; }
+    table.data th, table.data td { padding: 3px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    table.data th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 500; }
+
+    /* computer view: pairing */
+    .pair { padding: 18px; display: grid; grid-template-columns: auto 1fr; gap: 18px 24px; align-items: center; margin-bottom: 14px; }
+    .qr { background: #fff; padding: 10px; border-radius: 10px; width: 200px; height: 200px; display: grid; place-items: center; }
+    .qr img, .qr canvas { display: block; width: 180px !important; height: 180px !important; }
+    .pair .code { font-family: "IBM Plex Mono", monospace; font-size: 34px; letter-spacing: .3em; color: var(--accent); font-weight: 600; }
+    .pair ol { margin: 6px 0 10px; padding-left: 20px; color: var(--ink-2); }
+    .pair .url { font-family: "IBM Plex Mono", monospace; font-size: 12px; word-break: break-all; color: var(--ink-2); }
+    .empty { padding: 30px 16px; text-align: center; color: var(--muted); }
+
+    footer.foot { border-top: 1px solid var(--line); padding: 12px 20px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--muted); text-align: center; }
+    footer.foot .consult { color: var(--ink); }
+
+    @media (max-width: 640px) {
+      header.bar { padding: 8px 16px; }
+      .brand .sub .rest { display: none; }
+      main { padding: 14px 16px 22px; }
+      .pair { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+      .pair ol { text-align: left; }
+      .tabs button { padding: 8px 12px; font-size: 14px; }
+      .hide-sm { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { .bubble i { transition: none; } }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="mk" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l4-7 5 11 4-6 5 4"/></svg></span>
+      <div>
+        <h1>Sensor Deck<span class="ver" id="ver" title="App version"></span></h1>
+        <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"> · every phone sensor, live</span></div>
+      </div>
+    </div>
+    <div class="hact">
+      <a class="lnk" href="../index.html">&larr; <span class="hide-sm">AI </span>Projects</a>
+      <button id="themeBtn" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tabPhone" aria-selected="true">This phone</button>
+      <button type="button" role="tab" id="tabView" aria-selected="false">Computer view</button>
+    </div>
+
+    <div class="warnbox" id="insecure" hidden>This page is not on HTTPS, so the browser will not give it any sensors. Open it from https://kathuman.github.io/claude-projects/phone-sensors/.</div>
+
+    <!-- ===== This phone ===== -->
+    <section id="phoneView">
+      <div class="panel intro">
+        <p id="phoneIntro">Tap <b>Start sensors</b> and allow what the browser asks for. Everything stays on this phone unless you connect it to a computer. The camera and microphone start from their own cards.</p>
+        <div class="row">
+          <button class="btn primary" id="startAll" type="button">Start sensors</button>
+          <button class="btn" id="stopAll" type="button" disabled>Stop all</button>
+          <button class="btn" id="demoBtn" type="button" aria-pressed="false" title="Play a simulated phone: someone walking with it in hand">Demo phone</button>
+        </div>
+      </div>
+
+      <div class="panel intro" id="connectBox">
+        <p><b>Stream to a computer:</b> open this page on the computer, choose <i>Computer view</i>, then scan its QR code with this phone or type its code here.</p>
+        <div class="row">
+          <input class="code" id="codeIn" maxlength="7" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Pairing code" />
+          <button class="btn" id="connectBtn" type="button">Connect</button>
+          <span class="pill" id="linkPill">Not connected</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Computer view ===== -->
+    <section id="viewView" hidden>
+      <div class="panel pair" id="pairBox">
+        <div class="qr" id="qr" aria-label="QR code to open on the phone"></div>
+        <div>
+          <div class="head" style="font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Pairing code</div>
+          <div class="code" id="pairCode">······</div>
+          <ol>
+            <li>Scan the QR code with the phone's camera, or open this page on the phone and type the code.</li>
+            <li>On the phone, tap <b>Start sensors</b>. Readings appear here as they arrive.</li>
+          </ol>
+          <div class="row">
+            <span class="pill" id="viewPill">Getting a code…</span>
+            <span class="pill" id="rttPill" hidden></span>
+            <button class="btn small" id="buzzBtn" type="button" hidden>Buzz the phone</button>
+            <button class="btn small" id="demoTab" type="button">Try with a demo phone</button>
+          </div>
+          <div class="url" id="pairUrl"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== shared: recording, derived readings and the sensor cards ===== -->
+    <div class="panel intro" id="recBox">
+      <p><b>Record:</b> every reading from every running sensor, at its own rate, saved on this device as CSV or JSON.</p>
+      <div class="row">
+        <button class="btn rec" id="recBtn" type="button" aria-pressed="false">● Record</button>
+        <span class="pill" id="recPill">0 readings</span>
+        <button class="btn small" id="csvBtn" type="button" disabled>CSV</button>
+        <button class="btn small" id="legendBtn" type="button">CSV columns</button>
+        <button class="btn small" id="jsonBtn" type="button" disabled>JSON</button>
+      </div>
+    </div>
+
+    <div class="derived" id="derived">
+      <div class="panel tile"><span class="lbl">Steps</span><span class="big" id="dSteps">0</span><span class="small" id="dCadence">– steps/min</span></div>
+      <div class="panel tile vis">
+        <svg class="rose" viewBox="-32 -32 64 64" aria-hidden="true"><circle r="29" fill="none" stroke="var(--line)" stroke-width="2"/><g id="roseNeedle"><path d="M0 -24 L5 0 L0 4 L-5 0Z" fill="var(--bad)"/><path d="M0 24 L5 0 L0 -4 L-5 0Z" fill="var(--muted)"/></g><text y="-17" text-anchor="middle" font-size="8" fill="var(--ink-2)" font-family="IBM Plex Mono">N</text></svg>
+        <div><span class="lbl">Heading</span><div class="big" id="dHeading">–</div><span class="small" id="dHeadingNote">start orientation</span></div>
+      </div>
+      <div class="panel tile vis">
+        <div class="bubble" aria-hidden="true"><i id="bubbleDot"></i></div>
+        <div><span class="lbl">Level</span><div class="big" id="dTilt">–</div><span class="small" id="dTiltXY">tilt from flat</span></div>
+      </div>
+      <div class="panel tile"><span class="lbl">Shakes</span><span class="big" id="dShakes">0</span><span class="small">shake the phone hard</span></div>
+      <div class="panel tile"><span class="lbl">Motion rhythm</span><span class="big" id="dFreq">–</span><span class="small">strongest frequency, last 5 s</span></div>
+      <div class="panel tile"><span class="lbl">Distance</span><span class="big" id="dDist">0 m</span><span class="small" id="dDistNote">from good GPS fixes</span></div>
+    </div>
+
+    <div class="grid" id="cards"></div>
+    <p class="empty" id="viewEmpty" hidden>Waiting for a phone. The sensor cards fill in as soon as it starts streaming.</p>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Sensor Deck <span id="verFoot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <div>Built with Claude · readings stay on your devices; pairing uses the public PeerJS broker only to introduce the phone and the computer</div>
+  </footer>
+
+  <script src="vendor/qrcode.min.js"></script>
+  <script src="vendor/peerjs.min.js"></script>
+  <script src="src/core.js"></script>
+  <script src="src/sensors.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
