@@ -12,6 +12,12 @@
  *            goal "mate" accepts any mating move at the learner's last turn, "any" any legal move.
  *            engine: true → the test checks the first move against Stockfish.
  *   quiz     choose an answer (options: number of choices, answer: index of the correct one)
+ *   play     play an ending out against perfect defence (the Lichess tablebase, 7 pieces or fewer):
+ *            goal "win" ends in checkmate or in a promotion that keeps the win; goal "draw" holds for
+ *            `moves` moves. A move that changes the result is taken back with an explanation.
+ *   Options: drill: true marks an opening line; `opening` names it, and the test checks the line
+ *            against the Lichess opening catalogue (unless book: false). flip: true shows the board
+ *            from Black's side; move and play steps flip by themselves when the learner plays Black.
  */
 (function (root) {
   "use strict";
@@ -187,6 +193,104 @@
         { id: "plan", steps: [
           { k: "plan.intro", type: "explain", fen: START },
           { k: "plan.play", type: "explain", fen: START, link: "../index.html" }
+        ]}
+      ]},
+      // ---- opening courses: the idea, then a drill of the main line (checked against the Lichess catalogue)
+      { id: "openings", lessons: [
+        { id: "italian", practice: "opening", steps: [
+          { k: "italian.intro", type: "explain", fen: "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3", arrows: "c4f7 c2c3 d2d4" },
+          { k: "italian.drill", type: "move", fen: START, drill: true, opening: "Italian Game", solution: ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "c3", "Nf6", "d3", "d6", "O-O", "O-O"] },
+          { k: "italian.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "ruylopez", practice: "opening", steps: [
+          { k: "ruylopez.intro", type: "explain", fen: "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3", arrows: "b5c6 c6e5" },
+          { k: "ruylopez.drill", type: "move", fen: START, drill: true, opening: "Ruy Lopez", solution: ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O"] },
+          { k: "ruylopez.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "queensgambit", practice: "opening", steps: [
+          { k: "queensgambit.intro", type: "explain", fen: "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq - 0 2", arrows: "c4d5" },
+          { k: "queensgambit.drill", type: "move", fen: START, drill: true, opening: "Queen's Gambit Declined", solution: ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7", "e3", "O-O", "Nf3", "h6", "Bh4", "b6"] },
+          { k: "queensgambit.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "london", practice: "opening", steps: [
+          { k: "london.intro", type: "explain", fen: "rnbqkb1r/ppp1pppp/5n2/3p4/3P1B2/5N2/PPP1PPPP/RN1QKB1R b KQkq - 3 3", marks: "f4 d4 e3 c3" },
+          { k: "london.drill", type: "move", fen: START, drill: true, opening: "London System", book: false, solution: ["d4", "d5", "Nf3", "Nf6", "Bf4", "e6", "e3", "c5", "c3", "Nc6", "Nbd2", "Bd6", "Bg3", "O-O", "Bd3"] },
+          { k: "london.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "sicilian", practice: "opening", steps: [
+          { k: "sicilian.intro", type: "explain", flip: true, fen: "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", arrows: "c5d4" },
+          { k: "sicilian.drill", type: "move", fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", drill: true, opening: "Sicilian Defense: Najdorf", solution: ["c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"] },
+          { k: "sicilian.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "french", practice: "opening", steps: [
+          { k: "french.intro", type: "explain", flip: true, fen: "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", arrows: "d7d5 c7c5", marks: "c8" },
+          { k: "french.drill", type: "move", fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", drill: true, opening: "French Defense", solution: ["e6", "d4", "d5", "Nc3", "Nf6", "Bg5", "Be7", "e5", "Nfd7", "Bxe7", "Qxe7"] },
+          { k: "french.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "carokann", practice: "opening", steps: [
+          { k: "carokann.intro", type: "explain", flip: true, fen: "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2", arrows: "d7d5 c8f5" },
+          { k: "carokann.drill", type: "move", fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1", drill: true, opening: "Caro-Kann Defense", solution: ["c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Bf5", "Ng3", "Bg6", "h4", "h6"] },
+          { k: "carokann.quiz", type: "quiz", options: 3, answer: 0 }
+        ]},
+        { id: "kingsindian", practice: "opening", steps: [
+          { k: "kingsindian.intro", type: "explain", flip: true, fen: "rnbqk2r/ppp1ppbp/3p1np1/8/2PPP3/2N5/PP3PPP/R1BQKBNR w KQkq - 0 5", arrows: "g7d4 e7e5 f7f5" },
+          { k: "kingsindian.drill", type: "move", fen: "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1", drill: true, opening: "King's Indian Defense", solution: ["Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5"] },
+          { k: "kingsindian.quiz", type: "quiz", options: 3, answer: 0 }
+        ]}
+      ]},
+      // ---- middlegame plans; the practical tests are Lichess puzzles (ids in the comments), checked by Stockfish
+      { id: "middlegame", lessons: [
+        { id: "greekgift", practice: "sacrifice", steps: [
+          { k: "greekgift.intro", type: "explain", fen: "r1bq1rk1/pp2nppp/2n1p3/3pP3/1b6/2NB1N2/P2B1PPP/R2QR1K1 w - - 5 12", arrows: "d3h7 f3g5 d1h5" },
+          // Lichess puzzle Zd3DT
+          { k: "greekgift.task1", type: "move", fen: "r1bq1rk1/ppp1nppp/1bn1p3/3pP3/3P4/P1NB1N2/1PPB1PPP/R2QK2R w KQ - 5 9", solution: ["Bxh7+", "Kxh7", "Ng5+"], engine: true },
+          // Lichess puzzle vnssS (from a master game)
+          { k: "greekgift.task2", type: "move", fen: "rn3rk1/p2qnppp/bp2p3/2ppP3/3P1P2/P1BB1N2/1PP3PP/R2QK2R w KQ - 5 11", solution: ["Bxh7+", "Kxh7", "Ng5+", "Kg8", "Qh5"], engine: true }
+        ]},
+        { id: "seventh", practice: "endgame", steps: [
+          { k: "seventh.intro", type: "explain", fen: "2r3k1/pR3ppp/8/8/8/8/P4PPP/6K1 w - - 0 1", marks: "a7 f7 g7 h7", arrows: "b7f7" },
+          // Lichess puzzle 4L3lu
+          { k: "seventh.task", type: "move", fen: "8/pR3pk1/2p3pp/4N3/1P6/6P1/r4n1P/5K2 w - - 0 28", solution: ["Rxf7+", "Kg8", "Rxf2"], engine: true }
+        ]},
+        { id: "iqp", steps: [
+          { k: "iqp.intro", type: "explain", fen: "r1bq1rk1/pp2bppp/2n1pn2/8/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 0 9", marks: "d4 d5 e5 c5" },
+          { k: "iqp.quiz", type: "quiz", fen: "r1bq1rk1/pp2bppp/2n1pn2/8/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 0 9", options: 3, answer: 0 },
+          { k: "iqp.quiz2", type: "quiz", fen: "r1bq1rk1/pp2bppp/2n1pn2/8/3P4/2NB1N2/PP3PPP/R1BQ1RK1 w - - 0 9", options: 3, answer: 1 }
+        ]},
+        { id: "badbishop", steps: [
+          { k: "badbishop.intro", type: "explain", fen: "4k3/2b5/3p1p2/2pPpPp1/2P1P1P1/8/3N4/4K3 w - - 0 1", marks: "c5 d6 e5 f6 g5" },
+          { k: "badbishop.quiz", type: "quiz", fen: "4k3/2b5/3p1p2/2pPpPp1/2P1P1P1/8/3N4/4K3 w - - 0 1", options: 3, answer: 1 }
+        ]},
+        { id: "minority", steps: [
+          { k: "minority.intro", type: "explain", fen: "r1bq1rk1/pp1n1ppp/2p2n2/3p4/3P4/2NBPN2/PPQ2PPP/R3K2R w KQ - 0 10", arrows: "b2b4 b4b5", marks: "c6" },
+          { k: "minority.quiz", type: "quiz", fen: "r1bq1rk1/pp1n1ppp/2p2n2/3p4/3P4/2NBPN2/PPQ2PPP/R3K2R w KQ - 0 10", options: 3, answer: 0 }
+        ]}
+      ]},
+      // ---- endgame technique: play the ending out against perfect defence (the Lichess tablebase)
+      { id: "endgames", lessons: [
+        { id: "playkq", practice: "queenEndgame", steps: [
+          { k: "playkq.intro", type: "explain", fen: "8/8/3k4/8/8/8/8/4K2Q w - - 0 1" },
+          { k: "playkq.play", type: "play", goal: "win", fen: "8/8/3k4/8/8/8/8/4K2Q w - - 0 1" }
+        ]},
+        { id: "playkr", practice: "rookEndgame", steps: [
+          { k: "playkr.intro", type: "explain", fen: "8/8/4k3/8/8/8/8/R3K3 w - - 0 1", arrows: "a1a5" },
+          { k: "playkr.play", type: "play", goal: "win", fen: "8/8/4k3/8/8/8/8/R3K3 w - - 0 1" }
+        ]},
+        { id: "playkp", practice: "pawnEndgame", steps: [
+          { k: "playkp.intro", type: "explain", fen: "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1", marks: "d7 e7 f7" },
+          { k: "playkp.play", type: "play", goal: "win", fen: "4k3/8/4K3/4P3/8/8/8/8 w - - 0 1" }
+        ]},
+        { id: "defendkp", practice: "pawnEndgame", steps: [
+          { k: "defendkp.intro", type: "explain", flip: true, fen: "3k4/8/8/3K4/3P4/8/8/8 b - - 0 1" },
+          { k: "defendkp.play", type: "play", goal: "draw", moves: 12, fen: "3k4/8/8/3K4/3P4/8/8/8 b - - 0 1" }
+        ]},
+        { id: "playlucena", practice: "rookEndgame", steps: [
+          { k: "playlucena.intro", type: "explain", fen: "1K6/1P2k3/8/8/8/8/2r5/3R4 w - - 0 1", arrows: "d1d4" },
+          { k: "playlucena.play", type: "play", goal: "win", fen: "1K6/1P2k3/8/8/8/8/2r5/3R4 w - - 0 1" }
+        ]},
+        { id: "holdphilidor", practice: "rookEndgame", steps: [
+          { k: "holdphilidor.intro", type: "explain", flip: true, fen: "4k3/8/r7/4PK2/8/8/8/7R b - - 0 1", marks: "a6 b6 c6 d6 e6 f6 g6 h6" },
+          { k: "holdphilidor.play", type: "play", goal: "draw", moves: 15, fen: "4k3/8/r7/4PK2/8/8/8/7R b - - 0 1" }
         ]}
       ]}
     ]

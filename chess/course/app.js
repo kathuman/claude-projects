@@ -14,7 +14,9 @@
   // 1.2.0 lessons on tactics and endings link to puzzles of their theme (../puzzles/)
   // 1.3.0 link to My training (../train/)
   // 1.4.0 Cobot Lab blueprint theme (../theme.css)
-  var VERSION = "1.4.0";
+  // 1.5.0 three new levels: opening courses (8 drills), middlegame plans, endgames played out against perfect
+  //       defence from the Lichess tablebase ("play" steps); the board turns round when you play Black
+  var VERSION = "1.5.0";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];
@@ -222,16 +224,22 @@
   });
 
   // ---------------------------------------------------------------- board
-  var boardEl = $("board"), cells = [];
-  for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
-    var b = document.createElement("button");
-    b.type = "button"; b.className = "sq " + ((r + c) % 2 ? "d" : "l");
-    b.dataset.r = r; b.dataset.c = c; b.setAttribute("role", "gridcell");
-    if (r === 7) b.insertAdjacentHTML("beforeend", '<span class="coord f">' + "abcdefgh"[c] + "</span>");
-    if (c === 0) b.insertAdjacentHTML("beforeend", '<span class="coord r">' + (8 - r) + "</span>");
-    b.addEventListener("click", onSquare);
-    boardEl.appendChild(b); cells.push(b);
+  var boardEl = $("board"), cells = [], flipped = false;
+  function buildBoard() {
+    boardEl.innerHTML = "";
+    cells = new Array(64);
+    for (var vr = 0; vr < 8; vr++) for (var vc = 0; vc < 8; vc++) {
+      var r = flipped ? 7 - vr : vr, c = flipped ? 7 - vc : vc;
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "sq " + ((r + c) % 2 ? "d" : "l");
+      b.dataset.r = r; b.dataset.c = c; b.setAttribute("role", "gridcell");
+      if (vr === 7) b.insertAdjacentHTML("beforeend", '<span class="coord f">' + "abcdefgh"[c] + "</span>");
+      if (vc === 0) b.insertAdjacentHTML("beforeend", '<span class="coord r">' + (8 - r) + "</span>");
+      b.addEventListener("click", onSquare);
+      boardEl.appendChild(b); cells[r * 8 + c] = b;
+    }
   }
+  buildBoard();
   function cell(r, c) { return cells[r * 8 + c]; }
   function pieceName(p) { return (R.colorOf(p) === "w" ? T("ui.white") : T("ui.black")) + " " + T("piece." + p.toUpperCase()); }
   function drawBoard() {
@@ -257,7 +265,9 @@
     var svg = $("arrows"), out = '<defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="rgba(224,112,40,.85)"/></marker></defs>';
     S.arrows.forEach(function (a) {
       var f = R.parseSquare(a.slice(0, 2)), t = R.parseSquare(a.slice(2, 4));
-      var x1 = f[1] * 100 + 50, y1 = f[0] * 100 + 50, x2 = t[1] * 100 + 50, y2 = t[0] * 100 + 50;
+      function vx(q) { return (flipped ? 7 - q[1] : q[1]) * 100 + 50; }
+      function vy(q) { return (flipped ? 7 - q[0] : q[0]) * 100 + 50; }
+      var x1 = vx(f), y1 = vy(f), x2 = vx(t), y2 = vy(t);
       var len = Math.hypot(x2 - x1, y2 - y1), k = (len - 32) / len;
       out += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + (x1 + (x2 - x1) * k) + '" y2="' + (y1 + (y2 - y1) * k) + '" stroke="rgba(224,112,40,.85)" stroke-width="16" stroke-linecap="round" marker-end="url(#ah)"/>';
     });
@@ -295,6 +305,9 @@
     S.arrows = (st.arrows || "").split(/\s+/).filter(Boolean);
     S.sel = null; S.targets = []; S.found = {}; S.miss = null; S.last = null; S.ply = 0; S.picked = null;
     S.solved = st.type === "explain"; S.feedback = null;
+    // from Black's side when the step says so, or when the learner plays Black
+    var flip = st.flip != null ? !!st.flip : ((st.type === "move" || st.type === "play") && S.pos.turn === "b");
+    if (flip !== flipped) { flipped = flip; buildBoard(); }
     if (st.type === "squares") {
       var f = R.parseSquare(st.from);
       S.sel = f; S.marks = {};
@@ -323,10 +336,11 @@
     } else opts.hidden = true;
     if (st.type === "squares" && !S.feedback) S.feedback = { kind: "info", text: T("ui.found", { n: count(S.found), m: count(S.need) }) };
     showFeedback();
-    var interactive = st.type === "move" || st.type === "click" || st.type === "squares";
+    var interactive = st.type === "move" || st.type === "click" || st.type === "squares" || st.type === "play";
     $("hintBtn").hidden = !(EN[st.k + ".hint"] != null) || S.solved;
     $("solBtn").hidden = st.type !== "move" || S.solved;
-    $("retryBtn").hidden = !(interactive && S.solved && st.type === "move");
+    $("retryBtn").hidden = !(interactive && S.solved && (st.type === "move" || st.type === "play"));
+    if (st.type === "play") $("hintBtn").hidden = S.solved;
     $("backBtn").disabled = S.gi === 0 && S.si === 0;
     var last = S.si === ls.lesson.steps.length - 1;
     $("nextBtn").textContent = last ? (S.gi === LESSONS.length - 1 ? T("ui.done") : T("ui.nextLesson")) : (S.solved ? T("ui.next") : T("ui.next"));
@@ -373,7 +387,7 @@
       } else if (!(S.sel && S.sel[0] === r && S.sel[1] === c)) flashMiss(key, T("ui.notReachable"));
       renderStep(true); return;
     }
-    if (st.type !== "move" || S.solved) return;
+    if ((st.type !== "move" && st.type !== "play") || S.solved) return;
     var p = S.pos.board[r][c];
     if (p && R.colorOf(p) === S.pos.turn) {
       S.sel = [r, c];
@@ -383,7 +397,8 @@
     if (!S.sel) { setFeedback("info", T("ui.clickSquare")); return; }
     var options = S.targets.filter(function (m) { return m[2] === r && m[3] === c; });
     if (!options.length) { S.sel = null; S.targets = []; drawBoard(); return; }
-    if (options[0][4] === "promo") askPromotion(options, tryMove); else tryMove(options[0]);
+    var go = st.type === "play" ? playMove : tryMove;
+    if (options[0][4] === "promo") askPromotion(options, go); else go(options[0]);
   }
   function flashMiss(key, msg) {
     S.miss = key; setFeedback("bad", msg);
@@ -422,6 +437,8 @@
           if (tok !== S.token) return;
           var reply = R.findMove(S.pos, st.solution[S.ply + 1]), mover = S.pos.turn, replySan = R.toSAN(S.pos, reply);
           S.pos = R.play(S.pos, reply); S.last = reply; S.ply += 2; S.busy = false;
+          // a line that ends with the reply (an opening drill) is complete once the reply is on the board
+          if (S.ply >= st.solution.length) { S.solved = true; markDoneIfLast(); setFeedback("ok", okText(st)); drawBoard(); renderStep(true); return; }
           setFeedback("info", T("ui.theirMove") + " " + figurine(replySan, mover) + " · " + T("ui.yourMove"));
           drawBoard(); renderStep(true);
         }, 650);
@@ -431,9 +448,69 @@
       return;
     }
     var stale = R.status(after).stalemate;
-    setFeedback("bad", stale ? T("ui.stalemate") : T("ui.wrong"));
+    setFeedback("bad", stale ? T("ui.stalemate") : st.drill ? T("ui.notMainLine") : T("ui.wrong"));
     S.busy = true;
     setTimeout(function () { if (tok !== S.token) return; S.pos = before; S.last = null; S.busy = false; drawBoard(); }, 900);
+  }
+  // ---- play an ending out against perfect defence. Every learner move is looked up in the Lichess tablebase:
+  // the lookup of the position after it gives the result with best play (for the defender to move) and the
+  // defender's moves, best first. A move that changes the result is taken back; otherwise the best defence
+  // is played.
+  var tbCache = {};
+  function tablebase(pos) {
+    var fen = R.toFEN(pos);
+    if (tbCache[fen]) return Promise.resolve(tbCache[fen]);
+    return fetch("https://tablebase.lichess.ovh/standard?fen=" + encodeURIComponent(fen))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (d) { tbCache[fen] = d; return d; });
+  }
+  function playDone(text) { S.solved = true; S.busy = false; markDoneIfLast(); setFeedback("ok", text); renderStep(true); }
+  function playMove(move) {
+    var st = step(), before = S.pos, after = R.play(before, move), tok = S.token, now = R.status(after);
+    S.sel = null; S.targets = []; S.arrows = []; S.pos = after; S.last = move; S.busy = true; drawBoard();
+    function takeBack(text) {
+      setFeedback("bad", text);
+      setTimeout(function () { if (tok !== S.token) return; S.pos = before; S.last = null; S.busy = false; drawBoard(); }, 1400);
+    }
+    if (now.mate) { playDone(T("ui.tbWon")); return; }
+    if (now.stalemate || R.insufficientMaterial(after)) {
+      if (st.goal === "draw") playDone(T("ui.tbHeld")); else takeBack(now.stalemate ? T("ui.tbStalemate") : T("ui.tbSlip", { result: T("ui.resultDraw") }));
+      return;
+    }
+    setFeedback("info", T("ui.tbChecking"));
+    tablebase(after).then(function (d) {
+      if (tok !== S.token) return;
+      // categories are for the side to move (the defender): its loss is the learner's win
+      var mine = { loss: "win", "maybe-loss": "win", win: "loss", "maybe-win": "loss" }[d.category] || "draw";
+      if (st.goal === "win" && mine !== "win") { takeBack(T("ui.tbSlip", { result: T(mine === "loss" ? "ui.resultLoss" : "ui.resultDraw") })); return; }
+      if (st.goal === "draw" && mine === "loss") { takeBack(T("ui.tbLoses")); return; }
+      if (st.goal === "win" && move[4] === "promo") { playDone(T("ui.tbPromoted")); return; }
+      S.ply++;
+      if (st.goal === "draw" && S.ply >= st.moves) { playDone(T("ui.tbHeld")); return; }
+      var reply = d.moves && d.moves[0];
+      if (!reply) { playDone(T(st.goal === "draw" ? "ui.tbHeld" : "ui.tbWon")); return; }
+      setTimeout(function () {
+        if (tok !== S.token) return;
+        var rm = R.fromUCI(S.pos, reply.uci);
+        S.pos = R.play(S.pos, rm); S.last = rm; S.busy = false;
+        var st2 = R.status(S.pos);
+        if (st.goal === "draw" && (st2.stalemate || R.insufficientMaterial(S.pos))) { drawBoard(); playDone(T("ui.tbHeld")); return; }
+        var n = st.goal === "win" && reply.dtm != null ? Math.ceil(Math.abs(reply.dtm) / 2) : null;
+        setFeedback("ok", st.goal === "win" ? (n ? T("ui.tbGoodMate", { n: n }) : T("ui.tbGood")) : T("ui.tbHold", { n: st.moves - S.ply }));
+        drawBoard();
+      }, 450);
+    }).catch(function () { if (tok !== S.token) return; takeBack(T("ui.tbOffline")); });
+  }
+  function tbHint() {
+    if (S.busy || S.solved) return;
+    var pos = S.pos, tok = S.token;
+    setFeedback("info", T("ui.tbChecking"));
+    tablebase(pos).then(function (d) {
+      if (tok !== S.token || !d.moves || !d.moves.length) return;
+      var m = d.moves[0];
+      S.arrows = [m.uci]; drawBoard();
+      setFeedback("info", T("ui.tbHint", { move: figurine(m.san, pos.turn) }));
+    }).catch(function () { setFeedback("bad", T("ui.tbOffline")); });
   }
   function figurine(san, color) {
     var w = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘" }, b = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞" };
@@ -455,7 +532,7 @@
     var ls = cur();
     if (S.si === ls.lesson.steps.length - 1) { progress[ls.lesson.id] = true; saveProgress(); buildNav(); }
   }
-  $("hintBtn").addEventListener("click", function () { setFeedback("info", T(step().k + ".hint")); });
+  $("hintBtn").addEventListener("click", function () { if (step().type === "play") tbHint(); else setFeedback("info", T(step().k + ".hint")); });
   $("solBtn").addEventListener("click", showSolution);
   $("retryBtn").addEventListener("click", function () { renderStep(false); });
   $("backBtn").addEventListener("click", function () {

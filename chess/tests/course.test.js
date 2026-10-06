@@ -6,8 +6,10 @@
 // other move may be as good, so a learner is never told a good move is wrong.
 global.self = global;
 const fs = require("fs"), path = require("path");
-const R = require("../src/rules.js");
+const R = require("../src/rules.js"), O = require("../src/openings.js");
 require("../course/course.js");
+require("../src/openings-data.js");
+const BOOK = O.create(R, self.CHESS_OPENINGS_DATA), playTasks = [];
 const dir = path.join(__dirname, "..", "course", "i18n");
 fs.readdirSync(dir).filter((f) => f.endsWith(".js")).forEach((f) => require(path.join(dir, f)));
 const C = self.CHESS_COURSE, I = self.CHESS_I18N, EN = I.en;
@@ -50,7 +52,22 @@ for (const lv of C.levels) {
         if (ok) check(tag + ": solution legal (" + st.solution.join(" ") + ")", true);
         if (ok && st.goal === "mate") check(tag + ": the line ends in checkmate", R.isMate(p));
         (st.accept || []).forEach((san) => check(tag + ": accepted move " + san + " legal", !!R.findMove(pos, san)));
+        // opening drills: the line stays in the Lichess opening catalogue and reaches the opening it names
+        if (ok && st.drill) {
+          let q = pos, inBook = true; const seen = [q];
+          st.solution.forEach((san) => { const m = R.findMove(q, san); if (!BOOK.inBook(q, R.toUCI(m))) inBook = false; q = R.play(q, m); seen.push(q); });
+          const name = (BOOK.opening(seen) || {}).name || "";
+          if (st.book !== false) check(tag + ": the drill line is in the opening catalogue", inBook);
+          check(tag + ": the drill reaches the " + st.opening, name.indexOf(st.opening) >= 0, name);
+        }
         if (st.engine) engineTasks.push({ tag, fen: st.fen, expected: [st.solution[0]].concat(st.accept || []).map((s) => R.toUCI(R.findMove(pos, s))), mate: st.goal === "mate" });
+      }
+      if (st.type === "play") {
+        let pieces = 0; pos.board.forEach((row) => row.forEach((x) => { if (x) pieces++; }));
+        const cs = pos.castling, legal = R.loadFEN(st.fen);
+        check(tag + ": a tablebase position (7 pieces or fewer, no castling, legal)", pieces <= 7 && !cs.K && !cs.Q && !cs.k && !cs.q && !legal.error, pieces + " pieces");
+        check(tag + ": goal is win or draw", st.goal === "win" || (st.goal === "draw" && st.moves > 0));
+        playTasks.push({ tag, fen: st.fen, goal: st.goal });
       }
       if (st.link) needed.add(st.k + ".link");
     }
@@ -70,6 +87,15 @@ for (const [lang, T] of Object.entries(I)) {
 }
 
 (async () => {
+  // with NET=1: the tablebase agrees that each ending is a win (or a draw) for the side to move
+  if (process.env.NET) {
+    for (const t of playTasks) {
+      const r = await fetch("https://tablebase.lichess.ovh/standard?fen=" + encodeURIComponent(t.fen)).then((x) => x.json()).catch(() => null);
+      const cat = r && r.category, want = t.goal === "win" ? ["win"] : ["draw", "blessed-loss", "cursed-win"];
+      check(`${t.tag}: the tablebase says ${t.goal} for the learner`, want.includes(cat), cat);
+      await new Promise((res) => setTimeout(res, 400));
+    }
+  } else console.log("(set NET=1 to also check the endings with the Lichess tablebase)");
   if (process.env.CHROME) {
     const { chromium } = require("playwright");
     const b = await chromium.launch({ executablePath: process.env.CHROME });

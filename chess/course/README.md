@@ -1,6 +1,6 @@
 # Chess course
 
-An interactive chess course in five levels, part of the [Chess](../) app. Live:
+An interactive chess course in eight levels, part of the [Chess](../) app. Live:
 https://kathuman.github.io/claude-projects/chess/course/
 
 | Level | Lessons |
@@ -10,12 +10,32 @@ https://kathuman.github.io/claude-projects/chess/course/
 | Intermediate | opening principles, forks, pins, skewers, discovered attacks, back-rank mate, king and queen mate |
 | Upper intermediate | pawn structure, outposts, king and pawn endings (opposition), rule of the square, removing the defender, open files |
 | Advanced | calculation, the Lucena and Philidor positions, prophylaxis, converting an advantage, how to keep improving |
+| Opening courses | the Italian, Ruy Lopez, Queen's Gambit and London with White; the Sicilian (Najdorf), French, Caro-Kann and King's Indian with Black: the ideas, then a drill of the main line, then a question on the plan |
+| Middlegame plans | the Greek gift (♗xh7+), rooks on the seventh rank, the isolated queen's pawn, good and bad bishops, the minority attack |
+| Endgame technique | played out against perfect defence: mate with king and queen and with king and rook, win and hold king-and-pawn endings, win the Lucena, hold the Philidor |
 
 Each lesson is a short series of steps: explanations on the board, "click every square this piece can reach"
 (the answer is computed from the rules), moves to find (with hints, the solution on request, scripted
 replies for multi-move tactics, and a warning when a move would give stalemate instead of mate), and quizzes.
 Every move exercise has a *Play this position against Stockfish* button that opens the position in the play app
 (`../index.html?fen=…&opponent=engine`). Progress is kept in the browser.
+
+**Opening drills** play the main line: you make your side's moves, the course plays the other side's, and a
+playable move that isn't the main line gets "this drill follows the main line". Every drill line is in the
+[Lichess opening catalogue](https://github.com/lichess-org/chess-openings) (CC0) and reaches the opening it
+names. The London is a system, so only its name is checked.
+
+**Endings played out** (step type `play`) use the [Lichess tablebase](https://tablebase.lichess.ovh), which knows
+perfect play with seven pieces or fewer.
+- Each of your moves is looked up. A move that turns a win into a draw, or a draw into a loss, is taken back
+  with the reason.
+- Otherwise the defence plays its best move, and you're told how far mate is with best play.
+- Hint shows the tablebase's best move.
+- These exercises need a connection.
+
+**Middlegame tests** are real positions from the [Lichess puzzle database](https://database.lichess.org/#puzzles)
+(CC0); their ids are noted in `course.js`. Every exercise is played from the side to move, and the board turns
+round when that side is Black.
 
 ## Files
 
@@ -58,6 +78,9 @@ voice for that language, the page says so and shows the text only.
   positions, FEN, SAN, mate and stalemate.
 - `node chess/tests/course.test.js` — every position parses, every solution is legal, "mate" goals end in
   mate, quiz answers exist, all wording exists in English, and translations use exactly the English keys.
+  It also checks that each opening drill is in the opening catalogue and reaches its named opening, and that each
+  ending has seven pieces or fewer. With `NET=1` the tablebase must agree that each ending is a win (or a draw)
+  for the learner.
   With `CHROME=<chrome.exe>` and the repo served on :8767, the tactics and endgames are also checked against
   Stockfish (`tests/engine-probe.html`): the expected moves must be best, and other moves that are as good are
   reported.
