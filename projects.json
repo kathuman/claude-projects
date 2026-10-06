@@ -1,5 +1,13 @@
 [
   {
+    "title": "Chess for Kids",
+    "description": "A chess app for young children, part of the Chess project. Eight worlds teach the pieces one at a time (Rook Road, Bishop Hill, Queen Castle, King Garden, Knight Forest, Pawn Village), then Capture Cave and Checkmate Tower. Each level is a small puzzle: collect stars around rocks, capture sleepy pieces, walk the king to a flag without stepping onto guarded squares, promote a pawn, or find a checkmate in one. Three stars go to finishing in the fewest moves, and that target is proven by a breadth-first search over every level. The checkmate levels are real Lichess puzzles (CC0) with exactly one mating move. Children can then play whole games against three gentle computer opponents: Sleepy Sam, Friendly Fiona and Clever Owl. Sir Hop, a knight mascot, reads every instruction and move aloud. He asks before a piece is left where it can be taken, warns when one is attacked, and suggests a move on request. Stars, trophies and medals reward progress, and big squares suit small fingers on phones and tablets. In English, Spanish, Afrikaans, German, Danish and Dutch. Runs entirely in the browser, with progress kept on the device. 88 passing tests.",
+    "date": "2026-10-06",
+    "tags": ["javascript", "web", "game", "education"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/chess/kids",
+    "demoUrl": "https://kathuman.github.io/claude-projects/chess/kids/"
+  },
+  {
     "title": "Plumb",
     "description": "A 3D simulator for a two-wheeled balancing robot (v1.2). Real Lagrangian dynamics with wheel slip and a floor the body lands on, integrated with Runge-Kutta, and a cascaded PID controller like real cheap hardware runs. The motors are brushed DC gearmotors built from datasheet numbers: back-EMF sets a real top speed, battery voltage matters, gears have play, and speed comes from quantized wheel encoders. Pick a generic motor or Pololu micro metal gearmotors with their published specs, or the original ideal torque source to compare. Twelve presets, each shown with a scripted push and checked by a test that it behaves as described: a Balboa-class robot from published Pololu parts, flat battery, sloppy gears, ice, a too-slow control loop, a noisy sensor. Tune gains, loop rate, noise and delay live; seeded noise makes runs repeatable. Mass and inertia can also come from a FreeCAD parametric model. 29 passing tests.",
     "date": "2026-10-01",

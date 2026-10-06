@@ -460,8 +460,12 @@
       .brand .sub { display: none; }
       .hactions { gap: 6px; }
       .hactions .lnk { padding: 5px 9px; font-size: 11.5px; }
+      header.bar { flex-wrap: wrap; row-gap: 8px; } .brand { flex: none; } .hactions { flex: 1 1 auto; flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; } /* links drop below the title rather than overlap it */
       main { padding: 18px 16px 10px; }
       .board-wrap { padding: 12px; }
+    }
+    @media (max-width: 359px) {
+      .hactions { gap: 4px; } .hactions .lnk { padding: 4px 7px; letter-spacing: 0; }
     }
   </style>
   <link rel="stylesheet" href="theme.css" />
@@ -478,7 +482,7 @@
     <div class="hactions">
       <a class="lnk" href="puzzles/" title="45,000 puzzles at your level, with a puzzle rating">Puzzles</a>
       <a class="lnk" href="train/" title="Your strengths, weaknesses and a weekly plan">My training</a>
-      <a class="lnk hide-sm" href="kids/" title="Chess for kids: learn the pieces, collect stars, play a gentle computer">Kids</a>
+      <a class="lnk" href="kids/" title="Chess for kids: learn the pieces, collect stars, play a gentle computer">Kids</a>
       <a class="lnk" href="course/" title="A course in eight levels: the rules, tactics, openings, middlegame plans and endgames">Learn<span class="hide-sm"> chess</span></a>
       <a class="lnk hide-md" href="../index.html">&larr; All projects</a>
       <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
@@ -1076,7 +1080,8 @@
     //          IBM Plex Mono, dark by default; steel-blue default board (old tan board kept as "Tan & brown")
     //   1.9.1  iPhone/Safari: the board stays square (columns may shrink below a glyph's width) and the black pawn
     //          no longer turns into a purple emoji (text-presentation selector + a chess-symbol font subset)
-    var APP_VERSION = "1.9.1";
+    //   1.9.2  the Kids link shows on phones too; on narrow screens the header links wrap below the title
+    var APP_VERSION = "1.9.2";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
