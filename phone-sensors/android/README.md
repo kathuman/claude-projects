@@ -18,8 +18,8 @@ read, through a bridge to Android's `SensorManager`:
 check one, and Android answers matched or not. On phones whose face unlock counts as a strong biometric, Android may
 offer that instead; an app can't insist on a finger.
 
-Everything else (motion, compass, location, camera, microphone, touch, recording, the computer view) is the web page
-working as it does in Chrome. The app passes camera, microphone and location permission requests on to Android.
+Everything else (motion, compass, location, camera, microphone, touch, recording, the computer view, and streaming
+over a USB cable with the [USB bridge](../usb/sensor-deck-usb.js)) is the web page working as it does in Chrome. The app passes camera, microphone and location permission requests on to Android.
 
 Download: [`../download/sensor-deck.apk`](../download/sensor-deck.apk). It needs Android 7 or later on 64-bit ARM.
 Install steps are on the [web page](https://kathuman.github.io/claude-projects/phone-sensors/#app-help). The app is

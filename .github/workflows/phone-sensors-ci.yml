@@ -22,8 +22,9 @@ jobs:
         with:
           node-version: 22
       - run: node phone-sensors/tests/core.test.js
-      - name: Syntax-check the browser scripts
-        run: for f in phone-sensors/app.js phone-sensors/src/*.js; do node --check "$f"; done
+      - run: node phone-sensors/tests/usb-bridge.test.js
+      - name: Syntax-check the browser scripts and the USB bridge
+        run: for f in phone-sensors/app.js phone-sensors/src/*.js phone-sensors/usb/*.js; do node --check "$f"; done
         shell: bash
 
   android-app:

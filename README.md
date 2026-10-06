@@ -60,7 +60,7 @@ simulator, a live view of every phone sensor (streamable to a computer), live fa
 | Cobot Lab | 1,634 checks: forward/inverse kinematics, motion profiles, path planner, URDF import | CI |
 | Warehouse Model | 300 checks + 400 designs identical in the FreeCAD script and the web app | CI (FreeCAD-only checks locally) |
 | balancebot-sim | dynamics derivation and energy conservation | CI |
-| Sensor Deck | 57 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the Android app's bridge timing (Flutter) | CI |
+| Sensor Deck | 93 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the USB bridge's WebSocket framing, relay, origin check and adb handling; the Android app's bridge timing (Flutter) | CI |
 
 If you use any of this, [CITATION.cff](CITATION.cff) has the citation.
 

@@ -87,6 +87,39 @@ How the connection works:
 - Same Wi-Fi works best. Some mobile networks and strict firewalls block direct connections. PeerJS then needs a
   relay (TURN) server, which this app doesn't use.
 
+## Streaming over a USB cable
+
+With a cable, the readings go phone → cable → computer, with no Wi-Fi, no internet and no pairing service. They pass
+through **the USB bridge**, [`usb/sensor-deck-usb.js`](usb/sensor-deck-usb.js): one Node script with no npm packages.
+
+1. On the phone, switch on **USB debugging**: Settings › About phone › tap *Build number* seven times, then Developer
+   options › USB debugging.
+2. On the computer, install [Android platform-tools](https://developer.android.com/tools/releases/platform-tools)
+   (adb) and [Node.js](https://nodejs.org/) 18 or later, then run `node sensor-deck-usb.js`.
+3. Plug the phone in and accept *Allow USB debugging* on it.
+4. On the computer, open the page and choose **Computer view → USB cable**. The page finds the bridge by itself; open
+   it with `?mode=view&usb` to go straight there.
+5. On the phone, tap **USB cable** (the page or the Android app), then **Start sensors**.
+
+How it works:
+- Whenever a phone is plugged in, the bridge runs `adb reverse tcp:8766 tcp:8766`. Port 8766 on the phone then leads
+  through the cable to port 8766 on the computer.
+- The bridge listens there and relays the page's usual messages between `ws://127.0.0.1:8766/phone` and
+  `ws://127.0.0.1:8766/viewer`. It tells both ends who is connected.
+- The messages are the same as over WebRTC, so recording, the derived readings, the round-trip time and *Buzz the
+  phone* all work the same.
+
+Safety:
+- The bridge listens on 127.0.0.1 only, never on the network.
+- It accepts connections only from the Sensor Deck page (or `localhost` copies), so another website open in the same
+  browser can't read the phone through it.
+- It refuses messages over 1 MB, and allows one phone and one computer view at a time.
+- `--port 9000` picks another port (then open the page with `?usb=9000`). `--no-adb` relays only.
+- On exit it removes the `adb reverse`.
+
+Chrome may ask to let the page reach devices on the local network. Allow it: that is the bridge. The page itself
+still has to be loaded once from the internet.
+
 **Demo phone** plays a simulated phone: someone walking with it in hand in Copenhagen. It works on any device, so
 the page can be tried on a desktop. **Try with a demo phone** in the computer view opens one in a new tab, already
 paired.
@@ -124,11 +157,27 @@ Other limits:
   - CSV;
   - the message checks, the batcher and pairing codes;
   - the demo phone.
+- `usb/sensor-deck-usb.js`: the USB bridge. It has a small RFC 6455 WebSocket server (text frames,
+  fragmentation, ping/pong), adb discovery and the plug-in watch, the origin check, and a status page at
+  `http://127.0.0.1:8766/`.
 - `vendor/`: PeerJS 1.5.5 and qrcodejs 1.0.0 (both MIT).
 
 ## Tests
 
-`node phone-sensors/tests/core.test.js` (57 checks, run in CI):
+`node phone-sensors/tests/usb-bridge.test.js` (35 checks, run in CI, Node 22+):
+- **Framing:** the RFC 6455 handshake example; 16- and 64-bit lengths; a 70 kB message arriving in pieces;
+  fragmented messages; ping between messages; UTF-8.
+- **Refused:** unmasked, binary and oversized frames (a frame claiming 5 GB is refused before any of it arrives).
+- **Relay:** phone ↔ view in both directions and in order; status messages; a second phone replacing the first;
+  300 kB passing and over 1 MB cut off.
+- **Access:** 403 for another website's origin; listening on loopback only.
+- **adb, with a stand-in adb:**
+  - an unauthorised phone is reported, not reversed;
+  - an authorised one is reversed once on the port actually bound;
+  - unplug and replug are noticed;
+  - the reverse is removed on exit.
+
+`node phone-sensors/tests/core.test.js` (58 checks, run in CI):
 - **Steps:** 20 s of walking at 1.8 steps/s counts 36 ± 2, at 20 Hz or 60 Hz sampling. A phone lying still counts
   none, and neither does noise.
 - **Shakes:** a hard back-and-forth is one shake; ordinary handling is none.
@@ -152,6 +201,16 @@ A second browser run (37 checks) plays the Android app's side of the bridge:
 - fingerprint matched, failed and none-enrolled;
 - keep-screen-on, and stopping every source;
 - the app's readings reaching the computer view.
+
+A third browser run (23 checks) starts the real bridge (adb off) between a phone page and a computer page:
+- the view finds a bridge started after it;
+- streaming at about 60 Hz, the round-trip time, and *Buzz the phone*;
+- the phone leaving and coming back;
+- a view that arrives after the phone still gets the device information;
+- the bridge stopping, with clear messages on both sides;
+- phone-width layout.
+
+A real phone on a real cable has not been tried yet. That is the one step the tests can't stand in for.
 
 The app itself was checked on the Android emulator; see [android/README.md](android/README.md). Real sensors can only
 be judged on a real phone.

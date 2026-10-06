@@ -7,12 +7,15 @@
 //   1.1.0  the Sensor Deck Android app: barometer (with altitude), battery and air temperature, humidity (with dew
 //          point), proximity, the hardware step counter, a fingerprint check and any other sensor the phone lists;
 //          light and magnetometer without a Chrome flag. In a browser those cards say so and link to the app
+//   1.2.0  USB cable: with the USB bridge (usb/sensor-deck-usb.js) running on the computer, the phone streams over
+//          adb reverse and a local WebSocket, with no Wi-Fi or internet in the path
 (function () {
   "use strict";
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
   var NATIVE = !!(window.SensorHub && window.SensorHub.native), APK = "download/sensor-deck.apk";
   var C = window.SensorCore, $ = function (id) { return document.getElementById(id); };
   var WINDOW = 10000, PARAMS = new URLSearchParams(location.search);
+  var USB_PORT = +PARAMS.get("usb") || C.USB_PORT; // ?usb=9000 when the bridge runs with --port 9000
   $("ver").textContent = "v" + VERSION; $("verFoot").textContent = "v" + VERSION;
   if (!window.isSecureContext) $("insecure").hidden = false;
   if (NATIVE) { $("appBanner").hidden = true; $("appBadge").hidden = false; }
@@ -490,8 +493,29 @@
     }), "application/json");
   });
 
+  // ---- the USB bridge's WebSocket, shaped like a PeerJS connection (on open/data/close/error, send, close); the
+  // bridge's own status messages arrive as "bridge" events
+  function socketConn(role) {
+    var handlers = {}, c = { open: false }, ws;
+    function fire(ev, x) { (handlers[ev] || []).forEach(function (f) { f(x); }); }
+    c.on = function (ev, f) { (handlers[ev] = handlers[ev] || []).push(f); return c; };
+    c.send = function (m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
+    c.close = function () { try { ws.close(); } catch (e) { /* gone */ } };
+    try { ws = new WebSocket("ws://127.0.0.1:" + USB_PORT + "/" + role); }
+    catch (e) { setTimeout(function () { fire("error", e); fire("close", false); }, 0); return c; }
+    ws.onopen = function () { c.open = true; fire("open"); };
+    ws.onmessage = function (e) {
+      var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+      var b = C.checkBridge(m);
+      if (b) fire("bridge", b); else fire("data", m);
+    };
+    ws.onerror = function () { fire("error", new Error("No USB bridge on port " + USB_PORT)); };
+    ws.onclose = function () { var was = c.open; c.open = false; fire("close", was); };
+    return c;
+  }
+
   // ---- phone side of the link: connect to a waiting computer by its code and stream in batches
-  var link = { peer: null, conn: null, open: false, batcher: null, timer: null, frameTimer: null };
+  var link = { peer: null, conn: null, open: false, how: null, viewer: false, batcher: null, timer: null, frameTimer: null };
   link.send = function (m) { if (link.conn && link.open) { try { link.conn.send(m); } catch (e) { /* closing */ } } };
   function linkPill(text, cls) { var p = $("linkPill"); p.textContent = text; p.className = "pill" + (cls ? " " + cls : ""); }
   function connect(raw) {
@@ -505,17 +529,10 @@
     peer.on("open", function () {
       var conn = peer.connect(C.PEER_PREFIX + code, { serialization: "json", reliable: true }); link.conn = conn;
       conn.on("open", function () {
-        clearTimeout(giveUp); link.open = true; link.batcher = new C.Batcher(50, 60);
+        clearTimeout(giveUp); linkOpened("internet");
         linkPill("Streaming to the computer", "on"); $("connectBtn").textContent = "Disconnect";
-        sendHello(); wake.want("link", true);
-        link.timer = setInterval(function () { var m = link.batcher.take(performance.now()); if (m) link.send(m); }, 50);
-        link.frameTimer = setInterval(function () { if (hub.video) { var f = hub.frame(160, 0.5); if (f) link.send({ type: "frame", jpeg: f }); } }, 500);
       });
-      conn.on("data", function (raw) {
-        var m = C.checkMessage(raw); if (!m) return;
-        if (m.type === "ping") link.send({ type: "pong", n: m.n, t: m.t });
-        if (m.type === "cmd" && m.name === "vibrate" && navigator.vibrate) navigator.vibrate([150, 80, 150]);
-      });
+      conn.on("data", linkData);
       conn.on("close", function () { if (link.open) linkPill("The computer closed the connection"); disconnect(false); });
       conn.on("error", function (e) { linkPill("Connection error: " + (e && e.message || e), "bad"); });
     });
@@ -524,6 +541,39 @@
       var t = e.type === "peer-unavailable" ? "No computer is waiting with code " + code
         : /network|server-error|socket/.test(e.type) ? "Cannot reach the pairing service. Check the connection." : (e.message || String(e));
       linkPill(t, "bad"); disconnect(false);
+    });
+  }
+  // shared by both ways of connecting: start streaming, and answer what the computer may send
+  function linkOpened(how) {
+    link.open = true; link.how = how; link.batcher = new C.Batcher(50, 60);
+    sendHello(); wake.want("link", true);
+    link.timer = setInterval(function () { var m = link.batcher.take(performance.now()); if (m) link.send(m); }, 50);
+    link.frameTimer = setInterval(function () { if (hub.video) { var f = hub.frame(160, 0.5); if (f) link.send({ type: "frame", jpeg: f }); } }, 500);
+  }
+  function linkData(raw) {
+    var m = C.checkMessage(raw); if (!m) return;
+    if (m.type === "ping") link.send({ type: "pong", n: m.n, t: m.t });
+    if (m.type === "cmd" && m.name === "vibrate" && navigator.vibrate) navigator.vibrate([150, 80, 150]);
+  }
+  // over the cable: the phone's port leads to the bridge on the computer (adb reverse)
+  function connectUSB() {
+    disconnect(true);
+    linkPill("Looking for the USB bridge…", "warn");
+    var conn = socketConn("phone"); link.conn = conn; link.viewer = false;
+    conn.on("open", function () {
+      linkOpened("usb"); $("usbBtn").textContent = "Disconnect USB";
+      linkPill("USB bridge found. Open the computer view → USB cable", "warn");
+    });
+    conn.on("bridge", function (b) {
+      var was = link.viewer; link.viewer = b.viewer;
+      if (b.viewer && !was) sendHello(); // the view arrived after the phone: tell it everything again
+      linkPill(b.viewer ? "Streaming over USB" : "USB bridge found. Open the computer view → USB cable", b.viewer ? "on" : "warn");
+    });
+    conn.on("data", linkData);
+    conn.on("close", function (wasOpen) {
+      if (link.conn !== conn) return;
+      linkPill(wasOpen ? "The USB connection closed" : "No USB bridge: is the cable in, USB debugging on, and sensor-deck-usb.js running?", wasOpen ? "" : "bad");
+      disconnect(false);
     });
   }
   function sendHello() {
@@ -537,15 +587,17 @@
     if (link.open && quiet) link.send({ type: "bye" });
     try { if (link.conn) link.conn.close(); } catch (e) { /* gone */ }
     try { if (link.peer) link.peer.destroy(); } catch (e) { /* gone */ }
-    link.peer = null; link.conn = null; link.open = false; $("connectBtn").textContent = "Connect";
+    link.peer = null; link.conn = null; link.open = false; link.how = null; link.viewer = false;
+    $("connectBtn").textContent = "Connect"; $("usbBtn").textContent = "USB cable";
     wake.want("link", false);
     if (quiet) linkPill("Not connected");
   }
   $("connectBtn").addEventListener("click", function () { if (link.peer) { disconnect(true); } else connect($("codeIn").value); });
+  $("usbBtn").addEventListener("click", function () { if (link.how === "usb" || (link.conn && !link.peer)) disconnect(true); else connectUSB(); });
   $("codeIn").addEventListener("keydown", function (e) { if (e.key === "Enter") connect($("codeIn").value); });
 
   // ---- computer side: wait under a fresh code, show it as a QR code, draw whatever the phone sends
-  var view = { peer: null, conn: null, code: null, ping: null, n: 0 };
+  var view = { peer: null, conn: null, code: null, ping: null, n: 0, how: PARAMS.has("usb") ? "usb" : "internet", usb: null, retry: null, phone: false };
   function viewPill(text, cls) { var p = $("viewPill"); p.textContent = text; p.className = "pill" + (cls ? " " + cls : ""); }
   function startViewer() {
     stopViewer();
@@ -578,8 +630,36 @@
     });
     peer.on("disconnected", function () { if (view.peer === peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) { /* gone */ } } });
   }
+  // over the cable: the bridge relays whatever the phone sends; it says when a phone is there
+  function usbPill(text, cls) { var p = $("usbPill"); p.textContent = text; p.className = "pill" + (cls ? " " + cls : ""); }
+  function startUsbViewer() {
+    stopViewer();
+    usbPill("Looking for the USB bridge on port " + USB_PORT + "…", "warn");
+    $("usbPort").textContent = USB_PORT;
+    var conn = socketConn("viewer"); view.usb = conn; view.conn = conn; view.phone = false;
+    conn.on("open", function () {
+      clearInterval(view.ping);
+      view.ping = setInterval(function () { conn.send({ type: "ping", n: ++view.n, t: performance.now() }); }, 2000);
+    });
+    conn.on("bridge", function (b) {
+      var was = view.phone; view.phone = b.phone;
+      $("buzzBtn").hidden = !b.phone; $("usbBuzz").hidden = !b.phone;
+      if (b.phone) usbPill("Phone connected by USB" + (b.device ? " · " + b.device : ""), "on");
+      else usbPill("Bridge running · " + (b.adb === "off" ? "waiting for the phone" : b.adb || "waiting for the phone") + (b.device ? " (" + b.device + ")" : "") + ". On the phone, tap USB cable.", "warn");
+      if (was && !b.phone) { phoneGone(); $("rttPill").hidden = true; $("usbRtt").hidden = true; }
+    });
+    conn.on("data", onRemote);
+    conn.on("close", function () {
+      if (view.usb !== conn) return;
+      clearInterval(view.ping); if (view.phone) phoneGone(); view.phone = false; $("buzzBtn").hidden = true; $("usbBuzz").hidden = true;
+      usbPill("No USB bridge on port " + USB_PORT + ". Start it on this computer: node sensor-deck-usb.js", "bad");
+      // keep looking, so starting the bridge is enough
+      view.retry = setTimeout(function () { if (mode === "view" && view.how === "usb") startUsbViewer(); }, 3000);
+    });
+  }
   function stopViewer() {
-    clearInterval(view.ping);
+    clearInterval(view.ping); clearTimeout(view.retry);
+    if (view.usb) { var u = view.usb; view.usb = null; u.close(); }
     try { if (view.conn) view.conn.close(); } catch (e) { /* gone */ }
     try { if (view.peer) view.peer.destroy(); } catch (e) { /* gone */ }
     view.peer = null; view.conn = null; $("buzzBtn").hidden = true; $("rttPill").hidden = true;
@@ -596,7 +676,7 @@
     if (m.type === "status") { setState(m.id, m.state, m.text); if (m.state !== "off") { cardOf(m.id).hidden = false; $("viewEmpty").hidden = true; } return; }
     if (m.type === "meta") { setMeta(m.id, m.text); return; }
     if (m.type === "frame") { var img = $("camFrame"); img.src = m.jpeg; img.hidden = false; return; }
-    if (m.type === "pong") { var p = $("rttPill"); p.hidden = false; p.textContent = "round trip " + Math.round(performance.now() - m.t) + " ms"; return; }
+    if (m.type === "pong") { ["rttPill", "usbRtt"].forEach(function (id) { var p = $(id); p.hidden = false; p.textContent = "round trip " + Math.round(performance.now() - m.t) + " ms"; }); return; }
     if (m.type === "bye") phoneGone();
   }
   // the readings stay on screen, but nothing is live any more
@@ -605,6 +685,15 @@
     C.SENSORS.forEach(function (s) { if (D[s.id].state !== "off") setState(s.id, "off", "The phone disconnected."); });
   }
   $("buzzBtn").addEventListener("click", function () { if (view.conn) view.conn.send({ type: "cmd", name: "vibrate" }); });
+  $("usbBuzz").addEventListener("click", function () { if (view.conn) view.conn.send({ type: "cmd", name: "vibrate" }); });
+  function setHow(how) {
+    view.how = how;
+    $("howNet").setAttribute("aria-selected", String(how === "internet")); $("howUsb").setAttribute("aria-selected", String(how === "usb"));
+    $("pairBox").hidden = how !== "internet"; $("usbBox").hidden = how !== "usb";
+    if (mode === "view") { if (how === "usb") startUsbViewer(); else startViewer(); }
+  }
+  $("howNet").addEventListener("click", function () { if (view.how !== "internet") setHow("internet"); });
+  $("howUsb").addEventListener("click", function () { if (view.how !== "usb") setHow("usb"); });
   $("demoTab").addEventListener("click", function () {
     if (!view.code) return;
     window.open(location.pathname + "?connect=" + view.code + "&demo=1", "_blank", "noopener");
@@ -627,7 +716,7 @@
       if (demo.on) stopDemo(); hub.stopAll(); disconnect(true); clearDeck();
       C.SENSORS.forEach(function (s) { CARD[s.id].hidden = true; });
       $("viewEmpty").hidden = false; showInfo({ "Phone": "not connected yet" }); lastInfo = null;
-      startViewer();
+      setHow(view.how);
     } else {
       stopViewer(); clearDeck(); remoteOffset = null;
       C.SENSORS.forEach(function (s) { CARD[s.id].hidden = false; });
@@ -643,9 +732,11 @@
   // view. Without either, a device with no touch screen opens the computer view.
   var looksDesktop = !(navigator.maxTouchPoints > 0) && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   var startMode = PARAMS.has("connect") || PARAMS.get("mode") === "phone" || PARAMS.has("demo") ? "phone" : PARAMS.get("mode") === "view" || looksDesktop ? "view" : "phone";
+  if (startMode === "view") view.how = PARAMS.has("usb") ? "usb" : "internet";
   setMode(startMode);
   if (PARAMS.has("demo")) startDemo();
   if (PARAMS.has("connect")) { $("codeIn").value = C.normaliseCode(PARAMS.get("connect")); connect($("codeIn").value); }
+  else if (PARAMS.has("usb") && startMode === "phone") connectUSB();
   refreshButtons();
 
   window.sensorDeck = { version: VERSION, D: D, feed: feed, hub: hub, link: link, view: view, rec: rec, steps: steps, track: track, setMode: setMode, startDemo: startDemo, stopDemo: stopDemo, mode: function () { return mode; } };

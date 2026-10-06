@@ -110,6 +110,10 @@ check("message: camera frames must be small JPEG data URLs", C.checkMessage({ ty
 check("message: status states are limited to the known ones", C.checkMessage({ type: "status", id: "geo", state: "hacked" }).state === "off" && C.checkMessage({ type: "status", id: "geo", state: "denied" }).state === "denied");
 check("message: ping/pong carry numbers; the only command is a buzz", C.checkMessage({ type: "ping", n: 3, t: 99.5 }).n === 3 && C.checkMessage({ type: "pong", n: "3", t: 1 }) === null &&
   C.checkMessage({ type: "cmd", name: "vibrate" }) !== null && C.checkMessage({ type: "cmd", name: "camera" }) === null);
+check("bridge status: known fields only, booleans strict, strings trimmed", (() => {
+  const b = C.checkBridge({ type: "bridge", phone: true, viewer: "yes", device: "x".repeat(200), adb: "phone ready", evil: "<script>" });
+  return b.phone === true && b.viewer === false && b.device.length === 80 && b.adb === "phone ready" && !("evil" in b) && C.checkBridge({ type: "batch" }) === null;
+})());
 const bt = new C.Batcher(50, 20);
 bt.add(0, "accel", [1]); bt.add(10, "accel", [2]); bt.add(60, "accel", [3]); bt.add(10, "gyro", [1]);
 const b1 = bt.take(100), b2 = bt.take(120);

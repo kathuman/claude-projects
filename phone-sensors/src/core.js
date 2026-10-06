@@ -314,6 +314,11 @@
     if (m.type === "cmd" && m.name === "vibrate") return { type: "cmd", name: "vibrate" };
     return null;
   }
+  // the USB bridge's status message ({type: "bridge", phone, viewer, device, adb}), reduced to known fields
+  function checkBridge(m) {
+    if (!m || typeof m !== "object" || m.type !== "bridge") return null;
+    return { type: "bridge", phone: m.phone === true, viewer: m.viewer === true, device: m.device ? shortStr(String(m.device), 80) : null, adb: shortStr(String(m.adb || ""), 120) };
+  }
   // collects samples and hands them over in batches, at most every `ms`, thinning each sensor to `maxHz`
   // (timers jitter, so a reading up to a quarter early still counts as on time)
   function Batcher(ms, maxHz) { this.ms = ms || 50; this.minGap = 0.75 * 1000 / (maxHz || 60); this.items = []; this.lastFlush = 0; this.lastBy = {}; }
@@ -397,7 +402,7 @@
     StepCounter: StepCounter, ShakeDetector: ShakeDetector, compassHeading: compassHeading, cardinal: cardinal, level: level,
     fft: fft, resample: resample, dominantFrequency: dominantFrequency, peakFrequency: peakFrequency, dbfs: dbfs,
     haversine: haversine, Track: Track, toCSV: toCSV, csvLegend: csvLegend, csvCell: csvCell,
-    PROTOCOL: PROTOCOL, checkMessage: checkMessage, Batcher: Batcher, pairCode: pairCode, normaliseCode: normaliseCode, validCode: validCode,
+    PROTOCOL: PROTOCOL, checkMessage: checkMessage, checkBridge: checkBridge, USB_PORT: 8766, Batcher: Batcher, pairCode: pairCode, normaliseCode: normaliseCode, validCode: validCode,
     PEER_PREFIX: PEER_PREFIX, simulate: simulate, fmt: fmt, altitude: altitude, dewPoint: dewPoint, sane: sane
   };
 });

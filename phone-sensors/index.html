@@ -145,6 +145,12 @@
     .pair .code { font-family: "IBM Plex Mono", monospace; font-size: 34px; letter-spacing: .3em; color: var(--accent); font-weight: 600; }
     .pair ol { margin: 6px 0 10px; padding-left: 20px; color: var(--ink-2); }
     .pair .url { font-family: "IBM Plex Mono", monospace; font-size: 12px; word-break: break-all; color: var(--ink-2); }
+    .tabs.how { margin-bottom: 12px; }
+    .tabs.how button { font-size: 13px; padding: 7px 13px; }
+    .usbart { width: 200px; height: 120px; }
+    .pair.usb code { font-family: "IBM Plex Mono", monospace; font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+    .pair.usb ol li { margin-bottom: 4px; }
+    #usbPill, #linkPill { white-space: normal; max-width: 100%; }
     .empty { padding: 30px 16px; text-align: center; color: var(--muted); }
 
     footer.foot { border-top: 1px solid var(--line); padding: 12px 20px; font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--muted); text-align: center; }
@@ -154,7 +160,9 @@
       header.bar { padding: 8px 16px; }
       .brand .sub .rest { display: none; }
       main { padding: 14px 16px 22px; }
-      .pair { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+      .pair { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+      .pair > div { min-width: 0; max-width: 100%; }
+      .usbart { width: 160px; height: 96px; }
       .pair ol { text-align: left; }
       .tabs button { padding: 8px 12px; font-size: 14px; }
       .hide-sm { display: none; }
@@ -205,10 +213,11 @@
       </div>
 
       <div class="panel intro" id="connectBox">
-        <p><b>Stream to a computer:</b> open this page on the computer, choose <i>Computer view</i>, then scan its QR code with this phone or type its code here.</p>
+        <p><b>Stream to a computer:</b> open this page on the computer, choose <i>Computer view</i>, then scan its QR code with this phone or type its code here. With a cable instead, run the USB bridge on the computer and tap <b>USB cable</b>.</p>
         <div class="row">
           <input class="code" id="codeIn" maxlength="7" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Pairing code" />
           <button class="btn" id="connectBtn" type="button">Connect</button>
+          <button class="btn" id="usbBtn" type="button" title="Over a USB cable, with the USB bridge running on the computer">USB cable</button>
           <span class="pill" id="linkPill">Not connected</span>
         </div>
       </div>
@@ -216,6 +225,28 @@
 
     <!-- ===== Computer view ===== -->
     <section id="viewView" hidden>
+      <div class="tabs how" role="tablist" aria-label="How the phone connects">
+        <button type="button" role="tab" id="howNet" aria-selected="true">Wi-Fi or internet</button>
+        <button type="button" role="tab" id="howUsb" aria-selected="false">USB cable</button>
+      </div>
+      <div class="panel pair usb" id="usbBox" hidden>
+        <svg class="usbart" viewBox="0 0 200 120" aria-hidden="true"><rect x="8" y="14" width="46" height="88" rx="8" fill="none" stroke="var(--accent)" stroke-width="3"/><path d="M31 102 v6 q0 8 10 8 h40 q10 0 10 -10 v-10" fill="none" stroke="var(--ink-2)" stroke-width="3"/><rect x="86" y="84" width="10" height="12" rx="2" fill="var(--ink-2)"/><rect x="100" y="24" width="92" height="60" rx="5" fill="none" stroke="var(--accent)" stroke-width="3"/><path d="M92 92 h108" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/><path d="M16 60 l6 -10 6 14 6 -8 6 4" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <div class="head" style="font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">USB cable · port <span id="usbPort">8766</span></div>
+          <ol>
+            <li>On the phone, switch on <b>USB debugging</b>: Settings › About phone › tap <i>Build number</i> seven times, then Settings › System › Developer options › USB debugging.</li>
+            <li>On this computer, install <a href="https://developer.android.com/tools/releases/platform-tools" target="_blank" rel="noopener">Android platform-tools</a> (adb) and <a href="https://nodejs.org/" target="_blank" rel="noopener">Node.js</a>, <a href="usb/sensor-deck-usb.js" download>download sensor-deck-usb.js</a> and run <code>node sensor-deck-usb.js</code>.</li>
+            <li>Plug the phone in and accept <i>Allow USB debugging</i> on it.</li>
+            <li>On the phone, open Sensor Deck (the page or the app), tap <b>USB cable</b>, then <b>Start sensors</b>.</li>
+          </ol>
+          <div class="row">
+            <span class="pill" id="usbPill">Looking for the USB bridge…</span>
+            <span class="pill" id="usbRtt" hidden></span>
+            <button class="btn small" id="usbBuzz" type="button" hidden>Buzz the phone</button>
+          </div>
+          <p class="about" style="margin:8px 0 0">The readings go phone → cable → this computer: no Wi-Fi, no internet, no pairing service. The page itself still has to be loaded, so open it once while online. Chrome may ask to let this page reach devices on your local network: allow it, that is the bridge.</p>
+        </div>
+      </div>
       <div class="panel pair" id="pairBox">
         <div class="qr" id="qr" aria-label="QR code to open on the phone"></div>
         <div>
