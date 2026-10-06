@@ -24,6 +24,7 @@ export function defaultGains() {
     velocityKp: 0.6,
     velocityKi: 0.3,
     yawKp: 0.08,
+    yawKi: 0.4, // integral on turn-rate error: the motors' back-EMF and rotor inertia resist turning
     maxTiltRef: 0.26, // rad (~15 deg) -- cap how hard the velocity loop may lean the robot
     integralClamp: 4,
   };
@@ -40,14 +41,29 @@ export function defaultRealism() {
     sensorDelaySteps: 0, // number of control ticks of measurement latency
     sensorNoiseStdTheta: 0, // rad, gaussian
     sensorNoiseStdRate: 0, // rad/s, gaussian
+    noiseSeed: 1, // the noise is pseudo-random from this seed, so every run can be repeated exactly
+    useEncoders: true, // measure speed and turn rate from quantized wheel encoders (else: true values)
+    speedFilterHz: 8, // firmware low-pass on encoder speed: raw counts per tick are too coarse to feed back directly
   };
 }
 
-function gaussianNoise(std) {
+/** mulberry32: a small, fast, seedable PRNG returning [0, 1). */
+export function seededRandom(seed) {
+  let a = (seed >>> 0) || 1;
+  return function () {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function gaussianNoise(std, rand) {
   if (std <= 0) return 0;
   // Box-Muller
-  const u1 = Math.max(Math.random(), 1e-12);
-  const u2 = Math.random();
+  const u1 = Math.max(rand(), 1e-12);
+  const u2 = rand();
   return std * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
@@ -56,27 +72,32 @@ export function createController(initialGains = defaultGains(), initialRealism =
   let realism = initialRealism;
   let angleIntegral = 0;
   let velocityIntegral = 0;
+  let yawIntegral = 0;
   const delayBuffer = [];
+  let rand = seededRandom(realism.noiseSeed);
 
   function reset() {
     angleIntegral = 0;
     velocityIntegral = 0;
+    yawIntegral = 0;
     delayBuffer.length = 0;
+    rand = seededRandom(realism.noiseSeed);
   }
 
   /**
    * One control-loop tick.
-   * @param {{theta:number, thetaDot:number, xDot:number, psiDot:number}} trueState
+   * @param {{theta:number, thetaDot:number, xDot:number, psiDot:number}} sensed pitch and pitch rate
+   *   (true values; the noise is added here), speed and turn rate (from the wheel encoders, see simloop.mjs)
    * @param {number} desiredVelocity m/s
    * @param {number} desiredYawRate rad/s
    * @param {number} dt control-loop period (s)
-   * @param {number} motorMaxTorque N*m, per wheel saturation limit
+   * @param {number} motorMaxTorque N*m, per wheel saturation limit (the most torque the firmware can ask for)
    */
-  function update(trueState, desiredVelocity, desiredYawRate, dt, motorMaxTorque) {
-    const noisyTheta = trueState.theta + gaussianNoise(realism.sensorNoiseStdTheta);
-    const noisyRate = trueState.thetaDot + gaussianNoise(realism.sensorNoiseStdRate);
+  function update(sensed, desiredVelocity, desiredYawRate, dt, motorMaxTorque) {
+    const noisyTheta = sensed.theta + gaussianNoise(realism.sensorNoiseStdTheta, rand);
+    const noisyRate = sensed.thetaDot + gaussianNoise(realism.sensorNoiseStdRate, rand);
 
-    delayBuffer.push({ theta: noisyTheta, thetaDot: noisyRate, xDot: trueState.xDot, psiDot: trueState.psiDot });
+    delayBuffer.push({ theta: noisyTheta, thetaDot: noisyRate, xDot: sensed.xDot, psiDot: sensed.psiDot });
     const delaySamples = Math.max(0, Math.round(realism.sensorDelaySteps));
     const measured = delayBuffer.length > delaySamples ? delayBuffer.shift() : delayBuffer[0];
 
@@ -99,7 +120,8 @@ export function createController(initialGains = defaultGains(), initialRealism =
       gains.angleKp * angleError + gains.angleKd * measured.thetaDot + gains.angleKi * angleIntegral;
 
     const yawRateError = desiredYawRate - measured.psiDot;
-    const tauDiff = gains.yawKp * yawRateError;
+    yawIntegral = clamp(yawIntegral + yawRateError * dt, -gains.integralClamp, gains.integralClamp);
+    const tauDiff = gains.yawKp * yawRateError + (gains.yawKi || 0) * yawIntegral;
 
     let tauL = (tauCommon - tauDiff) / 2;
     let tauR = (tauCommon + tauDiff) / 2;
@@ -115,7 +137,7 @@ export function createController(initialGains = defaultGains(), initialRealism =
     getGains: () => gains,
     setGains: (g) => { gains = g; },
     getRealism: () => realism,
-    setRealism: (r) => { realism = r; },
+    setRealism: (r) => { const reseed = r.noiseSeed !== realism.noiseSeed; realism = r; if (reseed) rand = seededRandom(r.noiseSeed); },
   };
 }
 

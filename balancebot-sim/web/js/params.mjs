@@ -10,7 +10,9 @@
 //     center of mass and inertia from the actual modeled solids instead
 //     of approximating the body as a uniform box.
 
-export const SCHEMA_VERSION = 1;
+import { MOTORS, motorParams } from './motors.mjs';
+
+export const SCHEMA_VERSION = 2;
 
 /** Baseline geometry + material inputs for the closed-form derivation. */
 export const DEFAULT_GEOMETRY = {
@@ -28,9 +30,15 @@ export const DEFAULT_MATERIAL = {
   bodyDensity: 600, // kg/m^3 (lumped effective density: frame + electronics + battery)
 };
 
+/**
+ * Motor/actuator settings. model 'dc' (default) is a brushed DC gearmotor built from datasheet
+ * numbers (see motors.mjs); 'ideal' is the v1.0 torque source (maxTorque, first-order lag).
+ */
 export const DEFAULT_MOTOR = {
-  maxTorque: 0.35, // N*m per wheel
-  timeConstant: 0.02, // s, first-order actuator lag
+  model: 'dc',
+  ...motorParams(MOTORS.generic),
+  maxTorque: 0.35, // N*m per wheel ('ideal' model)
+  timeConstant: 0.02, // s, first-order actuator lag ('ideal' model)
 };
 
 export const DEFAULT_ENVIRONMENT = {
@@ -38,6 +46,10 @@ export const DEFAULT_ENVIRONMENT = {
   rollingResistance: 0.02, // damping on forward speed (N*m*s/m, lumped)
   pitchDamping: 0.0008, // damping at the pitch pivot
   yawDamping: 0.01, // damping on yaw rate
+  groundFriction: 0.9, // tyre-floor friction coefficient (rubber on a hard floor)
+  slipVelocity: 0.02, // m/s, width of the friction law's stick-to-slide transition (numerical creep)
+  bodyFriction: 0.5, // body-floor friction coefficient once it has fallen
+  contactHz: 40, // natural frequency of the body-floor contact spring (stiff, well damped)
 };
 
 /**

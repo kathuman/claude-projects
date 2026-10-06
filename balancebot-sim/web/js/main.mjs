@@ -1,38 +1,61 @@
-import { restState } from './dynamics.mjs';
-import { defaultParams, deriveFromGeometry, mergeParams, DEFAULT_GEOMETRY, DEFAULT_MATERIAL } from './params.mjs';
-import { createController, defaultGains, defaultRealism } from './controller.mjs';
+import { restState, forcesAt } from './dynamics.mjs';
+import { deriveFromGeometry, mergeParams } from './params.mjs';
+import { createController, seededRandom } from './controller.mjs';
 import { createSimLoop } from './simloop.mjs';
 import { buildScene, buildGround } from './scene.mjs';
-import { PRESETS } from './presets.mjs';
+import { PRESETS, buildPreset } from './presets.mjs';
+import { MOTORS, BALBOA_EXTERNAL, motorParams, freeSpeedAt } from './motors.mjs';
+
+// Bump on every user-visible change.
+//   1.0.0  launch: Lagrangian pitch/drive dynamics, cascaded PID, presets, FreeCAD parameters
+//   1.1.0  honest and usable: every preset is shown with a scripted push (the failure presets visibly
+//          fail), a floor the body lands on (motors cut on a fall, like real firmware), a visible Push
+//          button, seeded (repeatable) noise and pushes, no 404 at load, stage-first phone layout,
+//          the Cobot Lab theme, version + credit + footer; fixes: slider edits never reached the
+//          physics after the first geometry change, the body tilt and wheel spin were drawn mirrored,
+//          and a control loop slower than the frame rate never ran (the 25 Hz preset froze)
+//   1.2.0  real hardware: DC gearmotors from datasheets (back-EMF top speed, battery voltage, current,
+//          gear play, rotor inertia), wheel encoders with quantized counts and a firmware speed filter,
+//          tyre grip and wheel slip, a yaw integral; presets for a Balboa-class robot (published Pololu
+//          parts), flat battery, sloppy gears, ice and the old ideal motors
+const APP_VERSION = '1.2.0';
+document.getElementById('ver').textContent = 'v' + APP_VERSION;
+document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
 const THREE = window.THREE;
-const FALL_ANGLE = 1.2; // rad (~69 deg) -- past this, control gives up
-const FREEZE_ANGLE = 1.48; // rad (~85 deg) -- past this, physics stops too
+const FALL_ANGLE = 1.2; // rad (~69 deg) -- past this, the firmware gives up and cuts the motors
 const CHART_RANGE_DEG = 45;
 const CHART_SAMPLES = 320;
+const $ = (id) => document.getElementById(id);
 
 // --- live configuration state -------------------------------------------
-let geometry = { ...DEFAULT_GEOMETRY };
-let material = { ...DEFAULT_MATERIAL };
-let params = defaultParams();
-let gains = defaultGains();
-let realism = defaultRealism();
+let presetKey = 'default';
+let built = buildPreset(presetKey);
+let geometry = built.geometry;
+let material = built.material;
+let params = built.params;
+let gains = built.gains;
+let realism = built.realism;
 
 const controller = createController(gains, realism);
 const loop = createSimLoop(params, controller, 2000);
 let fallen = false;
-let frozen = false;
+let simTime = 0;
+let pendingPush = null; // { at, kick }
+let pushRand = seededRandom(realism.noiseSeed + 7919);
 
-function recomputeFromGeometry(motorOverride, environmentOverride) {
-  const derived = deriveFromGeometry(geometry, material);
-  params = mergeParams(derived, {
-    motor: motorOverride || params.motor,
-    environment: environmentOverride || params.environment,
-  });
+function setParams(p) {
+  params = p;
+  loop.setParams(params);
+}
+
+function recomputeFromGeometry() {
+  setParams(mergeParams(deriveFromGeometry(geometry, material), { motor: params.motor, environment: params.environment }));
+  robot.rebuild(params);
 }
 
 // --- three.js scene -------------------------------------------------------
-const stageEl = document.getElementById('stage');
+const stageEl = $('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
@@ -41,39 +64,30 @@ if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBE
 stageEl.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0f1a);
-scene.fog = new THREE.Fog(0x0b0f1a, 2.5, 9);
+scene.background = new THREE.Color(0x0a2f52);
+scene.fog = new THREE.Fog(0x0a2f52, 2.5, 9);
 
 const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 50);
 
-const hemi = new THREE.HemisphereLight(0x8fb7ff, 0x0b0f1a, 0.6);
-scene.add(hemi);
-const key = new THREE.DirectionalLight(0xfff2e0, 1.1);
+scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x0a2f52, 0.45));
+const key = new THREE.DirectionalLight(0xfff4e6, 1.1);
 key.position.set(1.2, 1.8, 1);
 key.castShadow = true;
 key.shadow.mapSize.set(1024, 1024);
-key.shadow.camera.left = -1;
-key.shadow.camera.right = 1;
-key.shadow.camera.top = 1;
-key.shadow.camera.bottom = -1;
-key.shadow.camera.near = 0.2;
-key.shadow.camera.far = 4;
+Object.assign(key.shadow.camera, { left: -1, right: 1, top: 1, bottom: -1, near: 0.2, far: 4 });
 key.shadow.bias = -0.0015;
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x18e0c8, 0.3);
+const rim = new THREE.DirectionalLight(0x7dd3fc, 0.35);
 rim.position.set(-1.2, 0.8, -1);
 scene.add(rim);
 
 buildGround(THREE, scene);
-let robot = buildScene(THREE, scene, params);
+const robot = buildScene(THREE, scene, params);
 
 // --- chase-orbit camera -----------------------------------------------
 const spherical = { theta: 1.3, phi: 1.0, radius: 0.95 };
 const cameraTarget = new THREE.Vector3(0, 0.15, 0);
-
-function cameraHeight() {
-  return params.geometry.wheelRadius + params.geometry.bodyHeight * 0.5;
-}
+const cameraHeight = () => params.geometry.wheelRadius + params.geometry.bodyHeight * 0.5;
 
 function updateCamera(state) {
   cameraTarget.set(state.posX, cameraHeight(), -state.posZ);
@@ -114,117 +128,194 @@ function resize() {
 window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe(stageEl);
 
-// --- UI: configuration / controller / realism sliders --------------------
+// --- UI: sliders ------------------------------------------------------------
+const geo = (k) => ({ get: () => geometry[k], set: (v) => { geometry[k] = v; recomputeFromGeometry(); markCustom(); } });
+const env = (k) => ({ get: () => params.environment[k], set: (v) => { setParams({ ...params, environment: { ...params.environment, [k]: v } }); markCustom(); } });
+const mot = (k, scale = 1) => ({ get: () => params.motor[k] / scale, set: (v) => { setParams({ ...params, motor: { ...params.motor, [k]: v * scale } }); refreshMotorNote(); markCustom(); } });
+const gain = (k) => ({ get: () => gains[k], set: (v) => { gains = { ...gains, [k]: v }; controller.setGains(gains); markCustom(); } });
+const real = (k) => ({ get: () => realism[k], set: (v) => { realism = { ...realism, [k]: v }; controller.setRealism(realism); if (k === 'noiseSeed') pushRand = seededRandom(v + 7919); markCustom(); } });
+let driveSpeed = 0.35;
+
 const sliderSpecs = [
-  { id: 'wheelRadius', get: () => geometry.wheelRadius, set: (v) => { geometry.wheelRadius = v; recomputeFromGeometry(); robot.rebuild(params); }, unit: 'm', decimals: 3 },
-  { id: 'trackWidth', get: () => geometry.trackWidth, set: (v) => { geometry.trackWidth = v; recomputeFromGeometry(); robot.rebuild(params); }, unit: 'm', decimals: 3 },
-  { id: 'bodyHeight', get: () => geometry.bodyHeight, set: (v) => { geometry.bodyHeight = v; recomputeFromGeometry(); robot.rebuild(params); }, unit: 'm', decimals: 3 },
-  { id: 'comHeight', get: () => geometry.comHeight, set: (v) => { geometry.comHeight = v; recomputeFromGeometry(); robot.rebuild(params); }, unit: 'm', decimals: 3 },
-  { id: 'bodyDensity', get: () => material.bodyDensity, set: (v) => { material.bodyDensity = v; recomputeFromGeometry(); robot.rebuild(params); }, unit: 'kg/m³', decimals: 0 },
-  { id: 'maxTorque', get: () => params.motor.maxTorque, set: (v) => { params.motor.maxTorque = v; }, unit: 'N·m', decimals: 2 },
-  { id: 'timeConstant', get: () => params.motor.timeConstant, set: (v) => { params.motor.timeConstant = v; }, unit: 's', decimals: 3 },
-  { id: 'gravity', get: () => params.environment.gravity, set: (v) => { params.environment.gravity = v; }, unit: 'm/s²', decimals: 1 },
+  { id: 'wheelRadius', ...geo('wheelRadius'), unit: 'm', decimals: 3 },
+  { id: 'trackWidth', ...geo('trackWidth'), unit: 'm', decimals: 3 },
+  { id: 'bodyHeight', ...geo('bodyHeight'), unit: 'm', decimals: 3 },
+  { id: 'comHeight', ...geo('comHeight'), unit: 'm', decimals: 3 },
+  { id: 'bodyDensity', get: () => material.bodyDensity, set: (v) => { material.bodyDensity = v; recomputeFromGeometry(); markCustom(); }, unit: 'kg/m³', decimals: 0 },
+  { id: 'groundFriction', ...env('groundFriction'), decimals: 2 },
+  { id: 'gravity', ...env('gravity'), unit: 'm/s²', decimals: 1 },
 
-  { id: 'angleKp', get: () => gains.angleKp, set: (v) => { gains = { ...gains, angleKp: v }; controller.setGains(gains); }, decimals: 1 },
-  { id: 'angleKd', get: () => gains.angleKd, set: (v) => { gains = { ...gains, angleKd: v }; controller.setGains(gains); }, decimals: 2 },
-  { id: 'angleKi', get: () => gains.angleKi, set: (v) => { gains = { ...gains, angleKi: v }; controller.setGains(gains); }, decimals: 1 },
-  { id: 'velocityKp', get: () => gains.velocityKp, set: (v) => { gains = { ...gains, velocityKp: v }; controller.setGains(gains); }, decimals: 2 },
-  { id: 'velocityKi', get: () => gains.velocityKi, set: (v) => { gains = { ...gains, velocityKi: v }; controller.setGains(gains); }, decimals: 2 },
-  { id: 'yawKp', get: () => gains.yawKp, set: (v) => { gains = { ...gains, yawKp: v }; controller.setGains(gains); }, decimals: 3 },
+  { id: 'batteryVoltage', ...mot('batteryVoltage'), unit: 'V', decimals: 1 },
+  { id: 'backlashDeg', ...mot('backlash', Math.PI / 180), unit: '°', decimals: 1 },
+  { id: 'maxTorque', ...mot('maxTorque'), unit: 'N·m', decimals: 2 },
+  { id: 'timeConstant', ...mot('timeConstant'), unit: 's', decimals: 3 },
 
-  { id: 'controlLoopHz', get: () => realism.controlLoopHz, set: (v) => { realism = { ...realism, controlLoopHz: v }; controller.setRealism(realism); }, unit: 'Hz', decimals: 0 },
-  { id: 'sensorDelaySteps', get: () => realism.sensorDelaySteps, set: (v) => { realism = { ...realism, sensorDelaySteps: v }; controller.setRealism(realism); }, decimals: 0 },
-  { id: 'sensorNoiseStdTheta', get: () => realism.sensorNoiseStdTheta, set: (v) => { realism = { ...realism, sensorNoiseStdTheta: v }; controller.setRealism(realism); }, unit: 'rad', decimals: 4 },
-  { id: 'sensorNoiseStdRate', get: () => realism.sensorNoiseStdRate, set: (v) => { realism = { ...realism, sensorNoiseStdRate: v }; controller.setRealism(realism); }, unit: 'rad/s', decimals: 3 },
+  { id: 'angleKp', ...gain('angleKp'), decimals: 1 },
+  { id: 'angleKd', ...gain('angleKd'), decimals: 2 },
+  { id: 'angleKi', ...gain('angleKi'), decimals: 1 },
+  { id: 'velocityKp', ...gain('velocityKp'), decimals: 2 },
+  { id: 'velocityKi', ...gain('velocityKi'), decimals: 2 },
+  { id: 'yawKp', ...gain('yawKp'), decimals: 3 },
+  { id: 'yawKi', ...gain('yawKi'), decimals: 2 },
+
+  { id: 'controlLoopHz', ...real('controlLoopHz'), unit: 'Hz', decimals: 0 },
+  { id: 'sensorDelaySteps', ...real('sensorDelaySteps'), decimals: 0 },
+  { id: 'sensorNoiseStdTheta', ...real('sensorNoiseStdTheta'), unit: 'rad', decimals: 4 },
+  { id: 'sensorNoiseStdRate', ...real('sensorNoiseStdRate'), unit: 'rad/s', decimals: 3 },
+  { id: 'speedFilterHz', ...real('speedFilterHz'), unit: 'Hz', decimals: 0 },
+  { id: 'noiseSeed', ...real('noiseSeed'), decimals: 0 },
+  { id: 'driveSpeed', get: () => driveSpeed, set: (v) => { driveSpeed = v; }, unit: 'm/s', decimals: 2 },
 ];
 
-const sourcePill = document.getElementById('source-pill');
-const sourceText = document.getElementById('source-text');
-
-function markAnalytic() {
-  sourcePill.classList.remove('source-freecad');
-  sourceText.textContent = 'ANALYTIC';
-}
-
 function refreshSliderUI(spec) {
-  const input = document.getElementById(spec.id);
-  const label = document.getElementById('v-' + spec.id);
-  const value = spec.get();
+  const input = $(spec.id), label = $('v-' + spec.id), value = spec.get();
   input.value = value;
   if (label) label.textContent = value.toFixed(spec.decimals) + (spec.unit ? ' ' + spec.unit : '');
 }
-
-function refreshAllSliderUI() {
-  sliderSpecs.forEach(refreshSliderUI);
-}
+const refreshAllSliderUI = () => sliderSpecs.forEach(refreshSliderUI);
 
 sliderSpecs.forEach((spec) => {
-  const input = document.getElementById(spec.id);
-  input.addEventListener('input', () => {
-    spec.set(parseFloat(input.value));
+  $(spec.id).addEventListener('input', () => {
+    spec.set(parseFloat($(spec.id).value));
     refreshSliderUI(spec);
-    if (['wheelRadius', 'trackWidth', 'bodyHeight', 'comHeight', 'bodyDensity'].includes(spec.id)) {
-      markAnalytic();
-    }
   });
 });
-refreshAllSliderUI();
 
-// --- presets ---------------------------------------------------------------
-const presetSelect = document.getElementById('preset-select');
-function applyPreset(key) {
-  const preset = PRESETS[key];
-  if (!preset) return;
-  geometry = { ...DEFAULT_GEOMETRY, ...(preset.geometry || {}) };
-  material = { ...DEFAULT_MATERIAL, ...(preset.material || {}) };
-  recomputeFromGeometry(preset.motor, preset.environment);
-  gains = { ...defaultGains(), ...(preset.gains || {}) };
-  realism = { ...defaultRealism(), ...(preset.realism || {}) };
-  controller.setGains(gains);
-  controller.setRealism(realism);
-  controller.reset();
-  robot.rebuild(params);
-  markAnalytic();
-  refreshAllSliderUI();
-  resetSimulation();
+// --- motors -------------------------------------------------------------------
+const motorModel = $('motor-model'), motorSelect = $('motor-select'), balboaGears = $('balboa-gears');
+Object.keys(MOTORS).forEach((k) => motorSelect.add(new Option(MOTORS[k].label, k)));
+
+function refreshMotorUI() {
+  motorModel.value = params.motor.model;
+  motorSelect.value = params.motor.motorKey in MOTORS ? params.motor.motorKey : 'generic';
+  balboaGears.checked = params.motor.externalRatio > 1;
+  const dc = params.motor.model === 'dc';
+  document.querySelectorAll('.dc-only').forEach((el) => { el.hidden = !dc; });
+  document.querySelectorAll('.ideal-only').forEach((el) => { el.hidden = dc; });
+  const bv = $('batteryVoltage');
+  bv.min = (params.motor.batteryNominal * 0.6).toFixed(1);
+  bv.max = (params.motor.batteryNominal * 1.25).toFixed(1);
+  refreshMotorNote();
 }
-presetSelect.addEventListener('change', () => {
-  if (presetSelect.value) applyPreset(presetSelect.value);
+
+function refreshMotorNote() {
+  const m = params.motor, note = $('motor-note');
+  if (m.model !== 'dc') {
+    note.innerHTML = 'A perfect torque source: any torque up to the limit at any speed, after a first-order lag. No top speed, no battery, no gear play &mdash; the v1.0 model, kept for comparison.';
+    return;
+  }
+  const spec = MOTORS[m.motorKey] || MOTORS.generic;
+  const top = freeSpeedAt(m, m.batteryVoltage) * params.geometry.wheelRadius;
+  const stall = (m.stallTorque * m.batteryVoltage) / m.vNom;
+  note.innerHTML =
+    `At ${m.batteryVoltage.toFixed(1)} V (firmware assumes ${m.batteryNominal.toFixed(1)} V): top speed <b>${top.toFixed(2)} m/s</b>, ` +
+    `stall <b>${stall.toFixed(2)} N·m</b> per wheel, <b>${m.encoderCpr}</b> encoder counts per wheel turn.<br>` +
+    `Source: ${spec.source}` + (spec.estimated && spec.estimated.length ? ` <span class="est">Estimated: ${spec.estimated.join(', ')}.</span>` : '');
+}
+
+function rebuildMotor() {
+  const spec = MOTORS[motorSelect.value];
+  const nominal = motorSelect.value === 'generic' ? 7.4 : 7.2; // a 2S LiPo, or the Balboa's six NiMH cells
+  setParams({
+    ...params,
+    motor: {
+      ...params.motor,
+      ...motorParams(spec, { external: balboaGears.checked ? BALBOA_EXTERNAL : null, batteryNominal: nominal, batteryVoltage: nominal }),
+      motorKey: motorSelect.value,
+    },
+  });
+  refreshMotorUI();
+  refreshAllSliderUI();
+  markCustom();
+}
+motorSelect.addEventListener('change', rebuildMotor);
+balboaGears.addEventListener('change', rebuildMotor);
+motorModel.addEventListener('change', () => {
+  setParams({ ...params, motor: { ...params.motor, model: motorModel.value } });
+  refreshMotorUI();
+  markCustom();
 });
 
+// --- realism toggles ------------------------------------------------------------
+$('use-encoders').addEventListener('change', (e) => {
+  realism = { ...realism, useEncoders: e.target.checked };
+  controller.setRealism(realism);
+  markCustom();
+});
+
+// --- presets ---------------------------------------------------------------------
+const presetSelect = $('preset-select');
+presetSelect.add(new Option('Custom', ''));
+Object.keys(PRESETS).forEach((k) => presetSelect.add(new Option(PRESETS[k].label, k)));
+
+function markCustom() {
+  if (presetSelect.value) {
+    presetSelect.value = '';
+    $('preset-desc').textContent = 'Your own configuration.';
+  }
+  sourceText.textContent = 'ANALYTIC';
+  sourcePill.classList.remove('source-freecad');
+}
+
+function applyPreset(key) {
+  if (!PRESETS[key]) return;
+  presetKey = key;
+  built = buildPreset(key);
+  geometry = built.geometry;
+  material = built.material;
+  gains = built.gains;
+  realism = built.realism;
+  setParams(built.params);
+  controller.setGains(gains);
+  controller.setRealism(realism);
+  robot.rebuild(params);
+  presetSelect.value = key;
+  $('preset-desc').textContent = PRESETS[key].description;
+  $('use-encoders').checked = realism.useEncoders !== false;
+  sourceText.textContent = 'ANALYTIC';
+  sourcePill.classList.remove('source-freecad');
+  refreshMotorUI();
+  refreshAllSliderUI();
+  resetSimulation();
+  if ($('auto-push').checked) pendingPush = { at: 1, kick: built.nudge };
+}
+presetSelect.addEventListener('change', () => { if (presetSelect.value) applyPreset(presetSelect.value); });
+
 // --- FreeCAD params loading --------------------------------------------
+const sourcePill = $('source-pill');
+const sourceText = $('source-text');
 async function loadCadParams(announce) {
   try {
     const res = await fetch('cad/robot_params.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('not found');
     const json = await res.json();
-    params = mergeParams(defaultParams(), json);
+    setParams(mergeParams(params, json));
     geometry = { ...geometry, ...params.geometry };
+    presetSelect.value = '';
+    $('preset-desc').textContent = 'Mass and inertia from the FreeCAD model (cad/parametric_robot.py).';
     sourcePill.classList.add('source-freecad');
     sourceText.textContent = 'FREECAD';
     robot.rebuild(params);
+    refreshMotorUI();
     refreshAllSliderUI();
     return true;
   } catch (e) {
-    if (announce) {
-      const prev = sourceText.textContent;
-      sourceText.textContent = 'NO CAD FILE';
-      setTimeout(() => { sourceText.textContent = prev; }, 1800);
-    }
+    if (announce) toast('No FreeCAD export found — run cad/parametric_robot.py first');
     return false;
   }
 }
-document.getElementById('btn-load-cad').addEventListener('click', () => loadCadParams(true));
-loadCadParams(false);
+$('btn-load-cad').addEventListener('click', () => loadCadParams(true));
+// The FreeCAD export only exists in a local checkout where the macro has been run, so only look for
+// it automatically there (on the published site it would just be a 404 in the console).
+if (/^(localhost|127\.0\.0\.1|)$/.test(location.hostname)) loadCadParams(false);
 
 // --- drive input ---------------------------------------------------------
 const drive = { fwd: false, back: false, left: false, right: false };
-const DRIVE_SPEED = 0.35;
 const DRIVE_YAW = 0.9;
 
-function bindHold(id, key) {
-  const el = document.getElementById(id);
-  const press = (v) => (e) => { e.preventDefault(); drive[key] = v; el.classList.toggle('held', v); };
+function bindHold(id, k) {
+  const el = $(id);
+  const press = (v) => (e) => { e.preventDefault(); drive[k] = v; el.classList.toggle('held', v); };
   el.addEventListener('pointerdown', press(true));
   el.addEventListener('pointerup', press(false));
   el.addEventListener('pointerleave', press(false));
@@ -235,141 +326,170 @@ bindHold('pad-back', 'back');
 bindHold('pad-left', 'left');
 bindHold('pad-right', 'right');
 
+const KEYS = { ArrowUp: 'fwd', ArrowDown: 'back', ArrowLeft: 'left', ArrowRight: 'right' };
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowUp') drive.fwd = true;
-  if (e.key === 'ArrowDown') drive.back = true;
-  if (e.key === 'ArrowLeft') drive.left = true;
-  if (e.key === 'ArrowRight') drive.right = true;
+  if (e.target.closest && e.target.closest('input, select, textarea')) return;
+  if (KEYS[e.key]) { drive[KEYS[e.key]] = true; e.preventDefault(); }
   if (e.key === ' ') { e.preventDefault(); push(); }
   if (e.key === 'r' || e.key === 'R') resetSimulation();
 });
-window.addEventListener('keyup', (e) => {
-  if (e.key === 'ArrowUp') drive.fwd = false;
-  if (e.key === 'ArrowDown') drive.back = false;
-  if (e.key === 'ArrowLeft') drive.left = false;
-  if (e.key === 'ArrowRight') drive.right = false;
-});
+window.addEventListener('keyup', (e) => { if (KEYS[e.key]) drive[KEYS[e.key]] = false; });
 
-function push() {
-  const s = loop.getState();
-  const impulse = (Math.random() < 0.5 ? -1 : 1) * (1.2 + Math.random() * 0.8);
-  loop.setState({ ...s, thetaDot: s.thetaDot + impulse });
+let toastTimer = null;
+function toast(text) {
+  const el = $('toast');
+  el.textContent = text;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
 }
-document.getElementById('btn-push').addEventListener('click', push);
+
+/** Kick the pitch rate (rad/s). Without an argument: a pseudo-random shove from the noise seed. */
+function push(kick) {
+  const s = loop.getState();
+  const k = kick != null ? kick : (pushRand() < 0.5 ? -1 : 1) * (1.2 + pushRand() * 0.8);
+  loop.setState({ ...s, thetaDot: s.thetaDot + k });
+  toast(`Push: ${k > 0 ? '+' : ''}${k.toFixed(1)} rad/s`);
+}
+$('btn-push').addEventListener('click', () => push());
 
 function resetSimulation() {
   loop.setState(restState());
   controller.reset();
+  pushRand = seededRandom(realism.noiseSeed + 7919);
   fallen = false;
-  frozen = false;
-  document.getElementById('fallen-banner').classList.remove('show');
-  document.getElementById('status-pill').classList.remove('fallen');
-  document.getElementById('status-pill').classList.add('ok');
-  document.getElementById('status-text').textContent = 'BALANCED';
+  simTime = 0;
+  pendingPush = null;
+  chartHistory.fill(0);
+  speedHistory.fill(0);
+  $('fallen-banner').classList.remove('show');
+  $('status-pill').classList.remove('fallen');
+  $('status-pill').classList.add('ok');
+  $('status-text').textContent = 'BALANCED';
 }
-document.getElementById('btn-reset').addEventListener('click', resetSimulation);
-document.getElementById('btn-reset-2').addEventListener('click', resetSimulation);
+$('btn-reset').addEventListener('click', resetSimulation);
+$('btn-reset-2').addEventListener('click', resetSimulation);
 
-// --- strip chart -----------------------------------------------------------
-const chartCanvas = document.getElementById('chart');
-const chartCtx = chartCanvas.getContext('2d');
+// --- strip charts (one quantity each, one axis) -----------------------------------
 const chartHistory = new Array(CHART_SAMPLES).fill(0);
+const speedHistory = new Array(CHART_SAMPLES).fill(0);
 let chartWriteIndex = 0;
 
-function pushChartSample(thetaDeg) {
-  chartHistory[chartWriteIndex] = thetaDeg;
-  chartWriteIndex = (chartWriteIndex + 1) % CHART_SAMPLES;
-}
-
-function drawChart() {
-  const w = chartCanvas.width, h = chartCanvas.height;
-  chartCtx.clearRect(0, 0, w, h);
-  chartCtx.strokeStyle = 'rgba(135,147,171,0.25)';
-  chartCtx.lineWidth = 1;
-  chartCtx.beginPath();
-  chartCtx.moveTo(0, h / 2);
-  chartCtx.lineTo(w, h / 2);
-  chartCtx.stroke();
-
-  chartCtx.strokeStyle = '#18e0c8';
-  chartCtx.lineWidth = 2;
-  chartCtx.beginPath();
+function drawChart(canvas, history, range, color, refs = []) {
+  const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(143,208,242,0.28)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+  ctx.setLineDash([6, 5]);
+  ctx.strokeStyle = 'rgba(255,207,74,0.75)';
+  refs.forEach((r) => {
+    const y = h / 2 - (r / range) * (h / 2);
+    if (y < 0 || y > h) return;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
   for (let i = 0; i < CHART_SAMPLES; i++) {
-    const sample = chartHistory[(chartWriteIndex + i) % CHART_SAMPLES];
-    const x = (i / (CHART_SAMPLES - 1)) * w;
-    const y = h / 2 - (sample / CHART_RANGE_DEG) * (h / 2);
-    if (i === 0) chartCtx.moveTo(x, y); else chartCtx.lineTo(x, y);
+    const sample = Math.max(-range, Math.min(range, history[(chartWriteIndex + i) % CHART_SAMPLES]));
+    const x = (i / (CHART_SAMPLES - 1)) * w, y = h / 2 - (sample / range) * (h / 2);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
-  chartCtx.stroke();
+  ctx.stroke();
 }
-document.getElementById('chart-range').textContent = '±' + CHART_RANGE_DEG + '°';
+$('chart-range').textContent = '±' + CHART_RANGE_DEG + '°';
 
 // --- HUD ---------------------------------------------------------------
-const hud = {
-  theta: document.getElementById('hud-theta'),
-  thetadot: document.getElementById('hud-thetadot'),
-  xdot: document.getElementById('hud-xdot'),
-  psidot: document.getElementById('hud-psidot'),
-  tau: document.getElementById('hud-tau'),
-};
-
-function updateHud(state, lastCommand) {
+function updateHud(state) {
+  const c = loop.getLastCommand(), sensed = loop.getLastSensed();
   const thetaDeg = state.theta * (180 / Math.PI);
-  hud.theta.textContent = thetaDeg.toFixed(1) + '°';
-  hud.theta.classList.toggle('warn', Math.abs(thetaDeg) > 30);
-  hud.thetadot.textContent = (state.thetaDot * 180 / Math.PI).toFixed(1) + ' °/s';
-  hud.xdot.textContent = state.xDot.toFixed(2) + ' m/s';
-  hud.psidot.textContent = (state.psiDot * 180 / Math.PI).toFixed(1) + ' °/s';
-  hud.tau.textContent = lastCommand.tauL.toFixed(2) + ' / ' + lastCommand.tauR.toFixed(2);
+  $('hud-theta').textContent = thetaDeg.toFixed(1) + '°';
+  $('hud-theta').classList.toggle('warn', Math.abs(thetaDeg) > 30);
+  $('hud-thetadot').textContent = (state.thetaDot * 180 / Math.PI).toFixed(1) + ' °/s';
+  $('hud-xdot').textContent = state.xDot.toFixed(2) + ' m/s';
+  $('hud-enc').textContent = sensed ? sensed.xDot.toFixed(2) + ' m/s' : '—';
+  $('hud-psidot').textContent = (state.psiDot * 180 / Math.PI).toFixed(1) + ' °/s';
+  const R = params.geometry.wheelRadius;
+  const slip = Math.max(Math.abs(R * state.omegaL - state.xDot), Math.abs(R * state.omegaR - state.xDot)) - Math.abs(state.psiDot) * params.geometry.trackWidth / 2;
+  $('hud-slip').textContent = Math.max(0, slip).toFixed(2) + ' m/s';
+  $('hud-slip').classList.toggle('warn', slip > 0.05);
+  const dc = params.motor.model === 'dc';
+  $('hud-u-label').textContent = dc ? 'Duty L / R' : 'τ cmd L / R';
+  $('hud-u').textContent = dc
+    ? `${Math.round(c.uL * 100)}% / ${Math.round(c.uR * 100)}%`
+    : `${c.uL.toFixed(2)} / ${c.uR.toFixed(2)}`;
+  $('hud-u').classList.toggle('warn', dc && Math.max(Math.abs(c.uL), Math.abs(c.uR)) > 0.98);
+  const f = forcesAt(state, c.uL, c.uR, params);
+  $('hud-tau').textContent = f.tauWL.toFixed(2) + ' / ' + f.tauWR.toFixed(2);
 }
 
 // --- main loop -------------------------------------------------------------
 let lastFrameTime = performance.now();
 const MAX_CATCHUP_SECONDS = 0.1;
+let timeDebt = 0;
 
 function tick(now) {
   requestAnimationFrame(tick);
-  let dt = Math.min((now - lastFrameTime) / 1000, MAX_CATCHUP_SECONDS);
+  const dt = Math.min((now - lastFrameTime) / 1000, MAX_CATCHUP_SECONDS);
   lastFrameTime = now;
 
-  if (!frozen) {
-    const controlHz = realism.controlLoopHz;
-    const controlDt = 1 / controlHz;
-    let steps = Math.min(Math.round(dt / controlDt), 60);
-    for (let i = 0; i < steps; i++) {
-      if (!fallen) {
-        loop.setCommand(
-          (drive.fwd ? DRIVE_SPEED : 0) - (drive.back ? DRIVE_SPEED : 0),
-          (drive.left ? DRIVE_YAW : 0) - (drive.right ? DRIVE_YAW : 0)
-        );
-        loop.advance(controlHz);
-      } else {
-        loop.advanceOpenLoop(0, 0, controlDt);
-      }
-
-      const theta = Math.abs(loop.getState().theta);
-      if (!fallen && theta > FALL_ANGLE) {
-        fallen = true;
-        document.getElementById('fallen-banner').classList.add('show');
-        document.getElementById('status-pill').classList.remove('ok');
-        document.getElementById('status-pill').classList.add('fallen');
-        document.getElementById('status-text').textContent = 'FALLEN';
-      }
-      if (fallen && theta > FREEZE_ANGLE) {
-        frozen = true;
-        break;
-      }
+  const controlHz = realism.controlLoopHz;
+  const controlDt = 1 / controlHz;
+  // run whole control ticks for the real time that has passed (a slow loop runs less than once a frame)
+  timeDebt = Math.min(timeDebt + dt, MAX_CATCHUP_SECONDS);
+  const steps = Math.floor(timeDebt / controlDt + 1e-9);
+  timeDebt -= steps * controlDt;
+  for (let i = 0; i < steps; i++) {
+    if (pendingPush && simTime >= pendingPush.at) { push(pendingPush.kick); pendingPush = null; }
+    if (!fallen) {
+      loop.setCommand(
+        (drive.fwd ? driveSpeed : 0) - (drive.back ? driveSpeed : 0),
+        (drive.left ? DRIVE_YAW : 0) - (drive.right ? DRIVE_YAW : 0)
+      );
+      loop.advance(controlHz);
+    } else {
+      loop.advanceOpenLoop(0, 0, controlDt); // firmware has cut the motors
+    }
+    simTime += controlDt;
+    if (!fallen && Math.abs(loop.getState().theta) > FALL_ANGLE) {
+      fallen = true;
+      $('fallen-banner').classList.add('show');
+      $('status-pill').classList.remove('ok');
+      $('status-pill').classList.add('fallen');
+      $('status-text').textContent = 'FALLEN';
     }
   }
 
   const state = loop.getState();
   robot.sync(state, params);
   updateCamera(state);
-  updateHud(state, loop.getLastCommand());
-  pushChartSample(state.theta * (180 / Math.PI));
-  drawChart();
+  updateHud(state);
+  chartHistory[chartWriteIndex] = state.theta * (180 / Math.PI);
+  speedHistory[chartWriteIndex] = state.xDot;
+  chartWriteIndex = (chartWriteIndex + 1) % CHART_SAMPLES;
+  drawChart($('chart'), chartHistory, CHART_RANGE_DEG, '#4fe0ff');
+  const top = params.motor.model === 'dc' ? freeSpeedAt(params.motor, params.motor.batteryVoltage) * params.geometry.wheelRadius : null;
+  const speedRange = Math.max(0.5, Math.ceil((top || 1) * 1.25 * 2) / 2);
+  $('speed-range').textContent = '±' + speedRange.toFixed(1);
+  drawChart($('chart-speed'), speedHistory, speedRange, '#3ddc97', top ? [top, -top] : []);
   renderer.render(scene, camera);
 }
 
+applyPreset('default');
 resize();
 requestAnimationFrame(tick);
+
+// a small hook for automated checks (tests/smoke)
+window.Plumb = {
+  version: APP_VERSION,
+  state: () => loop.getState(),
+  params: () => params,
+  applyPreset,
+  push,
+  fallen: () => fallen,
+  simTime: () => simTime,
+  robot,
+};

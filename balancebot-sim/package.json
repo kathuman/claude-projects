@@ -1,6 +1,6 @@
 {
   "name": "balancebot-sim",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Parametrized 3D simulator for a two-wheeled, single-axis balancing robot.",
   "type": "module",

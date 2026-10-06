@@ -19,8 +19,9 @@ export function buildScene(THREE, scene, params) {
   const chassisGroup = new THREE.Group();
   scene.add(chassisGroup);
 
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x2a3138, metalness: 0.3, roughness: 0.6 });
-  const treadMat = new THREE.MeshStandardMaterial({ color: 0x14181d, metalness: 0.1, roughness: 0.9 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x9fb4c8, metalness: 0.35, roughness: 0.5 });
+  const treadMat = new THREE.MeshStandardMaterial({ color: 0x14212e, metalness: 0.05, roughness: 0.95 });
+  const spokeMat = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, emissive: 0x7dd3fc, emissiveIntensity: 0.35, roughness: 0.5 });
   const bodyMat = new THREE.MeshPhysicalMaterial({
     color: 0xeaf2f1,
     metalness: 0.1,
@@ -29,8 +30,8 @@ export function buildScene(THREE, scene, params) {
     clearcoatRoughness: 0.3,
   });
   const accentMat = new THREE.MeshStandardMaterial({
-    color: 0x18e0c8,
-    emissive: 0x18e0c8,
+    color: 0x7dd3fc,
+    emissive: 0x7dd3fc,
     emissiveIntensity: 0.5,
     metalness: 0.3,
     roughness: 0.4,
@@ -42,16 +43,20 @@ export function buildScene(THREE, scene, params) {
     wheel.rotation.x = Math.PI / 2; // local Y (cylinder axis) -> Z (lateral)
     wheel.castShadow = true;
     wheel.receiveShadow = true;
-    group.add(wheel);
+    // the tyre: a torus around the axle (its own axis is already Z, the axle direction)
     const tread = new THREE.Mesh(
-      new THREE.TorusGeometry(g.wheelRadius * 0.96, g.wheelWidth * 0.18, 8, 28),
+      new THREE.TorusGeometry(g.wheelRadius * 0.93, g.wheelWidth * 0.32, 10, 36),
       treadMat
     );
-    tread.rotation.y = Math.PI / 2;
-    group.add(tread);
+    tread.castShadow = true;
+    // a bright spoke, so the wheel's spin (and any slip) is visible
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(g.wheelRadius * 1.6, g.wheelRadius * 0.16, g.wheelWidth * 1.08), spokeMat);
+    const spin = new THREE.Group();
+    spin.add(wheel, tread, spoke);
+    group.add(spin);
     group.position.set(0, 0, ySign * g.trackWidth / 2);
     chassisGroup.add(group);
-    return { group, wheel };
+    return { group, wheel, tread, spoke, spin };
   }
 
   const wheelLeft = makeWheel(-1);
@@ -78,9 +83,13 @@ export function buildScene(THREE, scene, params) {
 
   function rebuild(newParams) {
     const ng = newParams.geometry;
-    [wheelLeft, wheelRight].forEach(({ group, wheel }, i) => {
+    [wheelLeft, wheelRight].forEach(({ group, wheel, tread, spoke }, i) => {
       wheel.geometry.dispose();
-      wheel.geometry = new THREE.CylinderGeometry(ng.wheelRadius, ng.wheelRadius, ng.wheelWidth, 28);
+      wheel.geometry = new THREE.CylinderGeometry(ng.wheelRadius * 0.9, ng.wheelRadius * 0.9, ng.wheelWidth, 28);
+      tread.geometry.dispose();
+      tread.geometry = new THREE.TorusGeometry(ng.wheelRadius * 0.93, ng.wheelWidth * 0.32, 10, 36);
+      spoke.geometry.dispose();
+      spoke.geometry = new THREE.BoxGeometry(ng.wheelRadius * 1.6, ng.wheelRadius * 0.16, ng.wheelWidth * 1.08);
       group.position.set(0, 0, (i === 0 ? -1 : 1) * ng.trackWidth / 2);
     });
     body.geometry.dispose();
@@ -101,10 +110,12 @@ export function buildScene(THREE, scene, params) {
     sync(state, currentParams) {
       chassisGroup.position.set(state.posX, currentParams.geometry.wheelRadius, -state.posZ);
       chassisGroup.rotation.y = -state.psi;
-      tiltGroup.rotation.z = state.theta;
-      const phi = state.x / currentParams.geometry.wheelRadius;
-      wheelLeft.wheel.rotation.z = phi;
-      wheelRight.wheel.rotation.z = phi;
+      // physics: theta > 0 tips the body toward +x; a +Z rotation in three.js tips it toward -x
+      tiltGroup.rotation.z = -state.theta;
+      // each wheel turns by its own simulated angle (so a slipping wheel visibly spins);
+      // three.js's +Z rotation turns the top of the wheel backward, hence the minus sign
+      wheelLeft.spin.rotation.z = -state.phiL;
+      wheelRight.spin.rotation.z = -state.phiR;
     },
   };
 }
@@ -112,13 +123,13 @@ export function buildScene(THREE, scene, params) {
 export function buildGround(THREE, scene) {
   const floor = new THREE.Mesh(
     new THREE.PlaneGeometry(40, 40),
-    new THREE.MeshStandardMaterial({ color: 0x0d1116, roughness: 0.95, metalness: 0.05 })
+    new THREE.MeshStandardMaterial({ color: 0x05182c, roughness: 0.95, metalness: 0.0 })
   );
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const grid = new THREE.GridHelper(40, 80, 0x223038, 0x161c22);
+  const grid = new THREE.GridHelper(40, 160, 0x4f8cc0, 0x1f4f7c);
   grid.position.y = 0.002;
   scene.add(grid);
   return { floor, grid };
