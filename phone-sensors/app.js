@@ -4,13 +4,19 @@
 //          camera, touch, battery, network, screen) with live charts, hover read-outs and tables; steps, shakes,
 //          heading, spirit level, motion rhythm and GPS distance; CSV/JSON recording; a computer view paired by QR code
 //          over WebRTC (PeerJS); a demo phone for devices without sensors
+//   1.1.0  the Sensor Deck Android app: barometer (with altitude), battery and air temperature, humidity (with dew
+//          point), proximity, the hardware step counter, a fingerprint check and any other sensor the phone lists;
+//          light and magnetometer without a Chrome flag. In a browser those cards say so and link to the app
 (function () {
   "use strict";
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.0";
+  var NATIVE = !!(window.SensorHub && window.SensorHub.native), APK = "download/sensor-deck.apk";
   var C = window.SensorCore, $ = function (id) { return document.getElementById(id); };
   var WINDOW = 10000, PARAMS = new URLSearchParams(location.search);
   $("ver").textContent = "v" + VERSION; $("verFoot").textContent = "v" + VERSION;
   if (!window.isSecureContext) $("insecure").hidden = false;
+  if (NATIVE) { $("appBanner").hidden = true; $("appBadge").hidden = false; }
+  else if (/Android/i.test(navigator.userAgent)) $("appBanner").hidden = false;
 
   // ---- theme
   $("themeBtn").addEventListener("click", function () {
@@ -133,7 +139,7 @@
     s.ch.forEach(function (name, i) {
       var v = el("div", "val"), k = el("span", "k"), pi = s.plot.indexOf(i);
       if (pi >= 0) { var sw = el("i"); sw.dataset.series = pi; k.appendChild(sw); }
-      k.appendChild(document.createTextNode(name + (s.unit && !/[%°]|Hz|m\/s|ms|px|Mb|0–1/.test(name) && !/fingers|charging|online|pressure/.test(name) ? " (" + s.unit + ")" : "")));
+      k.appendChild(document.createTextNode(name + (s.unit && !/[%°]|Hz|m\/s|ms|px|Mb|0–1|hPa| m$| cm$/.test(name) && !/fingers|charging|online|pressure|near|matched|checks|since|session|^v\d/.test(name) ? " (" + s.unit + ")" : "")));
       v.appendChild(k); v.appendChild(el("span", "v", "–")); vals.appendChild(v);
     });
     c.appendChild(vals);
@@ -144,6 +150,13 @@
       c._chart = new Chart(cv, tip, s);
     }
     var tw = el("div", "tablewrap"); tw.hidden = true; c.appendChild(tw); c._table = tw;
+    if (s.app) {
+      var na = el("div", "appnote");
+      na.appendChild(document.createTextNode("Browsers cannot read this. The Sensor Deck Android app can: "));
+      var dl = el("a", "", "download the app (APK)"); dl.href = APK; na.appendChild(dl);
+      na.appendChild(document.createTextNode("."));
+      c.appendChild(na);
+    }
     c.appendChild(el("div", "meta about"));
     c.appendChild(el("div", "about", s.about));
     c.appendChild(el("div", "src", "Source: " + s.src));
@@ -165,13 +178,16 @@
     msg.textContent = d.msg || ""; msg.classList.toggle("bad", d.state === "denied" || d.state === "error");
     var tog = c.querySelector(".toggle");
     tog.textContent = d.state === "on" || hub.isOn(id) ? "Stop" : "Start";
+    // an app-only card in a browser collapses to its note, unless readings arrive (demo phone, or a phone with the app)
+    c.classList.toggle("needs-app", !!d.s.app && !NATIVE && mode === "phone" && !demo.on && (d.state === "off" || d.state === "unavailable"));
     if (id === "cam") paintCam();
+    if (id === "fingerprint" && $("fpBtn")) $("fpBtn").disabled = !(NATIVE && d.state === "on");
   }
   function paintValues(id) {
     var d = D[id], c = cardOf(id), vs = c.querySelectorAll(".val .v"), s = d.s;
     if (d.last) d.last.forEach(function (x, i) {
       var txt;
-      if (id === "battery" && i === 1) txt = x ? "yes" : "no";
+      if ((id === "battery" && i === 1) || (id === "proximity" && i === 1) || (id === "fingerprint" && i === 0)) txt = x ? "yes" : "no";
       else if (id === "net" && i === 2) txt = x ? "yes" : "no";
       else if (id === "geo") txt = C.fmt(x, i < 2 ? 6 : 1);
       else if (id === "orient" && i === 0 && x != null) txt = C.fmt(x, 1) + " " + C.cardinal(x);
@@ -209,6 +225,17 @@
       var tb = el("button", "btn small", "Torch"); tb.type = "button"; tb.id = "torchBtn"; tb.hidden = true; tb.setAttribute("aria-pressed", "false"); box.appendChild(tb);
       tb.addEventListener("click", function () { var on = tb.getAttribute("aria-pressed") !== "true"; hub.torch(on).then(function () { tb.setAttribute("aria-pressed", String(on)); }, function () {}); });
       var img = el("img"); img.id = "camFrame"; img.alt = "What the phone's camera sees"; img.width = 160; img.hidden = true; box.appendChild(img);
+    }
+    if (id === "fingerprint") {
+      var fb = el("button", "btn primary small", "Check fingerprint"); fb.type = "button"; fb.id = "fpBtn"; fb.disabled = true; box.appendChild(fb);
+      var log = el("ul", "fplog"); log.id = "fpLog"; box.appendChild(log);
+      fb.addEventListener("click", function () { hub.checkFingerprint(); });
+    }
+    if (id === "raw") {
+      var sel = el("select", "rawsel"); sel.id = "rawSel"; sel.setAttribute("aria-label", "Sensor to read"); sel.disabled = true;
+      sel.appendChild(new Option("Start the card to list the sensors", "")); box.appendChild(sel);
+      var det = el("details", "rawlist"); det.id = "rawList"; det.hidden = true; box.style.display = "block"; box.appendChild(det);
+      sel.addEventListener("change", function () { if (sel.value !== "") { D.raw.buf.clear(); hub.rawSelect(+sel.value); } });
     }
     if (id === "touch") {
       padEl = el("div", "touchpad"); padEl.appendChild(el("em", "", "Touch here, with several fingers"));
@@ -353,11 +380,36 @@
 
   // ---- local sensors
   var hub = new window.SensorHub(
-    function (id, v) { feed(id, localNow(), v); },
+    function (id, v, age) { feed(id, localNow() - (age || 0), v); },
     function (id, state, text) { setState(id, state, text); if (id === "mic" && specCv) specCv.hidden = state !== "on"; if (id === "cam") paintCam(); refreshButtons(); },
     function (id, text) { setMeta(id, text); }
   );
   var AUTO = ["accel", "linacc", "gyro", "orient", "mag", "light", "geo", "touch", "battery", "net", "screen"];
+  if (NATIVE) AUTO = AUTO.concat(["pressure", "temp", "humidity", "proximity", "hwsteps", "fingerprint", "raw"]);
+  // the app's sensor list fills the Any sensor card; fingerprint results go to its log
+  hub.onList = function (list) {
+    var sel = $("rawSel"), det = $("rawList"), keep = sel.value;
+    sel.textContent = ""; sel.appendChild(new Option("Choose one of " + list.length + " sensors…", ""));
+    list.forEach(function (x) { sel.appendChild(new Option(x.name + " — " + x.typeName, String(x.index))); });
+    sel.value = keep; sel.disabled = false;
+    det.hidden = false;
+    det.innerHTML = "<summary>All " + list.length + " sensors on this phone</summary><div class='tablewrap'><table class='data'><thead><tr><th>Sensor</th><th>Type</th><th>Vendor</th><th>Range</th><th>Resolution</th><th>Power mA</th></tr></thead><tbody>" +
+      list.map(function (x) { return "<tr><td>" + esc(x.name) + "</td><td>" + esc(x.typeName) + "</td><td>" + esc(x.vendor) + "</td><td>" + esc(C.fmt(x.range, 3)) + "</td><td>" + esc(C.fmt(x.resolution, 4)) + "</td><td>" + esc(C.fmt(x.power, 2)) + "</td></tr>"; }).join("") +
+      "</tbody></table></div>";
+    setMeta("raw", list.length + " sensors listed by Android.");
+  };
+  // the app's own facts (model, Android version, which sensors exist) arrive just after the page loads
+  hub.onInfo = function () {
+    if (mode !== "phone") return;
+    window.SensorHub.deviceInfo().then(function (i) { lastInfo = i; showInfo(i); if (link.open) sendHello(); });
+  };
+  hub.onFingerprint = function (result, text) {
+    var words = { matched: "Fingerprint matched", failed: "Not recognised", cancelled: "Cancelled", none: "No fingerprint enrolled", unavailable: "No fingerprint sensor", error: "Error" };
+    var li = el("li", result === "matched" ? "ok" : result === "failed" ? "bad" : "", new Date().toLocaleTimeString() + " · " + (words[result] || result) + (text ? " — " + text : ""));
+    var log = $("fpLog"); log.insertBefore(li, log.firstChild); while (log.children.length > 6) log.lastChild.remove();
+    setMeta("fingerprint", (words[result] || result) + (text ? ": " + text : ""));
+    if (result === "none") setState("fingerprint", "unavailable", "Add a fingerprint in Android's settings (Security) first.");
+  };
   $("startAll").addEventListener("click", function () {
     if (demo.on) stopDemo();
     hub.askMotionPermission().then(function () {
@@ -377,12 +429,12 @@
   var demo = { on: false, timer: null, start: 0, k: 0 };
   function startDemo() {
     hub.stopAll(); demo.on = true; demo.start = localNow(); demo.k = 0;
-    C.SENSORS.forEach(function (s) { setState(s.id, "on", "Demo phone: simulated readings."); });
+    C.SENSORS.forEach(function (s) { if (!s.event) setState(s.id, "on", "Demo phone: simulated readings."); });
     setMeta("orient", "Heading from magnetic north (demo)."); setMeta("net", "Online · wifi · 4G class (demo)"); setMeta("battery", "On battery (demo)."); setMeta("screen", "portrait primary (demo)");
     demo.timer = setInterval(function () {
       var t = localNow(), sim = C.simulate((t - demo.start) / 1000); demo.k++;
       ["accel", "linacc", "gyro", "orient"].forEach(function (id) { feed(id, t, sim[id]); });
-      if (demo.k % 12 === 0) ["mag", "light", "geo", "mic", "cam", "battery", "net", "screen", "touch"].forEach(function (id) { feed(id, t, sim[id]); });
+      if (demo.k % 12 === 0) ["mag", "light", "geo", "mic", "cam", "battery", "net", "screen", "touch", "pressure", "temp", "humidity", "proximity", "hwsteps", "raw"].forEach(function (id) { feed(id, t, sim[id]); });
     }, 1000 / 60);
     $("demoBtn").setAttribute("aria-pressed", "true"); $("demoBtn").textContent = "Stop demo";
     refreshButtons();
@@ -400,13 +452,15 @@
   wake.want = function (why, on) {
     wake.reasons[why] = on;
     var need = wake.manual || Object.keys(wake.reasons).some(function (k) { return wake.reasons[k]; });
+    // inside the Android app the activity keeps the screen on (the WebView has no wake lock API)
+    if (NATIVE) { hub.nativeSend({ cmd: "awake", on: need }); wake.lock = need ? { release: function () {} } : null; paintWake(); return; }
     if (need && !wake.lock && navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { wake.lock = l; l.addEventListener("release", function () { wake.lock = null; }); paintWake(); }, function () {});
     if (!need && wake.lock) { wake.lock.release(); wake.lock = null; }
     paintWake();
   };
   function paintWake() { $("wakeBtn").setAttribute("aria-pressed", String(!!wake.lock)); $("wakeBtn").textContent = wake.lock ? "Screen stays on" : "Keep screen on"; }
   $("wakeBtn").addEventListener("click", function () {
-    if (!navigator.wakeLock) { $("toolsMsg").textContent = "This browser cannot keep the screen on."; return; }
+    if (!navigator.wakeLock && !NATIVE) { $("toolsMsg").textContent = "This browser cannot keep the screen on."; return; }
     wake.manual = !wake.manual; wake.want("manual", wake.manual);
   });
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") wake.want("again", false); });

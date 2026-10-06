@@ -6,6 +6,10 @@ computer. Live: https://kathuman.github.io/claude-projects/phone-sensors/
 Nothing is installed. Open the page on the phone (Chrome on Android gives the most), tap **Start sensors** and allow
 what the browser asks for.
 
+For what browsers can't read, there is the **Sensor Deck Android app** ([download](download/sensor-deck.apk),
+[source and details](android/)). It runs this same page and adds the barometer, battery and air temperature,
+humidity, proximity, the hardware step counter, a fingerprint check, and any other sensor the phone lists.
+
 ## What it reads
 
 | Card | Readings | Web API |
@@ -23,7 +27,16 @@ what the browser asks for.
 | Battery | level, charging, time to full/empty | `navigator.getBattery` |
 | Network | downlink estimate, round trip, online | `navigator.connection` |
 | Screen | rotation angle, viewport size | `screen.orientation` |
+| Barometer *(app)* | pressure (hPa), altitude (standard atmosphere) | `Sensor.TYPE_PRESSURE` |
+| Temperature *(app)* | battery °C, air °C where fitted | `BatteryManager.EXTRA_TEMPERATURE`, `TYPE_AMBIENT_TEMPERATURE` |
+| Humidity *(app)* | relative humidity, dew point (Magnus) | `Sensor.TYPE_RELATIVE_HUMIDITY` |
+| Proximity *(app)* | distance (cm), near | `Sensor.TYPE_PROXIMITY` |
+| Step counter *(app)* | steps since boot and this session | `Sensor.TYPE_STEP_COUNTER` |
+| Fingerprint *(app)* | matched or not, number of checks | `BiometricPrompt` |
+| Any sensor *(app)* | raw values of any sensor Android lists | `SensorManager.getSensorList` |
 
+The cards marked *(app)* collapse to a short note with the download link in a browser. In the app, light and the
+magnetometer also come from Android directly, without the Chrome flag.
 There are two more cards:
 - **This device:** the model (Chrome on Android reports it), system version, cores, memory and screen, and which
   sensor APIs exist.
@@ -80,9 +93,13 @@ paired.
 
 ## What a web page cannot read
 
-Browsers don't expose some phone sensors to web pages: the barometer, the proximity sensor, the hardware step counter,
-the fingerprint reader, NFC tags (Chrome on Android has Web NFC, which is not used here), Bluetooth devices nearby,
-and cell-tower or Wi-Fi details. Reading them would need a native Android app.
+Browsers don't expose these to web pages: the barometer, thermometers, the hygrometer, the proximity sensor, the
+hardware step counter and the fingerprint reader. The Android app reads them.
+
+No app at all can read the fingerprint itself. Android only says whether it matched.
+
+Still not read: NFC tags (Chrome on Android has Web NFC, which is not used here), Bluetooth devices nearby, and
+cell-tower or Wi-Fi details.
 
 Other limits:
 - **Magnetometer and light sensor:** Chrome on Android hides them behind
@@ -111,7 +128,7 @@ Other limits:
 
 ## Tests
 
-`node phone-sensors/tests/core.test.js` (52 checks, run in CI):
+`node phone-sensors/tests/core.test.js` (57 checks, run in CI):
 - **Steps:** 20 s of walking at 1.8 steps/s counts 36 ± 2, at 20 Hz or 60 Hz sampling. A phone lying still counts
   none, and neither does noise.
 - **Shakes:** a hard back-and-forth is one shake; ordinary handling is none.
@@ -122,7 +139,19 @@ Other limits:
   CSV quoting.
 - **Messages:** junk, scripts, non-JPEG frames and unknown commands are refused.
 - **Demo phone:** gives a value for every channel.
+- **Altitude:** matches the standard atmosphere's published values (1000 m at 898.75 hPa).
+- **Dew point:** matches tables (9.3 °C for 20 °C at 50 %).
+- **Junk readings:** sentinels such as −1e30 are dropped.
 
 The browser was checked with Playwright: synthetic motion and orientation events, a fake location, fake camera and
 microphone, the touch pad, the demo phone, CSV/JSON downloads, phone width, and a phone page streaming to a computer
-page over PeerJS. All 44 checks pass. Real sensors can only be judged on a real phone.
+page over PeerJS. All 44 checks pass.
+
+A second browser run (37 checks) plays the Android app's side of the bridge:
+- native readings, a missing air thermometer, the sensor list, and raw values;
+- fingerprint matched, failed and none-enrolled;
+- keep-screen-on, and stopping every source;
+- the app's readings reaching the computer view.
+
+The app itself was checked on the Android emulator; see [android/README.md](android/README.md). Real sensors can only
+be judged on a real phone.

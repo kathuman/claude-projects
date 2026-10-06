@@ -8,7 +8,7 @@ const near = (a, b, tol) => a != null && Math.abs(a - b) <= tol;
 const angNear = (a, b, tol) => a != null && Math.abs(((a - b + 540) % 360) - 180) <= tol;
 
 // catalogue
-check("13 sensors with unique ids, every plotted channel exists", C.SENSORS.length === 13 && new Set(C.SENSORS.map((s) => s.id)).size === 13 &&
+check("20 sensors with unique ids, every plotted channel exists", C.SENSORS.length === 20 && new Set(C.SENSORS.map((s) => s.id)).size === 20 &&
   C.SENSORS.every((s) => s.plot.every((i) => i < s.ch.length) && s.name && s.src && s.about));
 
 // ring buffer
@@ -93,7 +93,7 @@ const csv = C.toCSV([[1500, "accel", [0.1, -9.81, 0.3333333333, 9.8]], [1600, "g
 const rows = csv.trim().split("\n");
 check("CSV: a header and one row per sample, seconds, blanks for missing", rows.length === 3 && rows[0].startsWith("time_s,sensor,v1") && rows[1].startsWith("1.5,accel,0.1,-9.81,0.333333,9.8") && rows[2].includes("5,,1,90"), rows[2]);
 check("CSV quotes commas and quotes", C.csvCell('a,"b"') === '"a,""b"""' && C.csvCell(null) === "" && C.csvCell(NaN) === "");
-check("CSV legend names every sensor's columns", C.csvLegend().split("\n").filter(Boolean).length === 14 && C.csvLegend().includes("accel,m/s²"));
+check("CSV legend names every sensor's columns", C.csvLegend().split("\n").filter(Boolean).length === C.SENSORS.length + 1 && C.csvLegend().includes("accel,m/s²"));
 
 // messages
 check("message: hello keeps known sensors only and trims strings", (() => {
@@ -122,10 +122,17 @@ check("pairing codes are normalised from what people type", C.normaliseCode(" ab
 
 // demo phone
 const s0 = C.simulate(0), s5 = C.simulate(5);
-check("demo phone: every sensor gives a value per channel", C.SENSORS.every((s) => Array.isArray(s0[s.id]) && s0[s.id].length === s.ch.length && s0[s.id].every((v) => typeof v === "number" && isFinite(v))));
+check("demo phone: every sensor gives a value per channel (the fingerprint is an event, not a stream)", C.SENSORS.filter((s) => !s.event).every((s) => Array.isArray(s0[s.id]) && s0[s.id].length === s.ch.length && s0[s.id].every((v) => typeof v === "number" && isFinite(v))));
 check("demo phone: gravity has magnitude g on average", near(C.stats(Array.from({ length: 600 }, (_, i) => C.simulate(i / 60).accel[3])).mean, C.G, 0.6));
 check("demo phone: walks about 6.5 m in 5 s", near(C.haversine(s0.geo[0], s0.geo[1], s5.geo[0], s5.geo[1]), 6.5, 0.3));
 check("demo phone: the compass agrees with the orientation it reports", angNear(C.compassHeading(s5.orient[3], 0, 0), s5.orient[0], 1e-6));
+check("app-only sensors: barometer, temperature, humidity, proximity, step counter, fingerprint, any sensor", C.SENSORS.filter((s) => s.app).map((s) => s.id).join() === "pressure,temp,humidity,proximity,hwsteps,fingerprint,raw");
+// barometric altitude: the standard atmosphere's published values
+check("altitude: 1013.25 hPa is sea level, 898.75 hPa is 1000 m, 795.01 hPa is 2000 m", near(C.altitude(1013.25), 0, 1e-9) && near(C.altitude(898.75), 1000, 3) && near(C.altitude(795.01), 2000, 5), C.altitude(898.75).toFixed(1) + " / " + C.altitude(795.01).toFixed(1));
+check("altitude: one floor (3 m) is about 0.36 hPa", near(C.altitude(1013.25 - 0.36), 3, 0.2));
+// dew point: at 100 % it equals the temperature; 20 °C at 50 % is 9.3 °C (tables)
+check("dew point: equals the temperature at 100 %, 9.3 °C for 20 °C at 50 %", near(C.dewPoint(20, 100), 20, 1e-9) && near(C.dewPoint(20, 50), 9.3, 0.1) && C.dewPoint(null, 50) === null && C.dewPoint(20, 0) === null, C.dewPoint(20, 50).toFixed(2));
+check("sane: the emulator's −1e30 sentinel, NaN and Infinity are no reading; real values pass", C.sane(-1.0000000150474662e+30) === null && C.sane(NaN) === null && C.sane(Infinity) === null && C.sane("3") === null && C.sane(1013.25) === 1013.25 && C.sane(-40) === -40);
 check("fmt: dashes for missing, no negative zero", C.fmt(null) === "–" && C.fmt(-0.0001, 2) === "0.00" && C.fmt(3.14159, 3) === "3.142");
 
 console.log(pass + "/" + (pass + fail) + " checks passed");

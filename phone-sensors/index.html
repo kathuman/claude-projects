@@ -115,6 +115,18 @@
     .phone3d { width: 70px; height: 110px; perspective: 400px; flex: none; margin: 4px 14px; }
     .phone3d .body { width: 100%; height: 100%; border: 2px solid var(--accent); border-radius: 10px; background: linear-gradient(160deg, var(--accent-soft), var(--panel-2)); transform-style: preserve-3d; position: relative; }
     .phone3d .body::after { content: ""; position: absolute; left: 50%; top: 6px; width: 16px; height: 3px; margin-left: -8px; border-radius: 2px; background: var(--accent); }
+    .card.needs-app .vals, .card.needs-app .chartbox, .card.needs-app .tblbtn, .card.needs-app .toggle, .card.needs-app .extra, .card.needs-app .msg, .card.needs-app .rate { display: none; }
+    .appnote { display: none; font-size: 13px; color: var(--ink-2); border-left: 3px solid var(--accent); padding: 2px 0 2px 10px; }
+    .card.needs-app .appnote { display: block; }
+    .appbanner { padding: 12px 16px; margin-bottom: 14px; font-size: 14px; color: var(--ink-2); border-color: var(--accent); }
+    .fplog { list-style: none; margin: 0; padding: 0; font-family: "IBM Plex Mono", monospace; font-size: 12px; width: 100%; }
+    .fplog li { padding: 2px 0; color: var(--ink-2); } .fplog li.ok { color: var(--good); } .fplog li.bad { color: var(--bad); }
+    .rawsel { width: 100%; padding: 7px 8px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 14px; }
+    .rawlist { margin-top: 8px; font-size: 13px; } .rawlist summary { cursor: pointer; color: var(--accent); margin-bottom: 6px; }
+    .rawlist td:first-child, .rawlist th:first-child, .rawlist td:nth-child(2), .rawlist td:nth-child(3) { text-align: left; }
+    .help { padding: 14px 16px; margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+    .help h2 { margin: 0 0 6px; font-size: 18px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink); }
+    .help ol { margin: 4px 0 8px; padding-left: 20px; }
     .touchpad { width: 100%; height: 150px; border: 1px dashed var(--line); border-radius: 10px; position: relative; touch-action: none; background: var(--panel-2); overflow: hidden; user-select: none; -webkit-user-select: none; }
     .touchpad span { position: absolute; border-radius: 50%; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 25%, transparent); transform: translate(-50%, -50%); pointer-events: none; }
     .touchpad em { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-style: normal; font-size: 13px; pointer-events: none; }
@@ -174,12 +186,17 @@
       <button type="button" role="tab" id="tabView" aria-selected="false">Computer view</button>
     </div>
 
+    <div class="panel appbanner" id="appBanner" hidden>
+      <b>On Android?</b> The <a href="download/sensor-deck.apk">Sensor Deck app</a> adds what browsers cannot read: the barometer,
+      battery and air temperature, humidity, proximity, the step counter, a fingerprint check and every other sensor the phone has.
+      <a href="#app-help">How to install</a>
+    </div>
     <div class="warnbox" id="insecure" hidden>This page is not on HTTPS, so the browser will not give it any sensors. Open it from https://kathuman.github.io/claude-projects/phone-sensors/.</div>
 
     <!-- ===== This phone ===== -->
     <section id="phoneView">
       <div class="panel intro">
-        <p id="phoneIntro">Tap <b>Start sensors</b> and allow what the browser asks for. Everything stays on this phone unless you connect it to a computer. The camera and microphone start from their own cards.</p>
+        <p id="phoneIntro"><span class="pill on" id="appBadge" hidden>Android app</span> Tap <b>Start sensors</b> and allow what the browser asks for. Everything stays on this phone unless you connect it to a computer. The camera and microphone start from their own cards.</p>
         <div class="row">
           <button class="btn primary" id="startAll" type="button">Start sensors</button>
           <button class="btn" id="stopAll" type="button" disabled>Stop all</button>
@@ -247,6 +264,21 @@
     </div>
 
     <div class="grid" id="cards"></div>
+    <section class="panel help" id="app-help">
+      <h2>The Android app</h2>
+      <p>Browsers only let a page read some sensors. The Sensor Deck app runs this same page and adds the rest, read
+        through Android's SensorManager: the barometer, the battery's and the air's temperature, humidity, proximity, the
+        hardware step counter, a fingerprint check (Android only ever says whether a fingerprint matched, never the print
+        itself) and any other sensor the phone lists. Everything else works as here, including recording and the computer view.</p>
+      <ol>
+        <li>On the phone, <a href="download/sensor-deck.apk">download sensor-deck.apk</a> (Android 7 or later, 64-bit ARM: practically every phone since 2017).</li>
+        <li>Open it. Android asks to allow installing from your browser the first time: allow it, then install.</li>
+        <li>Open <b>Sensor Deck</b> and tap <b>Start sensors</b>.</li>
+      </ol>
+      <p>The app is not on Google Play, so Android warns about an unknown app; its source is in
+        <a href="https://github.com/kathuman/claude-projects/tree/main/phone-sensors/android" target="_blank" rel="noopener">phone-sensors/android</a>.
+        Phones differ: few have an air thermometer or a hygrometer, and the cards say which sensors yours lacks.</p>
+    </section>
     <p class="empty" id="viewEmpty" hidden>Waiting for a phone. The sensor cards fill in as soon as it starts streaming.</p>
   </main>
 

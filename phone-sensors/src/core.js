@@ -23,7 +23,16 @@
     { id: "mag", name: "Magnetometer", unit: "µT", ch: ["x", "y", "z", "|B|"], plot: [0, 1, 2], digits: 1,
       src: "Magnetometer (Generic Sensor API)", about: "The magnetic field: the Earth's is 25–65 µT; magnets and steel push it far higher." },
     { id: "light", name: "Ambient light", unit: "lx", ch: ["illuminance"], plot: [0], digits: 0,
-      src: "AmbientLightSensor (Generic Sensor API)", about: "Light falling on the front of the phone." },
+      src: "AmbientLightSensor (Generic Sensor API); Android app: Sensor.TYPE_LIGHT", about: "Light falling on the front of the phone, from the photosensor beside the earpiece." },
+    // the next four have no web API: they come from the Sensor Deck Android app (app: true)
+    { id: "pressure", name: "Barometer", unit: "hPa", ch: ["pressure hPa", "altitude m"], plot: [0], digits: 2, app: true,
+      src: "Android app: Sensor.TYPE_PRESSURE", about: "Air pressure. Sea level is about 1013 hPa; it falls about 0.12 hPa per metre you climb, so the altitude (standard atmosphere) follows a lift or a staircase." },
+    { id: "temp", name: "Temperature", unit: "°C", ch: ["battery °C", "air °C"], plot: [0, 1], digits: 1, app: true,
+      src: "Android app: BatteryManager.EXTRA_TEMPERATURE, Sensor.TYPE_AMBIENT_TEMPERATURE", about: "The battery's temperature (every phone has it) and the air's, on the few phones with an air thermometer." },
+    { id: "humidity", name: "Humidity", unit: "%", ch: ["relative humidity %", "dew point °C"], plot: [0], digits: 1, app: true,
+      src: "Android app: Sensor.TYPE_RELATIVE_HUMIDITY", about: "Relative humidity, on the few phones with a hygrometer; the dew point needs the air temperature too." },
+    { id: "proximity", name: "Proximity", unit: "cm", ch: ["distance cm", "near"], plot: [0], digits: 1, app: true,
+      src: "Android app: Sensor.TYPE_PROXIMITY", about: "The infrared sensor that turns the screen off at your ear. Most only say near or far." },
     { id: "geo", name: "Location", unit: "", ch: ["latitude", "longitude", "accuracy m", "altitude m", "speed m/s", "course °"], plot: [4], digits: 6,
       src: "navigator.geolocation", about: "GPS, Wi-Fi and cell position. Speed and course need movement." },
     { id: "mic", name: "Microphone", unit: "dBFS", ch: ["level", "peak Hz"], plot: [0], digits: 1,
@@ -37,7 +46,13 @@
     { id: "net", name: "Network", unit: "", ch: ["downlink Mb/s", "round trip ms", "online"], plot: [0], digits: 1,
       src: "navigator.connection", about: "The browser's estimate of connection speed and latency." },
     { id: "screen", name: "Screen", unit: "°", ch: ["angle", "width px", "height px"], plot: [], digits: 0,
-      src: "screen.orientation", about: "Screen rotation and size." }
+      src: "screen.orientation", about: "Screen rotation and size." },
+    { id: "hwsteps", name: "Step counter", unit: "", ch: ["since boot", "this session"], plot: [], digits: 0, app: true,
+      src: "Android app: Sensor.TYPE_STEP_COUNTER", about: "The phone's own low-power step counter, which counts even while the screen is off." },
+    { id: "fingerprint", name: "Fingerprint", unit: "", ch: ["matched", "checks"], plot: [], digits: 0, app: true, event: true,
+      src: "Android app: BiometricPrompt", about: "Asks Android to check a fingerprint. No app can read the fingerprint itself: Android keeps it in secure hardware and only says whether it matched." },
+    { id: "raw", name: "Any sensor", unit: "", ch: ["v1", "v2", "v3", "v4", "v5", "v6"], plot: [0, 1, 2], digits: 3, app: true,
+      src: "Android app: SensorManager.getSensorList(TYPE_ALL)", about: "Every sensor the phone has, by Android's own list. Pick one to see its raw values." }
   ];
   var BY_ID = {};
   SENSORS.forEach(function (s, i) { s.index = i; BY_ID[s.id] = s; });
@@ -348,8 +363,25 @@
       cam: [118 + 20 * Math.sin(t / 5), 126, 120, 104],
       battery: [Math.max(5, 81 - t / 120), 0],
       net: [12.5, 45, 1],
-      screen: [0, 412, 915]
+      screen: [0, 412, 915],
+      pressure: [1009.6 - 0.02 * Math.sin(t / 9), altitude(1009.6 - 0.02 * Math.sin(t / 9))],
+      temp: [31.5 + t / 600, 21.8], humidity: [46, dewPoint(21.8, 46)], proximity: [5, 0],
+      hwsteps: [18240 + Math.floor(1.8 * t), Math.floor(1.8 * t)],
+      raw: [gx + lx, gy + ly, gz + lz, 0, 0, 0]
     };
+  }
+
+  // a reading Android reports as a sentinel (the emulator sends −1e30 for an unset sensor) or as not-a-number is
+  // no reading at all
+  function sane(x) { return typeof x === "number" && isFinite(x) && Math.abs(x) < 1e7 ? x : null; }
+
+  // altitude from air pressure in the standard atmosphere (ICAO), metres, relative to a sea-level pressure p0
+  function altitude(p, p0) { return p > 0 ? 44330 * (1 - Math.pow(p / (p0 || 1013.25), 1 / 5.255)) : null; }
+  // dew point (°C) from air temperature (°C) and relative humidity (%), Magnus formula (Sonntag 1990 constants)
+  function dewPoint(t, rh) {
+    if (t == null || !(rh > 0)) return null;
+    var a = 17.62, b = 243.12, g = Math.log(rh / 100) + a * t / (b + t);
+    return b * g / (a - g);
   }
 
   function fmt(v, digits) {
@@ -366,6 +398,6 @@
     fft: fft, resample: resample, dominantFrequency: dominantFrequency, peakFrequency: peakFrequency, dbfs: dbfs,
     haversine: haversine, Track: Track, toCSV: toCSV, csvLegend: csvLegend, csvCell: csvCell,
     PROTOCOL: PROTOCOL, checkMessage: checkMessage, Batcher: Batcher, pairCode: pairCode, normaliseCode: normaliseCode, validCode: validCode,
-    PEER_PREFIX: PEER_PREFIX, simulate: simulate, fmt: fmt
+    PEER_PREFIX: PEER_PREFIX, simulate: simulate, fmt: fmt, altitude: altitude, dewPoint: dewPoint, sane: sane
   };
 });

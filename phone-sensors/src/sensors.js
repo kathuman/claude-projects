@@ -6,12 +6,19 @@
 (function (root) {
   "use strict";
   var C = root.SensorCore;
+  // Inside the Sensor Deck Android app the page runs in a WebView that offers window.SensorDeckNative.postMessage(json)
+  // and calls window.SensorDeckBridge.receive(json) with batches of readings from Android's SensorManager.
+  var NATIVE = root.SensorDeckNative && typeof root.SensorDeckNative.postMessage === "function" ? root.SensorDeckNative : null;
 
   function SensorHub(emit, status, meta) {
     this.emit = emit; this.status = status; this.meta = meta || function () {};
     this.on = {}; this.cleanup = {}; this.motionUsers = 0; this.motionSeen = false;
     this.audio = null; this.video = null; this.track = null;
+    this.nat = {}; this.natUsers = {}; this.sensorList = null; this.onList = null; this.onFingerprint = null; this.fpCount = 0;
+    if (NATIVE) { var self = this; root.SensorDeckBridge = { receive: function (m) { self.nativeReceive(typeof m === "string" ? JSON.parse(m) : m); } }; this.nativeSend({ cmd: "hello" }); }
   }
+  SensorHub.native = !!NATIVE;
+  SensorHub.nativeInfo = null;
   var P = SensorHub.prototype;
 
   P.isOn = function (id) { return !!this.on[id]; };
@@ -109,8 +116,92 @@
     this.status(id, "on", "");
     return true;
   };
-  P.start_mag = function () { return this.generic("mag", "Magnetometer", "The magnetometer", function (s) { return [s.x, s.y, s.z, C.magnitude(s.x, s.y, s.z)]; }, true); };
-  P.start_light = function () { return this.generic("light", "AmbientLightSensor", "The light sensor", function (s) { return [s.illuminance]; }, true); };
+  P.start_mag = function () {
+    if (NATIVE) return this.nativeUse("mag", ["mag"]);
+    return this.generic("mag", "Magnetometer", "The magnetometer", function (s) { return [s.x, s.y, s.z, C.magnitude(s.x, s.y, s.z)]; }, true);
+  };
+  P.start_light = function () {
+    if (NATIVE) return this.nativeUse("light", ["light"]);
+    return this.generic("light", "AmbientLightSensor", "The light sensor", function (s) { return [s.illuminance]; }, true);
+  };
+
+  // ---- the Android app's sensors. Native sources: pressure, ambient (air temperature), battery (battery
+  // temperature), humidity, proximity, steps, light, mag, raw. One card can use several (temperature uses two).
+  P.nativeSend = function (o) { if (NATIVE) NATIVE.postMessage(JSON.stringify(o)); };
+  function appOnly(self, id) { self.status(id, "unavailable", "Only in the Sensor Deck Android app: browsers have no way to read this."); return false; }
+  P.nativeUse = function (id, sources) {
+    var self = this;
+    if (!NATIVE) return appOnly(this, id);
+    sources.forEach(function (src) { self.natUsers[src] = (self.natUsers[src] || 0) + 1; if (self.natUsers[src] === 1) self.nativeSend({ cmd: "start", id: src }); });
+    this.cleanup[id] = function () {
+      sources.forEach(function (src) { self.natUsers[src]--; if (self.natUsers[src] <= 0) { self.natUsers[src] = 0; self.nativeSend({ cmd: "stop", id: src }); } });
+    };
+    this.status(id, "on", "Waiting for the first reading…");
+    return true;
+  };
+  P.start_pressure = function () { return this.nativeUse("pressure", ["pressure"]); };
+  P.start_temp = function () { this.nat.battery = this.nat.ambient = null; return this.nativeUse("temp", ["battery", "ambient"]); };
+  P.start_humidity = function () { return this.nativeUse("humidity", ["humidity", "ambient"]); };
+  P.start_proximity = function () { return this.nativeUse("proximity", ["proximity"]); };
+  P.start_hwsteps = function () { this.nat.steps0 = null; return this.nativeUse("hwsteps", ["steps"]); };
+  P.start_raw = function () {
+    if (!NATIVE) return appOnly(this, "raw");
+    var self = this;
+    this.cleanup.raw = function () { if (self.rawIndex != null) self.nativeSend({ cmd: "stop", id: "raw" }); self.rawIndex = null; };
+    this.nativeSend({ cmd: "list" });
+    this.status("raw", "on", "Pick a sensor from the list.");
+    return true;
+  };
+  P.rawSelect = function (index) {
+    if (!NATIVE || !this.on.raw) return;
+    this.rawIndex = index; this.nativeSend({ cmd: "start", id: "raw", index: index });
+    var s = (this.sensorList || []).filter(function (x) { return x.index === index; })[0];
+    if (s) this.meta("raw", s.name + " (" + s.typeName + ") · " + s.vendor + " · range " + s.range + " · resolution " + s.resolution);
+  };
+  P.listSensors = function () { this.nativeSend({ cmd: "list" }); };
+  P.start_fingerprint = function () {
+    if (!NATIVE) return appOnly(this, "fingerprint");
+    this.status("fingerprint", "on", "Tap Check fingerprint.");
+    return true;
+  };
+  P.checkFingerprint = function () { if (NATIVE && this.on.fingerprint) this.nativeSend({ cmd: "fingerprint" }); };
+
+  // a batch from the app: { now: ms on the app's clock, items: [...] }; readings are dated by their age
+  P.nativeReceive = function (m) {
+    var self = this, now = m.now || 0;
+    (m.items || []).forEach(function (it) {
+      var age = it.t != null ? Math.max(0, now - it.t) : 0, v = (it.v || []).map(C.sane), n = self.nat;
+      if (it.k === "s") {
+        if (it.id === "pressure" && self.on.pressure) self.emit("pressure", [v[0], v[0] == null ? null : C.altitude(v[0])], age);
+        else if (it.id === "battery" || it.id === "ambient") {
+          n[it.id] = v[0];
+          if (self.on.temp) self.emit("temp", [n.battery != null ? n.battery : null, n.ambient != null ? n.ambient : null], age);
+        }
+        else if (it.id === "humidity" && self.on.humidity) self.emit("humidity", [v[0], C.dewPoint(n.ambient, v[0])], age);
+        else if (it.id === "proximity" && self.on.proximity) self.emit("proximity", [v[0], it.max != null && v[0] < it.max ? 1 : 0], age);
+        else if (it.id === "steps" && self.on.hwsteps) { if (n.steps0 == null) n.steps0 = v[0]; self.emit("hwsteps", [v[0], v[0] - n.steps0], age); }
+        else if (it.id === "light" && self.on.light) self.emit("light", [v[0]], age);
+        else if (it.id === "mag" && self.on.mag) self.emit("mag", [v[0], v[1], v[2], C.magnitude(v[0], v[1], v[2])], age);
+        else if (it.id === "raw" && self.on.raw) self.emit("raw", v.slice(0, 6).concat([null, null, null, null, null, null]).slice(0, 6), age);
+      } else if (it.k === "status") {
+        // a missing air thermometer is normal: the temperature card carries on with the battery alone
+        var card = { pressure: "pressure", battery: "temp", ambient: self.on.temp ? "temp" : "humidity", humidity: "humidity", proximity: "proximity", steps: "hwsteps", light: "light", mag: "mag", raw: "raw" }[it.id];
+        if (!card || !self.on[card]) return;
+        if (it.id === "ambient" && it.state === "unavailable") self.meta(card, card === "temp" ? "This phone has no air thermometer: battery temperature only." : "No air thermometer, so no dew point.");
+        else if (it.state !== "on") self.status(card, it.state, it.text || "");
+      } else if (it.k === "list") {
+        self.sensorList = it.sensors || [];
+        if (self.onList) self.onList(self.sensorList);
+      } else if (it.k === "fp") {
+        self.fpCount++;
+        if (it.result === "matched" || it.result === "failed") self.emit("fingerprint", [it.result === "matched" ? 1 : 0, self.fpCount], 0);
+        if (self.onFingerprint) self.onFingerprint(it.result, it.text || "");
+      } else if (it.k === "info") {
+        SensorHub.nativeInfo = it.info || null;
+        if (self.onInfo) self.onInfo();
+      }
+    });
+  };
 
   // ---- location
   P.start_geo = function () {
@@ -264,9 +355,14 @@
       "Vibration": n.vibrate ? "yes" : "no",
       "Screen wake lock": n.wakeLock ? "yes" : "no"
     };
+    if (SensorHub.nativeInfo) {
+      var ni = {};
+      Object.keys(SensorHub.nativeInfo).forEach(function (k) { ni[k] = SensorHub.nativeInfo[k]; });
+      info = Object.assign(ni, info);
+    }
     if (n.userAgentData && n.userAgentData.getHighEntropyValues) {
       return n.userAgentData.getHighEntropyValues(["model", "platformVersion"]).then(function (h) {
-        if (h.model) info = Object.assign({ "Model": h.model }, info);
+        if (h.model && !info.Model) info = Object.assign({ "Model": h.model }, info);
         if (h.platformVersion) info.System = (n.userAgentData.platform || "") + " " + h.platformVersion + (n.userAgentData.mobile ? " (mobile)" : "");
         return info;
       }, function () { return info; });

@@ -25,3 +25,18 @@ jobs:
       - name: Syntax-check the browser scripts
         run: for f in phone-sensors/app.js phone-sensors/src/*.js; do node --check "$f"; done
         shell: bash
+
+  android-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: phone-sensors/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
