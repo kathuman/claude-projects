@@ -9,9 +9,10 @@
 //          light and magnetometer without a Chrome flag. In a browser those cards say so and link to the app
 //   1.2.0  USB cable: with the USB bridge (usb/sensor-deck-usb.js) running on the computer, the phone streams over
 //          adb reverse and a local WebSocket, with no Wi-Fi or internet in the path
+//   1.2.1  explains Chrome's Local Network Access permission, which a public page needs to reach the bridge
 (function () {
   "use strict";
-  var VERSION = "1.2.0";
+  var VERSION = "1.2.1";
   var NATIVE = !!(window.SensorHub && window.SensorHub.native), APK = "download/sensor-deck.apk";
   var C = window.SensorCore, $ = function (id) { return document.getElementById(id); };
   var WINDOW = 10000, PARAMS = new URLSearchParams(location.search);
@@ -514,6 +515,15 @@
     return c;
   }
 
+  // Chrome (142+) lets a public page reach this computer's own ports only with the "Local network access" permission;
+  // when the bridge can't be reached, say whether that permission is the reason
+  function lnaState() {
+    if (!navigator.permissions || !navigator.permissions.query) return Promise.resolve(null);
+    return navigator.permissions.query({ name: "local-network-access" }).then(function (p) { return p.state; }, function () { return null; });
+  }
+  var LNA_DENIED = "The browser is blocking this page from the bridge. Allow Local network access for this site (the icon left of the address bar, or Site settings), then reload.";
+  var LNA_PROMPT = "Allow the browser's local network prompt: that is how this page reaches the bridge.";
+
   // ---- phone side of the link: connect to a waiting computer by its code and stream in batches
   var link = { peer: null, conn: null, open: false, how: null, viewer: false, batcher: null, timer: null, frameTimer: null };
   link.send = function (m) { if (link.conn && link.open) { try { link.conn.send(m); } catch (e) { /* closing */ } } };
@@ -572,8 +582,11 @@
     conn.on("data", linkData);
     conn.on("close", function (wasOpen) {
       if (link.conn !== conn) return;
-      linkPill(wasOpen ? "The USB connection closed" : "No USB bridge: is the cable in, USB debugging on, and sensor-deck-usb.js running?", wasOpen ? "" : "bad");
       disconnect(false);
+      if (wasOpen) { linkPill("The USB connection closed"); return; }
+      lnaState().then(function (st) {
+        linkPill(st === "denied" ? LNA_DENIED : st === "prompt" ? LNA_PROMPT + " Then tap USB cable again." : "No USB bridge: is the cable in, USB debugging on, and sensor-deck-usb.js running?", "bad");
+      });
     });
   }
   function sendHello() {
@@ -652,9 +665,13 @@
     conn.on("close", function () {
       if (view.usb !== conn) return;
       clearInterval(view.ping); if (view.phone) phoneGone(); view.phone = false; $("buzzBtn").hidden = true; $("usbBuzz").hidden = true;
-      usbPill("No USB bridge on port " + USB_PORT + ". Start it on this computer: node sensor-deck-usb.js", "bad");
-      // keep looking, so starting the bridge is enough
-      view.retry = setTimeout(function () { if (mode === "view" && view.how === "usb") startUsbViewer(); }, 3000);
+      view.usb = null; if (view.conn === conn) view.conn = null;
+      lnaState().then(function (st) {
+        if (view.usb || view.how !== "usb" || mode !== "view") return;
+        usbPill(st === "denied" ? LNA_DENIED : (st === "prompt" ? LNA_PROMPT + " " : "") + "No USB bridge on port " + USB_PORT + ". Start it on this computer: node sensor-deck-usb.js", "bad");
+        // keep looking, so starting the bridge is enough (a refusal won't change by itself: wait for a reload)
+        if (st !== "denied") view.retry = setTimeout(function () { if (mode === "view" && view.how === "usb") startUsbViewer(); }, 3000);
+      });
     });
   }
   function stopViewer() {

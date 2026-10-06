@@ -117,8 +117,11 @@ Safety:
 - `--port 9000` picks another port (then open the page with `?usb=9000`). `--no-adb` relays only.
 - On exit it removes the `adb reverse`.
 
-Chrome may ask to let the page reach devices on the local network. Allow it: that is the bridge. The page itself
-still has to be loaded once from the internet.
+**Chrome's Local Network Access.** Chrome 142 and later lets a public page reach the computer's own ports only with
+permission. The first time, it asks to let the page *look for and connect to devices on your local network*. Allow it
+on the computer and on the phone, because that is how the page reaches the bridge. If it was refused, the page says
+so; allow it under the site's settings (the icon left of the address bar) and reload. The page itself still has to be
+loaded once from the internet.
 
 **Demo phone** plays a simulated phone: someone walking with it in hand in Copenhagen. It works on any device, so
 the page can be tried on a desktop. **Try with a demo phone** in the computer view opens one in a new tab, already
