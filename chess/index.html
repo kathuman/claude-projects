@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- the twelve chess symbols only (a few kB), so glyph pieces look the same everywhere and iPhones don't swap in an emoji pawn -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&text=%E2%99%94%E2%99%95%E2%99%96%E2%99%97%E2%99%98%E2%99%99%E2%99%9A%E2%99%9B%E2%99%9C%E2%99%9D%E2%99%9E%E2%99%9F&display=block" rel="stylesheet" />
   <style>
     /* ------------------------------------------------------------------
        Chrome follows the parent site's warm neutrals + accent, stepped
@@ -124,7 +126,8 @@
     .board {
       position: relative;
       width: min(82vw, 600px); aspect-ratio: 1 / 1;
-      display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+      /* minmax(0, 1fr): Safari otherwise widens a column to fit its piece glyph and the board stops being square */
+      display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr));
       border: 3px solid var(--sq-dark);
       border-radius: 6px;
       overflow: hidden;
@@ -133,6 +136,7 @@
     }
     .cell {
       position: relative;
+      min-width: 0; min-height: 0; overflow: hidden;
       background: var(--sq-light);
       display: grid; place-items: center;
       cursor: default;
@@ -157,6 +161,7 @@
     :root[data-board="charcoal"] .dot { background: rgba(255,255,255,.42); }
     :root[data-board="charcoal"] .ring { box-shadow: inset 0 0 0 4px rgba(255,255,255,.45); }
 
+    .piece, .anim-piece, .side-score .cap, .modal .choices button { font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "DejaVu Sans", sans-serif; }
     .piece { color: var(--piece-ink); text-shadow: 0 1px 0 var(--piece-stroke); line-height: 1; }
     .piece.dragging { opacity: 0; }
 
@@ -185,7 +190,7 @@
     :root[data-view="3d"] .stage.dragging .board-frame { transition: margin .45s cubic-bezier(.2,.7,.2,1); }
     :root[data-view="3d"] .board { overflow: visible; transform-style: preserve-3d; }
     /* lift the squares a hair off the board so clicks never resolve to the coplanar board behind them */
-    :root[data-view="3d"] .cell { transform-style: preserve-3d; transform: translateZ(.4px); }
+    :root[data-view="3d"] .cell { transform-style: preserve-3d; transform: translateZ(.4px); overflow: visible; } /* overflow other than visible would flatten the standing pieces */
     :root[data-view="3d"] .piece,
     :root[data-view="3d"] .anim-piece {
       transform-origin: 50% 80%;
@@ -1068,7 +1073,9 @@
     //          the tactic each mistake allowed or missed; reviewed games and mistakes feed the learner profile
     //   1.9.0  Cobot Lab blueprint theme shared by every chess page (theme.css): navy panels, cyan ink, Rajdhani/Barlow/
     //          IBM Plex Mono, dark by default; steel-blue default board (old tan board kept as "Tan & brown")
-    var APP_VERSION = "1.9.0";
+    //   1.9.1  iPhone/Safari: the board stays square (columns may shrink below a glyph's width) and the black pawn
+    //          no longer turns into a purple emoji (text-presentation selector + a chess-symbol font subset)
+    var APP_VERSION = "1.9.1";
     document.getElementById("verBadge").textContent = "v" + APP_VERSION;
     document.getElementById("verFooter").textContent = "v" + APP_VERSION;
 
@@ -1098,9 +1105,11 @@
     // fullmove }), so it can be handed to the rules directly. A move is [fr, fc, tr, tc, flag, extra].
     var R = window.ChessRules;
     var FILES = R.FILES, colorOf = R.colorOf, squareName = R.squareName, kingPos = R.kingPos;
+    // Each glyph is followed by U+FE0E (text presentation): Apple draws the black pawn ♟ as a purple emoji
+    // otherwise, unlike the other pieces.
     var UNICODE_PIECES = {
-      K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
-      k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
+      K: "♔︎", Q: "♕︎", R: "♖︎", B: "♗︎", N: "♘︎", P: "♙︎",
+      k: "♚︎", q: "♛︎", r: "♜︎", b: "♝︎", n: "♞︎", p: "♟︎"
     };
     var PIECE_VALUE = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
     function opponent(color) { return color === "w" ? "b" : "w"; }
