@@ -130,5 +130,101 @@
     return null;
   }
 
-  return { position: position, heroMoves: heroMoves, move: move, solve: solve, nextMove: nextMove, finished: finished, stars: stars, pawnAI: pawnAI, pawnWinner: pawnWinner, squares: sqs };
+  // ---- a whole game against a gentle computer
+  var VALUE = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
+  function val(p) { return VALUE[p.toUpperCase()]; }
+  // material (plus a little for central pawns and pieces) from the side to move's point of view
+  function evaluate(R, pos) {
+    var s = 0;
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var p = pos.board[r][c];
+      if (!p) continue;
+      var v = val(p) + ((r >= 2 && r <= 5 && c >= 2 && c <= 5 && p.toUpperCase() !== "K") ? 0.1 : 0);
+      s += R.colorOf(p) === pos.turn ? v : -v;
+    }
+    return s;
+  }
+  function ordered(R, pos) {
+    return R.legalMoves(pos).map(function (m) {
+      var t = pos.board[m[2]][m[3]];
+      return [m, (t ? 10 * val(t) - val(pos.board[m[0]][m[1]]) : 0) + (m[4] === "promo" ? 80 : 0)];
+    }).sort(function (a, b) { return b[1] - a[1]; }).map(function (x) { return x[0]; });
+  }
+  // negamax with alpha-beta; mate scores beat any material, sooner mates beat later ones
+  function negamax(R, pos, depth, alpha, beta) {
+    var moves = ordered(R, pos);
+    if (!moves.length) return R.inCheck(pos) ? -1000 - depth : 0;
+    if (depth === 0) return evaluate(R, pos);
+    var best = -Infinity;
+    for (var i = 0; i < moves.length; i++) {
+      var s = -negamax(R, R.play(pos, moves[i]), depth - 1, -beta, -alpha);
+      if (s > best) best = s;
+      if (s > alpha) alpha = s;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+  // levels: "sleepy" (often random, likes captures), "friendly" (looks at the reply, sometimes slips),
+  // "clever" (three plies ahead, never misses a mate in one)
+  function kidAI(R, pos, level, rnd) {
+    rnd = rnd || Math.random;
+    var moves = ordered(R, pos);
+    if (!moves.length) return null;
+    function pick(list) { return list[Math.floor(rnd() * list.length)]; }
+    if (level === "sleepy") {
+      var mates = moves.filter(function (m) { return R.isMate(R.play(pos, m)); });
+      if (mates.length && rnd() < 0.5) return mates[0];
+      if (rnd() < 0.55) return pick(moves);
+      var caps = moves.filter(function (m) { return pos.board[m[2]][m[3]]; });
+      return caps.length ? caps[0] : pick(moves);
+    }
+    var depth = level === "clever" ? 3 : 2;
+    var scored = moves.map(function (m) { return [-negamax(R, R.play(pos, m), depth - 1, -Infinity, Infinity), m]; });
+    scored.sort(function (a, b) { return b[0] - a[0]; });
+    var top = scored[0][0];
+    if (level === "friendly" && top < 900 && rnd() < 0.25 && scored.length > 1) return scored[1][1]; // a small slip now and then
+    var near = scored.filter(function (x) { return x[0] >= top - (level === "clever" ? 0.05 : 0.4); });
+    return pick(near)[1];
+  }
+  // the cheapest enemy piece that can capture on (r, c) right now, or null
+  function cheapestAttacker(R, pos, r, c, enemy) {
+    var p = R.clonePos(pos); p.turn = enemy; p.enPassant = null;
+    var best = null;
+    R.legalMoves(p).forEach(function (m) {
+      if (m[2] === r && m[3] === c) { var a = p.board[m[0]][m[1]]; if (!best || val(a) < val(best)) best = a; }
+    });
+    return best;
+  }
+  function defended(R, pos, r, c, color) {
+    // is the piece on (r, c) protected? (would its side be able to recapture there)
+    var p = R.clonePos(pos), piece = p.board[r][c];
+    p.board[r][c] = color === "w" ? "p" : "P"; // pretend an enemy pawn stands there
+    p.turn = color; p.enPassant = null;
+    var ok = R.legalMoves(p).some(function (m) { return m[2] === r && m[3] === c; });
+    p.board[r][c] = piece;
+    return ok;
+  }
+  // would the piece that just moved be lost? { attacker } when the opponent can take it for less than it is
+  // worth (or for free), else null
+  function hanging(R, pos, r, c) {
+    var piece = pos.board[r][c];
+    if (!piece || piece.toUpperCase() === "K" || val(piece) < 3) return null;
+    var me = R.colorOf(piece), enemy = me === "w" ? "b" : "w";
+    var a = cheapestAttacker(R, pos, r, c, enemy);
+    if (!a) return null;
+    if (val(a) < val(piece) || !defended(R, pos, r, c, me)) return { attacker: a, piece: piece };
+    return null;
+  }
+  // the learner's pieces (worth 3 or more) that the opponent can win right now
+  function dangers(R, pos, color) {
+    var out = [];
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var p = pos.board[r][c];
+      if (p && R.colorOf(p) === color) { var h = hanging(R, pos, r, c); if (h) out.push({ r: r, c: c, piece: p, attacker: h.attacker }); }
+    }
+    return out.sort(function (a, b) { return val(b.piece) - val(a.piece); });
+  }
+
+  return { kidAI: kidAI, evaluate: evaluate, hanging: hanging, dangers: dangers,
+    position: position, heroMoves: heroMoves, move: move, solve: solve, nextMove: nextMove, finished: finished, stars: stars, pawnAI: pawnAI, pawnWinner: pawnWinner, squares: sqs };
 });

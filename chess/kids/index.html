@@ -57,6 +57,20 @@
     .real { margin-top: 16px; display: flex; align-items: center; gap: 14px; background: var(--panel); border: 2px dashed var(--kid-sun); border-radius: 22px; padding: 14px 18px; text-decoration: none; color: var(--ink); }
     .real b { font-family: var(--font-kid); font-size: 20px; display: block; }
     .real span { color: var(--ink-2); font-size: 15px; }
+    .play-card { width: 100%; font: inherit; color: var(--ink); cursor: pointer; text-align: left; border-style: solid; }
+    .play-card:hover { transform: translateY(-2px); }
+    .big-emoji { font-size: 44px; line-height: 1; }
+    .medals { margin-left: auto; font-family: var(--font-kid); font-size: 20px; font-weight: 700; }
+    .opps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .opp { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font: inherit; color: var(--ink); text-align: left; background: var(--panel); border: 2px solid var(--border); border-radius: 22px; padding: 16px 18px; cursor: pointer; box-shadow: var(--shadow); min-height: 140px; }
+    .opp:hover { border-color: var(--kid-sun); transform: translateY(-2px); }
+    .opp .face { font-size: 46px; line-height: 1; }
+    .opp b { font-family: var(--font-kid); font-size: 22px; }
+    .opp span { color: var(--ink-2); font-size: 15px; }
+    .opp .medal { position: absolute; right: 14px; top: 12px; font-size: 30px; }
+    .gopp { font-family: var(--font-kid); font-size: 18px; font-weight: 600; color: var(--ink-2); }
+    .sq.check::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, rgba(230,50,40,.7) 22%, rgba(230,50,40,0) 72%); pointer-events: none; }
+    #gboard .sq.guard::before { box-shadow: inset 0 0 0 4px rgba(230,60,50,.85); background: rgba(230,60,50,.18); }
     details.grown { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 4px 16px; }
     details.grown summary { cursor: pointer; font-weight: 600; padding: 10px 0; color: var(--ink-2); }
     details.grown p { color: var(--ink-2); font-size: 14px; }
@@ -152,6 +166,11 @@
     <section id="mapView">
       <p class="total" id="total"></p>
       <div class="worlds" id="worlds"></div>
+      <button class="real play-card" id="gameCard" type="button">
+        <span class="big-emoji">🎲</span>
+        <div><b data-i="game.title">Play a game</b><span data-i="game.desc"></span></div>
+        <span class="medals" id="gameMedals"></span>
+      </button>
       <a class="real" id="realGame" href="../?opponent=engine&amp;level=1&amp;side=w">
         <img src="../pieces/cburnett/wK.svg" alt="" width="54" height="54" />
         <div><b data-i="ui.realGame">Play a real game</b><span data-i="ui.realGameDesc"></span></div>
@@ -161,6 +180,35 @@
         <p data-i="ui.grownupsText"></p>
         <p><button class="linkbtn" id="resetBtn" type="button" data-i="ui.reset">Start again</button></p>
       </details>
+    </section>
+
+    <section id="gameView" hidden>
+      <div class="lvltop">
+        <button class="kbtn" id="gMapBtn" type="button">&#8592; <span data-i="ui.map">Map</span></button>
+        <h2 data-i="game.title">Play a game</h2>
+        <span class="gopp" id="gOpp"></span>
+      </div>
+      <div id="gPick">
+        <div class="opps" id="gPickList"></div>
+      </div>
+      <div class="stage" id="gStage" hidden>
+        <div class="board" id="gboard" role="grid" aria-label="Board">
+          <div class="win" id="gCareful" hidden><div class="win-box">
+            <div class="win-text" id="gCarefulText"></div>
+            <button class="kbtn big" id="gNo" type="button" data-i="game.thinkAgain">Think again</button>
+            <button class="kbtn" id="gYes" type="button" data-i="game.moveAnyway">Move anyway</button>
+          </div></div>
+          <div class="win" id="gOver" hidden><div class="win-box">
+            <div class="win-text" id="gOverText"></div>
+            <button class="kbtn big" id="gNew2" type="button" data-i="game.new">New game</button>
+          </div></div>
+        </div>
+        <div class="side">
+          <button class="kbtn" id="gHelp" type="button">&#128161; <span data-i="ui.hint">Help</span></button>
+          <button class="kbtn" id="gUndo" type="button">&#8630; <span data-i="game.undo">Take back</span></button>
+          <button class="kbtn" id="gNew" type="button">&#127922; <span data-i="game.new">New game</span></button>
+        </div>
+      </div>
     </section>
 
     <section id="levelView" hidden>

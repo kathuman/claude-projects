@@ -22,6 +22,14 @@ https://kathuman.github.io/claude-projects/chess/kids/
 - **Six languages,** shared with the course: English, Spanish, Afrikaans, German, Danish and Dutch. The kids'
   wording is in `i18n.js`; the translations were written by Claude, like the course's.
 - **Size:** big squares and buttons, readable on a phone.
+- **Play a game** (`?game`): a whole game against a gentle computer.
+  - Three opponents: Sleepy Sam (often random, likes captures), Friendly Fiona (looks at the reply,
+    sometimes slips) and Clever Owl (three moves ahead, never misses a mate in one).
+  - Sir Hop narrates each computer move ("My move: knight to f6", "I take your bishop on c4!").
+  - Before a piece is left where it can be taken, he asks first: "Careful! My pawn could take your knight
+    there". The child can think again or move anyway.
+  - After the computer's move he warns of any piece in danger: "Watch out! Your bishop on c4 can be taken".
+  - Help suggests a move, Take back undoes one, and beating each opponent earns a medal.
 - **Progress** stays in the browser (`chess-kids-v1`). "Play a real game" opens the play app against Stockfish
   at level 1 with the coach on.
 
@@ -35,7 +43,9 @@ https://kathuman.github.io/claude-projects/chess/kids/
   - breadth-first search for the fewest moves and for Help;
   - the finish test;
   - stars;
-  - the pawn-wars computer.
+  - the pawn-wars computer;
+  - the game opponents (`kidAI`: negamax with alpha-beta at depth 2 or 3, on material);
+  - the danger checks (`hanging`, `dangers`).
 
 ## Tests
 
@@ -46,3 +56,7 @@ https://kathuman.github.io/claude-projects/chess/kids/
 - Each checkmate level is a Lichess puzzle (CC0) with exactly one mating move.
 - Computer-against-computer pawn wars always reach a winner.
 - Every language has every word.
+- The opponents only play legal moves over whole games, never miss a mate in one (Fiona and the Owl), take
+  free pieces, and don't drop their queen.
+- The danger checks flag a piece attacked by something cheaper or undefended, but not a defended one, nor
+  pawns or kings.

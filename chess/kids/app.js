@@ -5,7 +5,9 @@
 (function () {
   "use strict";
   // 1.0.0 launch: eight worlds (the six pieces, captures, checkmate), stars, trophies, pawn wars, read aloud
-  var VERSION = "1.0.0";
+  // 1.1.0 "Play a game": a whole game against Sleepy Sam, Friendly Fiona or Clever Owl, with Sir Hop narrating,
+  //       a warning before a piece is left where it can be taken, Help, Take back and medals
+  var VERSION = "1.1.0";
   var R = window.ChessRules, K = window.ChessKids, W = window.CHESS_KIDS.worlds, I18N = window.CHESS_KIDS_I18N;
   var LANGS = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];
   function $(id) { return document.getElementById(id); }
@@ -50,7 +52,9 @@
   $("langSel").addEventListener("change", function () {
     lang = this.value; writeLS("chess-course-lang", lang);
     try { var u = new URL(location.href); u.searchParams.set("lang", lang); history.replaceState(null, "", u); } catch (e) {}
-    applyStatic(); if (S.level) renderLevel(true, true); else renderMap(); // and Sir Hop says it again in the new language
+    applyStatic(); // and Sir Hop says it again in the new language
+    if (!$("gameView").hidden) { if (G.level) { $("gOpp").textContent = OPP.filter(function (o) { return o[0] === G.level; })[0][1] + " " + T("game." + G.level); drawGame(); say(T("game.yourTurn")); } else openGame(); }
+    else if (S.level) renderLevel(true, true); else renderMap();
   });
 
   // ---- Sir Hop's voice (the same care for phones as the course: unlock on the first tap, late voices, chunks)
@@ -121,7 +125,9 @@
   // ---- the map
   function renderMap() {
     S.level = null;
-    $("mapView").hidden = false; $("levelView").hidden = true;
+    $("mapView").hidden = false; $("levelView").hidden = true; $("gameView").hidden = true;
+    var med = OPP.filter(function (o) { return store.medals && store.medals[o[0]]; }).length;
+    $("gameMedals").textContent = med ? "🏅 × " + med : "";
     var have = 0, max = 0;
     W.forEach(function (w) { w.levels.forEach(function (l) { have += starsOf(l.id); max += 3; }); });
     $("total").textContent = "⭐ " + have + " / " + max;
@@ -149,7 +155,7 @@
   function lv() { return W[S.wi].levels[S.li]; }
   function openLevel(wi, li, intro) {
     S.wi = wi; S.li = li; S.level = lv();
-    $("mapView").hidden = true; $("levelView").hidden = false;
+    $("mapView").hidden = true; $("levelView").hidden = false; $("gameView").hidden = true;
     resetLevel();
     renderLevel(false, intro);
     window.scrollTo(0, 0);
@@ -311,9 +317,167 @@
   });
   $("resetBtn").addEventListener("click", function () { if (confirm(T("ui.resetAsk"))) { store.stars = {}; save(); renderMap(); } });
 
-  // ---- start: ?world=knight opens a world directly
+
+  // ---- a whole game against a gentle computer (Sam, Fiona or the Owl); the child plays White
+  var OPP = [["sleepy", "😴"], ["friendly", "🙂"], ["clever", "🦉"]];
+  var G = { level: null, pos: null, hist: [], sel: null, busy: false, over: false, last: null, help: null, pending: null, warn: [], token: 0 };
+  var gboard = $("gboard"), gcells = [];
+  (function buildGame() {
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "sq" + ((r + c) % 2 ? " d" : "");
+      b.dataset.r = r; b.dataset.c = c;
+      b.setAttribute("aria-label", R.squareName(r, c));
+      b.addEventListener("click", onGameBoard);
+      gboard.insertBefore(b, $("gCareful")); gcells.push(b);
+    }
+  })();
+  function pname(p) { return T("piece." + p.toUpperCase()); }
+  function openGame() {
+    S.level = null; G.token++; G.level = null;
+    $("mapView").hidden = true; $("levelView").hidden = true; $("gameView").hidden = false;
+    $("gPick").hidden = false; $("gStage").hidden = true;
+    $("gPickList").innerHTML = OPP.map(function (o) {
+      var medal = store.medals && store.medals[o[0]];
+      return '<button class="opp" type="button" data-opp="' + o[0] + '"><span class="face">' + o[1] + '</span><b>' + T("game." + o[0]) + "</b><span>" +
+        T("game." + o[0] + "Desc") + "</span>" + (medal ? '<span class="medal" title="' + T("game.medal", { name: T("game." + o[0]) }) + '">🏅</span>' : "") + "</button>";
+    }).join("");
+    say(T("game.pick"));
+    window.scrollTo(0, 0);
+  }
+  $("gPickList").addEventListener("click", function (e) { var b = e.target.closest("[data-opp]"); if (b) startGame(b.dataset.opp); });
+  function startGame(level) {
+    G.token++;
+    G.level = level; G.pos = R.fromFEN(R.START_FEN); G.hist = []; G.sel = null; G.busy = false; G.over = false; G.last = null; G.help = null; G.pending = null; G.warn = [];
+    $("gPick").hidden = true; $("gStage").hidden = false; $("gCareful").hidden = true; $("gOver").hidden = true;
+    $("gOpp").textContent = OPP.filter(function (o) { return o[0] === level; })[0][1] + " " + T("game." + level);
+    drawGame(); say(T("game.start"));
+  }
+  function gTargets() {
+    if (!G.sel || G.busy || G.over) return [];
+    return R.legalMoves(G.pos).filter(function (m) { return m[0] === G.sel[0] && m[1] === G.sel[1] && (m[4] !== "promo" || m[5] === "Q"); });
+  }
+  function drawGame() {
+    var t = gTargets(), ck = R.inCheck(G.pos) ? R.kingPos(G.pos.board, G.pos.turn) : null;
+    for (var r = 0; r < 8; r++) for (var c = 0; c < 8; c++) {
+      var el = gcells[r * 8 + c], p = G.pos.board[r][c], img = el.querySelector("img");
+      if (img) img.remove();
+      if (p) el.insertAdjacentHTML("beforeend", '<img class="pc" src="../pieces/cburnett/' + R.colorOf(p) + p.toUpperCase() + '.svg" alt="">');
+      var tg = t.filter(function (m) { return m[2] === r && m[3] === c; })[0];
+      el.classList.toggle("go", !!tg); el.classList.toggle("cap", !!tg && !!p);
+      el.classList.toggle("sel", !!G.sel && G.sel[0] === r && G.sel[1] === c);
+      el.classList.toggle("mine", !!p && R.colorOf(p) === "w" && !G.busy && !G.over && G.pos.turn === "w");
+      el.classList.toggle("last", !!G.last && ((G.last[0] === r && G.last[1] === c) || (G.last[2] === r && G.last[3] === c)));
+      el.classList.toggle("guard", G.warn.some(function (w) { return w.r === r && w.c === c; }));
+      el.classList.toggle("check", !!ck && ck[0] === r && ck[1] === c);
+      el.classList.toggle("help", !!G.help && G.help.some(function (h) { return h[0] === r && h[1] === c; }));
+      el.setAttribute("aria-label", R.squareName(r, c) + (p ? ", " + (R.colorOf(p) === "w" ? "" : "⚫ ") + pname(p) : ""));
+    }
+    $("gUndo").disabled = G.busy || G.hist.length < 2;
+    $("gHelp").disabled = G.busy || G.over;
+  }
+  function onGameBoard(e) {
+    if (G.busy || G.over || G.pos.turn !== "w" || !$("gCareful").hidden) return;
+    var el = e.currentTarget, r = +el.dataset.r, c = +el.dataset.c, p = G.pos.board[r][c];
+    var m = gTargets().filter(function (x) { return x[2] === r && x[3] === c; })[0];
+    G.help = null;
+    if (m) {
+      G.sel = null;
+      var after = R.play(G.pos, m), h = K.hanging(R, after, r, c);
+      // a piece left where it can be won: ask first
+      if (h) {
+        // show the move on the board while asking; Yes plays it, No puts everything back
+        G.pending = m; G.prev = G.pos; G.prevLast = G.last;
+        G.pos = after; G.last = m; drawGame();
+        $("gCarefulText").textContent = T("game.careful", { attacker: pname(h.attacker), piece: pname(h.piece) });
+        $("gCareful").hidden = false; beep("nope"); say($("gCarefulText").textContent);
+        return;
+      }
+      return commit(m);
+    }
+    if (p && R.colorOf(p) === "w") { G.sel = [r, c]; beep("move"); drawGame(); return; }
+    G.sel = null; drawGame();
+  }
+  function commit(m) {
+    var before = G.pos, taken = before.board[m[2]][m[3]] || (m[4] === "ep" ? "p" : null), tok = G.token;
+    G.hist.push(before);
+    G.pos = R.play(before, m); G.last = m; G.sel = null; G.warn = [];
+    beep(taken ? "star" : "move");
+    var msg = [];
+    if (taken) msg.push(T("game.youTake", { taken: pname(taken) }));
+    if (m[4] === "promo") msg.push(T("game.promoted"));
+    if (R.inCheck(G.pos)) msg.push(T("game.youCheck"));
+    drawGame();
+    if (gameEnd()) return;
+    if (msg.length) say(msg.join(" "));
+    G.busy = true; drawGame();
+    setTimeout(function () {
+      if (tok !== G.token) return;
+      $("bubbleText").textContent = T("game.thinking");
+      setTimeout(function () { if (tok === G.token) computerMove(); }, 60);
+    }, msg.length ? 1100 : 350);
+  }
+  function computerMove() {
+    var tok = G.token, reply = K.kidAI(R, G.pos, G.level);
+    if (!reply) { G.busy = false; gameEnd(); return; }
+    var before = G.pos, taken = before.board[reply[2]][reply[3]] || (reply[4] === "ep" ? "P" : null), mover = before.board[reply[0]][reply[1]];
+    G.hist.push(before);
+    G.pos = R.play(before, reply); G.last = reply; G.busy = false;
+    beep(taken ? "nope" : "move");
+    var sq = R.squareName(reply[2], reply[3]), msg = [];
+    msg.push(taken ? T("game.iTake", { taken: pname(taken), square: sq }) : T("game.iMove", { piece: pname(mover), square: sq }));
+    if (reply[4] === "promo") msg.push(T("game.myPromoted"));
+    if (gameEnd(msg.join(" "))) return;
+    if (R.inCheck(G.pos)) msg.push(T("game.check"));
+    else {
+      G.warn = K.dangers(R, G.pos, "w");
+      if (G.warn.length) msg.push(T("game.danger", { piece: pname(G.warn[0].piece), square: R.squareName(G.warn[0].r, G.warn[0].c) }));
+      else msg.push(T("game.yourTurn"));
+    }
+    drawGame(); say(msg.join(" "));
+  }
+  // mate, stalemate, or no way to mate (only kings and a minor piece) ends the game
+  function gameEnd(prefix) {
+    var st = R.status(G.pos), text = null, won = false;
+    if (st.mate) { won = G.pos.turn === "b"; text = T(won ? "game.win" : "game.lose"); }
+    else if (st.stalemate || R.insufficientMaterial(G.pos) || G.pos.halfmove >= 100) text = T("game.draw");
+    if (!text) return false;
+    G.over = true; G.busy = false; G.warn = [];
+    if (won) {
+      var first = !(store.medals && store.medals[G.level]);
+      store.medals = store.medals || {}; store.medals[G.level] = true; save();
+      beep("win"); confetti();
+      if (first) text += " " + T("game.medal", { name: T("game." + G.level) }) + " 🏅";
+    }
+    drawGame();
+    $("gOverText").textContent = (prefix ? prefix + " " : "") + text;
+    $("gOver").hidden = false;
+    say((prefix ? prefix + " " : "") + text.replace("🏅", ""));
+    return true;
+  }
+  $("gYes").addEventListener("click", function () { var m = G.pending; G.pending = null; $("gCareful").hidden = true; G.pos = G.prev; G.last = G.prevLast; commit(m); });
+  $("gNo").addEventListener("click", function () { G.pending = null; $("gCareful").hidden = true; G.pos = G.prev; G.last = G.prevLast; drawGame(); say(T("game.yourTurn")); });
+  $("gUndo").addEventListener("click", function () {
+    if (G.busy || G.hist.length < 2) return;
+    G.token++; G.pos = G.hist[G.hist.length - 2]; G.hist.length -= 2; G.over = false; G.last = null; G.sel = null; G.warn = []; G.help = null;
+    $("gOver").hidden = true; $("gCareful").hidden = true; drawGame(); say(T("game.yourTurn"));
+  });
+  $("gHelp").addEventListener("click", function () {
+    if (G.busy || G.over || G.pos.turn !== "w") return;
+    var m = K.kidAI(R, G.pos, "clever");
+    if (!m) return;
+    G.help = [[m[0], m[1]], [m[2], m[3]]]; drawGame();
+    say(T("game.helpMove", { piece: pname(G.pos.board[m[0]][m[1]]), square: R.squareName(m[2], m[3]) }));
+  });
+  $("gNew").addEventListener("click", function () { openGame(); });
+  $("gNew2").addEventListener("click", function () { openGame(); });
+  $("gMapBtn").addEventListener("click", function () { G.token++; renderMap(); });
+
+  // ---- start: ?world=knight opens a world directly, ?game opens the game
   applyStatic(); setToggles();
   var wq = W.findIndex(function (w) { return w.id === params.get("world"); });
-  if (wq >= 0 && worldOpen(wq)) openLevel(wq, 0, true); else renderMap();
-  window.chessKids = { version: VERSION, state: S, store: function () { return store; }, open: openLevel, map: renderMap };
+  if (params.has("game")) openGame(); else if (wq >= 0 && worldOpen(wq)) openLevel(wq, 0, true); else renderMap();
+  $("gameCard").addEventListener("click", openGame);
+  window.chessKids = { version: VERSION, state: S, game: G, store: function () { return store; }, open: openLevel, map: renderMap, openGame: openGame, startGame: startGame,
+    setGame: function (fen) { G.pos = R.fromFEN(fen); G.hist = [R.fromFEN(fen), R.fromFEN(fen)]; G.over = false; G.warn = []; drawGame(); } };
 })();
