@@ -16,7 +16,8 @@
   // 1.4.0 Cobot Lab blueprint theme (../theme.css)
   // 1.5.0 three new levels: opening courses (8 drills), middlegame plans, endgames played out against perfect
   //       defence from the Lichess tablebase ("play" steps); the board turns round when you play Black
-  var VERSION = "1.5.0";
+  // 1.6.0 link to Chess for kids (../kids/)
+  var VERSION = "1.6.0";
   var R = window.ChessRules, C = window.CHESS_COURSE, I18N = window.CHESS_I18N, EN = I18N.en;
   var START = R.START_FEN;
   var BUNDLED = [["en", "English"], ["es", "Español"], ["af", "Afrikaans"], ["de", "Deutsch"], ["da", "Dansk"], ["nl", "Nederlands"]];

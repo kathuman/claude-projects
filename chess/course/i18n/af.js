@@ -36,6 +36,7 @@
   "ui.practise": "Oefen met raaisels op jou vlak",
   "ui.puzzles": "Raaisels",
   "ui.training": "My oefenplan",
+  "ui.kids": "Vir kinders",
   "ui.correct": "Reg!",
   "ui.wrong": "Nie heeltemal nie. Probeer weer.",
   "ui.illegal": "Daardie skuif is nie hier moontlik nie.",

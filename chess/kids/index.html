@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess for Kids</title>
+  <meta name="description" content="Chess for kids: learn how every piece moves by collecting stars, capture sleepy pieces, win pawn wars and find checkmates, with a friendly knight who reads everything aloud. Six languages." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9822;</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Rajdhani:wght@600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); }
+    body { line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+    a { color: var(--accent); }
+    header.bar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 18px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand .mk { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; flex: none; }
+    .brand h1 { margin: 0; white-space: nowrap; }
+    .brand .sub { font-size: 12px; color: var(--muted); }
+    .brand .sub a { color: var(--ink-2); font-weight: 600; text-decoration: none; }
+    .ver { font-size: 10.5px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: 3px; }
+    .hactions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .lnk { font-size: 13px; font-weight: 600; color: var(--ink-2); text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
+    .sel { padding: 7px 10px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    .toggle { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 600; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
+    .toggle[aria-pressed="true"] { background: var(--kid-sun); color: #3a2a00; border-color: var(--kid-sun); }
+    .icon-btn { width: 38px; height: 38px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; display: grid; place-items: center; }
+    .icon-moon { display: none; }
+    :root[data-theme="dark"] .icon-sun { display: none; } :root[data-theme="dark"] .icon-moon { display: block; }
+
+    main { max-width: 1040px; margin: 0 auto; padding: 18px 18px 10px; }
+    /* Sir Hop and his speech bubble */
+    .mascot { display: flex; align-items: flex-end; gap: 12px; margin: 4px 0 16px; }
+    .mascot img { width: 74px; height: 74px; flex: none; filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); animation: bob 3s ease-in-out infinite; }
+    .bubble { position: relative; flex: 1; background: var(--panel); border: 2px solid var(--kid-sun); border-radius: 20px; padding: 14px 18px; font-family: var(--font-kid); font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--ink); box-shadow: var(--shadow); }
+    .bubble::before { content: ""; position: absolute; left: -12px; bottom: 18px; border: 10px solid transparent; border-right-color: var(--kid-sun); border-left: 0; }
+    .bubble .say { margin-left: 8px; vertical-align: 2px; font-size: 13px; padding: 3px 10px; }
+    @keyframes bob { 50% { transform: translateY(-5px); } }
+    .total { font-family: var(--font-kid); font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+
+    /* the map */
+    .worlds { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .world { position: relative; text-align: left; font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--border); border-radius: 22px; padding: 14px 16px 12px; cursor: pointer; box-shadow: var(--shadow); transition: transform .12s, border-color .12s; min-height: 132px; }
+    .world:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--kid-sun); }
+    .world:disabled { opacity: .55; cursor: not-allowed; }
+    .world img { width: 54px; height: 54px; float: right; }
+    .world .name { display: block; font-family: var(--font-kid); font-size: 22px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; }
+    .world .wstars { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+    .world .trophy { font-size: 22px; margin-left: 6px; vertical-align: -3px; }
+    .world .lock { position: absolute; right: 14px; bottom: 10px; font-size: 22px; }
+    .world .dots { display: flex; gap: 6px; margin-top: 10px; }
+    .world .dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--border); }
+    .world .dots i.s1 { background: var(--kid-sun); opacity: .5; } .world .dots i.s2 { background: var(--kid-sun); opacity: .75; } .world .dots i.s3 { background: var(--kid-sun); }
+    .real { margin-top: 16px; display: flex; align-items: center; gap: 14px; background: var(--panel); border: 2px dashed var(--kid-sun); border-radius: 22px; padding: 14px 18px; text-decoration: none; color: var(--ink); }
+    .real b { font-family: var(--font-kid); font-size: 20px; display: block; }
+    .real span { color: var(--ink-2); font-size: 15px; }
+    details.grown { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 4px 16px; }
+    details.grown summary { cursor: pointer; font-weight: 600; padding: 10px 0; color: var(--ink-2); }
+    details.grown p { color: var(--ink-2); font-size: 14px; }
+    .linkbtn { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+
+    /* a level */
+    .lvltop { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+    .lvltop h2 { margin: 0; font-family: var(--font-kid); font-size: 24px; }
+    .lvltop .ldots { display: flex; gap: 6px; }
+    .lvltop .ldots i { width: 12px; height: 12px; border-radius: 50%; background: var(--border); }
+    .lvltop .ldots i.now { background: var(--kid-sun); }
+    .stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+    .board { position: relative; width: min(100%, 560px); aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); border: 6px solid var(--kid-wood); border-radius: 14px; overflow: hidden; touch-action: manipulation; user-select: none; box-shadow: var(--shadow); }
+    .sq { position: relative; border: 0; padding: 0; margin: 0; background: var(--kid-light); display: grid; place-items: center; cursor: default; font: inherit; }
+    .sq.d { background: var(--kid-dark); }
+    .sq img.pc { width: 88%; height: 88%; pointer-events: none; transition: transform .15s; }
+    .sq.hero img.pc { filter: drop-shadow(0 0 6px var(--kid-sun)); }
+    .sq.go { cursor: pointer; }
+    .sq.go::after { content: ""; position: absolute; width: 30%; height: 30%; border-radius: 50%; background: rgba(40,140,80,.55); pointer-events: none; }
+    .sq.go.cap::after { width: 86%; height: 86%; background: none; box-shadow: inset 0 0 0 5px rgba(40,140,80,.65); }
+    .sq.mine { cursor: pointer; }
+    .sq.sel { box-shadow: inset 0 0 0 4px var(--kid-sun); }
+    .sq.last { box-shadow: inset 0 0 0 999px rgba(255,214,51,.28); }
+    .sq.guard::before { content: ""; position: absolute; inset: 0; background: rgba(230,60,50,.28); pointer-events: none; }
+    .sq.help { animation: glow 1s ease-in-out infinite; }
+    @keyframes glow { 50% { box-shadow: inset 0 0 0 6px #ffd633, 0 0 18px #ffd633; } }
+    .sq .star, .sq .rock, .sq .flag { width: 70%; height: 70%; pointer-events: none; }
+    .sq .star { animation: twinkle 2s ease-in-out infinite; }
+    @keyframes twinkle { 50% { transform: scale(1.12) rotate(8deg); } }
+    .sq.nope { animation: shake .3s; }
+    @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+    .side { display: flex; flex-direction: column; gap: 12px; }
+    .count { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 12px 16px; font-family: var(--font-kid); font-size: 20px; font-weight: 600; }
+    .count small { display: block; font-size: 15px; color: var(--ink-2); font-weight: 500; }
+    .kbtn { font-family: var(--font-kid); font-size: 20px; font-weight: 600; padding: 12px 18px; border-radius: 16px; border: 2px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 52px; }
+    .kbtn:hover:not(:disabled) { border-color: var(--kid-sun); }
+    .kbtn.big { background: var(--kid-sun); border-color: var(--kid-sun); color: #3a2a00; }
+    .kbtn:disabled { opacity: .45; cursor: not-allowed; }
+    /* celebration */
+    .win { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4,20,40,.55); z-index: 5; }
+    .win-box { text-align: center; background: var(--panel); border: 3px solid var(--kid-sun); border-radius: 24px; padding: 18px 26px; box-shadow: var(--shadow); max-width: 90%; }
+    .win-stars { font-size: 46px; letter-spacing: 4px; }
+    .win-stars span { display: inline-block; filter: grayscale(1) opacity(.35); }
+    .win-stars span.on { filter: none; animation: pop .45s ease-out backwards; }
+    .win-stars span.on:nth-child(2) { animation-delay: .2s; } .win-stars span.on:nth-child(3) { animation-delay: .4s; }
+    @keyframes pop { from { transform: scale(0) rotate(-40deg); } 70% { transform: scale(1.3); } }
+    .win-text { font-family: var(--font-kid); font-size: 22px; font-weight: 700; margin: 6px 0 12px; }
+    canvas.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; width: 100vw; height: 100vh; }
+    @media (prefers-reduced-motion: reduce) { .mascot img, .sq .star, .sq.help, .win-stars span.on { animation: none; } }
+    footer.foot { max-width: 1040px; margin: 18px auto 0; padding: 22px 18px 50px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
+    footer.foot a { color: var(--muted); }
+    footer.foot .consult { display: block; margin-bottom: 6px; font-weight: 600; color: var(--ink); }
+    footer.foot .consult a { color: var(--accent); }
+    @media (max-width: 820px) { .stage { grid-template-columns: minmax(0, 1fr); } .side { flex-direction: row; flex-wrap: wrap; } .count { flex: 1 1 100%; } .kbtn { flex: 1; } }
+    @media (max-width: 520px) { .brand .sub .sub-rest, .ver, .hide-sm { display: none; } .bubble { font-size: 17px; } .mascot img { width: 56px; height: 56px; } main { padding: 14px 12px 10px; } .board { border-width: 4px; } }
+  </style>
+  <link rel="stylesheet" href="../theme.css" />
+  <style>
+    /* kids colours on top of the shared theme: sunny accents, a friendly font, a wooden board */
+    :root { --font-kid: "Fredoka", "Barlow", sans-serif; --kid-sun: #ffcf3f; --kid-wood: #a8743f; --kid-light: #fbe9c4; --kid-dark: #c9935a; }
+    .brand h1 { font-family: var(--font-kid); letter-spacing: 0; }
+    .brand .mk { background: var(--kid-sun); color: #3a2a00; }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">
+      <span class="mk">&#9822;</span>
+      <div>
+        <h1><span data-i="ui.title">Chess for kids</span><span class="ver" id="ver"></span></h1>
+        <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="sub-rest"> &middot; <span data-i="ui.subtitle"></span></span></div>
+      </div>
+    </div>
+    <div class="hactions">
+      <select class="sel" id="langSel" aria-label="Language"></select>
+      <button class="toggle" id="readBtn" type="button" aria-pressed="true">&#128266; <span data-i="ui.read">Read aloud</span></button>
+      <button class="toggle" id="soundBtn" type="button" aria-pressed="true">&#127925; <span class="hide-sm" data-i="ui.sound">Sounds</span></button>
+      <a class="lnk hide-sm" href="../course/">Course</a>
+      <a class="lnk hide-sm" href="../">Play</a>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme" title="Toggle theme">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div class="mascot">
+      <img src="../pieces/cburnett/wN.svg" alt="Sir Hop" />
+      <div class="bubble" id="bubble" aria-live="polite"><span id="bubbleText"></span><button class="toggle say" id="sayAgain" type="button" aria-label="Say it again">&#128266;</button></div>
+    </div>
+
+    <section id="mapView">
+      <p class="total" id="total"></p>
+      <div class="worlds" id="worlds"></div>
+      <a class="real" id="realGame" href="../?opponent=engine&amp;level=1&amp;side=w">
+        <img src="../pieces/cburnett/wK.svg" alt="" width="54" height="54" />
+        <div><b data-i="ui.realGame">Play a real game</b><span data-i="ui.realGameDesc"></span></div>
+      </a>
+      <details class="grown">
+        <summary data-i="ui.grownups">For grown-ups</summary>
+        <p data-i="ui.grownupsText"></p>
+        <p><button class="linkbtn" id="resetBtn" type="button" data-i="ui.reset">Start again</button></p>
+      </details>
+    </section>
+
+    <section id="levelView" hidden>
+      <div class="lvltop">
+        <button class="kbtn" id="mapBtn" type="button">&#8592; <span data-i="ui.map">Map</span></button>
+        <h2 id="worldName"></h2>
+        <div class="ldots" id="ldots"></div>
+      </div>
+      <div class="stage">
+        <div class="board" id="board" role="grid" aria-label="Board">
+          <div class="win" id="win" hidden><div class="win-box">
+            <div class="win-stars" id="winStars"><span>&#11088;</span><span>&#11088;</span><span>&#11088;</span></div>
+            <div class="win-text" id="winText"></div>
+            <button class="kbtn" id="againBtn2" type="button" data-i="ui.again">Try again</button>
+            <button class="kbtn big" id="nextBtn" type="button" data-i="ui.next">Next level</button>
+          </div></div>
+        </div>
+        <div class="side">
+          <div class="count" id="count"></div>
+          <button class="kbtn" id="helpBtn" type="button">&#128161; <span data-i="ui.hint">Help</span></button>
+          <button class="kbtn" id="againBtn" type="button">&#8635; <span data-i="ui.again">Try again</span></button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Chess for kids <span id="verFoot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    Part of <a href="../">Chess</a>. Checkmate puzzles from the <a href="https://database.lichess.org/#puzzles" target="_blank" rel="noopener">Lichess puzzle database</a> (CC0). Pieces by Colin M.L. Burnett (GPL). Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+
+  <script src="../src/rules.js"></script>
+  <script src="../src/kids.js"></script>
+  <script src="levels.js"></script>
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

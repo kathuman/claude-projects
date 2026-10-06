@@ -41,6 +41,7 @@
   "ui.practise": "Practise with puzzles at your level",
   "ui.puzzles": "Puzzles",
   "ui.training": "My training",
+  "ui.kids": "For kids",
   "ui.correct": "Correct!",
   "ui.wrong": "Not quite. Try again.",
   "ui.illegal": "That move is not possible here.",
