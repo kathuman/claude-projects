@@ -1,0 +1,75 @@
+/*
+ * theme.css — the Cobot Lab "blueprint" look for the projects page, loaded after style.css so it only
+ * redefines the tokens, fonts and a few header and card details; the layout stays in style.css.
+ * The same palette as cobot-lab/ and chess/theme.css.
+ *
+ * Dark (the default, as in Cobot Lab): navy panels, pale-cyan ink, sky-blue accent, a faint blueprint grid.
+ * Light (theme toggle): the same palette on blueprint paper.
+ * Fonts: Rajdhani (headings, brand, labels), Barlow (text), IBM Plex Mono (numbers, dates, tags).
+ */
+
+/* ---------- dark: the default, also when the system asks for dark ---------- */
+:root, :root[data-theme="dark"] {
+  --bg: #0a2f52; --bg-elev: #0d3a63; --text: #bfe4ff; --text-muted: #8fd0f2; --border: #2a5580;
+  --accent: #7dd3fc; --accent-soft: #14496f; --accent-contrast: #04202b; --chip-bg: #082444;
+  --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -12px rgba(0,0,0,.55);
+  --grid-line: rgba(125,211,252,.07);
+  --header-bg: linear-gradient(180deg, #0d3a63, #0a2f52);
+  --font-sans: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-head: "Rajdhani", "Arial Narrow", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a2f52; --bg-elev: #0d3a63; --text: #bfe4ff; --text-muted: #8fd0f2; --border: #2a5580;
+    --accent: #7dd3fc; --accent-soft: #14496f; --accent-contrast: #04202b; --chip-bg: #082444;
+    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 14px 40px -12px rgba(0,0,0,.55);
+    --grid-line: rgba(125,211,252,.07);
+    color-scheme: dark;
+  }
+}
+
+/* ---------- light: blueprint paper ---------- */
+:root[data-theme="light"] {
+  --bg: #e9f1f8; --bg-elev: #ffffff; --text: #0a2f52; --text-muted: #2d5677; --border: #c3d7e8;
+  --accent: #0b6aa2; --accent-soft: #d8ebf7; --accent-contrast: #ffffff; --chip-bg: #f3f8fc;
+  --shadow: 0 1px 2px rgba(10,47,82,.06), 0 10px 30px -8px rgba(10,47,82,.16);
+  --grid-line: rgba(11,106,162,.08);
+  --header-bg: linear-gradient(180deg, #ffffff, #eef5fb);
+  color-scheme: light;
+}
+
+/* the icons follow the theme that is actually shown (dark unless light was chosen) */
+.icon-sun { display: none; }
+.icon-moon { display: block; }
+:root[data-theme="light"] .icon-sun { display: block; }
+:root[data-theme="light"] .icon-moon { display: none; }
+
+/* a faint blueprint grid instead of the warm glow */
+.bg-glow {
+  opacity: 1;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    radial-gradient(700px circle at 15% -10%, var(--accent-soft), transparent 60%);
+  background-size: 32px 32px, 32px 32px, auto;
+}
+
+/* ---------- typography: Rajdhani for headings and labels, as in Cobot Lab ---------- */
+html, body { font-family: var(--font-sans); }
+.site-header { background: var(--header-bg); border-bottom: 1px solid var(--border); backdrop-filter: none; }
+.brand-text { font-family: var(--font-head); font-weight: 700; font-size: 22px; letter-spacing: .04em; text-transform: uppercase; }
+.brand-text span { color: var(--accent); }
+.brand-mark { background: var(--accent); color: var(--accent-contrast); }
+.hero h1 { font-family: var(--font-head); font-weight: 700; letter-spacing: .03em; }
+.stats .stat-num { font-family: var(--font-head); font-weight: 700; color: var(--accent); }
+.stats .stat-label, .card-date, .card-tags span { font-family: var(--font-mono); }
+.card-title { font-family: var(--font-head); font-weight: 700; letter-spacing: .03em; font-size: 1.2em; }
+.card { background: var(--bg-elev); border-color: var(--border); }
+.card:hover { border-color: var(--accent); }
+.tag-chip { font-family: var(--font-head); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.tag-chip.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+.gh-link, .site-footer .consult { font-family: var(--font-head); font-weight: 600; letter-spacing: .03em; }
+.gh-link { text-transform: uppercase; border-radius: 8px; border-color: var(--border); }
+.gh-link:hover, .icon-btn:hover { border-color: var(--accent); color: var(--accent); }

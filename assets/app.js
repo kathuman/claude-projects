@@ -39,15 +39,13 @@ els.repoLink.href = `https://github.com/${SITE_CONFIG.githubUsername}/${SITE_CON
   } catch (e) {
     /* localStorage unavailable — fall back to system preference */
   }
-  if (saved === "light" || saved === "dark") {
-    document.documentElement.setAttribute("data-theme", saved);
-  }
+  // dark (the Cobot Lab blueprint look) unless light was chosen
+  document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
 })();
 
 els.themeToggle.addEventListener("click", () => {
   const root = document.documentElement;
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const current = root.getAttribute("data-theme") || (prefersDark ? "dark" : "light");
+  const current = root.getAttribute("data-theme") || "dark";
   const next = current === "dark" ? "light" : "dark";
   root.setAttribute("data-theme", next);
   try {
