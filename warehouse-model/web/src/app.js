@@ -27,7 +27,8 @@
   //   7.0.0  CAD/BIM and data: IFC4 building model (validated with IfcOpenShell), DXF floor plan,
   //          glTF 3D model and the FreeCAD command for the current design; import of real movement and
   //          inventory CSVs to derive throughput, peak factor, operating hours, inventory and demand skew
-  const APP_VERSION = "7.0.0";
+  //   7.0.1  an About page with the author; no "by kathuman" in the header, footer or exported IFC files
+  const APP_VERSION = "7.0.1";
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
