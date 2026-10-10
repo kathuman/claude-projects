@@ -1,6 +1,6 @@
 # Tube Flow — a validated lattice-Boltzmann flow lab
 
-By [kathuman](https://github.com/kathuman). Flow through a tube past a sphere — or an ellipsoid, cylinder,
+By Daniel Alberto Sepulveda Estay, PhD ([about the app](about.html)). Flow through a tube past a sphere — or an ellipsoid, cylinder,
 disc, cube, a bar across the tube, a wing section (NACA airfoil at an angle of attack), or your own STL shape — in 3D, with real fluids and units, live
 measurements, Reynolds sweeps against published curves, saved runs and VTK export. Live: https://kathuman.github.io/claude-projects/tube-flow-sim/
 

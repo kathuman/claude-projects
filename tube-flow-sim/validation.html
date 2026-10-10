@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tube Flow Validation</title>
-  <meta name="description" content="Validation report for Tube Flow by kathuman: the lattice-Boltzmann solver against exact solutions and published results, grid convergence with Richardson extrapolation and GCI, GPU/CPU parity and sphere-wake benchmarks — re-runnable in your browser." />
+  <meta name="description" content="Validation report for Tube Flow: the lattice-Boltzmann solver against exact solutions and published results, grid convergence with Richardson extrapolation and GCI, GPU/CPU parity and sphere-wake benchmarks — re-runnable in your browser." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -74,9 +74,9 @@ pre{font-family:var(--mono); font-size:12.5px; background:var(--panel-2); border
   <div class="brand">
     <div class="mark">TUBE<span>FLOW</span></div>
     <span class="ver" id="ver"></span>
-    <span class="by">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · validation report</span>
+    <span class="by">validation report</span>
   </div>
-  <a class="back-link" href="./">← Tube Flow</a>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;"><a class="back-link" href="about.html">About</a><a class="back-link" href="./">← Tube Flow</a></div>
 </header>
 
 <main>
@@ -145,7 +145,7 @@ CHROME=&lt;chrome.exe&gt; node tube-flow-sim/tests/gpu.test.js</pre>
 </main>
 
 <footer class="foot">
-  <span class="consult">Tube Flow <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+  <span class="consult">Tube Flow <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
   A validated lattice-Boltzmann flow lab. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
 </footer>
 
@@ -156,7 +156,7 @@ CHROME=&lt;chrome.exe&gt; node tube-flow-sim/tests/gpu.test.js</pre>
 <script>
 (function () {
   "use strict";
-  var APP_VERSION = "6.2.1";   // keep in step with index.html
+  var APP_VERSION = "6.2.2";   // keep in step with index.html
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
   var CASES = TF.validation.CASES, results = {}, recorded = null, running = false;
