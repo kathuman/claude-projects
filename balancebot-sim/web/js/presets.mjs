@@ -7,20 +7,22 @@
 import { deriveFromGeometry, mergeParams, DEFAULT_GEOMETRY, DEFAULT_MATERIAL } from './params.mjs';
 import { defaultGains, defaultRealism } from './controller.mjs';
 import { MOTORS, BALBOA_EXTERNAL, motorParams } from './motors.mjs';
+import { imuParams } from './imu.mjs';
 
 export const PRESETS = {
   default: {
     label: 'Default',
-    description: 'A small hobby-scale balancing robot on 25 mm gearmotors and a 2S LiPo.',
+    description: 'A small hobby-scale balancing robot on 25 mm gearmotors and a 2S LiPo, with an MPU-6050 IMU read through a complementary filter.',
     expect: 'recovers',
   },
   balboa: {
     label: 'Balboa-class (Pololu parts)',
     description:
-      'Built on published Pololu parts: 50:1 HPCB micro gearmotors through the Balboa 32U4\'s 2.88:1 external gears, 80 mm wheels, 12 CPR motor encoders (1778 counts per wheel turn), a 7.2 V pack and a 100 Hz loop. The body\'s size and mass are estimates (Pololu doesn\'t publish them).',
+      'Built on published Pololu parts: 50:1 HPCB micro gearmotors through the Balboa 32U4\'s 2.88:1 external gears, 80 mm wheels, 12 CPR motor encoders (1778 counts per wheel turn), its LSM6DS33 IMU, a 7.2 V pack and a 100 Hz loop. The body\'s size and mass and the IMU position are estimates (Pololu doesn\'t publish them).',
     geometry: { wheelRadius: 0.04, wheelWidth: 0.01, trackWidth: 0.11, bodyWidth: 0.09, bodyDepth: 0.045, bodyHeight: 0.13, comHeight: 0.06 },
     material: { bodyDensity: 650, wheelDensity: 1100 },
     motorSpec: 'pololu50', external: true, battery: { nominal: 7.2, voltage: 7.2 },
+    imu: { chip: 'lsm6ds33', mountHeight: 0.05 },
     gains: { angleKp: 3, angleKd: 0.1, angleKi: 15, velocityKp: 0.3, velocityKi: 0.15 },
     realism: { controlLoopHz: 100 },
     expect: 'recovers',
@@ -76,10 +78,34 @@ export const PRESETS = {
     nudge: 2.0,
     expect: 'slips',
   },
+  gyroonly: {
+    label: 'Gyro only, uncalibrated',
+    description: 'The firmware just integrates the gyro and never calibrates it. This MPU-6050’s zero-rate offset (within its ±20 °/s datasheet tolerance) makes the angle estimate run away at about 15°/s: the robot balances the wrong angle, the speed loop fights it, and it falls.',
+    realism: { estimator: 'gyro', calibrateGyro: false },
+    expect: 'falls',
+  },
+  accelonly: {
+    label: 'Accelerometer only',
+    description: 'The firmware trusts the accelerometer alone. Standing still that is gravity, but every push and every correction accelerates the sensor too, and it reads that as tilt -- the faster it reacts, the more it is fooled.',
+    realism: { estimator: 'accel' },
+    expect: 'falls',
+  },
+  uncalibrated: {
+    label: 'Complementary, uncalibrated gyro',
+    description: 'A complementary filter on an uncalibrated gyro: it stays up, but its idea of upright is off by bias × time constant (about 12° here). The speed loop quietly leans the robot to compensate -- watch the two pitch lines disagree.',
+    realism: { estimator: 'complementary', calibrateGyro: false },
+    expect: 'recovers',
+  },
+  kalman: {
+    label: 'Kalman filter learns the bias',
+    description: 'The same uncalibrated gyro through a Kalman filter that estimates the gyro bias as a second state: within seconds it has learned the offset, and the estimate lines up with the truth to within the accelerometer’s own zero-g offset (a degree or two).',
+    realism: { estimator: 'kalman', calibrateGyro: false },
+    expect: 'recovers',
+  },
   noisy: {
     label: 'Noisy sensor',
-    description: 'Default hardware, a cheap/vibrating IMU read two ticks late: visible jitter and motors buzzing at their limit about half the time -- still (barely) upright.',
-    realism: { sensorNoiseStdTheta: 0.003, sensorNoiseStdRate: 0.1, sensorDelaySteps: 2 },
+    description: 'Default hardware with the IMU replaced by the true angle plus heavy noise, read two ticks late (the v1.2 sensor model): visible jitter and motors buzzing at their limit about half the time -- still (barely) upright.',
+    realism: { estimator: 'truth', sensorNoiseStdTheta: 0.003, sensorNoiseStdRate: 0.1, sensorDelaySteps: 2 },
     expect: 'jitters',
   },
   slowbrain: {
@@ -115,7 +141,8 @@ export function buildPreset(key) {
     timeConstant: 0.02,
     ...(p.motor || {}),
   };
-  const params = mergeParams(deriveFromGeometry(geometry, material), { motor, environment: p.environment });
+  const imu = imuParams((p.imu && p.imu.chip) || 'mpu6050', p.imu && p.imu.mountHeight != null ? { mountHeight: p.imu.mountHeight } : {});
+  const params = mergeParams(deriveFromGeometry(geometry, material), { motor, environment: p.environment, imu });
   return {
     geometry, material, params,
     gains: { ...defaultGains(), ...(p.gains || {}) },

@@ -159,6 +159,8 @@ kbd{
 .chart-box .chart-title{font-family:var(--head); font-weight:700; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:5px; display:flex; justify-content:space-between;}
 .chart-box canvas{display:block; width:100%; height:62px;}
 .chart-box canvas + .chart-title{margin-top:8px;}
+.chart-title b{font-weight:700;}
+.lg-true{color:#4fe0ff;} .lg-est{color:#ffa45c;}
 
 .drive-pad{
   position:absolute; left:14px; bottom:14px; display:grid; grid-template-columns:repeat(3,36px); grid-template-rows:repeat(2,36px);
@@ -283,6 +285,24 @@ footer.foot .consult{color:var(--ink);}
         </div>
       </details>
 
+      <details class="rail-section" open>
+        <summary>IMU &amp; Tilt Estimate</summary>
+        <div class="body">
+          <label class="field-label" for="estimator">Tilt estimate</label>
+          <select id="estimator"></select>
+          <label class="field-label imu-only" for="imu-chip">IMU chip</label>
+          <select id="imu-chip" class="imu-only"></select>
+          <label class="check imu-only"><input type="checkbox" id="calibrate-gyro" checked> Calibrate the gyro at power-on (robot held still 1 s)</label>
+          <div class="ctrl-row est-complementary"><div class="row-head"><span class="name">Filter Time Constant</span><span class="val" id="v-complementaryTau"></span></div>
+            <input type="range" id="complementaryTau" min="0.05" max="5" step="0.05"></div>
+          <div class="ctrl-row est-kalman"><div class="row-head"><span class="name">Kalman: Accel Angle Noise</span><span class="val" id="v-kalmanAccelStdDeg"></span></div>
+            <input type="range" id="kalmanAccelStdDeg" min="0.5" max="20" step="0.5"></div>
+          <div class="ctrl-row imu-only"><div class="row-head"><span class="name">IMU Height Above Axle</span><span class="val" id="v-mountHeight"></span></div>
+            <input type="range" id="mountHeight" min="0" max="0.4" step="0.005"></div>
+          <p class="note" id="imu-note"></p>
+        </div>
+      </details>
+
       <details class="rail-section">
         <summary>Controller</summary>
         <div class="body">
@@ -310,9 +330,9 @@ footer.foot .consult{color:var(--ink);}
             <input type="range" id="controlLoopHz" min="10" max="1000" step="5"></div>
           <div class="ctrl-row"><div class="row-head"><span class="name">Sensor Delay</span><span class="val" id="v-sensorDelaySteps"></span></div>
             <input type="range" id="sensorDelaySteps" min="0" max="15" step="1"></div>
-          <div class="ctrl-row"><div class="row-head"><span class="name">Angle Noise</span><span class="val" id="v-sensorNoiseStdTheta"></span></div>
+          <div class="ctrl-row truth-only"><div class="row-head"><span class="name">Angle Noise (true-angle mode)</span><span class="val" id="v-sensorNoiseStdTheta"></span></div>
             <input type="range" id="sensorNoiseStdTheta" min="0" max="0.05" step="0.0005"></div>
-          <div class="ctrl-row"><div class="row-head"><span class="name">Rate Noise</span><span class="val" id="v-sensorNoiseStdRate"></span></div>
+          <div class="ctrl-row truth-only"><div class="row-head"><span class="name">Rate Noise (true-angle mode)</span><span class="val" id="v-sensorNoiseStdRate"></span></div>
             <input type="range" id="sensorNoiseStdRate" min="0" max="0.3" step="0.005"></div>
           <div class="ctrl-row"><div class="row-head"><span class="name">Encoder Speed Filter</span><span class="val" id="v-speedFilterHz"></span></div>
             <input type="range" id="speedFilterHz" min="1" max="60" step="1"></div>
@@ -344,6 +364,8 @@ footer.foot .consult{color:var(--ink);}
       <div class="hud">
         <div class="hud-title">Telemetry</div>
         <div class="hud-line"><span>Pitch</span><b id="hud-theta">0.0&deg;</b></div>
+        <div class="hud-line imu-only"><span>Estimate</span><b id="hud-est">0.0&deg;</b></div>
+        <div class="hud-line extra imu-only"><span>Gyro bias / est</span><b id="hud-bias">0.0 / 0.0</b></div>
         <div class="hud-line"><span>Pitch Rate</span><b id="hud-thetadot">0.00 &deg;/s</b></div>
         <div class="hud-line"><span>Speed</span><b id="hud-xdot">0.00 m/s</b></div>
         <div class="hud-line extra"><span>Encoder Speed</span><b id="hud-enc">0.00 m/s</b></div>
@@ -360,7 +382,7 @@ footer.foot .consult{color:var(--ink);}
       <div class="toast" id="toast"></div>
 
       <div class="chart-box">
-        <div class="chart-title"><span>Pitch (&deg;)</span><span id="chart-range">&plusmn;20&deg;</span></div>
+        <div class="chart-title"><span>Pitch (&deg;) &middot; <b class="lg-true">true</b><span class="imu-only"> &middot; <b class="lg-est">estimate</b></span></span><span id="chart-range">&plusmn;20&deg;</span></div>
         <canvas id="chart" width="600" height="124"></canvas>
         <div class="chart-title"><span>Speed (m/s) &middot; dashed: top speed</span><span id="speed-range"></span></div>
         <canvas id="chart-speed" width="600" height="124"></canvas>

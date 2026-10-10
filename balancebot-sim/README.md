@@ -1,4 +1,4 @@
-# Plumb — a two-wheeled balancing robot simulator (v1.2.0)
+# Plumb — a two-wheeled balancing robot simulator (v1.3.0)
 
 A 3D simulator for a two-wheeled, single-axis balancing robot: real
 Lagrangian dynamics (not a generic physics engine bolted on top), a
@@ -28,6 +28,15 @@ from an actual **FreeCAD** parametric model.
   - Choose a generic hobby motor or Pololu micro metal gearmotors (30:1,
     50:1, 75:1 HPCB) with their published specs. The original ideal torque
     source is still there to compare against.
+- **Real sensing** (v1.3): the firmware never sees the true angle.
+  - **IMU from datasheets:** an MPU-6050 or LSM6DS33, modelled from its
+    datasheet. Gyro noise, its zero-rate offset (calibrated away at power-on
+    or not) and warm-up drift. An accelerometer that reads gravity but is
+    fooled by every acceleration, more so the higher it's mounted.
+  - **Tilt estimators:** gyro only, accelerometer only, a complementary
+    filter, or a Kalman filter that learns the gyro offset.
+  - **Display:** the estimate is plotted against the true pitch, with
+    presets showing each failure and each fix.
 - **Control**: a cascaded angle/velocity/yaw PID controller, with
   configurable control-loop rate, sensor noise and delay. The noise is
   seeded, so any run can be replayed exactly.
@@ -63,8 +72,8 @@ cd balancebot-sim
 npm test
 ```
 
-29 tests check the physics, hardware and controller against the derivation in
-[`docs/dynamics.md`](docs/dynamics.md) and against published motor data:
+42 tests check the physics, hardware, sensing and controller against the derivation in
+[`docs/dynamics.md`](docs/dynamics.md) and against published motor and IMU data:
 
 - **Physics:** energy conservation, the upright equilibrium being a true
   fixed point, the uncontrolled robot falling over, and the new plant
@@ -76,6 +85,10 @@ npm test
   passing no torque inside the gap, tyre force never exceeding `mu * N`, a
   fallen robot lying still on the floor, encoder quantization, and
   repeatable noise.
+- **Sensing:** the accelerometer reading gravity at rest and `-atan(a/g)`
+  when accelerating, noise matching the datasheet density, gyro-only drift
+  `b*t`, the complementary filter's `b*tau` error, and the Kalman filter
+  learning the bias.
 - **Presets:** each one behaving as its description says.
 
 ## Structure
@@ -84,6 +97,7 @@ npm test
 web/                  the simulator (static site, open web/index.html)
   js/dynamics.mjs      equations of motion, tyres, floor contact, DC motor + gear model, RK4
   js/motors.mjs        gearmotor library (datasheet numbers, sources, estimates marked)
+  js/imu.mjs           IMU from datasheets (MPU-6050, LSM6DS33) + tilt estimators
   js/controller.mjs    cascaded PID balance controller, seeded sensor noise
   js/simloop.mjs       sensors (encoders), motor driver, control/physics timing
   js/params.mjs        parameter schema + closed-form mass/inertia derivation
@@ -98,6 +112,7 @@ cad/
 tests/
   dynamics.test.mjs    plant and controller correctness
   hardware.test.mjs    motors, battery, gears, encoders, tyres, floor, noise
+  imu.test.mjs         IMU readings, datasheet noise, estimators
   presets.test.mjs     every preset behaves as described
 docs/
   dynamics.md          full derivation + controller design notes
@@ -130,8 +145,9 @@ table.
 
 - No gyroscopic pitch/yaw coupling, and the wheels never leave the ground
   (see [`docs/dynamics.md`](docs/dynamics.md)).
-- Pitch and pitch rate are measured directly (with noise and delay). A real
-  IMU's drift and the gyro/accelerometer fusion filter come in v1.3.
+- The IMU sees pitch only: no motor vibration, no cross-axis or scale-factor
+  errors, and the chip's warm-up and its offsets drawn from datasheet
+  tolerances are assumptions.
 - Motor rotor inertia, gear play and external-gear efficiency are
   estimates where manufacturers don't publish them; the app labels them.
   The Balboa-class body's size and mass are estimates too.
@@ -145,6 +161,15 @@ table.
 
 ## Versions
 
+- **1.3.0**: real sensing.
+  - Gyro and accelerometer from the MPU-6050 and LSM6DS33 datasheets: noise,
+    zero-rate offset, warm-up drift, acceleration fooling the accelerometer.
+  - Boot calibration.
+  - Tilt estimators: gyro only, accelerometer only, complementary, and a
+    Kalman filter with bias and acceleration gating.
+  - Estimate-vs-truth chart.
+  - Presets: gyro only uncalibrated, accelerometer only, complementary with an
+    uncalibrated gyro, Kalman learns the bias.
 - **1.2.0**: real hardware.
   - DC gearmotors from datasheets: back-EMF top speed, battery voltage,
     rotor inertia, gear play.

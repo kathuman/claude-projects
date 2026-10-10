@@ -11,6 +11,7 @@
 //     of approximating the body as a uniform box.
 
 import { MOTORS, motorParams } from './motors.mjs';
+import { imuParams } from './imu.mjs';
 
 export const SCHEMA_VERSION = 2;
 
@@ -40,6 +41,9 @@ export const DEFAULT_MOTOR = {
   maxTorque: 0.35, // N*m per wheel ('ideal' model)
   timeConstant: 0.02, // s, first-order actuator lag ('ideal' model)
 };
+
+/** The IMU chip and how it is mounted (see imu.mjs; the firmware's estimator settings live in the controller's realism). */
+export const DEFAULT_IMU = imuParams('mpu6050');
 
 export const DEFAULT_ENVIRONMENT = {
   gravity: 9.81,
@@ -94,6 +98,7 @@ export function deriveFromGeometry(geometry, material) {
     inertia: { wheelInertia, bodyPitchInertia, yawInertia },
     motor: { ...DEFAULT_MOTOR },
     environment: { ...DEFAULT_ENVIRONMENT },
+    imu: { ...DEFAULT_IMU },
   };
 }
 
@@ -105,7 +110,7 @@ export function defaultParams() {
 export function mergeParams(base, partial) {
   if (!partial) return base;
   const out = { ...base };
-  for (const key of ['geometry', 'mass', 'inertia', 'motor', 'environment']) {
+  for (const key of ['geometry', 'mass', 'inertia', 'motor', 'environment', 'imu']) {
     if (partial[key]) out[key] = { ...base[key], ...partial[key] };
   }
   if (partial.source) out.source = partial.source;

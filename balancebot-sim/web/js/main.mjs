@@ -5,6 +5,7 @@ import { createSimLoop } from './simloop.mjs';
 import { buildScene, buildGround } from './scene.mjs';
 import { PRESETS, buildPreset } from './presets.mjs';
 import { MOTORS, BALBOA_EXTERNAL, motorParams, freeSpeedAt } from './motors.mjs';
+import { IMUS, ESTIMATORS, imuParams } from './imu.mjs';
 
 // Bump on every user-visible change.
 //   1.0.0  launch: Lagrangian pitch/drive dynamics, cascaded PID, presets, FreeCAD parameters
@@ -18,7 +19,11 @@ import { MOTORS, BALBOA_EXTERNAL, motorParams, freeSpeedAt } from './motors.mjs'
 //          gear play, rotor inertia), wheel encoders with quantized counts and a firmware speed filter,
 //          tyre grip and wheel slip, a yaw integral; presets for a Balboa-class robot (published Pololu
 //          parts), flat battery, sloppy gears, ice and the old ideal motors
-const APP_VERSION = '1.2.0';
+//   1.3.0  real sensing: gyro + accelerometer from datasheets (MPU-6050, LSM6DS33: noise, zero-rate offset,
+//          warm-up drift, acceleration fooling the accelerometer), boot calibration, and the firmware's tilt
+//          estimate -- gyro only, accelerometer only, complementary or Kalman (with bias) -- plotted against
+//          the true pitch; presets for each failure and fix
+const APP_VERSION = '1.3.0';
 document.getElementById('ver').textContent = 'v' + APP_VERSION;
 document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
@@ -163,6 +168,9 @@ const sliderSpecs = [
   { id: 'sensorNoiseStdTheta', ...real('sensorNoiseStdTheta'), unit: 'rad', decimals: 4 },
   { id: 'sensorNoiseStdRate', ...real('sensorNoiseStdRate'), unit: 'rad/s', decimals: 3 },
   { id: 'speedFilterHz', ...real('speedFilterHz'), unit: 'Hz', decimals: 0 },
+  { id: 'complementaryTau', ...real('complementaryTau'), unit: 's', decimals: 2 },
+  { id: 'kalmanAccelStdDeg', ...real('kalmanAccelStdDeg'), unit: '°', decimals: 1 },
+  { id: 'mountHeight', get: () => params.imu.mountHeight, set: (v) => { setParams({ ...params, imu: { ...params.imu, mountHeight: v } }); markCustom(); }, unit: 'm', decimals: 3 },
   { id: 'noiseSeed', ...real('noiseSeed'), decimals: 0 },
   { id: 'driveSpeed', get: () => driveSpeed, set: (v) => { driveSpeed = v; }, unit: 'm/s', decimals: 2 },
 ];
@@ -236,6 +244,49 @@ motorModel.addEventListener('change', () => {
   markCustom();
 });
 
+// --- IMU & tilt estimate ------------------------------------------------------------
+const estimatorSelect = $('estimator'), imuChip = $('imu-chip'), calibrateGyro = $('calibrate-gyro');
+Object.keys(ESTIMATORS).forEach((k) => estimatorSelect.add(new Option(ESTIMATORS[k], k)));
+Object.keys(IMUS).forEach((k) => imuChip.add(new Option(IMUS[k].label, k)));
+
+function refreshImuUI() {
+  const type = realism.estimator || 'truth', usesImu = type !== 'truth';
+  estimatorSelect.value = type;
+  imuChip.value = params.imu.chip;
+  calibrateGyro.checked = !!realism.calibrateGyro;
+  document.querySelectorAll('.imu-only').forEach((el) => { el.hidden = !usesImu; });
+  document.querySelectorAll('.truth-only').forEach((el) => { el.hidden = usesImu; });
+  document.querySelectorAll('.est-complementary').forEach((el) => { el.hidden = type !== 'complementary'; });
+  document.querySelectorAll('.est-kalman').forEach((el) => { el.hidden = type !== 'kalman'; });
+  const explain = {
+    truth: 'No IMU: the firmware is handed the true pitch, plus the noise and delay set under Realism (the v1.2 model). Real robots never get this.',
+    gyro: 'Integrate the gyro rate. Smooth and fast, but every bit of uncorrected gyro offset adds up into an ever-growing angle error.',
+    accel: 'Take the tilt from the direction of "gravity". Right when standing still -- but any acceleration of the sensor reads as tilt.',
+    complementary: 'Gyro for fast changes, accelerometer for slow ones, blended with one time constant. A leftover gyro offset b leaves a steady error of b × τ.',
+    kalman: 'Angle and gyro offset as two states; the accelerometer corrects both, trusted less when it measures anything but 1 g. Learns an uncalibrated offset.',
+  }[type];
+  const chip = IMUS[params.imu.chip];
+  $('imu-note').innerHTML = explain + (usesImu ? `<br>Datasheet: ${chip.source} <span class="est">Assumed: this chip's actual offsets are drawn from those tolerances (seeded), it warms up ${params.imu.tempRise} °C over ~${params.imu.tempTau} s, and it sits ${Math.round(params.imu.mountHeight * 1000)} mm above the axle.</span>` : '');
+}
+
+estimatorSelect.addEventListener('change', () => {
+  realism = { ...realism, estimator: estimatorSelect.value };
+  controller.setRealism(realism);
+  refreshImuUI();
+  markCustom();
+});
+calibrateGyro.addEventListener('change', () => {
+  realism = { ...realism, calibrateGyro: calibrateGyro.checked };
+  controller.setRealism(realism);
+  refreshImuUI();
+  markCustom();
+});
+imuChip.addEventListener('change', () => {
+  setParams({ ...params, imu: imuParams(imuChip.value, { mountHeight: params.imu.mountHeight }) });
+  refreshImuUI();
+  markCustom();
+});
+
 // --- realism toggles ------------------------------------------------------------
 $('use-encoders').addEventListener('change', (e) => {
   realism = { ...realism, useEncoders: e.target.checked };
@@ -275,6 +326,7 @@ function applyPreset(key) {
   sourceText.textContent = 'ANALYTIC';
   sourcePill.classList.remove('source-freecad');
   refreshMotorUI();
+  refreshImuUI();
   refreshAllSliderUI();
   resetSimulation();
   if ($('auto-push').checked) pendingPush = { at: 1, kick: built.nudge };
@@ -354,13 +406,14 @@ function push(kick) {
 $('btn-push').addEventListener('click', () => push());
 
 function resetSimulation() {
-  loop.setState(restState());
+  loop.reset(); // power cycle: the IMU re-boots and re-calibrates
   controller.reset();
   pushRand = seededRandom(realism.noiseSeed + 7919);
   fallen = false;
   simTime = 0;
   pendingPush = null;
   chartHistory.fill(0);
+  estHistory.fill(0);
   speedHistory.fill(0);
   $('fallen-banner').classList.remove('show');
   $('status-pill').classList.remove('fallen');
@@ -373,11 +426,23 @@ $('btn-reset-2').addEventListener('click', resetSimulation);
 // --- strip charts (one quantity each, one axis) -----------------------------------
 const chartHistory = new Array(CHART_SAMPLES).fill(0);
 const speedHistory = new Array(CHART_SAMPLES).fill(0);
+const estHistory = new Array(CHART_SAMPLES).fill(0);
 let chartWriteIndex = 0;
 
-function drawChart(canvas, history, range, color, refs = []) {
+function drawChart(canvas, history, range, color, refs = [], extra = null) {
   const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
   ctx.clearRect(0, 0, w, h);
+  const trace = (hist, col, width) => {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    for (let i = 0; i < CHART_SAMPLES; i++) {
+      const sample = Math.max(-range, Math.min(range, hist[(chartWriteIndex + i) % CHART_SAMPLES]));
+      const x = (i / (CHART_SAMPLES - 1)) * w, y = h / 2 - (sample / range) * (h / 2);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  };
   ctx.strokeStyle = 'rgba(143,208,242,0.28)';
   ctx.lineWidth = 1;
   ctx.setLineDash([]);
@@ -390,15 +455,8 @@ function drawChart(canvas, history, range, color, refs = []) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
   });
   ctx.setLineDash([]);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  for (let i = 0; i < CHART_SAMPLES; i++) {
-    const sample = Math.max(-range, Math.min(range, history[(chartWriteIndex + i) % CHART_SAMPLES]));
-    const x = (i / (CHART_SAMPLES - 1)) * w, y = h / 2 - (sample / range) * (h / 2);
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
+  if (extra) trace(extra.history, extra.color, 2);
+  trace(history, color, 2.5);
 }
 $('chart-range').textContent = '±' + CHART_RANGE_DEG + '°';
 
@@ -408,6 +466,12 @@ function updateHud(state) {
   const thetaDeg = state.theta * (180 / Math.PI);
   $('hud-theta').textContent = thetaDeg.toFixed(1) + '°';
   $('hud-theta').classList.toggle('warn', Math.abs(thetaDeg) > 30);
+  const imu = loop.getImu();
+  if (imu) {
+    $('hud-est').textContent = (imu.estimate * 180 / Math.PI).toFixed(1) + '°';
+    $('hud-est').classList.toggle('warn', Math.abs(imu.estimate - state.theta) > 3 * Math.PI / 180);
+    $('hud-bias').textContent = (imu.biasTrue * 180 / Math.PI).toFixed(1) + ' / ' + (imu.biasEstimate * 180 / Math.PI).toFixed(1) + ' °/s';
+  }
   $('hud-thetadot').textContent = (state.thetaDot * 180 / Math.PI).toFixed(1) + ' °/s';
   $('hud-xdot').textContent = state.xDot.toFixed(2) + ' m/s';
   $('hud-enc').textContent = sensed ? sensed.xDot.toFixed(2) + ' m/s' : '—';
@@ -468,9 +532,11 @@ function tick(now) {
   updateCamera(state);
   updateHud(state);
   chartHistory[chartWriteIndex] = state.theta * (180 / Math.PI);
+  const imuNow = loop.getImu();
+  estHistory[chartWriteIndex] = imuNow ? imuNow.estimate * (180 / Math.PI) : state.theta * (180 / Math.PI);
   speedHistory[chartWriteIndex] = state.xDot;
   chartWriteIndex = (chartWriteIndex + 1) % CHART_SAMPLES;
-  drawChart($('chart'), chartHistory, CHART_RANGE_DEG, '#4fe0ff');
+  drawChart($('chart'), chartHistory, CHART_RANGE_DEG, '#4fe0ff', [], imuNow ? { history: estHistory, color: '#ffa45c' } : null);
   const top = params.motor.model === 'dc' ? freeSpeedAt(params.motor, params.motor.batteryVoltage) * params.geometry.wheelRadius : null;
   const speedRange = Math.max(0.5, Math.ceil((top || 1) * 1.25 * 2) / 2);
   $('speed-range').textContent = '±' + speedRange.toFixed(1);
@@ -490,6 +556,7 @@ window.Plumb = {
   applyPreset,
   push,
   fallen: () => fallen,
+  imu: () => loop.getImu(),
   simTime: () => simTime,
   robot,
 };

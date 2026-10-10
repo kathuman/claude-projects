@@ -176,11 +176,91 @@ estimate, and the app says so.
   to feed back directly: at 300 Hz the default robot's encoder resolves only
   about 0.046 m/s. Untick *Measure speed with the wheel encoders* to give the
   controller the true speed instead.
-- **Pitch and pitch rate** come from the true state, plus Gaussian noise and
-  a delay of whole control ticks. A real IMU's drift, and the filter that
-  fuses gyro and accelerometer, are the roadmap's next step (v1.3).
+- **Pitch and pitch rate** come from the IMU through a tilt estimator (next
+  section). With the estimator set to *True angle*, they are the true values
+  plus Gaussian noise (the v1.2 model). Either way, the controller adds a
+  delay of whole control ticks.
 - **Repeatable noise.** Noise and the Push button use a seeded
   pseudo-random generator (mulberry32), so the same seed replays the same run.
+
+### IMU and tilt estimation (v1.3, `imu.mjs`)
+
+The firmware never knows the true pitch. It has two sensors.
+
+**Gyro: pitch rate.**
+
+```
+gyro = thetadot + bias(t) + gSens * aFwd + noise
+bias(t) = b0 + kT * dT * (1 - exp(-t / tauT))
+```
+
+- `b0` is the chip's zero-rate offset.
+- `kT` is its temperature coefficient. The chip warms up by `dT` = 8 °C,
+  with a time constant `tauT` = 60 s; both of those are estimates.
+- Noise per sample is `density * sqrt(fs/2)`: the chip's low-pass filter is
+  assumed set to the control loop's Nyquist band.
+
+**Accelerometer: specific force at the sensor**, mounted `h` above the axle
+along the body:
+
+```
+a_point = ( xddot + h(cos(theta) thetaddot - sin(theta) thetadot^2),  h(-sin(theta) thetaddot - cos(theta) thetadot^2) )
+f       = a_point - g_vec
+aFwd    = f . (cos(theta), -sin(theta)) + offset + noise,     aUp = f . (sin(theta), cos(theta)) + noise
+accelerometer angle = atan2(-aFwd, aUp)
+```
+
+Standing still this is exactly `theta`. Accelerating forward at `a`, it reads
+`-atan(a/g)`: any acceleration of the sensor is indistinguishable from tilt.
+The higher the mount, the more the body's own swing (`h*thetaddot`) fools it.
+
+**Datasheet numbers.** Typical values are taken as published:
+
+- InvenSense MPU-6050 (product specification rev 3.4, §6.1–6.2):
+  - gyro noise 0.005 °/s/√Hz
+  - gyro zero-rate offset ±20 °/s, and ±20 °/s more over −40…85 °C
+  - gyro sensitivity to acceleration 0.1 °/s/g
+  - accelerometer noise 400 µg/√Hz
+  - accelerometer zero-g offset ±50 mg, and ±35 mg more over 0…70 °C
+- ST LSM6DS33 (datasheet DocID027423 rev 4, Table 3):
+  - gyro noise 7 mdps/√Hz
+  - gyro zero-rate offset ±10 dps, drifting ±0.05 dps/°C
+  - accelerometer noise 90 µg/√Hz
+  - accelerometer zero-g offset ±40 mg, drifting ±0.5 mg/°C
+
+A particular chip's offsets and temperature coefficients are drawn once from
+the seed, treating the typical tolerance as about 3σ (an assumption).
+
+**Boot calibration.** With *Calibrate the gyro* on, the firmware averages the
+gyro for 1 s at power-on (the robot held still) and subtracts the result.
+What's left is the averaged-down noise plus the warm-up drift. The
+accelerometer is not calibrated, so its zero-g offset stays as a degree or
+two of angle error. The speed loop absorbs that by leaning slightly.
+
+**Estimators**, run once per control tick:
+
+| Estimator | Update | What goes wrong |
+|---|---|---|
+| Gyro only | `theta += (gyro - b_cal) dt` | Leftover bias integrates into an error growing like `b*t` |
+| Accelerometer only | `theta = atan2(-aFwd, aUp)` | Every acceleration reads as tilt |
+| Complementary | `theta = a(theta + (gyro - b_cal) dt) + (1-a) acc`, `a = tau/(tau+dt)` | A bias `b` leaves a steady error of `b * tau` |
+| Kalman | states `[theta, bias]`; gyro predicts, accelerometer corrects | Needs its noise model; see below |
+
+**Kalman filter details.** It is the classic two-state filter. Process noise
+comes from the gyro noise and an assumed bias drift. The accelerometer-angle
+measurement noise is the `Kalman: Accel Angle Noise` setting, inflated by
+`1 + 400(|a|/g - 1)²` whenever the measured acceleration isn't 1 g. Without
+that gating, the filter learns the robot's own motion as "bias" and runs away
+on light, stiff robots (the Balboa and Nimble presets did exactly that during
+development).
+
+The tests reproduce each row of the table:
+
+- gyro-only error `= b*t`
+- complementary steady-state error `= b*tau` (within 1%)
+- Kalman bias estimate within 5% of the true bias
+- the accelerometer's `-atan(a/g)` and tangential `h*thetaddot` errors
+- per-sample noise within 3% of `density*sqrt(fs/2)`
 
 ### Integration
 
@@ -290,9 +370,6 @@ the file's mass, inertia and geometry.
 
 ## Next on the roadmap
 
-- **v1.3, real sensing:** a gyro with drift and noise, an accelerometer that
-  acceleration fools, and a complementary or Kalman filter, plotted against
-  the true tilt.
 - **v2.0, control design studio:** automatic linearization (`A`, `Bc`, `Bb`
   at `theta = 0` are the starting point), poles and margins, LQR and pole
   placement beside the PID, auto-tuning, and side-by-side scorecards.

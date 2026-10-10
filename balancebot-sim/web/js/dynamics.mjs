@@ -271,6 +271,12 @@ export function forcesAt(state, uL, uR, params) {
   return cache.out;
 }
 
+/** Axle and pitch accelerations at a state (what the accelerometer feels). */
+export function accelerationsAt(state, uL, uR, params) {
+  const d = derivative(state, uL, uR, params, makeCache(params));
+  return { xDdot: d.xDot, thetaDdot: d.thetaDot };
+}
+
 /** Total mechanical energy: pitch/drive + wheel spin + yaw + rotors. With no damping, friction or input it is conserved. */
 export function mechanicalEnergy(state, params) {
   const { comHeight: L } = params.geometry;

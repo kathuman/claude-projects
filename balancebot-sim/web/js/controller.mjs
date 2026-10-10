@@ -44,6 +44,12 @@ export function defaultRealism() {
     noiseSeed: 1, // the noise is pseudo-random from this seed, so every run can be repeated exactly
     useEncoders: true, // measure speed and turn rate from quantized wheel encoders (else: true values)
     speedFilterHz: 8, // firmware low-pass on encoder speed: raw counts per tick are too coarse to feed back directly
+    // tilt estimation from the IMU (imu.mjs); 'truth' skips the IMU and uses the true angle plus the
+    // sensorNoise* values above (the v1.2 model)
+    estimator: 'complementary',
+    complementaryTau: 1, // s: trust the gyro for faster changes than this, the accelerometer for slower
+    kalmanAccelStdDeg: 3, // Kalman: how noisy the firmware assumes the accelerometer angle is (deg)
+    calibrateGyro: true, // average the gyro for a second at power-on and subtract it
   };
 }
 
@@ -94,8 +100,11 @@ export function createController(initialGains = defaultGains(), initialRealism =
    * @param {number} motorMaxTorque N*m, per wheel saturation limit (the most torque the firmware can ask for)
    */
   function update(sensed, desiredVelocity, desiredYawRate, dt, motorMaxTorque) {
-    const noisyTheta = sensed.theta + gaussianNoise(realism.sensorNoiseStdTheta, rand);
-    const noisyRate = sensed.thetaDot + gaussianNoise(realism.sensorNoiseStdRate, rand);
+    // with an IMU estimator the noise is already in the readings (imu.mjs); these knobs are the
+    // v1.2 "true angle plus noise" sensor model
+    const trueAngleMode = (realism.estimator || 'truth') === 'truth';
+    const noisyTheta = sensed.theta + (trueAngleMode ? gaussianNoise(realism.sensorNoiseStdTheta, rand) : 0);
+    const noisyRate = sensed.thetaDot + (trueAngleMode ? gaussianNoise(realism.sensorNoiseStdRate, rand) : 0);
 
     delayBuffer.push({ theta: noisyTheta, thetaDot: noisyRate, xDot: sensed.xDot, psiDot: sensed.psiDot });
     const delaySamples = Math.max(0, Math.round(realism.sensorDelaySteps));
