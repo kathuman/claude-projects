@@ -1,0 +1,26 @@
+name: Lag Lab tests
+
+# The production/workforce model: analytic delay and smoothing responses, equilibrium, exact conservation, the
+# textbook stock-management and workforce results, physical limits, scale invariance and convergence.
+on:
+  push:
+    paths:
+      - 'lag-lab/**'
+      - '.github/workflows/lag-lab-ci.yml'
+  pull_request:
+    paths:
+      - 'lag-lab/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node lag-lab/tests/model.test.js
+      - name: Syntax-check the model
+        run: node --check lag-lab/src/model.js
