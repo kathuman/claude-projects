@@ -23,7 +23,8 @@ import { IMUS, ESTIMATORS, imuParams } from './imu.mjs';
 //          warm-up drift, acceleration fooling the accelerometer), boot calibration, and the firmware's tilt
 //          estimate -- gyro only, accelerometer only, complementary or Kalman (with bias) -- plotted against
 //          the true pitch; presets for each failure and fix
-const APP_VERSION = '1.3.0';
+//   1.3.1  an About page with the author, in place of the author credit in the header and footer
+const APP_VERSION = '1.3.1';
 document.getElementById('ver').textContent = 'v' + APP_VERSION;
 document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 

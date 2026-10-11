@@ -1,4 +1,4 @@
-# Plumb — a two-wheeled balancing robot simulator (v1.3.0)
+# Plumb — a two-wheeled balancing robot simulator (v1.3.1)
 
 A 3D simulator for a two-wheeled, single-axis balancing robot: real
 Lagrangian dynamics (not a generic physics engine bolted on top), a
@@ -41,7 +41,7 @@ from an actual **FreeCAD** parametric model.
   configurable control-loop rate, sensor noise and delay. The noise is
   seeded, so any run can be replayed exactly.
 - **Configurations**: change geometry, mass, grip, gravity, motors, battery
-  and gains live, or pick one of 12 presets. Each preset is shown with a
+  and gains live, or pick one of 16 presets. Each preset is shown with a
   scripted push, so the ones meant to fail visibly fail. They include:
   - a *Balboa-class* robot built from published Pololu parts
   - *Flat battery*, *Sloppy gears* and *On ice*
