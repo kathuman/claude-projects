@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cobot Lab — Robotic Arm Simulator</title>
-  <meta name="description" content="A real-time 3D simulator of a 6-axis collaborative robot arm with real UR5e-class proportions: tested forward kinematics, collision guarding against the table and itself, live tool-pose telemetry and a singularity meter, and a rigid-body physics bench. By kathuman." />
+  <meta name="description" content="A real-time 3D simulator of a 6-axis collaborative robot arm with real UR5e-class proportions: tested forward kinematics, collision guarding against the table and itself, live tool-pose telemetry and a singularity meter, and a rigid-body physics bench." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦾</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -48,8 +48,8 @@ body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body); 
 .header-actions{display:flex; align-items:center; gap:10px; flex:none; position:relative;}
 button.back-link{background:transparent; cursor:pointer;}
 .tut-launch{color:var(--accent) !important; border-color:var(--accent) !important;}
-.tut-hint{position:absolute; top:calc(100% + 10px); right:120px; z-index:70; width:250px; padding:10px 30px 10px 12px; background:var(--panel); border:1px solid var(--accent); border-radius:8px; font-size:12.5px; color:var(--ink); box-shadow:0 10px 30px rgba(0,0,0,.35); cursor:pointer;}
-.tut-hint::before{content:""; position:absolute; top:-7px; right:40px; width:12px; height:12px; background:var(--panel); border-left:1px solid var(--accent); border-top:1px solid var(--accent); transform:rotate(45deg);}
+.tut-hint{position:absolute; top:calc(100% + 10px); left:0; /* Tutorial is the first button: the arrow sits under it at any width */ z-index:70; width:250px; padding:10px 30px 10px 12px; background:var(--panel); border:1px solid var(--accent); border-radius:8px; font-size:12.5px; color:var(--ink); box-shadow:0 10px 30px rgba(0,0,0,.35); cursor:pointer;}
+.tut-hint::before{content:""; position:absolute; top:-7px; left:38px; width:12px; height:12px; background:var(--panel); border-left:1px solid var(--accent); border-top:1px solid var(--accent); transform:rotate(45deg);}
 .tut-hint button{position:absolute; top:4px; right:6px; background:none; border:0; color:var(--ink-faint); font-size:16px; cursor:pointer;}
 
 /* ---- tutorial ---- */
@@ -113,7 +113,7 @@ button.back-link{background:transparent; cursor:pointer;}
 @media (max-width:1100px){ .tut-levels{grid-template-columns:1fr;} }
 @media (max-width:820px){
   .tut-panel{left:8px; right:8px; bottom:8px; width:auto; max-height:48vh;}
-  .tut-hint{right:0; width:220px;}
+  .tut-hint{width:220px;}
 }
 .back-link{
   font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
@@ -305,11 +305,12 @@ footer.foot .consult{color:var(--ink);}
     <div class="brand">
       <div class="mark">COBOT<span> LAB</span></div>
       <span class="ver" id="ver" title="App version"></span>
-      <div class="sub">by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a><span class="rest"> · 6-AXIS ARM · KINEMATICS + PHYSICS BENCH</span></div>
+      <div class="sub"><span class="rest">6-AXIS ARM · KINEMATICS + PHYSICS BENCH</span></div>
     </div>
     <div class="header-actions">
       <button class="back-link tut-launch" id="btn-tutorial" type="button">▸ Tutorial</button>
       <div class="tut-hint" id="tut-hint" hidden>New here? Take the guided tour — Basic, Intermediate or Advanced. <button type="button" id="tut-hint-x" aria-label="Dismiss">×</button></div>
+      <a class="back-link" href="about.html">About</a>
       <a class="back-link" href="../" aria-label="Projects">← <span class="lbl">Projects</span></a>
       <div class="status-pill" id="status-pill"><span class="dot"></span><span id="status-text">IDLE</span></div>
     </div>
@@ -549,7 +550,7 @@ footer.foot .consult{color:var(--ink);}
   </main>
 
   <footer class="foot">
-    <span class="consult">Cobot Lab <span id="ver-foot"></span> · by <a href="https://github.com/kathuman" target="_blank" rel="noopener">kathuman</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span class="consult">Cobot Lab <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
     <span>UR e-Series kinematics &amp; dynamics (published parameters) · three.js + Rapier</span>
   </footer>
 </div>
@@ -599,7 +600,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
   //          step tasks that tick themselves off, "do it for me", saved progress, written guides
   //   5.5.0  renamed from Linkage to Cobot Lab (ROS topics now /cobot_lab/…, programs cobot-lab-program)
   //   5.5.1  moved to /cobot-lab/ (the old /robotic-arm-sim/ address redirects here, share links included)
-  var APP_VERSION = "5.5.1";
+  //   5.5.2  an About page with the author, in place of the author credit in the header and footer
+  var APP_VERSION = "5.5.2";
   document.getElementById('ver').textContent = 'v' + APP_VERSION;
   document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
 
