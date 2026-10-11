@@ -1,6 +1,6 @@
 # Lag Lab — capacity that lags demand
 
-**Status: phase 1 of 6 (the model and its tests). There is no app page yet.**
+**Live: https://kathuman.github.io/claude-projects/lag-lab/ · version 1.0.0 (phases 1–3 of 6).**
 
 After a demand step, planning sees the overshoot and calls it forecast error. Lag Lab will show that this attribution
 is usually wrong, and by how much. It splits the overshoot into three layers, each with its own remedy:
@@ -17,12 +17,35 @@ is usually wrong, and by how much. It splits the overshoot into three layers, ea
 
 | Phase | Content | Version |
 |---|---|---|
-| **1** | **Model core and validation** (this) | 0.1.0 |
-| 2 | Step and policy panel, time-series charts, About page, AI Projects entry | 1.0 |
-| 3 | Decomposition view: runs (a), (b) and (c), the necessary refill, the three-layer share | 1.1 |
-| 4 | Planner's lens: forecast error measured as planning measures it | 1.2 |
-| 5 | Policy map: overshoot, settling time and cost over two parameters | 1.3 |
-| 6 | Stress test (ramps, pulses, pink noise, repeated steps) and polish | 1.4 |
+| 1 | Model core and validation | done |
+| 2 | Step and policy panel, time-series charts, About page, AI Projects entry | done, 1.0.0 |
+| 3 | Decomposition view: runs (a), (b) and (c), the necessary refill, the layer shares | done, 1.0.0 |
+| 4 | Planner's lens: forecast error measured as planning measures it | 1.1 |
+| 5 | Policy map: overshoot, settling time and cost over two parameters | 1.2 |
+| 6 | Stress test (ramps, pulses, pink noise, repeated steps) and polish | 1.3 |
+
+## The app
+
+- **Decomposition** (the decision screen):
+  - a one-line answer ("only 7% of the overshoot is a forecasting problem");
+  - a share bar, and four layer cards with units, share and remedy;
+  - production starts, inventory, backlog and effective workforce for runs (a), (b) and (c), with the gaps
+    shaded by layer;
+  - warnings when a run has not settled, or when a layer is zero because the policy already removes its cause.
+- **Run details:** the plan's overshoot, settling time and oscillation for each stock, seven week-by-week charts,
+  and CSV of all three runs.
+- **Controls:** step size and timing; the production, hiring and training delays; TAI, TASL, w_SL and forecast
+  smoothing; TAW, w_V and the hiring driver; run length; five presets; share links.
+- **About:** `about.html`, with the author.
+
+`src/decompose.js` runs (a), (b) and (c) and returns the layers, the refill, the shares and whether each run
+settled. Its 20 tests (`tests/decompose.test.js`) check that:
+- the layers add up exactly;
+- the refill matches conservation;
+- a layer vanishes when its cause is removed;
+- the textbook fix leaves only the refill;
+- steps down work the same way;
+- a negative forecast layer stays negative.
 
 ## The model (`src/model.js`)
 
@@ -73,7 +96,7 @@ check the textbook results.
 
 ## Tests
 
-`node lag-lab/tests/model.test.js` runs 45 checks, and GitHub runs them on every change:
+`node lag-lab/tests/model.test.js` runs 45 checks, `node lag-lab/tests/decompose.test.js` 20 more, and GitHub runs them on every change:
 - **Building blocks:**
   - the third-order delay matches its analytic step response, 1 − e⁻ˣ(1 + x + x²/2), and returns an impulse whole
     after a mean delay τ;

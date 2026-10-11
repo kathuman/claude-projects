@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lag Lab — Capacity That Lags Demand</title>
+  <meta name="description" content="After a demand step, planning calls the overshoot forecast error. Lag Lab splits it into the necessary refill, the structure, the decision rules and the forecast, with a Sterman-style production and workforce model, so you can see how much is really a forecasting problem." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --warn:#ffcf4a; --bad:#ff8a7a;
+  /* the four layers, in bar order: validated for the dark panel (lightness, colour-blind separation, 3:1);
+     every segment also carries a text label, as the closest pair needs secondary encoding */
+  --l-necessary:#4f9f15; --l-structural:#1f9fd8; --l-policy:#c7820c; --l-forecast:#e0558f;
+  --run:#e6f3ff;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+html,body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+a{color:var(--accent);}
+.app{display:flex; flex-direction:column; min-height:100vh;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52); position:sticky; top:0; z-index:20;}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.brand .ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:5px; padding:1px 6px;}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.actions{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap; background:transparent; cursor:pointer;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+
+.layout{display:grid; grid-template-columns:300px minmax(0,1fr); flex:1;}
+.rail{border-right:1px solid var(--line); background:var(--panel-2); padding:16px 16px 28px; overflow-y:auto; max-height:calc(100vh - 57px); position:sticky; top:57px;}
+.rail h2{font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:18px 0 8px;}
+.rail h2:first-child{margin-top:0;}
+.ctl{margin-bottom:10px;}
+.ctl .row{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13.5px;}
+.ctl .row label{color:var(--ink);}
+.ctl .row output{font-family:var(--mono); font-size:12.5px; color:var(--accent); white-space:nowrap;}
+.ctl input[type=range]{width:100%; accent-color:var(--accent); margin:4px 0 0;}
+.ctl .hint{font-size:11.5px; color:var(--ink-faint); line-height:1.35; margin-top:1px;}
+.seg{display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; margin-top:4px;}
+.seg button{flex:1; font:inherit; font-size:12.5px; padding:6px 4px; background:transparent; color:var(--ink-dim); border:0; cursor:pointer;}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:600;}
+select.sel{width:100%; font:inherit; font-size:13.5px; padding:6px 8px; border-radius:7px; border:1px solid var(--line); background:var(--panel); color:var(--ink);}
+.rail-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;}
+.btn{font-family:var(--head); font-weight:700; font-size:13px; letter-spacing:.05em; text-transform:uppercase; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:7px; padding:6px 11px; cursor:pointer;}
+.btn:hover{border-color:var(--accent); color:var(--accent);}
+
+.content{padding:18px 22px 30px; min-width:0;}
+.tabs{display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; margin-bottom:14px;}
+.tabs button{font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.05em; text-transform:uppercase; padding:8px 14px; background:transparent; color:var(--ink-dim); border:0; cursor:pointer;}
+.tabs button[aria-selected="true"]{background:var(--accent); color:var(--accent-ink);}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:14px;}
+.answer h1{font-family:var(--head); font-weight:700; font-size:28px; line-height:1.2; margin:0 0 6px;}
+.answer .sub{color:var(--ink-dim); font-size:15px; margin:0 0 14px;}
+.answer .big{color:var(--l-forecast);}
+.sharebar{display:flex; height:44px; border-radius:8px; overflow:hidden; gap:2px; background:var(--panel-2);}
+.sharebar div{display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; font-weight:600; color:#04131f; white-space:nowrap; overflow:hidden; min-width:2px;}
+.layers{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin-top:14px;}
+.layer{border-left:4px solid; padding:4px 0 4px 10px;}
+.layer b{font-family:var(--head); font-size:15px; letter-spacing:.03em;}
+.layer .num{font-family:var(--mono); font-size:13px; color:var(--ink); margin:2px 0;}
+.layer p{margin:0; font-size:12.5px; color:var(--ink-dim); line-height:1.4;}
+.note{border:1px solid var(--warn); color:var(--warn); border-radius:8px; padding:8px 12px; font-size:13.5px; margin-top:12px;}
+.note.info{border-color:var(--line); color:var(--ink-dim);}
+.charts{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr)); gap:14px;}
+.chart{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; min-width:0;}
+.chart h3{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 2px;}
+.chart .what{font-size:12.5px; color:var(--ink-dim); margin:0 0 6px;}
+.legend{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--ink-dim); margin-bottom:4px;}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.legend svg{flex:none;}
+.plot{position:relative; height:230px;}
+.plot canvas{width:100%; height:100%; display:block;}
+.tip{position:absolute; pointer-events:none; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:11.5px; color:var(--ink); white-space:nowrap; z-index:3; box-shadow:0 8px 24px rgba(0,0,0,.35);}
+.tip .k{color:var(--ink-faint);}
+table.metrics{width:100%; border-collapse:collapse; font-size:13px;}
+table.metrics th, table.metrics td{padding:6px 8px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap;}
+table.metrics th:first-child, table.metrics td:first-child{text-align:left;}
+table.metrics th{font-family:var(--head); letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); font-size:12px;}
+table.metrics td{font-family:var(--mono);}
+.runs-explain{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; font-size:13px; color:var(--ink-dim);}
+.runs-explain b{color:var(--ink);}
+.prose{font-size:14px; line-height:1.6; color:var(--ink-dim); max-width:900px;}
+.prose b{color:var(--ink);}
+.foot{border-top:1px solid var(--line-soft); padding:16px 22px 28px; font-size:12.5px; color:var(--ink-faint); line-height:1.7;}
+.foot .consult{display:block; color:var(--ink); font-weight:600;}
+.foot a{color:var(--accent);}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr);}
+  .rail{position:static; max-height:none; border-right:0; border-top:1px solid var(--line); order:2;}  /* the answer first, the controls below */
+  .content{order:1;}
+  .brand .sub{display:none;}
+  .content{padding:14px 14px 24px;}
+  .answer h1{font-size:23px;}
+  .topbar{padding:10px 14px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">LAG<span> LAB</span></div>
+      <span class="ver" id="ver" title="App version"></span>
+      <div class="sub">CAPACITY THAT LAGS DEMAND · WHAT IS REALLY FORECAST ERROR?</div>
+    </div>
+    <div class="actions">
+      <button class="back-link" id="btn-share" type="button" title="Copy a link to this exact setup">Share</button>
+      <a class="back-link" href="about.html">About</a>
+      <a class="back-link" href="../">← Projects</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="rail" id="rail" aria-label="Step and policy"></aside>
+
+    <section class="content">
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-dec" aria-selected="true">Decomposition</button>
+        <button type="button" role="tab" id="tab-run" aria-selected="false">Run details</button>
+      </div>
+
+      <!-- ===== the decision screen ===== -->
+      <div id="view-dec">
+        <div class="panel answer">
+          <h1 id="headline"></h1>
+          <p class="sub" id="subline"></p>
+          <div class="sharebar" id="sharebar" role="img"></div>
+          <div class="layers" id="layers"></div>
+          <div id="notes"></div>
+        </div>
+        <div class="charts" id="dec-charts"></div>
+        <div class="panel" style="margin-top:14px;">
+          <div class="runs-explain">
+            <div><b>(a) Your plan.</b> The policy as set on the left, with its smoothed forecast. This is what actually happens.</div>
+            <div><b>(b) Perfect forecast.</b> The same policy, but expected demand is always right. The gap (a)–(b) is the forecast's share.</div>
+            <div><b>(c) Perfect forecast, full accounting.</b> The supply line and vacancies weighted fully (w = 1) and hiring on the capacity gap. The gap (b)–(c) is the policy's share. What is left above the refill is structure.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== the current plan in detail ===== -->
+      <div id="view-run" hidden>
+        <div class="panel">
+          <table class="metrics" id="metrics"></table>
+          <div class="rail-actions"><button class="btn" id="btn-csv" type="button">Download runs (CSV)</button></div>
+        </div>
+        <div class="charts" id="run-charts"></div>
+      </div>
+
+      <details class="panel" style="margin-top:14px;">
+        <summary style="cursor:pointer; font-family:var(--head); font-weight:700; letter-spacing:.05em; text-transform:uppercase;">How the model and the decomposition work</summary>
+        <div class="prose">
+          <p>The model is a production and workforce chain in the style of Sterman, <i>Business Dynamics</i>, ch. 17–19. Orders build a <b>backlog</b> and are shipped from <b>inventory</b>. Production starts enter a <b>supply line</b> (a third-order delay of the production lead time) before they become inventory. Production follows the <b>workforce</b>, with ±20% flexible working time. New people come through <b>vacancies</b> (the hiring delay) and <b>training</b> (half as productive until trained).</p>
+          <p><b>Decision rules (anchor and adjust).</b> Production starts = expected demand + inventory gap / TAI + w<sub>SL</sub> · supply-line gap / TASL. Hiring = attrition + workforce gap / TAW + w<sub>V</sub> · vacancy gap / TAV. The workforce target follows either the <b>capacity</b> the production plan needs or the <b>inventory gap</b>, which is blind to the work already in the pipeline.</p>
+          <p><b>The decomposition.</b> Overshoot is the production above demand after the step (below it, for a step down), counted only where it happens: over a whole run, the net extra production always equals the refill, so a net measure would hide the oscillation. The <b>necessary refill</b> is (inventory coverage + lead time − delivery delay) × the change in demand: a bigger inventory and pipeline to fill, less of it waiting as backlog. <b>Structure</b> is what run (c) produces beyond that. <b>Policy</b> is (b) − (c), and <b>forecast</b> is (a) − (b). The four add up to your plan's overshoot exactly. A layer can be negative: a slow forecast sometimes damps an aggressive policy.</p>
+          <p>The model, the decomposition and their tests are in <a href="https://github.com/kathuman/claude-projects/tree/main/lag-lab" target="_blank" rel="noopener">lag-lab/</a>: an analytic check of the delay and smoothing, exact conservation of material and people, and the textbook results that ignoring the supply line oscillates and full accounting does not.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Lag Lab <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    A simulator for capacity that lags demand: it splits the overshoot after a demand step into the necessary refill, structure, policy and forecast. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+
+<script src="src/model.js"></script>
+<script src="src/decompose.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

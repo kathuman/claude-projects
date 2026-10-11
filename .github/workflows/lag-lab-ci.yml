@@ -22,5 +22,7 @@ jobs:
         with:
           node-version: 22
       - run: node lag-lab/tests/model.test.js
-      - name: Syntax-check the model
-        run: node --check lag-lab/src/model.js
+      - run: node lag-lab/tests/decompose.test.js
+      - name: Syntax-check the page scripts
+        run: for f in lag-lab/src/*.js lag-lab/app.js; do node --check "$f"; done
+        shell: bash

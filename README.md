@@ -5,6 +5,7 @@
 [![Warehouse Model tests](https://github.com/kathuman/claude-projects/actions/workflows/warehouse-model-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/warehouse-model-ci.yml)
 [![balancebot-sim CI](https://github.com/kathuman/claude-projects/actions/workflows/balancebot-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/balancebot-ci.yml)
 [![Sensor Deck tests](https://github.com/kathuman/claude-projects/actions/workflows/phone-sensors-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/phone-sensors-ci.yml)
+[![Lag Lab tests](https://github.com/kathuman/claude-projects/actions/workflows/lag-lab-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/lag-lab-ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 Simulation and decision tools for engineering and supply chains, built with [Claude](https://claude.com) by
@@ -50,7 +51,7 @@ stress tests, time-to-survive / time-to-recover, and adversarial worst-case sear
 </table>
 
 Also here: Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
-simulator, a live view of every phone sensor (streamable to a computer), live face morphing, real options for network design, and a library of supply-chain visualisations.
+simulator, a live view of every phone sensor (streamable to a computer), live face morphing, a simulator that shows how much of a post-step overshoot is really forecast error, real options for network design, and a library of supply-chain visualisations.
 
 ## Tests
 
@@ -60,6 +61,7 @@ simulator, a live view of every phone sensor (streamable to a computer), live fa
 | Cobot Lab | 1,634 checks: forward/inverse kinematics, motion profiles, path planner, URDF import | CI |
 | Warehouse Model | 300 checks + 400 designs identical in the FreeCAD script and the web app | CI (FreeCAD-only checks locally) |
 | balancebot-sim | dynamics derivation and energy conservation | CI |
+| Lag Lab | 65 checks: delay and smoothing against exact solutions, exact conservation, the textbook stock-management and workforce results, and a decomposition that adds up and vanishes when its cause is removed | CI |
 | Sensor Deck | 93 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the USB bridge's WebSocket framing, relay, origin check and adb handling; the Android app's bridge timing (Flutter) | CI |
 
 If you use any of this, [CITATION.cff](CITATION.cff) has the citation.
@@ -137,6 +139,7 @@ warehouse-model/web/index.html     — https://kathuman.github.io/claude-project
 face-morph/index.html              — https://kathuman.github.io/claude-projects/face-morph/
 balancebot-sim/index.html          — https://kathuman.github.io/claude-projects/balancebot-sim/
 phone-sensors/index.html           — https://kathuman.github.io/claude-projects/phone-sensors/
+lag-lab/index.html                 — https://kathuman.github.io/claude-projects/lag-lab/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules

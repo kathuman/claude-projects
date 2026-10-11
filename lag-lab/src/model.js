@@ -24,7 +24,7 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var VERSION = "0.1.0";
+  var VERSION = "0.2.0";
 
   // Defaults: a weekly-planned plant. Changing any of these is what the app's sliders do.
   function defaults() {
@@ -132,7 +132,8 @@
     var B = x.B, I = x.I, S = x.S.slice(), W = x.W, T = x.T, V = x.V, Dexp = x.Dexp;
     var out = { t: [], params: p }; SERIES.forEach(function (k) { out[k] = []; });
     // running totals for the conservation checks
-    var tot = { starts: 0, demand: 0, hires: 0, attrition: 0, layoffs: 0, shipments: 0 };
+    // excessUp / excessDown: production above / below demand, counted separately (they would net out)
+    var tot = { starts: 0, demand: 0, hires: 0, attrition: 0, layoffs: 0, shipments: 0, excessUp: 0, excessDown: 0 };
     var unc = p.capacity === "unconstrained", perfect = p.forecast === "perfect", capDriver = p.hiringDriver === "capacity";
     for (var i = 0; i <= n; i++) {
       var t = i * dt, D = demandAt(p.demand, t);
@@ -174,6 +175,7 @@
       T += (hires - grad) * dt;
       W += (grad - attr - lay) * dt;
       if (!perfect) Dexp += (D - Dexp) / p.forecastTime * dt;
+      tot.excessUp += Math.max(0, starts - D) * dt; tot.excessDown += Math.max(0, D - starts) * dt;
       tot.starts += starts * dt; tot.demand += D * dt; tot.hires += hires * dt; tot.attrition += attr * dt; tot.layoffs += lay * dt; tot.shipments += ship * dt;
     }
     out.totals = tot;
