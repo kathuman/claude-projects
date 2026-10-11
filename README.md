@@ -61,7 +61,7 @@ simulator, a live view of every phone sensor (streamable to a computer), live fa
 | Cobot Lab | 1,634 checks: forward/inverse kinematics, motion profiles, path planner, URDF import | CI |
 | Warehouse Model | 300 checks + 400 designs identical in the FreeCAD script and the web app | CI (FreeCAD-only checks locally) |
 | balancebot-sim | dynamics derivation and energy conservation | CI |
-| Lag Lab | 65 checks: delay and smoothing against exact solutions, exact conservation, the textbook stock-management and workforce results, and a decomposition that adds up and vanishes when its cause is removed | CI |
+| Lag Lab | 73 checks: delay and smoothing against exact solutions, exact conservation, the textbook stock-management and workforce results, a decomposition that adds up and vanishes when its cause is removed, and every published equation reproducing the model | CI |
 | Sensor Deck | 93 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the USB bridge's WebSocket framing, relay, origin check and adb handling; the Android app's bridge timing (Flutter) | CI |
 
 If you use any of this, [CITATION.cff](CITATION.cff) has the citation.

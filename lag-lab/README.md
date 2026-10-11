@@ -1,6 +1,6 @@
 # Lag Lab — capacity that lags demand
 
-**Live: https://kathuman.github.io/claude-projects/lag-lab/ · version 1.0.0 (phases 1–3 of 6).**
+**Live: https://kathuman.github.io/claude-projects/lag-lab/ · version 1.1.0 (phases 1–3 of 6, plus the model diagram).**
 
 After a demand step, planning sees the overshoot and calls it forecast error. Lag Lab will show that this attribution
 is usually wrong, and by how much. It splits the overshoot into three layers, each with its own remedy:
@@ -36,7 +36,24 @@ is usually wrong, and by how much. It splits the overshoot into three layers, ea
   and CSV of all three runs.
 - **Controls:** step size and timing; the production, hiring and training delays; TAI, TASL, w_SL and forecast
   smoothing; TAW, w_V and the hiring driver; run length; five presets; share links.
+- **Model:** a stock-and-flow diagram of the model (`diagram.js`).
+  - Stocks are boxes, flows are valves on pipes, auxiliaries are circles, and clouds mark the boundary.
+  - The information arrows are drawn from each equation's own references, so the diagram can't show a link the
+    model doesn't have.
+  - Clicking a variable shows its equation, initial value, meaning and parameters, and highlights what it reads and
+    what reads it. The values come from your plan at a chosen week.
+  - Below the diagram, every equation and every parameter with its current value. Names link back to the diagram.
 - **About:** `about.html`, with the author.
+
+`src/equations.js` holds every variable's equation, units and meaning, with a `calc` that recomputes it from the
+other variables. Its 8 tests (`tests/equations.test.js`) check that:
+- each published flow and auxiliary equation equals the model's own value at every week, across 27 runs (76,302
+  comparisons, zero error);
+- every output column and every parameter is described;
+- every reference names a real variable or parameter;
+- the forecast's rate, integrated, reproduces the forecast.
+
+The pipeline's internal outflow is covered by the model's conservation tests.
 
 `src/decompose.js` runs (a), (b) and (c) and returns the layers, the refill, the shares and whether each run
 settled. Its 20 tests (`tests/decompose.test.js`) check that:
@@ -88,7 +105,7 @@ check the textbook results.
   production pipeline. With w_SL = 0 the two coincide, since they differ only by the supply line.
 
 **API:**
-- `LagLab.simulate(params)` returns weekly columns of every stock and flow (25 series), plus running totals and the
+- `LagLab.simulate(params)` returns weekly columns of every stock and flow (26 series), plus running totals and the
   initial and final states.
 - `LagLab.analyze(series, t, tStep)` gives the final value, peak, overshoot, settling time and oscillation
   crossings.
@@ -96,7 +113,7 @@ check the textbook results.
 
 ## Tests
 
-`node lag-lab/tests/model.test.js` runs 45 checks, `node lag-lab/tests/decompose.test.js` 20 more, and GitHub runs them on every change:
+`node lag-lab/tests/model.test.js` runs 45 checks, `node lag-lab/tests/decompose.test.js` 20 more, `node lag-lab/tests/equations.test.js` 8 more, and GitHub runs them on every change:
 - **Building blocks:**
   - the third-order delay matches its analytic step response, 1 − e⁻ˣ(1 + x + x²/2), and returns an impulse whole
     after a mean delay τ;

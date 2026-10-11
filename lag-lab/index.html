@@ -92,6 +92,57 @@ table.metrics td{font-family:var(--mono);}
 .runs-explain b{color:var(--ink);}
 .prose{font-size:14px; line-height:1.6; color:var(--ink-dim); max-width:900px;}
 .prose b{color:var(--ink);}
+/* the Model tab */
+.model-intro p{margin:0 0 8px; font-size:14px; color:var(--ink-dim); line-height:1.5;}
+.model-intro b{color:var(--ink);}
+.key{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--ink-dim);}
+.key span{display:inline-flex; align-items:center; gap:6px;}
+/* the diagram takes the full width; the equation sits just below it (beside it only on very wide screens) */
+.model-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:0; align-items:start;}
+.model-grid .diagram-wrap{border-radius:12px 12px 0 0; margin-bottom:0;}
+.model-grid #eq-panel{border-radius:0 0 12px 12px; border-top:0;}
+.diagram-wrap{overflow-x:auto; padding:8px;}
+#diagram svg{display:block; width:100%; min-width:900px; height:auto;}
+#diagram .node{cursor:pointer; outline:none;}
+#diagram .node .shape{fill:#0d3a63; stroke:#bfe4ff; stroke-width:1.4;}
+#diagram .node.aux .shape{fill:#082444; stroke:#8fd0f2;}
+#diagram .node .knob{fill:#bfe4ff; stroke:none;}
+#diagram .node .label{fill:#bfe4ff; font:500 12.5px var(--body);}
+#diagram .node .stock-label{font:600 14px var(--head); letter-spacing:.03em;}
+#diagram .node.dim{opacity:.28;}
+#diagram .node.sel .shape{stroke:#ffcf4a; stroke-width:2.6;}
+#diagram .node.sel .label{fill:#ffcf4a;}
+#diagram .node.in .shape{stroke:#7dd3fc; stroke-width:2.2;}
+#diagram .node.out .shape{stroke:#e0558f; stroke-width:2.2;}
+#diagram .node:focus-visible .shape{stroke:#ffcf4a; stroke-width:2.6;}
+#eq-panel{font-size:13.5px;}
+#eq-panel .eq-cols{display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:6px 26px;}
+@media (max-width:900px){ #eq-panel .eq-cols{grid-template-columns:minmax(0,1fr);} }
+#eq-panel h3{font-family:var(--head); font-weight:700; font-size:20px; margin:2px 0 8px;}
+#eq-panel h4, #eq-list h4{font-family:var(--head); font-weight:700; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:14px 0 6px;}
+.section-h{font-family:var(--head); font-weight:700; font-size:16px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 4px;}
+.eq-kind{display:inline-block; font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; border:1px solid var(--line); border-radius:999px; padding:1px 8px; color:var(--ink-dim);}
+.eq{font-family:var(--mono); font-size:13px; line-height:1.7; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:8px; padding:9px 11px; color:var(--ink);}
+.eq-init{font-size:12.5px; color:var(--ink-dim); margin-top:6px; line-height:1.5;}
+.about{color:var(--ink-dim); line-height:1.5; margin:8px 0;}
+.muted{color:var(--ink-faint);}
+.u{font-family:var(--mono); font-size:11px; color:var(--ink-faint); font-weight:400;}
+.vref{font:inherit; color:var(--accent); background:none; border:0; border-bottom:1px dotted var(--accent); padding:0; cursor:pointer;}
+.vref.stock{color:#ffcf4a; border-color:#ffcf4a;}
+.vref:hover{color:#fff;}
+.pref{color:#c7e9ff; border-bottom:1px dashed var(--ink-faint); cursor:help;}
+.wk{margin:10px 0 4px;} .wk label{font-size:12.5px; color:var(--ink-dim);} .wk input{width:100%; accent-color:var(--accent);}
+table.eqvals{width:100%; border-collapse:collapse; font-size:13px;}
+table.eqvals td{padding:4px 2px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+table.eqvals td:last-child{text-align:right; font-family:var(--mono); white-space:nowrap;}
+table.eqlist{width:100%; border-collapse:collapse; font-size:13px;}
+table.eqlist td{padding:7px 8px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+table.eqlist td:first-child{width:210px;}
+table.eqlist td:last-child{font-family:var(--mono); font-size:12.5px; line-height:1.6;}
+table.eqlist.params td:last-child{font-family:var(--mono);}
+table.eqlist tr.sel td{background:rgba(255,207,74,.08);}
+@media (min-width:1800px){ .model-grid{grid-template-columns:minmax(0,1fr) 380px; gap:14px;} .model-grid .diagram-wrap{border-radius:12px;} .model-grid #eq-panel{border-radius:12px; border-top:1px solid var(--line); position:sticky; top:72px; max-height:calc(100vh - 90px); overflow-y:auto;} #eq-panel .eq-cols{grid-template-columns:minmax(0,1fr);} }
+@media (max-width:700px){ table.eqlist td:first-child{width:auto;} table.eqlist tr{display:block; border-bottom:1px solid var(--line-soft);} table.eqlist td{display:block; border:0; padding:4px 6px;} }
 .foot{border-top:1px solid var(--line-soft); padding:16px 22px 28px; font-size:12.5px; color:var(--ink-faint); line-height:1.7;}
 .foot .consult{display:block; color:var(--ink); font-weight:600;}
 .foot a{color:var(--accent);}
@@ -128,6 +179,7 @@ table.metrics td{font-family:var(--mono);}
       <div class="tabs" role="tablist">
         <button type="button" role="tab" id="tab-dec" aria-selected="true">Decomposition</button>
         <button type="button" role="tab" id="tab-run" aria-selected="false">Run details</button>
+        <button type="button" role="tab" id="tab-model" aria-selected="false">Model</button>
       </div>
 
       <!-- ===== the decision screen ===== -->
@@ -158,6 +210,19 @@ table.metrics td{font-family:var(--mono);}
         <div class="charts" id="run-charts"></div>
       </div>
 
+      <!-- ===== the model: stock-and-flow diagram and every equation ===== -->
+      <div id="view-model" hidden>
+        <div class="panel model-intro">
+          <p>The model as a stock-and-flow diagram: <b>stocks</b> are boxes, <b>flows</b> are valves on pipes, <b>auxiliaries</b> are circles, and clouds mark the model's boundary. The curved arrows are drawn from the equations themselves. Click any variable to see its equation, what it reads, what reads it, and its values in your plan's run.</p>
+          <div class="key"><span><svg width="30" height="16"><rect x="1" y="2" width="28" height="12" rx="2" fill="#0d3a63" stroke="#bfe4ff"/></svg>stock</span><span><svg width="22" height="16"><path d="M2,2 L20,14 L20,2 L2,14 z" fill="#0d3a63" stroke="#bfe4ff"/></svg>flow</span><span><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#082444" stroke="#8fd0f2"/></svg>auxiliary</span><span><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#bfe4ff" stroke-width="6"/><line x1="0" y1="5" x2="30" y2="5" stroke="#0d3a63" stroke-width="2"/></svg>material</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#6fa8c9" stroke-width="1.4"/></svg>information</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#7dd3fc" stroke-width="2.2"/></svg>reads (selected)</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#e0558f" stroke-width="2.2"/></svg>read by (selected)</span></div>
+        </div>
+        <div class="model-grid">
+          <div class="panel diagram-wrap"><div id="diagram"></div></div>
+          <aside class="panel" id="eq-panel" aria-live="polite"></aside>
+        </div>
+        <div class="panel"><h3 class="section-h">All equations</h3><div id="eq-list"></div></div>
+      </div>
+
       <details class="panel" style="margin-top:14px;">
         <summary style="cursor:pointer; font-family:var(--head); font-weight:700; letter-spacing:.05em; text-transform:uppercase;">How the model and the decomposition work</summary>
         <div class="prose">
@@ -178,6 +243,8 @@ table.metrics td{font-family:var(--mono);}
 
 <script src="src/model.js"></script>
 <script src="src/decompose.js"></script>
+<script src="src/equations.js"></script>
 <script src="app.js"></script>
+<script src="diagram.js"></script>
 </body>
 </html>

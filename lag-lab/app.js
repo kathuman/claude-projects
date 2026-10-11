@@ -3,9 +3,12 @@
 //   1.0.0  launch: the production/workforce model (phase 1), step and policy controls with presets and share
 //          links, the decomposition of the overshoot into necessary refill, structure, policy and forecast from
 //          runs (a), (b) and (c), charts with hover read-outs, the plan's metrics and CSV export
+//   1.1.0  the Model tab: a stock-and-flow diagram of the model, every variable clickable for its equation, inputs,
+//          readers, parameters and values in your plan's run; the full equation and parameter list. The published
+//          equations are tested against the model's own output
 (function () {
   "use strict";
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.0";
   var L = window.LagLab, Dc = window.LagDecompose, $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION; $("ver-foot").textContent = "v" + VERSION;
 
@@ -184,6 +187,7 @@
     var d = Dc.decompose(params); last = d;
     renderAnswer(d); renderDecCharts(d); renderRun(d);
     writeHash();
+    window.dispatchEvent(new CustomEvent("laglab:update"));
   }
 
   function renderAnswer(d) {
@@ -266,12 +270,13 @@
 
   // ---- tabs, CSV, share links
   function tab(which) {
-    $("tab-dec").setAttribute("aria-selected", String(which === "dec")); $("tab-run").setAttribute("aria-selected", String(which === "run"));
-    $("view-dec").hidden = which !== "dec"; $("view-run").hidden = which !== "run";
+    ["dec", "run", "model"].forEach(function (k) { $("tab-" + k).setAttribute("aria-selected", String(which === k)); $("view-" + k).hidden = which !== k; });
+    if (which === "model" && window.lagDiagram) window.lagDiagram.show();
     requestAnimationFrame(function () { Object.keys(decCharts).forEach(function (k) { decCharts[k].draw(); }); Object.keys(runCharts).forEach(function (k) { runCharts[k].draw(); }); });
   }
   $("tab-dec").addEventListener("click", function () { tab("dec"); });
   $("tab-run").addEventListener("click", function () { tab("run"); });
+  $("tab-model").addEventListener("click", function () { tab("model"); });
   $("btn-csv").addEventListener("click", function () {
     if (!last) return;
     var cols = ["demand", "expectedDemand", "starts", "completions", "shipments", "inventory", "backlog", "supplyLine", "effectiveWorkforce", "trainees", "vacancies"];
@@ -314,5 +319,5 @@
   window.addEventListener("resize", function () { Object.keys(decCharts).forEach(function (k) { decCharts[k].draw(); }); Object.keys(runCharts).forEach(function (k) { runCharts[k].draw(); }); });
 
   readHash(); paintRail(); recompute();
-  window.lagLab = { version: VERSION, params: function () { return params; }, last: function () { return last; }, applyPreset: applyPreset };
+  window.lagLab = { version: VERSION, params: function () { return params; }, last: function () { return last; }, applyPreset: applyPreset, tab: tab };
 })();

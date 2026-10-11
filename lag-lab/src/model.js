@@ -120,7 +120,7 @@
 
   var SERIES = ["demand", "expectedDemand", "backlog", "inventory", "supplyLine", "workforce", "trainees", "vacancies", "effectiveWorkforce",
     "desiredInventory", "desiredSupplyLine", "desiredStarts", "starts", "completions", "shipments", "capacity", "utilisation",
-    "desiredWorkforce", "desiredHiring", "vacancyCreation", "vacancyCancellation", "hires", "graduations", "attrition", "layoffs"];
+    "desiredWorkforce", "desiredHiring", "vacancyCreation", "vacancyCancellation", "hires", "graduations", "attrition", "layoffs", "desiredVacancies"];
 
   // Run the model. Returns columns sampled every `every` steps (default: every week), plus the parameters used.
   function simulate(params, opts) {
@@ -162,7 +162,7 @@
       var hires = V / p.hiringDelay, grad = T / p.trainingTime;
       if (i % every === 0) {
         out.t.push(t);
-        var row = [D, Dexp, B, I, SL, W, T, V, E, Istar, SLstar, DS, starts, 0, ship, cap, u, Estar, Hd, vc, vx, hires, grad, attr, lay];
+        var row = [D, Dexp, B, I, SL, W, T, V, E, Istar, SLstar, DS, starts, 0, ship, cap, u, Estar, Hd, vc, vx, hires, grad, attr, lay, Vstar];
         row[13] = S[2] * 3 / p.productionLeadTime;
         for (var k = 0; k < SERIES.length; k++) out[SERIES[k]].push(row[k]);
       }
