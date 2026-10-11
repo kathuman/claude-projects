@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Network Stress Test — Estay Dynamics</title>
+  <meta name="description" content="Network Stress Test is an Estay Dynamics sandbox for supply-network resilience: a real min-cost-flow solver, disruption scenarios, N-1 contingency, Monte Carlo and worst-case search. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+body{background-image:linear-gradient(rgba(125,211,252,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,.05) 1px, transparent 1px); background-size:28px 28px;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52);}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.actions{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+main{max-width:980px; margin:0 auto; padding:34px 22px 10px;}
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
+h1{font-family:var(--head); font-weight:700; font-size:40px; letter-spacing:.02em; margin:8px 0 12px;}
+.lede{font-size:18px; line-height:1.6; color:var(--ink-dim); max-width:760px; margin:0 0 22px;}
+h2{font-family:var(--head); font-weight:700; font-size:20px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 12px;}
+p{line-height:1.65; color:var(--ink-dim); margin:0 0 12px;}
+b{color:var(--ink);}
+a{color:var(--accent);}
+.open{display:inline-block; font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.06em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink); text-decoration:none; padding:10px 16px; border-radius:8px;}
+.open:hover{filter:brightness(1.08);}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:28px;}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px;}
+.card ul{list-style:none; margin:0; padding:0;}
+.card li{padding:10px 0; border-bottom:1px dashed var(--line-soft); line-height:1.55; color:var(--ink-dim);}
+.card li:last-child{border-bottom:none;}
+.card li b{display:block; font-family:var(--head); font-weight:600; font-size:15px; letter-spacing:.04em; margin-bottom:2px;}
+.cite{font-size:13px; color:var(--ink-faint); margin-top:16px;}
+.foot{max-width:980px; margin:30px auto 0; padding:18px 22px 40px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-faint); line-height:1.7;}
+.foot .consult{display:block; color:var(--ink); font-weight:600; margin-bottom:4px;}
+.foot a{color:var(--accent);}
+@media (max-width:760px){ .cols{grid-template-columns:1fr;} h1{font-size:32px;} .lede{font-size:16px;} .brand .sub{display:none;} }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">NETWORK<span> STRESS TEST</span></div>
+    <div class="sub">ABOUT THE APP · ESTAY DYNAMICS</div>
+  </div>
+  <div class="actions">
+    <a class="back-link" href="index.html">Open the app</a>
+    <a class="back-link" href="../../">← Projects</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">About the app</div>
+  <h1>Network Stress Test</h1>
+  <p class="lede">Where would your supply network break first, and could it survive the break? Network Stress Test is a sandbox for answering that before it happens: build or generate a network of plants, warehouses and customers linked by air, sea and road, then push on it and see what gives.</p>
+  <p><a class="open" href="index.html">Open Network Stress Test →</a></p>
+
+  <div class="cols">
+    <section class="card">
+      <h2>What it does</h2>
+      <ul>
+        <li><b>Builds the network</b>Hundreds of editable production, warehouse and customer nodes and air, sea and road lanes with realistic defaults, generated or imported from CSV, on a world map or a layered diagram.</li>
+        <li><b>Solves the flows</b>A real minimum-cost flow solver decides how each product moves, within node and lane capacities, and reports service level, shortfalls and bottlenecks.</li>
+        <li><b>Tests disruptions</b>Switch off or derate any site or lane and re-solve, or scan every element in use to rank the single points of failure (an N-1 contingency analysis).</li>
+        <li><b>Measures resilience</b>Monte Carlo sampling of random failures, a time-to-survive against time-to-recover check for each site, and a search for the worst combination of failures.</li>
+        <li><b>Teaches by doing</b>A guided tutorial walks through one worked example, from finding the weakest point to judging whether it is survivable.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>How it is built</h2>
+      <p>The algorithms (the flow solver, the network model, the generator, the contingency scan, the Monte Carlo, the resilience check and the worst-case search) are separate modules, each tested on its own against hand-built networks with known answers, and the whole app was checked end to end in a real browser. A published <a href="solver-guide.html">solver guide</a> explains how to swap in a different flow solver. Everything runs in your browser.</p>
+
+      <h2 style="margin-top:22px;">Author</h2>
+      <p>Network Stress Test was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+      <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a> · <a href="https://kathuman.github.io/estay-dynamics/contact.html" target="_blank" rel="noopener">Get in touch</a></p>
+      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Network Stress Test: a supply-network resilience sandbox</em> (version 1.4.1) [Software]. Estay Dynamics. https://kathuman.github.io/claude-projects/network-stress-test/web/</p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <span class="consult">Estay Dynamics — Network Stress Test v1.4.1 · <a href="index.html">Open the app</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+  A supply-network stress-test sandbox: a real min-cost-flow solver, disruption scenarios, an N-1 contingency scan, Monte Carlo stress testing, a Time-to-Survive/Time-to-Recover check and adversarial worst-case search. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+</footer>
+</body>
+</html>

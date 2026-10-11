@@ -14,11 +14,12 @@ published), how to wire it in, how to test it, and what it would actually take t
 drop-in replacement to genuine joint multi-commodity optimization. Linked from an in-app
 summary panel ("Swapping in a different solver", in the explanations at the bottom of the app).
 
-**Version:** shown as a badge in the header and footer (currently v1.4.0), bumped on every
+**Version:** shown as a badge in the header and footer (currently v1.4.1), bumped on every
 user-visible change — see the `APP_VERSION` constant at the top of `web/src/app.js`. The
 header and footer also credit **Estay Dynamics**, with a header "Contact" button and the
 footer's "get in touch" link both pointing at the same consulting contact destination used
-site-wide (`github.com/kathuman`).
+site-wide (`github.com/kathuman`). [`web/about.html`](web/about.html) describes the app and its
+author, Daniel Alberto Sepulveda Estay, PhD.
 
 ## Why this exists
 
