@@ -132,7 +132,7 @@
   },
   {
     "title": "Real Options for Network Design",
-    "description": "Prices the flexibility in a supply network design against a fair baseline: commit now, the best fixed design, wait and see, and stage and expand, each with its optimal policy on a binomial demand lattice. A decision window separate from the asset life, build and expansion lead times, a 3PL that covers unmet demand up to a limit, a market ceiling, and a WACC or risk-neutral basis. A decision map of build and expansion triggers, payoff and NPV distributions over simulated paths, value against volatility, a sensitivity tornado, the equations, and shareable scenario links. 35 automated tests, including convergence to Black–Scholes.",
+    "description": "Prices the flexibility in a supply network design against a fair baseline: commit now, the best fixed design, wait and see, stage and expand, and a lease with break clauses, each with its optimal policy on a binomial demand lattice; every owned site can also be sold for a resale value. A decision window separate from the asset life, build and expansion lead times, a 3PL that covers unmet demand up to a limit, a market ceiling, and a WACC or risk-neutral basis. A decision map of build and expansion triggers, payoff and NPV distributions over simulated paths, value against volatility, a sensitivity tornado, the equations, and shareable scenario links. 54 automated tests, including convergence to Black–Scholes.",
     "date": "2026-09-08",
     "tags": ["javascript", "web", "dataviz", "supply-chain", "finance", "decision-support"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/real-options",

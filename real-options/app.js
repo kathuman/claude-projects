@@ -35,7 +35,15 @@
       { id: "premium", label: "Staging premium", min: 0, max: 60, step: 5, def: 25, scale: 0.01, fmt: pct, hint: "Extra cost per unit added in a later step." },
       { id: "fFix", label: "Fixed cost of a site", min: 0, max: 30, step: 1, def: 8, fmt: function (v) { return "$" + v + "M"; } },
       { id: "fVar", label: "Capex per unit of capacity", min: 10, max: 60, step: 1, def: 30, scale: 0.001, fmt: perUnit },
-      { id: "escal", label: "Cost escalation if delayed", min: 0, max: 15, step: 1, def: 6, scale: 0.01, fmt: function (v) { return v + "%/yr"; } } ] }
+      { id: "escal", label: "Cost escalation if delayed", min: 0, max: 15, step: 1, def: 6, scale: 0.01, fmt: function (v) { return v + "%/yr"; } } ] },
+    { name: "Exit & leasing", items: [
+      { id: "salvF", label: "Resale value of a site", min: 0, max: 80, step: 5, def: 30, scale: 0.01, fmt: function (v) { return v + "% of cost"; }, hint: "What an owned site sells for when new; it declines to zero over the asset life. Generic buildings resell well, specialised ones do not." },
+      { id: "rent", label: "Lease rent", min: 2, max: 12, step: 0.25, def: 6.5, scale: 0.001, fmt: function (v) { return "$" + v + "/unit·yr"; } },
+      { id: "leaseFit", label: "Fit-out cost of a lease", min: 0, max: 100, step: 5, def: 25, scale: 0.01, fmt: function (v) { return v + "% of site fixed cost"; } },
+      { id: "leaseLead", label: "Fit-out time", min: 0, max: 2, step: 0.25, def: 0.5, fmt: yrs },
+      { id: "minTerm", label: "First break date", min: 1, max: 15, step: 1, def: 5, fmt: function (v) { return "year " + v + " of the lease"; } },
+      { id: "breakEvery", label: "Then a break every", min: 0, max: 10, step: 1, def: 5, fmt: function (v) { return v === 0 ? "no further breaks" : yrs(v); } },
+      { id: "breakFee", label: "Break fee", min: 0, max: 3, step: 0.25, def: 1, fmt: function (v) { return v + (v === 1 ? " year" : " years") + " of rent"; } } ] }
   ];
   function pct(v) { return v + "%"; }
   function pctS(v) { return (v > 0 ? "+" : "") + v + "%/yr"; }
@@ -54,8 +62,9 @@
   var state = { basis: "wacc" }, preset = null;
   Object.keys(SPECS).forEach(function (k) { state[k] = SPECS[k].def; });
 
-  var NAMES = { full: "Commit now", best: "Best fixed", defer: "Wait & see", stage: "Stage & expand" };
-  var COL = { full: "var(--s4)", best: "var(--s1)", defer: "var(--s2)", stage: "var(--s3)" };
+  var NAMES = { full: "Commit now", best: "Best fixed", defer: "Wait & see", stage: "Stage & expand", lease: "Lease & break" };
+  var COL = { full: "var(--s4)", best: "var(--s1)", defer: "var(--s2)", stage: "var(--s3)", lease: "var(--s5)" };
+  var FLEX = ["defer", "stage", "lease"];
 
   // ---- build the controls
   var host = $("ctlHost"), inputs = {}, outs = {}, rows = {};
@@ -137,18 +146,21 @@
     headline(); scorecards(); decisionMap(); payoff(); distribution();
     $("derived").innerHTML = "Lattice step " + stepName(L.dt) + " · " + L.N + " steps<br>u " + L.u.toFixed(4) + " · d " + L.d.toFixed(4) + " · p " + L.p.toFixed(4) +
       "<br>drift " + (L.g * 100).toFixed(2) + "%/yr · discount " + (L.r * 100).toFixed(2) + "%/yr" +
-      "<br>stages " + sol.levels.map(function (k) { return k.toFixed(0); }).join(" → ") + "k";
+      "<br>stages " + sol.levels.map(function (k) { return k.toFixed(0); }).join(" → ") + "k" +
+      "<br>lease breaks in years " + (Object.keys(sol.lease.breaks).map(function (t) { return (t * L.dt).toFixed(1).replace(/\.0$/, ""); }).join(", ") || "none");
     // the sweeps need dozens of solves: done in the background, one solve per tick, abandoned if inputs change
     background(++bgToken);
   }
   function stepName(dt) { return dt === 0.25 ? "quarterly" : Math.abs(dt - 1 / 12) < 1e-9 ? "monthly" : Math.abs(dt - 1 / 52) < 1e-9 ? "weekly" : (dt * 52).toFixed(1) + " weeks"; }
   function money(v, sign) { return (sign && v > 0 ? "+" : v < 0 ? "−" : "") + "$" + Math.abs(v).toFixed(1) + "M"; }
-  function flexOf(s) { return Math.max(s.defer.npv, s.stage.npv) - s.best.npv; }
+  function bestFlexOf(s) { return FLEX.reduce(function (a, b) { return s[b].npv > s[a].npv ? b : a; }); }
+  function flexOf(s) { return s[bestFlexOf(s)].npv - s.best.npv; }
+  function share(k) { return Math.round(100 * sim.filter(function (r) { return r.sold[k] !== null; }).length / sim.length); }
   function mean(a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; }
 
   function headline() {
-    var f = flexOf(sol), bestFlex = sol.stage.npv >= sol.defer.npv ? "stage" : "defer", h = $("headline");
-    var vsFull = Math.max(sol.defer.npv, sol.stage.npv) - sol.full.npv;
+    var f = flexOf(sol), bestFlex = bestFlexOf(sol), h = $("headline");
+    var vsFull = sol[bestFlex].npv - sol.full.npv;
     h.innerHTML = "";
     var big = el("div", { class: "big" + (f < 0 ? " neg" : "") }, h); big.textContent = money(f, true);
     var what = el("div", { class: "what" }, h);
@@ -156,19 +168,21 @@
       sol.best.K.toFixed(0) + "k units built now), and " + money(vsFull) + " more than committing to the full footprint (" + sol.Kbig.toFixed(0) +
       "k). Most studies quote the second number; the first is the honest one.";
     else what.innerHTML = "<b>Flexibility does not pay here.</b> The best fixed design (" + sol.best.K.toFixed(0) + "k units built now) is worth " +
-      money(-f) + " more than the best flexible strategy. " + (sol.lattice.p > 0 && sol.params.sigma < 0.15 ? "Demand is too predictable for the right to wait to be worth much." : "Waiting or building twice costs more than the uncertainty it resolves.");
+      money(-f) + " more than the best flexible strategy. " + (sol.params.sigma < 0.15 ? "Demand is too predictable for the right to wait to be worth much." : "Waiting, building twice or renting costs more than the uncertainty it resolves.");
+    if (sol.params.salvF > 0) what.innerHTML += " Every owned design here can be sold if demand collapses; that right adds " + money(sol.best.npv - sol.best.noExit) + " to the best fixed design.";
   }
 
   function scorecards() {
     var host = $("scorecards"); host.innerHTML = "";
-    var keys = ["full", "best", "defer", "stage"], top = keys.reduce(function (a, b) { return sol[b].npv > sol[a].npv ? b : a; });
+    var keys = ["full", "best", "defer", "stage", "lease"], top = keys.reduce(function (a, b) { return sol[b].npv > sol[a].npv ? b : a; });
     var built = sim.filter(function (r) { return r.deferYear !== null; }), years = built.map(function (r) { return r.deferYear; }).sort(function (a, b) { return a - b; });
     var exp = mean(sim.map(function (r) { return r.expansions; })), firsts = sim.filter(function (r) { return r.firstExpansion !== null; }).map(function (r) { return r.firstExpansion; }).sort(function (a, b) { return a - b; });
     var desc = {
       full: "Build the full " + sol.Kbig.toFixed(0) + "k units now; ready in " + yrs(sol.params.buildLead) + ".",
-      best: "Build " + sol.best.K.toFixed(0) + "k units now: the capacity that maximises NPV without options.",
+      best: "Build " + sol.best.K.toFixed(0) + "k units now: the capacity that maximises NPV without designed-in options." + (share("best") ? " Sold on " + share("best") + "% of paths." : ""),
       defer: built.length ? "Builds on " + Math.round(100 * built.length / sim.length) + "% of paths, typically in year " + years[Math.floor(years.length / 2)].toFixed(1) + "." : "Never builds inside the window: the 3PL is better.",
-      stage: "Starts at " + sol.levels[0].toFixed(0) + "k; " + exp.toFixed(1) + " expansions on average" + (firsts.length ? ", the first typically in year " + firsts[Math.floor(firsts.length / 2)].toFixed(1) : "") + "."
+      stage: "Starts at " + sol.levels[0].toFixed(0) + "k; " + exp.toFixed(1) + " expansions on average" + (firsts.length ? ", the first typically in year " + firsts[Math.floor(firsts.length / 2)].toFixed(1) : "") + ".",
+      lease: "Lease " + sol.lease.K.toFixed(0) + "k units; the break clauses are worth " + money(sol.lease.npv - sol.lease.noBreak) + " and are used on " + share("lease") + "% of paths."
     };
     keys.forEach(function (k) {
       var c = el("div", { class: "score" + (k === top ? " win" : "") }, host); c.style.borderTopColor = COL[k];
@@ -221,12 +235,17 @@
     for (var t = 0; t <= L.W && t < L.N; t++) {
       var td = null, ts = null;
       for (var i = 0; i <= t; i++) if (sol.defer.build[t][i]) { td = edge(t, i); break; }
-      if (t >= L.Lb) for (i = 0; i <= t; i++) if (sol.stage.pol[t][0][i] > 0) { ts = edge(t, i); break; }
+      if (t >= L.Lb) for (i = 0; i <= t; i++) { var c = sol.stage.pol[t][0][i]; if (c > 0 && c !== 255) { ts = edge(t, i); break; } }
       trig.defer.push({ y: t * L.dt, D: td }); trig.stage.push({ y: t * L.dt, D: ts });
     }
     function edge(t, i) { return i === 0 ? M.demand(p, L, t, 0) : Math.min(p.D0 * Math.pow(L.u, 2 * i - t - 1), p.ceiling * p.D0); }
+    // selling the best fixed design: below the line (once it is in place); breaking the lease at its break dates
+    var sellT = [], breaksT = [];
+    function top(ex, t) { for (var i = t; i >= 0; i--) if (ex[t][i]) return i === t ? M.demand(p, L, t, t) : Math.min(p.D0 * Math.pow(L.u, 2 * i - t + 1), p.ceiling * p.D0); return null; }
+    if (sol.Rbest.ex) for (t = L.Lb; t < L.N; t++) sellT.push({ y: t * L.dt, D: top(sol.Rbest.ex, t) });
+    Object.keys(sol.lease.breaks).forEach(function (tb) { tb = +tb; var D = top(sol.lease.R.ex, tb); breaksT.push({ y: tb * L.dt, D: D }); });
     var thin = function (a) { return unzip(a, ["D"]).filter(function (q, j) { return j % every === 0 || j === a.length - 1; }); };
-    trig.defer = thin(trig.defer); trig.stage = thin(trig.stage);
+    trig.defer = thin(trig.defer); trig.stage = thin(trig.stage); sellT = thin(sellT);
     var ymax = Math.max(p.ceiling * p.D0 * 1.04, sol.Kbig * 1.1), ymin = 0;
     var x = scale(0, p.life, m.l, W - m.r), y = scale(ymin, ymax, H - m.b, m.t);
     axes(svg, x, y, W, H, m, p.life, ymax, "year", "demand, k units/yr");
@@ -245,16 +264,24 @@
     ["defer", "stage"].forEach(function (k) {
       segments(trig[k]).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL[k], "stroke-width": 2.5, fill: "none", "stroke-linejoin": "round" }); });
     });
-    legend($("mapLegend"), [["band", "rgba(191,228,255,.18)", "middle 50% of demand"], ["band", "rgba(191,228,255,.10)", "middle 90%"], ["line", "var(--ink-dim)", "median"],
-      ["line", COL.defer, "wait & see: build above"], ["line", COL.stage, "stage & expand: first step above"]]);
+    segments(sellT).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL.best, "stroke-width": 2, "stroke-dasharray": "6 4", fill: "none" }); });
+    breaksT.forEach(function (q) { if (q.D !== null) el("circle", { cx: x(q.y), cy: y(q.D), r: 5, fill: COL.lease, stroke: "var(--panel)", "stroke-width": 2 }, svg, NS); });
+    var items = [["band", "rgba(191,228,255,.18)", "middle 50% of demand"], ["band", "rgba(191,228,255,.10)", "middle 90%"], ["line", "var(--ink-dim)", "median"],
+      ["line", COL.defer, "wait & see: build above"], ["line", COL.stage, "stage & expand: first step above"]];
+    if (sellT.some(function (q) { return q.D !== null; })) items.push(["dash", COL.best, "best fixed: sell below"]);
+    if (breaksT.some(function (q) { return q.D !== null; })) items.push(["dot", COL.lease, "lease: break below, at break dates"]);
+    legend($("mapLegend"), items);
     var d0 = trig.defer.find(function (q) { return q.D !== null; }), s0 = trig.stage.find(function (q) { return q.D !== null; });
     $("mapCaption").textContent = (d0 ? "Wait & see first becomes willing to build in year " + d0.y.toFixed(1) + ", if demand is above " + d0.D.toFixed(0) + "k. " : "Wait & see never builds inside the window. ") +
-      (s0 ? "Stage & expand first adds a step in year " + s0.y.toFixed(1) + " if demand is above " + s0.D.toFixed(0) + "k." : "Stage & expand never adds a step from its initial stage.");
+      (s0 ? "Stage & expand first adds a step in year " + s0.y.toFixed(1) + " if demand is above " + s0.D.toFixed(0) + "k. " : "Stage & expand never adds a step from its initial stage. ") +
+      (function () { var b = breaksT.find(function (q) { return q.D !== null; }); return b ? "At its first break date (year " + b.y.toFixed(1) + ") the lease is handed back if demand is below " + b.D.toFixed(0) + "k." : "The lease is never broken."; })();
     hover(svg, m, W, H, function (mx) {
       var yr = x.inv(mx), f = nearest(fan, yr), td2 = nearest(trig.defer, yr), ts2 = nearest(trig.stage, yr);
       var s = "<b>Year " + f.y.toFixed(2) + "</b><br>median demand " + f.q50.toFixed(0) + "k<br>50%: " + f.q25.toFixed(0) + "–" + f.q75.toFixed(0) + "k · 90%: " + f.q05.toFixed(0) + "–" + f.q95.toFixed(0) + "k";
       if (yr <= p.window + 1e-9) s += "<br>wait & see builds above " + (td2 && td2.D !== null ? td2.D.toFixed(0) + "k" : "—") + "<br>first expansion above " + (ts2 && ts2.D !== null ? ts2.D.toFixed(0) + "k" : "—");
       else s += "<br>outside the decision window";
+      var sl = sellT.length ? nearest(sellT, yr) : null;
+      if (sl && Math.abs(sl.y - yr) < 0.3) s += "<br>best fixed is sold below " + (sl.D !== null ? sl.D.toFixed(0) + "k" : "— (never)");
       return { html: s, x: x(f.y) };
     });
   }
@@ -262,9 +289,9 @@
   function nearest(arr, v) { var b = null, bd = Infinity; arr.forEach(function (a) { var d = Math.abs(a.y - v); if (d < bd) { bd = d; b = a; } }); return b; }
 
   function payoff() {
-    var svg = $("payChart"), W = 360, H = 300, m = { l: 46, r: 10, t: 10, b: 34 }, keys = ["best", "defer", "stage"];
+    var svg = $("payChart"), W = 360, H = 300, m = { l: 46, r: 10, t: 10, b: 34 }, keys = ["best", "defer", "stage", "lease"];
     clear(svg);
-    var pts = sim.slice(0, 500), xs = pts.map(function (r) { return r.meanDemand; });
+    var pts = sim.slice(0, 400), xs = pts.map(function (r) { return r.meanDemand; });
     var all = []; pts.forEach(function (r) { keys.forEach(function (k) { all.push(r[k]); }); });
     var lo = quant(all, 0.01), hi = quant(all, 0.99), pad = (hi - lo) * 0.08;
     var x = scale(Math.min.apply(null, xs), Math.max.apply(null, xs), m.l, W - m.r), y = scale(lo - pad, hi + pad, H - m.b, m.t);
@@ -286,7 +313,7 @@
   function distribution() {
     var svg = $("distChart"), W = 360, H = 300, m = { l: 46, r: 10, t: 10, b: 34 };
     clear(svg);
-    var fk = sol.stage.npv >= sol.defer.npv ? "stage" : "defer", keys = ["best", fk];
+    var fk = bestFlexOf(sol), keys = ["best", fk];
     var A = sim.map(function (r) { return r.best; }), B = sim.map(function (r) { return r[fk]; });
     var lo = Math.min(quant(A, 0.005), quant(B, 0.005)), hi = Math.max(quant(A, 0.995), quant(B, 0.995)), nb = 28, bw = (hi - lo) / nb;
     var hist = function (a) { var h = new Array(nb).fill(0); a.forEach(function (v) { var b = Math.floor((v - lo) / bw); if (b >= 0 && b < nb) h[b]++; }); return h.map(function (c) { return c / a.length; }); };
@@ -321,15 +348,18 @@
     ["Penalty, lost sale", "penalty", function (v) { return [v * 0.5, v * 1.5]; }, function (v) { return "$" + (v * 1000).toFixed(0); }],
     ["Outsourcing limit", "outCap", function (v) { return [Math.max(0, v - 0.5), v + 0.5]; }, function (v) { return Math.round(v * 100) + "%"; }],
     ["Staging premium", "premium", function (v) { return [Math.max(0, v - 0.15), v + 0.15]; }, function (v) { return Math.round(v * 100) + "%"; }],
-    ["Cost escalation", "escal", function (v) { return [Math.max(0, v - 0.03), v + 0.03]; }, function (v) { return (v * 100).toFixed(0) + "%"; }]
+    ["Cost escalation", "escal", function (v) { return [Math.max(0, v - 0.03), v + 0.03]; }, function (v) { return (v * 100).toFixed(0) + "%"; }],
+    ["Resale value", "salvF", function (v) { return [Math.max(0, v - 0.2), v + 0.2]; }, function (v) { return Math.round(v * 100) + "%"; }],
+    ["Lease rent", "rent", function (v) { return [v * 0.85, v * 1.15]; }, function (v) { return "$" + (v * 1000).toFixed(2); }],
+    ["Break fee", "breakFee", function (v) { return [Math.max(0, v - 0.75), v + 0.75]; }, function (v) { return v.toFixed(2) + "y"; }]
   ];
   function background(token) {
     var base = params(), jobs = [], volRes = [], torRes = [];
     SIGMAS.forEach(function (s) { jobs.push(function () {
       var pp = params({ sigma: s });
       // very slow lattices (weekly steps) are skipped in the sweep
-      if (M.lattice(M.merge(pp)).dt < 1 / 13) { volRes.push({ s: s, defer: null, stage: null }); return; }
-      var r = M.solve(pp); volRes.push({ s: s, defer: r.defer.npv - r.best.npv, stage: r.stage.npv - r.best.npv });
+      if (M.lattice(M.merge(pp)).dt < 1 / 13) { volRes.push({ s: s, defer: null, stage: null, lease: null }); return; }
+      var r = M.solve(pp); volRes.push({ s: s, defer: r.defer.npv - r.best.npv, stage: r.stage.npv - r.best.npv, lease: r.lease.npv - r.best.npv });
     }); });
     var f0 = flexOf(sol);
     TORNADO.forEach(function (t) { jobs.push(function () {
@@ -346,26 +376,27 @@
   }
   function volChart(res) {
     var svg = $("volChart"), W = 360, H = 280, m = { l: 46, r: 10, t: 10, b: 34 }; clear(svg);
-    var vals = []; res.forEach(function (r) { ["defer", "stage"].forEach(function (k) { if (r[k] !== null) vals.push(r[k]); }); });
+    var vals = []; res.forEach(function (r) { FLEX.forEach(function (k) { if (r[k] !== null) vals.push(r[k]); }); });
     var lo = Math.min(0, Math.min.apply(null, vals)), hi = Math.max(0.5, Math.max.apply(null, vals)), pad = (hi - lo) * 0.08;
     var x = scale(0, 0.62, m.l, W - m.r), y = scale(lo - pad, hi + pad, H - m.b, m.t);
     axes(svg, x, y, W, H, m, null, null, "volatility", "vs best fixed, $M", null, function (v) { return Math.round(v * 100) + "%"; });
     line(svg, m.l, y(0), W - m.r, y(0), { stroke: "var(--ink-faint)" });
     var cur = sol.params.sigma; line(svg, x(cur), m.t, x(cur), H - m.b, { stroke: "var(--accent)", "stroke-dasharray": "4 4" });
-    ["defer", "stage"].forEach(function (k) {
+    FLEX.forEach(function (k) {
       segments(res.map(function (r) { return { y: r.s, D: r[k] }; })).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL[k], "stroke-width": 2, fill: "none" }); });
       res.forEach(function (r) { if (r[k] !== null) el("circle", { cx: x(r.s), cy: y(r[k]), r: 4, fill: COL[k], stroke: "var(--panel)", "stroke-width": 2 }, svg, NS); });
     });
-    legend($("volLegend"), [["line", COL.defer, NAMES.defer], ["line", COL.stage, NAMES.stage], ["dash", "var(--accent)", "your setting"]]);
-    $("volTable").innerHTML = "<table class='data'><tr><th>Volatility</th><th>Wait &amp; see</th><th>Stage &amp; expand</th></tr>" + res.map(function (r) {
-      return "<tr><td>" + Math.round(r.s * 100) + "%</td><td>" + (r.defer === null ? "—" : money(r.defer, true)) + "</td><td>" + (r.stage === null ? "—" : money(r.stage, true)) + "</td></tr>"; }).join("") + "</table>";
+    legend($("volLegend"), FLEX.map(function (k) { return ["line", COL[k], NAMES[k]]; }).concat([["dash", "var(--accent)", "your setting"]]));
+    var cell = function (v) { return "<td>" + (v === null ? "—" : money(v, true)) + "</td>"; };
+    $("volTable").innerHTML = "<table class='data'><tr><th>Volatility</th>" + FLEX.map(function (k) { return "<th>" + NAMES[k].replace("&", "&amp;") + "</th>"; }).join("") + "</tr>" + res.map(function (r) {
+      return "<tr><td>" + Math.round(r.s * 100) + "%</td>" + FLEX.map(function (k) { return cell(r[k]); }).join("") + "</tr>"; }).join("") + "</table>";
     hover(svg, m, W, H, function (mx) {
       var r = res.reduce(function (a, b) { return Math.abs(x(b.s) - mx) < Math.abs(x(a.s) - mx) ? b : a; });
-      return { html: "<b>Volatility " + Math.round(r.s * 100) + "%</b><br>" + NAMES.defer + ": " + (r.defer === null ? "—" : money(r.defer, true)) + "<br>" + NAMES.stage + ": " + (r.stage === null ? "—" : money(r.stage, true)), x: x(r.s) };
+      return { html: "<b>Volatility " + Math.round(r.s * 100) + "%</b><br>" + FLEX.map(function (k) { return NAMES[k] + ": " + (r[k] === null ? "—" : money(r[k], true)); }).join("<br>"), x: x(r.s) };
     });
   }
   function tornado(res, f0) {
-    var svg = $("torChart"), W = 360, H = 300, m = { l: 128, r: 20, t: 8, b: 30 }; clear(svg);
+    var svg = $("torChart"), W = 360, H = 340, m = { l: 128, r: 20, t: 8, b: 30 }; clear(svg);
     res.sort(function (a, b) { return Math.max(Math.abs(b.dlo), Math.abs(b.dhi)) - Math.max(Math.abs(a.dlo), Math.abs(a.dhi)); });
     var ext = Math.max(0.5, Math.max.apply(null, res.map(function (r) { return Math.max(Math.abs(r.dlo), Math.abs(r.dhi)); }))) * 1.1;
     var x = scale(-ext, ext, m.l, W - m.r), bh = (H - m.t - m.b) / res.length;

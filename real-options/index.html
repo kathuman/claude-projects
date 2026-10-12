@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Real Options for Network Design</title>
-  <meta name="description" content="Price the flexibility in a supply network design: commit now, the best fixed design, wait and see, or stage and expand, valued on a binomial demand lattice with lead times, outsourcing, a decision window and a risk-neutral option, against a fair baseline." />
+  <meta name="description" content="Price the flexibility in a supply network design: commit now, the best fixed design, wait and see, stage and expand, or lease with break clauses, valued on a binomial demand lattice with lead times, outsourcing, a decision window and a risk-neutral option, against a fair baseline." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127922;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,7 +14,7 @@
   --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
   --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
   --good:#3ddc97; --warn:#ffcf4a; --bad:#ff8a7a;
-  --s1:#1f9fd8; --s2:#c7820c; --s3:#e0558f; --s4:#4f9f15;   /* validated categorical order for the dark panel */
+  --s1:#1f9fd8; --s2:#c7820c; --s3:#e0558f; --s4:#4f9f15; --s5:#9085e9;   /* validated categorical order for the dark panel */
   --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --head:'Rajdhani', 'Arial Narrow', sans-serif;
   --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
@@ -79,11 +79,11 @@ table.rox th{font-family:var(--head); letter-spacing:.04em; color:var(--ink-fain
 .headline .big.neg{color:var(--bad);}
 .headline .what{font-size:15px; line-height:1.5; color:var(--ink-dim);}
 .headline .what b{color:var(--ink);}
-.scorecards{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px;}
+.scorecards{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px;}
 .score{background:var(--panel); border:1px solid var(--line); border-top:4px solid; border-radius:10px; padding:10px 12px;}
 .score.win{box-shadow:0 0 0 1px var(--accent) inset;}
 .score .nm{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.04em; text-transform:uppercase;}
-.score .v{font-family:var(--head); font-weight:700; font-size:28px; margin:2px 0;}
+.score .v{font-family:var(--head); font-weight:700; font-size:26px; margin:2px 0;}
 .score .d{font-size:12.5px; color:var(--ink-dim); line-height:1.4;}
 .score .badge{font-family:var(--mono); font-size:10.5px; color:var(--accent-ink); background:var(--accent); border-radius:4px; padding:0 5px; margin-left:4px; vertical-align:2px;}
 .grid2{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px;}
@@ -116,7 +116,7 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
 @media (max-width:960px){
   .layout{grid-template-columns:1fr;}
   .controls{position:static; max-height:none;}
-  .scorecards{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .scorecards{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
   .grid2,.eqs{grid-template-columns:1fr;}
 }
 @media (max-width:620px){
@@ -145,15 +145,15 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
     <h1>What is flexibility in a network design worth?</h1>
     <p class="lede">A classic network study optimises for the expected forecast and commits. But demand grows, stalls or
       collapses. A <b>real option</b> is the right, not the obligation, to act later: build once demand is confirmed, or
-      start small on a big site and expand in steps. Those rights cost money today. This page prices them on a demand
+      start small on a big site and expand in steps, or rent with the right to hand the space back. Those rights cost money today. This page prices them on a demand
       lattice and compares them with the <b>best fixed design</b>, not with a straw man.</p>
     <div class="optcards">
       <div class="optcard" style="border-color:var(--s2)"><span class="tag">Deferral option</span><b>Wait &amp; see</b>
         <p>Serve demand through a 3PL now; hold the permits. Build the full site once, at the best moment inside the decision window. Later builds cost more.</p></div>
       <div class="optcard" style="border-color:var(--s3)"><span class="tag">Growth option</span><b>Stage &amp; expand</b>
         <p>Build a smaller facility on a big footprint now, and add capacity in steps where demand justifies it. Each step costs a premium and takes time.</p></div>
-      <div class="optcard next" style="border-color:var(--ink-faint)"><span class="tag">Next phase · not yet modelled</span><b>Contract &amp; switch</b>
-        <p>Leases with break clauses, dual sourcing, multi-product lines: shed or redirect capacity when demand falls.</p></div>
+      <div class="optcard" style="border-color:var(--s5)"><span class="tag">Exit option</span><b>Lease &amp; break</b>
+        <p>Rent instead of building, with break clauses to hand the space back if demand falls. Owned sites can be sold too, for a resale value that a generic building keeps and a specialised one loses.</p></div>
     </div>
     <details class="map">
       <summary>How financial options map onto network decisions</summary>
@@ -187,8 +187,9 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
       <div class="panel">
         <h2 class="sec">Decision map: when to act</h2>
         <p class="blurb">The shaded fan is where demand may go (the middle 50% and 90% of outcomes, and the median). The lines
-          are the optimal triggers inside the decision window: <b>wait &amp; see</b> builds once demand rises above its
-          line, and <b>stage &amp; expand</b> adds its first step above its own. Below a trigger, waiting is worth more than acting.</p>
+          are the optimal triggers: inside the decision window <b>wait &amp; see</b> builds once demand rises above its
+          line and <b>stage &amp; expand</b> adds its first step above its own; at any time the <b>best fixed</b> design is
+          sold if demand falls below the dashed line, and at each break date the <b>lease</b> is handed back below its dot.</p>
         <svg class="chart" id="mapChart" viewBox="0 0 720 340" role="img" aria-label="Demand fan and decision triggers over time"></svg>
         <div class="legend" id="mapLegend"></div>
         <p class="caption" id="mapCaption"></p>
@@ -222,7 +223,7 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
         <div class="panel">
           <h2 class="sec">What moves the value of flexibility</h2>
           <p class="blurb">Each bar moves one assumption down and up and shows the effect on the value of flexibility (best flexible minus best fixed). Pin down the long bars first.</p>
-          <svg class="chart" id="torChart" viewBox="0 0 360 300" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
+          <svg class="chart" id="torChart" viewBox="0 0 360 340" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
           <div class="legend" id="torLegend"></div>
         </div>
       </div>
@@ -230,7 +231,7 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
       <div class="panel" id="model">
         <h2 class="sec">The model</h2>
         <p class="blurb">One facility, one product, money in $M. Every number on this page comes from these equations, which
-          run in <code>src/model.js</code>; the same file is checked by 35 automated tests, including a lattice-against-Black–Scholes
+          run in <code>src/model.js</code>; the same file is checked by 54 automated tests, including a lattice-against-Black–Scholes
           convergence test and a Monte Carlo replay of every optimal policy.</p>
         <div class="eqs">
           <div class="eq"><h4>Demand lattice</h4>
@@ -267,6 +268,20 @@ stage(t,k)= max(hold,  max over k′>k of
             commit(k → k′) − (F/4 + v·ΔK·(1+premium)))</div>
             <p>Decisions are possible only inside the decision window; after it the capacity stays as it is until the end
               of the asset life. Staging runs one project at a time.</p></div>
+          <div class="eq"><h4>Selling a site</h4>
+            <div class="f">resale(K,t) = salvF·(F + v·K)·(1 − t/N)
+R_K(t,i) = max(hold, resale(K,t) + R_0(t,i))</div>
+            <p>Any owned site can be sold at any time, irreversibly; demand is then served through the 3PL (R<sub>0</sub>).
+              The resale value declines to zero at the end of the asset life. Staging can sell too, at whatever stage it has reached.
+              This applies to the best fixed design as well, so the baseline is not penalised.</p></div>
+          <div class="eq"><h4>Lease with break clauses</h4>
+            <div class="f">CF_lease = CF(D, K) − rent·K
+at a break date b:
+  R_L(b,i) = max(hold, R_0(b,i) − fee·rent·K)
+lease = commit(0,0; 0 → K, lead L_f) − fit·F</div>
+            <p>No capex: rent instead, plus a fit-out cost and time. Break dates fall at the minimum term after the lease
+              starts and then at fixed intervals; breaking costs a fee in years of rent. The leased capacity is chosen to
+              maximise NPV, and the break clauses' value is the lease with them minus the same lease without.</p></div>
           <div class="eq"><h4>Valuation basis</h4>
             <div class="f">WACC:          drift g,       discount at WACC
 Risk-neutral:  drift g − λ·σ, discount at r_f</div>
@@ -274,13 +289,13 @@ Risk-neutral:  drift g − λ·σ, discount at r_f</div>
               theoretically consistent one for options: it reduces the drift by the market price of demand risk λ and
               discounts at the risk-free rate.</p></div>
           <div class="eq"><h4>Value of flexibility</h4>
-            <div class="f">flexibility = max(defer, stage) − best fixed</div>
+            <div class="f">flexibility = max(defer, stage, lease) − best fixed</div>
             <p>Measured against the best fixed design, which is what a competent planner would choose without options.
               The gap to the full footprint is shown as well, because that is the comparison most studies make.</p></div>
           <div class="eq"><h4>Read it as</h4>
             <p>A decision-support model, not a project appraisal. Its value is the direction and rough size of the
               flexibility premium, the triggers, and which assumptions they hinge on. It does not yet model several sites,
-              contraction or switching, competition, or correlated cost risks.</p></div>
+              partial contraction, mothballing or switching between sources, competition, or correlated cost risks.</p></div>
         </div>
       </div>
     </main>

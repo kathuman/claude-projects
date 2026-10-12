@@ -11,12 +11,16 @@
 //   full       fixed at the full footprint;   best: fixed at the capacity that maximises NPV
 //   defer      build the full footprint once, at the best moment inside the window (cost escalates with time)
 //   stage      build the initial footprint now, then add steps where they pay (each at a premium, one at a time)
+//   lease      lease capacity now (no capex, rent instead); break clauses let you hand it back at set dates for a fee
+// Every owned site can also be sold at any time for its resale value, which declines to zero over the asset life
+// (a generic, resellable building has a high resale value; a specialised one a low value). Selling is irreversible:
+// demand is then served through the 3PL.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.RealOptions = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var VERSION = "2.0.0";
+  var VERSION = "2.1.0";
 
   // money in $M, demand and capacity in thousand units per year, margins in $M per thousand units (= $/unit / 1000)
   function defaults() {
@@ -26,7 +30,10 @@
       margin: 0.020, opcost: 0.006, penalty: 0.010, outMargin: 0.006, outCap: 1.0,
       basis: "wacc", wacc: 0.10, rf: 0.03, lambda: 0.3,
       smallF: 0.8, bigF: 1.4, stepF: 0.15, premium: 0.25, escal: 0.06, fFix: 8, fVar: 0.030,
-      buildLead: 1.5, expandLead: 1.0
+      buildLead: 1.5, expandLead: 1.0,
+      salvF: 0.3,                                      // resale value of a new site, as a share of its cost
+      rent: 0.0065, leaseLead: 0.5, leaseFit: 0.25,    // rent per unit of capacity per year; fit-out time; fit-out cost (x fixed cost)
+      minTerm: 5, breakEvery: 5, breakFee: 1.0         // first break date, then every breakEvery years; fee in years of rent
     };
   }
   function merge(p) { var d = defaults(); Object.keys(p || {}).forEach(function (k) { d[k] = p[k]; }); return d; }
@@ -54,14 +61,40 @@
   }
   function buildCost(p, K, years) { return K <= 0 ? 0 : (p.fFix + p.fVar * K) * Math.pow(1 + p.escal, years); }
   function expandCost(p, dK) { return dK <= 0 ? 0 : 0.25 * p.fFix + p.fVar * dK * (1 + p.premium); }
+  // what selling a site of capacity K at step t brings: a share of its cost, declining linearly to zero at end of life
+  function salvage(p, L, K, t) { return K <= 0 || !(p.salvF > 0) ? 0 : p.salvF * (p.fFix + p.fVar * K) * Math.max(0, 1 - t / L.N); }
+  // the steps at which a lease that starts at step `start` may be broken
+  function breakSteps(p, L, start) {
+    var out = {}, first = start + Math.round(p.minTerm / L.dt), every = p.breakEvery > 0 ? Math.max(1, Math.round(p.breakEvery / L.dt)) : Infinity;
+    for (var t = first; t < L.N; t += every) out[t] = true;
+    return out;
+  }
 
-  // R[t][i] = value of operating capacity K from step t to the end of life, no decisions
-  function operate(p, L, K) {
-    var R = new Array(L.N + 1); R[L.N] = new Float64Array(L.N + 1);
+  // R[t][i] = value of operating capacity K from step t to the end of life. With R0 given, the site may also be sold
+  // at any step (then R0, the value of serving through the 3PL, takes over); R.ex marks where selling is optimal.
+  function operate(p, L, K, R0) {
+    var R = new Array(L.N + 1), sell = !!R0 && K > 0 && p.salvF > 0; R[L.N] = new Float64Array(L.N + 1);
+    if (sell) { R.ex = new Array(L.N + 1); R.ex[L.N] = new Uint8Array(L.N + 1); }
     for (var t = L.N - 1; t >= 0; t--) {
-      var row = new Float64Array(t + 1), nx = R[t + 1];
-      for (var i = 0; i <= t; i++) row[i] = cfRate(p, demand(p, L, t, i), K) * L.dt + L.disc * (L.p * nx[i + 1] + (1 - L.p) * nx[i]);
-      R[t] = row;
+      var row = new Float64Array(t + 1), nx = R[t + 1], ex = sell ? new Uint8Array(t + 1) : null, sv = sell ? salvage(p, L, K, t) : 0;
+      for (var i = 0; i <= t; i++) {
+        var hold = cfRate(p, demand(p, L, t, i), K) * L.dt + L.disc * (L.p * nx[i + 1] + (1 - L.p) * nx[i]);
+        if (sell && sv + R0[t][i] > hold) { row[i] = sv + R0[t][i]; ex[i] = 1; } else row[i] = hold;
+      }
+      R[t] = row; if (sell) R.ex[t] = ex;
+    }
+    return R;
+  }
+  // a lease of capacity K: rent on top of operating costs; at break dates it may be handed back for a fee
+  function leaseValue(p, L, K, R0, breaks) {
+    var R = new Array(L.N + 1), fee = p.breakFee * p.rent * K; R[L.N] = new Float64Array(L.N + 1); R.ex = new Array(L.N + 1);
+    for (var t = L.N - 1; t >= 0; t--) {
+      var row = new Float64Array(t + 1), nx = R[t + 1], ex = new Uint8Array(t + 1);
+      for (var i = 0; i <= t; i++) {
+        var hold = (cfRate(p, demand(p, L, t, i), K) - p.rent * K) * L.dt + L.disc * (L.p * nx[i + 1] + (1 - L.p) * nx[i]);
+        if (breaks && breaks[t] && R0[t][i] - fee > hold) { row[i] = R0[t][i] - fee; ex[i] = 1; } else row[i] = hold;
+      }
+      R[t] = row; R.ex[t] = ex;
     }
     return R;
   }
@@ -79,16 +112,19 @@
   function solve(params) {
     var p = merge(params), L = lattice(p), N = L.N, W = L.W, lv = levelsOf(p), Kbig = lv[lv.length - 1];
     var wb = weights(L, L.Lb), we = weights(L, L.Le), db = Math.pow(L.disc, L.Lb), de = Math.pow(L.disc, L.Le);
-    var R0 = operate(p, L, 0), Rbig = operate(p, L, Kbig);
+    var R0 = operate(p, L, 0), Rbig = operate(p, L, Kbig, R0);
     // value of committing to K at step t: the old operation (here: none) until it arrives, then K for the rest of life
     function committed(RK, Rold, t, i, years) { return Rold[t][i] - ahead(Rold, t, i, L.Lb, wb, db) + ahead(RK, t, i, L.Lb, wb, db); }
     // ---- fixed capacity
-    function fixedValue(K) { var RK = operate(p, L, K); return { npv: committed(RK, R0, 0, 0) - buildCost(p, K, 0), R: RK }; }
+    function fixedValue(K) { var RK = operate(p, L, K, R0); return { npv: committed(RK, R0, 0, 0) - buildCost(p, K, 0), R: RK }; }
     var full = fixedValue(Kbig);
     var best = { npv: -Infinity, K: 0 };
     for (var K = 0.3 * p.D0; K <= 2.2 * p.D0 + 1e-9; K += 0.02 * p.D0) { var v = fixedValue(K).npv; if (v > best.npv) best = { npv: v, K: K }; }
     // refine around the best grid point
     for (var K2 = best.K - 0.02 * p.D0; K2 <= best.K + 0.02 * p.D0; K2 += 0.002 * p.D0) { var v2 = fixedValue(K2).npv; if (v2 > best.npv) best = { npv: v2, K: K2 }; }
+    var Rbest = operate(p, L, best.K, R0);
+    // the same design with no resale value: what the right to sell is worth to it
+    best.noExit = committed(operate(p, L, best.K), R0, 0, 0) - buildCost(p, best.K, 0);
     // ---- defer: build the full footprint once, inside the window, arriving after the build lead time
     var Wd = new Array(N + 1), build = new Array(N + 1);
     for (var t = N; t >= 0; t--) {
@@ -118,6 +154,9 @@
         for (k = nL - 1; k >= 0; k--) {
           var hold = t === N ? 0 : cfRate(p, D, lv[k]) * L.dt + L.disc * (L.p * V[t + 1][k][i + 1] + (1 - L.p) * V[t + 1][k][i]);
           var bestV = hold, bk = k;
+          // selling everything is a choice at every step (policy code 255)
+          var sv = salvage(p, L, lv[k], t);
+          if (sv > 0 && sv + R0[t][i] > bestV) { bestV = sv + R0[t][i]; bk = 255; }
           if (canAct) {
             var meanwhile = Rk[k][t][i] - ahead(Rk[k], t, i, L.Le, we, de);
             for (var k2 = k + 1; k2 < nL; k2++) {
@@ -132,11 +171,18 @@
     }
     // the initial build of the stage strategy, then whatever expansions pay
     var stageNpv = R0[0][0] - ahead(R0, 0, 0, L.Lb, wb, db) + aheadLevel(V, 0, 0, L.Lb, wb, db, 0) - buildCost(p, lv[0], 0);
+    // ---- lease: capacity chosen to maximise NPV; fit-out takes leaseLead, and its cost is paid now
+    var Ll = Math.min(N, Math.round(p.leaseLead / L.dt)), wl = weights(L, Ll), dl = Math.pow(L.disc, Ll), brk = breakSteps(p, L, Ll);
+    function leaseNpv(K, b) { var RL = leaseValue(p, L, K, R0, b); return { npv: R0[0][0] - ahead(R0, 0, 0, Ll, wl, dl) + ahead(RL, 0, 0, Ll, wl, dl) - p.leaseFit * p.fFix, R: RL }; }
+    var lease = { npv: -Infinity, K: 0 };
+    for (K = 0.3 * p.D0; K <= 2.2 * p.D0 + 1e-9; K += 0.02 * p.D0) { v = leaseNpv(K, brk).npv; if (v > lease.npv) lease = { npv: v, K: K }; }
+    for (K2 = lease.K - 0.02 * p.D0; K2 <= lease.K + 0.02 * p.D0; K2 += 0.002 * p.D0) { v2 = leaseNpv(K2, brk).npv; if (v2 > lease.npv) lease = { npv: v2, K: K2 }; }
+    lease.R = leaseNpv(lease.K, brk).R; lease.lead = Ll; lease.breaks = brk; lease.noBreak = leaseNpv(lease.K, null).npv;
     return {
       version: VERSION, params: p, lattice: L, levels: lv, Kbig: Kbig,
       full: { npv: full.npv, K: Kbig }, best: best,
-      defer: { npv: Wd[0][0], build: build }, stage: { npv: stageNpv, pol: pol, V: V },
-      R0: R0, Rbig: Rbig, Rk: Rk
+      defer: { npv: Wd[0][0], build: build }, stage: { npv: stageNpv, pol: pol, V: V }, lease: lease,
+      R0: R0, Rbig: Rbig, Rbest: Rbest, Rk: Rk
     };
   }
   // the n-step expectation for the staged value array, which is indexed [t][level][i]
@@ -150,33 +196,43 @@
       var i = 0, df = 1, iW = 0, sumD = 0;
       // each strategy's state: capacity in place, and a pending project (target, arrival step)
       var S = {
-        full: { K: 0, pend: sol.Kbig, at: L.Lb, npv: -buildCost(p, sol.Kbig, 0) },
-        best: { K: 0, pend: sol.best.K, at: L.Lb, npv: -buildCost(p, sol.best.K, 0) },
-        defer: { K: 0, pend: null, at: -1, npv: 0, built: false, buildYear: null },
-        stage: { k: -1, pend: 0, at: L.Lb, npv: -buildCost(p, lv[0], 0), expansions: 0, firstExpansion: null }
+        full: { K: 0, pend: sol.Kbig, at: L.Lb, npv: -buildCost(p, sol.Kbig, 0), ex: sol.Rbig.ex, sold: null },
+        best: { K: 0, pend: sol.best.K, at: L.Lb, npv: -buildCost(p, sol.best.K, 0), ex: sol.Rbest.ex, sold: null },
+        defer: { K: 0, pend: null, at: -1, npv: 0, built: false, buildYear: null, ex: sol.Rbig.ex, sold: null },
+        stage: { k: -1, pend: 0, at: L.Lb, npv: -buildCost(p, lv[0], 0), expansions: 0, firstExpansion: null, sold: null },
+        lease: { K: 0, pend: sol.lease.K, at: sol.lease.lead, npv: -p.leaseFit * p.fFix, sold: null }
       };
       var events = [];
+      // sell an owned site where its policy says so (only once it is in place and no project is under way)
+      var sell = function (x, t, i, df) { if (x.ex && x.K > 0 && x.pend === null && x.ex[t][i]) { x.npv += df * salvage(p, L, x.K, t); x.K = 0; x.sold = t * L.dt; x.ex = null; } };
       for (var t = 0; t < N; t++) {
         var D = demand(p, L, t, i);
         if (t === L.W) iW = i;
         sumD += D;
-        ["full", "best"].forEach(function (s) { var x = S[s]; if (x.pend !== null && t >= x.at) { x.K = x.pend; x.pend = null; } x.npv += df * cfRate(p, D, x.K) * L.dt; });
+        ["full", "best"].forEach(function (s) { var x = S[s]; if (x.pend !== null && t >= x.at) { x.K = x.pend; x.pend = null; } sell(x, t, i, df); x.npv += df * cfRate(p, D, x.K) * L.dt; });
         var f = S.defer;
         if (f.pend !== null && t >= f.at) { f.K = f.pend; f.pend = null; }
         if (!f.built && sol.defer.build[t][i]) { f.built = true; f.pend = sol.Kbig; f.at = t + L.Lb; f.npv -= df * buildCost(p, sol.Kbig, t * L.dt); f.buildYear = t * L.dt; events.push(["defer", t, i]); }
+        sell(f, t, i, df);
         f.npv += df * cfRate(p, D, f.K) * L.dt;
         var g = S.stage;
         if (g.pend !== null && t >= g.at) { g.k = g.pend; g.pend = null; }
         if (g.k >= 0 && g.pend === null) {
           var k2 = sol.stage.pol[t][g.k][i];
-          if (k2 > g.k) { g.npv -= df * expandCost(p, lv[k2] - lv[g.k]); g.pend = k2; g.at = t + L.Le; g.expansions++; if (g.firstExpansion === null) g.firstExpansion = t * L.dt; events.push(["stage", t, i]); }
+          if (k2 === 255) { g.npv += df * salvage(p, L, lv[g.k], t); g.k = -2; g.sold = t * L.dt; }
+          else if (k2 > g.k) { g.npv -= df * expandCost(p, lv[k2] - lv[g.k]); g.pend = k2; g.at = t + L.Le; g.expansions++; if (g.firstExpansion === null) g.firstExpansion = t * L.dt; events.push(["stage", t, i]); }
         }
         g.npv += df * cfRate(p, D, g.k >= 0 ? lv[g.k] : 0) * L.dt;
+        var e = S.lease;
+        if (e.pend !== null && t >= e.at) { e.K = e.pend; e.pend = null; }
+        if (e.K > 0 && sol.lease.breaks[t] && sol.lease.R.ex[t][i]) { e.npv -= df * p.breakFee * p.rent * e.K; e.K = 0; e.sold = t * L.dt; }
+        e.npv += df * (cfRate(p, D, e.K) - p.rent * e.K) * L.dt;
         if (next() < L.p) i++;
         df *= L.disc;
       }
       if (L.W >= N) iW = i;
-      out.push({ windowDemand: demand(p, L, L.W, iW), meanDemand: sumD / N, full: S.full.npv, best: S.best.npv, defer: S.defer.npv, stage: S.stage.npv, deferYear: S.defer.buildYear, expansions: S.stage.expansions, firstExpansion: S.stage.firstExpansion,
+      out.push({ windowDemand: demand(p, L, L.W, iW), meanDemand: sumD / N, full: S.full.npv, best: S.best.npv, defer: S.defer.npv, stage: S.stage.npv, lease: S.lease.npv, deferYear: S.defer.buildYear,
+        sold: { full: S.full.sold, best: S.best.sold, defer: S.defer.sold, stage: S.stage.sold, lease: S.lease.sold }, expansions: S.stage.expansions, firstExpansion: S.stage.firstExpansion,
         endDemand: demand(p, L, N, i), growth: Math.pow(demand(p, L, N, i) / p.D0, 1 / p.life) - 1, events: events });
     }
     return out;
@@ -193,10 +249,17 @@
 
   // NPV of building capacity K now and keeping it (used for fair comparisons and in the tests)
   function fixedNpv(params, K) {
-    var p = merge(params), L = lattice(p), R0 = operate(p, L, 0), RK = operate(p, L, K), w = weights(L, L.Lb), dN = Math.pow(L.disc, L.Lb);
+    var p = merge(params), L = lattice(p), R0 = operate(p, L, 0), RK = operate(p, L, K, R0), w = weights(L, L.Lb), dN = Math.pow(L.disc, L.Lb);
     return R0[0][0] - ahead(R0, 0, 0, L.Lb, w, dN) + ahead(RK, 0, 0, L.Lb, w, dN) - buildCost(p, K, 0);
   }
 
-  return { VERSION: VERSION, defaults: defaults, merge: merge, lattice: lattice, fixedNpv: fixedNpv, demand: demand, cfRate: cfRate, buildCost: buildCost, expandCost: expandCost,
+  // NPV of leasing capacity K now, with or without its break clauses (used in the tests)
+  function leaseNpv(params, K, withBreaks) {
+    var p = merge(params), L = lattice(p), R0 = operate(p, L, 0), Ll = Math.min(L.N, Math.round(p.leaseLead / L.dt)), w = weights(L, Ll), dN = Math.pow(L.disc, Ll);
+    var RL = leaseValue(p, L, K, R0, withBreaks ? breakSteps(p, L, Ll) : null);
+    return R0[0][0] - ahead(R0, 0, 0, Ll, w, dN) + ahead(RL, 0, 0, Ll, w, dN) - p.leaseFit * p.fFix;
+  }
+
+  return { VERSION: VERSION, defaults: defaults, merge: merge, lattice: lattice, fixedNpv: fixedNpv, leaseNpv: leaseNpv, demand: demand, cfRate: cfRate, buildCost: buildCost, expandCost: expandCost, salvage: salvage, breakSteps: breakSteps,
     operate: operate, levelsOf: levelsOf, solve: solve, simulate: simulate, europeanCall: europeanCall };
 });
