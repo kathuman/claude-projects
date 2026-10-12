@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clockspeed Balancing — Strategy Flight Simulator</title>
+  <meta name="description" content="A management flight simulator: fly a company for 20 years while commercial strategy moves in months, the product supply chain in a year and the network in years, and watch the misfit drain capability, trust and customers." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏱️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --good:#3ddc97; --warn:#ffcf4a; --bad:#ff8a7a;
+  --s1:#1f9fd8; --s2:#c7820c; --s3:#e0558f; --s4:#4f9f15;   /* validated categorical order for the dark panel */
+  --com:#e0558f; --psc:#c7820c; --net:#1f9fd8;              /* the three clocks, same validated hues */
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+html,body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+a{color:var(--accent);}
+.app{display:flex; flex-direction:column; min-height:100vh;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:10px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52); position:sticky; top:0; z-index:30;}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.brand .ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:5px; padding:1px 6px;}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.actions{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; align-items:center;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap; background:transparent; cursor:pointer;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+.btn{font-family:var(--head); font-weight:700; font-size:13.5px; letter-spacing:.05em; text-transform:uppercase; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:8px; padding:7px 12px; cursor:pointer; white-space:nowrap;}
+.btn:hover:not(:disabled){border-color:var(--accent); color:var(--accent);}
+.btn:disabled{opacity:.45; cursor:default;}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.btn.primary:hover:not(:disabled){color:var(--accent-ink); filter:brightness(1.08);}
+.btn.small{font-size:12px; padding:5px 9px;}
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px;}
+h2.sec{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.07em; text-transform:uppercase; margin:0 0 8px;}
+
+/* ---- briefing */
+.briefing{max-width:1060px; margin:0 auto; padding:30px 20px;}
+.briefing h1{font-family:var(--head); font-weight:700; font-size:38px; margin:0 0 8px;}
+.briefing .lede{font-size:17px; line-height:1.6; color:var(--ink-dim); max-width:820px;}
+.clocks{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:22px 0;}
+.clock{border-left:4px solid; padding:6px 0 6px 12px;}
+.clock b{font-family:var(--head); font-size:17px; letter-spacing:.03em;}
+.clock .speed{font-family:var(--mono); font-size:12px; color:var(--ink-faint);}
+.clock p{margin:4px 0 0; font-size:13.5px; color:var(--ink-dim); line-height:1.45;}
+.scenarios{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; margin:12px 0 20px;}
+.scn{text-align:left; font:inherit; color:var(--ink); background:var(--panel); border:2px solid var(--line); border-radius:12px; padding:12px 14px; cursor:pointer;}
+.scn b{font-family:var(--head); font-size:17px; letter-spacing:.03em; display:block;}
+.scn span{font-size:13px; color:var(--ink-dim); line-height:1.4;}
+.scn[aria-pressed="true"]{border-color:var(--accent); background:#0f4673;}
+.resume{margin-top:10px; font-size:14px; color:var(--ink-dim);}
+
+/* ---- cockpit */
+.cockpit{display:grid; grid-template-columns:350px minmax(0,1fr); flex:1;}
+.yoke{border-right:1px solid var(--line); background:var(--panel-2); padding:14px 14px 30px; overflow-y:auto; max-height:calc(100vh - 53px); position:sticky; top:53px;}
+.lever-group{border-left:4px solid; padding:2px 0 6px 10px; margin-bottom:16px;}
+.lever-group h3{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; margin:0;}
+.lever-group .speed{font-family:var(--mono); font-size:11px; color:var(--ink-faint); margin-bottom:8px;}
+.ctl{margin-bottom:9px;}
+.ctl-title{font-size:13.5px; color:var(--ink); margin:2px 0 2px; font-weight:600;}
+.pair .ctl .row{font-size:12px; color:var(--ink-dim);}
+.ctl .row{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px;}
+.ctl .row output{font-family:var(--mono); font-size:12px; color:var(--accent); white-space:nowrap;}
+.ctl input[type=range]{width:100%; accent-color:var(--accent); margin:3px 0 0;}
+.ctl .actual{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:0 10px;}
+.regions-in{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;}
+.regions-in button{font:inherit; font-size:12px; padding:4px 8px; border-radius:6px; border:1px solid var(--line); background:transparent; color:var(--ink-dim); cursor:pointer;}
+.regions-in button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+table.net{width:100%; border-collapse:collapse; font-size:12.5px;}
+table.net th{font-family:var(--head); font-weight:600; letter-spacing:.04em; color:var(--ink-faint); text-align:right; padding:3px 4px; font-size:11.5px; text-transform:uppercase;}
+table.net th:first-child, table.net td:first-child{text-align:left;}
+table.net td{padding:4px; border-bottom:1px solid var(--line-soft); text-align:right; font-family:var(--mono); font-size:12px;}
+table.net input{width:52px; font:inherit; font-family:var(--mono); font-size:12px; padding:3px 4px; border-radius:5px; border:1px solid var(--line); background:var(--panel); color:var(--ink); text-align:right;}
+
+.deck{padding:14px 18px 30px; min-width:0;}
+.flightbar{display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin-bottom:12px;}
+.clockface{font-family:var(--head); font-weight:700; font-size:26px; letter-spacing:.03em;}
+.clockface small{font-family:var(--mono); font-size:12px; color:var(--ink-faint); font-weight:400; margin-left:8px;}
+.progress{flex:1; min-width:160px; height:8px; background:var(--panel-2); border-radius:4px; overflow:hidden; border:1px solid var(--line-soft);}
+.progress i{display:block; height:100%; background:var(--accent);}
+.gauges{display:grid; grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); gap:8px; margin-bottom:12px;}
+.gauge .val{font-size:15.5px !important;}
+.gauge{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 10px 10px; text-align:center;}
+.gauge svg{width:100%; max-width:150px; height:auto; display:block; margin:0 auto;}
+.gauge .lbl{font-family:var(--head); font-weight:600; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint);}
+.gauge .val{font-family:var(--mono); font-size:17px; font-weight:600; color:var(--ink);}
+.gauge .delta{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+.status{display:inline-flex; align-items:center; gap:4px; font-family:var(--mono); font-size:11px;}
+.status.good{color:var(--good);} .status.warn{color:var(--warn);} .status.bad{color:var(--bad);}
+.fits{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:12px;}
+.fit{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; border-top:4px solid;}
+.fit .lbl{font-family:var(--head); font-weight:700; font-size:13.5px; letter-spacing:.05em; text-transform:uppercase;}
+.fit .bar{height:10px; background:var(--panel-2); border-radius:5px; overflow:hidden; margin:6px 0 4px;}
+.fit .bar i{display:block; height:100%;}
+.fit .txt{font-size:12px; color:var(--ink-dim);}
+.two{display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:12px; margin-bottom:12px;}
+.advisories{list-style:none; margin:0; padding:0; max-height:260px; overflow-y:auto;}
+.advisories li{display:flex; gap:8px; padding:6px 2px; border-bottom:1px solid var(--line-soft); font-size:13px; line-height:1.4;}
+.advisories li .ic{flex:none; width:18px; text-align:center;}
+.advisories li.bad .ic{color:var(--bad);} .advisories li.warn .ic{color:var(--warn);} .advisories li.good .ic{color:var(--good);} .advisories li.info .ic{color:var(--accent);}
+.advisories li .when{font-family:var(--mono); font-size:11px; color:var(--ink-faint); flex:none;}
+.radar table{width:100%; border-collapse:collapse; font-size:12.5px;}
+.radar td{padding:4px 2px; border-bottom:1px solid var(--line-soft);}
+.radar td:last-child{text-align:right; font-family:var(--mono); font-size:12px; white-space:nowrap;}
+.radar .lane{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px;}
+.charts{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr)); gap:12px;}
+.chart{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; min-width:0;}
+.chart h3{font-family:var(--head); font-weight:700; font-size:14.5px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 4px;}
+.legend{display:flex; flex-wrap:wrap; gap:3px 12px; font-size:12px; color:var(--ink-dim); margin-bottom:4px;}
+.legend span{display:inline-flex; align-items:center; gap:5px;}
+.plot{position:relative; height:200px;}
+.plot canvas{width:100%; height:100%; display:block;}
+.tip{position:absolute; pointer-events:none; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-family:var(--mono); font-size:11.5px; color:var(--ink); white-space:nowrap; z-index:3; box-shadow:0 8px 24px rgba(0,0,0,.35);}
+table.regions{width:100%; border-collapse:collapse; font-size:13px;}
+table.regions th, table.regions td{padding:5px 6px; border-bottom:1px solid var(--line-soft); text-align:right; white-space:nowrap;}
+table.regions th:first-child, table.regions td:first-child{text-align:left;}
+table.regions th{font-family:var(--head); font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-faint); font-size:12px;}
+table.regions td{font-family:var(--mono); font-size:12.5px;}
+.endcard h2{font-family:var(--head); font-weight:700; font-size:30px; margin:0 0 6px;}
+.endcard .score{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:14px 0;}
+.endcard .score div{background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:10px 12px;}
+.endcard .score b{display:block; font-family:var(--mono); font-size:22px;}
+.endcard .score span{font-size:12.5px; color:var(--ink-dim);}
+.foot{border-top:1px solid var(--line-soft); padding:16px 22px 28px; font-size:12.5px; color:var(--ink-faint); line-height:1.7;}
+.foot .consult{display:block; color:var(--ink); font-weight:600;}
+.foot a{color:var(--accent);}
+@media (max-width:1000px){
+  .cockpit{grid-template-columns:minmax(0,1fr);}
+  .yoke{position:static; max-height:none; border-right:0; border-top:1px solid var(--line); order:2;}
+  .deck{order:1;}
+  .two{grid-template-columns:minmax(0,1fr);}
+}
+@media (max-width:700px){
+  .clocks, .fits{grid-template-columns:minmax(0,1fr);}
+  .brand .sub{display:none;}
+  .briefing h1{font-size:30px;}
+  .deck{padding:12px 12px 24px;}
+  .topbar{padding:8px 12px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">CLOCKSPEED<span> BALANCING</span></div>
+      <span class="ver" id="ver" title="App version"></span>
+      <div class="sub">STRATEGY FLIGHT SIMULATOR</div>
+    </div>
+    <div class="actions">
+      <button class="back-link" id="btn-newgame" type="button" hidden>New flight</button>
+      <a class="back-link" href="about.html">About</a>
+      <a class="back-link" href="../">← Projects</a>
+    </div>
+  </header>
+
+  <!-- ===== briefing ===== -->
+  <section class="briefing" id="briefing">
+    <h1>Fly a company for 20 years.</h1>
+    <p class="lede">You are the executive team. Every quarter you set the commercial strategy, the product supply chain and the network, then advance the clock. The three move at different speeds, and every gap between them costs money, wears down the organisation and teaches customers to expect more.</p>
+    <div class="clocks">
+      <div class="clock" style="border-color:var(--com)"><b>Commercial strategy</b><div class="speed">takes effect in months</div><p>Price, service promise, promotions, product launches, which markets you serve.</p></div>
+      <div class="clock" style="border-color:var(--psc)"><b>Product supply chain</b><div class="speed">takes effect in about a year</div><p>Inventory cover, reserved flexible capacity, dual sourcing, by product segment.</p></div>
+      <div class="clock" style="border-color:var(--net)"><b>Network</b><div class="speed">takes effect in years</div><p>Capacity by region: build (30 months), close (12 months, with write-offs), automate.</p></div>
+    </div>
+    <h2 class="sec">Choose the weather</h2>
+    <div class="scenarios" id="scenarios"></div>
+    <div class="flightbar"><button class="btn primary" id="btn-takeoff" type="button">Take off →</button><span class="resume" id="resume" hidden></span></div>
+  </section>
+
+  <!-- ===== cockpit ===== -->
+  <main class="cockpit" id="cockpit" hidden>
+    <aside class="yoke" id="yoke" aria-label="Decisions"></aside>
+    <section class="deck">
+      <div class="flightbar">
+        <div class="clockface" id="clockface"></div>
+        <div class="progress" aria-hidden="true"><i id="progress"></i></div>
+        <button class="btn primary" id="btn-advance" type="button">Advance quarter →</button>
+        <button class="btn" id="btn-advance4" type="button" title="Advance four quarters with the same decisions">+ 1 year</button>
+        <button class="btn" id="btn-toend" type="button" title="Hold the current decisions to the end of the 20 years">Fly to the end</button>
+        <button class="btn small" id="btn-undo" type="button" title="Take back the last quarter">Undo</button>
+        <button class="btn small" id="btn-export" type="button" title="Save this flight as a file">Save file</button>
+        <label class="btn small" style="display:inline-flex; align-items:center;">Load file<input type="file" id="in-load" accept="application/json" hidden /></label>
+      </div>
+      <div class="panel endcard" id="endcard" hidden style="margin-bottom:12px;"></div>
+      <div class="gauges" id="gauges"></div>
+      <div class="fits" id="fits"></div>
+      <div class="two">
+        <div class="panel"><h2 class="sec">Advisories</h2><ul class="advisories" id="advisories"></ul></div>
+        <div class="panel radar"><h2 class="sec">Still in flight</h2><div id="radar"></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:12px; overflow-x:auto;"><h2 class="sec">Regions this quarter</h2><table class="regions" id="regions"></table></div>
+      <div class="charts" id="charts"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span class="consult">Clockspeed Balancing <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    A management flight simulator for the conflict between commercial, product supply chain and network strategy, and the inertial stocks they drag along. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  </footer>
+</div>
+<script src="src/model.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

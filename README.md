@@ -6,6 +6,7 @@
 [![balancebot-sim CI](https://github.com/kathuman/claude-projects/actions/workflows/balancebot-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/balancebot-ci.yml)
 [![Sensor Deck tests](https://github.com/kathuman/claude-projects/actions/workflows/phone-sensors-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/phone-sensors-ci.yml)
 [![Lag Lab tests](https://github.com/kathuman/claude-projects/actions/workflows/lag-lab-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/lag-lab-ci.yml)
+[![Clockspeed Balancing tests](https://github.com/kathuman/claude-projects/actions/workflows/clockspeed-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/clockspeed-ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 Simulation and decision tools for engineering and supply chains, built with [Claude](https://claude.com) by
@@ -51,7 +52,7 @@ stress tests, time-to-survive / time-to-recover, and adversarial worst-case sear
 </table>
 
 Also here: Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
-simulator, a live view of every phone sensor (streamable to a computer), live face morphing, a simulator that shows how much of a post-step overshoot is really forecast error, real options for network design, and a library of supply-chain visualisations.
+simulator, a live view of every phone sensor (streamable to a computer), live face morphing, a simulator that shows how much of a post-step overshoot is really forecast error, a strategy flight simulator for commercial vs supply chain clock speeds, real options for network design, and a library of supply-chain visualisations.
 
 ## Tests
 
@@ -61,6 +62,7 @@ simulator, a live view of every phone sensor (streamable to a computer), live fa
 | Cobot Lab | 1,634 checks: forward/inverse kinematics, motion profiles, path planner, URDF import | CI |
 | Warehouse Model | 300 checks + 400 designs identical in the FreeCAD script and the web app | CI (FreeCAD-only checks locally) |
 | balancebot-sim | dynamics derivation and energy conservation | CI |
+| Clockspeed Balancing | 34 checks: a 20-year steady state, exact accounting, the three clock speeds, the promise ratchet, unsupported push vs support and pacing, firefighting, complexity, resilience, scenarios | CI |
 | Lag Lab | 73 checks: delay and smoothing against exact solutions, exact conservation, the textbook stock-management and workforce results, a decomposition that adds up and vanishes when its cause is removed, and every published equation reproducing the model | CI |
 | Sensor Deck | 93 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the USB bridge's WebSocket framing, relay, origin check and adb handling; the Android app's bridge timing (Flutter) | CI |
 
@@ -140,6 +142,7 @@ face-morph/index.html              — https://kathuman.github.io/claude-project
 balancebot-sim/index.html          — https://kathuman.github.io/claude-projects/balancebot-sim/
 phone-sensors/index.html           — https://kathuman.github.io/claude-projects/phone-sensors/
 lag-lab/index.html                 — https://kathuman.github.io/claude-projects/lag-lab/
+clockspeed/index.html              — https://kathuman.github.io/claude-projects/clockspeed/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules

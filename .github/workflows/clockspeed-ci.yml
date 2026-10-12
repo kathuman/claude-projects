@@ -22,5 +22,6 @@ jobs:
         with:
           node-version: 22
       - run: node clockspeed/tests/model.test.js
-      - name: Syntax-check the model
-        run: node --check clockspeed/src/model.js
+      - name: Syntax-check the page scripts
+        run: for f in clockspeed/src/model.js clockspeed/app.js; do node --check "$f"; done
+        shell: bash

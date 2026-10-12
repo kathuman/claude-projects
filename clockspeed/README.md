@@ -1,6 +1,6 @@
 # Clockspeed Balancing — a management flight simulator for strategy misalignment
 
-**Status: phase 1 of 6 (the model and its tests). The cockpit is not built yet.**
+**Live: https://kathuman.github.io/claude-projects/clockspeed/ · version 1.0.0 (phases 1–2 of 6).**
 
 Three strategies steer the same company, at different speeds:
 - **commercial strategy** changes in quarters;
@@ -18,12 +18,39 @@ The name follows Charles Fine's *Clockspeed* (1998). The approach follows Sterma
 
 | Phase | Content | Version |
 |---|---|---|
-| **1** | **Model core and validation** (this) | 0.1.0 |
-| 2 | Cockpit: quarterly decisions, instruments, 20-year run, scenarios, save and replay, About page, AI Projects entry | 1.0 |
+| 1 | Model core and validation | done |
+| 2 | Cockpit: quarterly decisions, instruments, 20-year run, scenarios, save and replay, About page, AI Projects entry | done, 1.0.0 |
 | 3 | Debrief: the misalignment decomposition, and a timeline of each decision against when it took effect | 1.1 |
 | 4 | Model tab: stock-and-flow diagram and every equation, tested against the model | 1.2 |
 | 5 | Autopilots (sales-led, operations-led, aligned), more scenarios, a scored challenge | 1.3 |
 | 6 | Role mode: Commercial, Product SC and Network each control only their own levers | 1.4 |
+
+## The cockpit (`index.html`, `app.js`)
+
+- **Briefing:** the three clocks, and a choice of six weathers.
+- **Levers**, grouped by clock speed, each showing what is already in effect:
+  - **Commercial:** price, service promise (with what customers now expect), promotions, launches (with the current
+    range), rationalisation, markets served.
+  - **Product supply chain:** inventory cover, flexible capacity, dual sourcing, each with its configuration in
+    effect.
+  - **Network:** capacity and what is being built per region, one-off orders and closures, automation targets.
+- **Instruments:**
+  - seven gauges: profit per quarter, cash, reliability, demand, capability, trust, suppliers. Each has a status shown
+    with an icon and a word, not only colour;
+  - three fit bars: the commercial promise kept, product supply chain fit, network fit;
+  - advisories in plain words, raised when a condition starts and again when it ends;
+  - a radar of decisions still in flight;
+  - the regions this quarter;
+  - six charts over the full 20 years with hover read-outs: money, reliability and fit, the inertial organisation,
+    the promise ratchet, demand and capacity, product range.
+- **Flying:** advance a quarter, a year, or to the end. Undo replays the flight without its last quarter (the model
+  is deterministic). The flight autosaves in the browser and can be resumed; Save file and Load file move flights as
+  JSON.
+- **Landing:** a comparison with holding the starting course in the same weather.
+- **About:** `about.html`, with the author.
+
+Browser checks (26) cover the briefing, flying, the levers, one-off orders, undo and replay, autosave and resume,
+flight files (including refusing a bad one), landing, phone width, and the About page.
 
 ## The model (`src/model.js`)
 

@@ -346,7 +346,7 @@
         perceivedF: perc.F / Math.max(1e-9, demandW.F), perceivedI: perc.I / Math.max(1e-9, demandW.I),
         fitProduct: fitP / Math.max(1e-9, fitPw), fitNetwork: fitN / Math.max(1e-9, fitNw), fitCommercial: fitC, imports: imp, expediting: o.money.expediting,
         capex: o.capex || 0, lost: o.demand - o.served_total, complexity: o.complexity, book: REG.reduce(function (a, r) { return a + st.book[r]; }, 0) });
-      row.detail = { D: clone(o.D), K: clone(st.K), util: clone(o.util), SQ: clone(o.SQ), share: clone(st.share), money: clone(o.money) };
+      row.detail = { D: clone(o.D), K: clone(st.K), Keff: clone(o.Keff), imports: clone(o.imports), exportsOut: clone(o.exportsOut), util: clone(o.util), SQ: clone(o.SQ), share: clone(st.share), money: clone(o.money) };
       return row;
     }
     var sim = {
