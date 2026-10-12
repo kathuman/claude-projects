@@ -22,7 +22,7 @@
   else root.RealOptions = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var VERSION = "2.2.0";
+  var VERSION = "3.0.0";
 
   // money in $M, demand and capacity in thousand units per year, margins in $M per thousand units (= $/unit / 1000)
   function defaults() {

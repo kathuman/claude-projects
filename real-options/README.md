@@ -1,6 +1,6 @@
 # Real Options for Network Design
 
-**Live: https://kathuman.github.io/claude-projects/real-options/ · version 2.2.0 (roadmap phases 0, 1 and 1b of 5).**
+**Live: https://kathuman.github.io/claude-projects/real-options/ · version 3.0.0 (roadmap phases 0–2 of 5).**
 
 What is the right to decide later worth in a supply network design? The app values five strategies on a binomial
 demand lattice, each with its optimal policy, and reports the value of flexibility against the **best fixed
@@ -23,7 +23,7 @@ sell capacity back in steps.
 | 0 | Defensible numbers: decision window vs asset life, adaptive lattice step, consistent outsourcing and penalties, best fixed baseline, lead times, risk-neutral basis, tests and CI, equations, blueprint theme, About | done, 2.0.0 |
 | 1 | Contract & exit: resale of owned sites (all strategies), leases with break clauses, sell and break thresholds on the decision map | done, 2.1.0 |
 | 1b | Switching: mothballing and reactivation of owned sites, partial contraction of the staged site, idle and restart thresholds (hysteresis) on the decision map | done, 2.2.0 |
-| 2 | Several sites and regions; compound options | |
+| 2 | Network page: two correlated regions, cross-region service, a central hub vs regional hubs, a pilot hub with a cheaper option on the second (compound option), waiting across the network; 2D decision map, correlation sweep | done, 3.0.0 |
 | 3 | Calibration from data: volatility and growth from demand history | |
 | 4 | Decision report and scenario comparison | |
 | 5 | Teaching mode and guided cases | |
@@ -49,7 +49,27 @@ sell capacity back in steps.
   intervals, a fee in years of rent; the leased capacity maximises NPV.
 - `simulate()` replays every optimal policy along seeded paths for the payoff charts.
 
-## The page
+## The network page (`network.html`, `network-app.js`, `src/network.js`)
+
+Two regions on a correlated joint lattice (four branches per quarter; each region's growth is exact and the
+correlation is the one set, or the page says what is used). A hub serves its own region first, its spare capacity
+serves the other region at a transport cost, the 3PL covers the rest up to a limit. A second hub's fixed cost is
+reduced by a learning share once the first exists. Five strategies:
+- **Central hub:** one hub in A, sized to maximise NPV.
+- **Two hubs now:** sizes chosen together.
+- **Commit both:** both hubs at the planned sizes.
+- **Pilot hub:** one hub now (whichever region is worth more), with the option on the other.
+- **Wait & see network:** open either hub, or both, at the best moment.
+
+The page shows:
+- the value of flexibility against the best fixed network, and what the second-hub saving is worth;
+- a 2D decision map for the network in place at a chosen year;
+- the NPV distribution;
+- an NPV-against-correlation sweep (pooling).
+
+`charts.js` and `style.css` are shared by both pages.
+
+## The single-site page
 
 `index.html` + `app.js`:
 - headline value of flexibility and five scorecards;
@@ -61,7 +81,7 @@ sell capacity back in steps.
 
 ## Tests
 
-`node real-options/tests/model.test.js` checks 75 things. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
+`node real-options/tests/model.test.js` checks 75 things, and `node real-options/tests/network.test.js` 29 more. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
 - the lattice: no clamping, exact growth, convergence to Black–Scholes, and a deterministic closed form;
 - the dominance relations between the strategies;
 - how option value responds to volatility, the window, lead times, penalties and escalation;
@@ -71,4 +91,12 @@ sell capacity back in steps.
   to mothball rises with volatility; idling always triggers below restarting (hysteresis); and with free switching the
   site is worth the expected best of running and idling at every step (closed form);
 - that the simulated policies reproduce the lattice values;
-- convergence as the step shrinks.
+- convergence as the step shrinks;
+- the network:
+  - the joint lattice (exact growth per region, the correlation, valid branches);
+  - fixed designs valued two ways;
+  - an exact reduction to the single-site engine when region B is empty;
+  - separability without cross-region service;
+  - dominance;
+  - learning, pooling (a central hub is worth less as correlation rises), the window and volatility;
+  - a Monte Carlo replay of every policy.
