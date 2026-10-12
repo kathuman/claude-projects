@@ -1,6 +1,6 @@
 # Real Options for Network Design
 
-**Live: https://kathuman.github.io/claude-projects/real-options/ · version 2.1.0 (roadmap phases 0 and 1 of 5).**
+**Live: https://kathuman.github.io/claude-projects/real-options/ · version 2.2.0 (roadmap phases 0, 1 and 1b of 5).**
 
 What is the right to decide later worth in a supply network design? The app values five strategies on a binomial
 demand lattice, each with its optimal policy, and reports the value of flexibility against the **best fixed
@@ -12,8 +12,9 @@ design**, not against a straw man:
 - **Stage & expand:** build an initial stage now and add steps where they pay, one project at a time.
 - **Lease & break:** rent capacity instead of building, with break clauses to hand it back at set dates for a fee.
 
-Every owned site can also be sold at any time for a resale value that declines to zero over its life, so the
-baseline is not penalised for lacking an exit.
+Every owned site can also be sold at any time for a resale value that declines to zero over its life, or mothballed
+and restarted at a one-off cost each way, so the baseline is not penalised for lacking an exit. The staged site can
+sell capacity back in steps.
 
 ## Roadmap
 
@@ -21,7 +22,7 @@ baseline is not penalised for lacking an exit.
 |---|---|---|
 | 0 | Defensible numbers: decision window vs asset life, adaptive lattice step, consistent outsourcing and penalties, best fixed baseline, lead times, risk-neutral basis, tests and CI, equations, blueprint theme, About | done, 2.0.0 |
 | 1 | Contract & exit: resale of owned sites (all strategies), leases with break clauses, sell and break thresholds on the decision map | done, 2.1.0 |
-| 1b | Switching: mothballing and reactivation, partial contraction | later |
+| 1b | Switching: mothballing and reactivation of owned sites, partial contraction of the staged site, idle and restart thresholds (hysteresis) on the decision map | done, 2.2.0 |
 | 2 | Several sites and regions; compound options | |
 | 3 | Calibration from data: volatility and growth from demand history | |
 | 4 | Decision report and scenario comparison | |
@@ -40,6 +41,10 @@ baseline is not penalised for lacking an exit.
 - No terminal perpetuity: the asset life is explicit, and decisions are allowed only inside the decision window.
 - Bases: expected cash flows at a WACC, or risk-neutral (drift `g − λσ`, discounted at `r_f`).
 - Resale: `salvF·(F + v·K)·(1 − t/N)`; selling is irreversible and the 3PL takes over. Staging can sell at any stage.
+- Mothballing: an idle site sends demand to the 3PL and keeps `mothF` of its holding cost; switching costs open a
+  hysteresis band. Continuation values are compared first, so there is no switch-and-back within a step. A site that
+  resells well is usually better sold than idled.
+- Contraction: the staged site may move down levels, receiving the resale value of the capacity sold.
 - Lease: rent on top of operating cost, fit-out cost and time, break dates at the minimum term and then at fixed
   intervals, a fee in years of rent; the leased capacity maximises NPV.
 - `simulate()` replays every optimal policy along seeded paths for the payoff charts.
@@ -48,19 +53,22 @@ baseline is not penalised for lacking an exit.
 
 `index.html` + `app.js`:
 - headline value of flexibility and five scorecards;
-- a decision map of demand bands with build, expansion, sell and lease-break thresholds;
+- a decision map of demand bands with build, expansion, sell, mothball, restart and lease-break thresholds;
 - payoff by outcome, and the NPV distribution;
 - value against volatility, and a sensitivity tornado (computed in the background);
 - the equations;
-- five presets and scenario links in the address.
+- six presets and scenario links in the address.
 
 ## Tests
 
-`node real-options/tests/model.test.js` checks 54 things. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
+`node real-options/tests/model.test.js` checks 75 things. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
 - the lattice: no clamping, exact growth, convergence to Black–Scholes, and a deterministic closed form;
 - the dominance relations between the strategies;
 - how option value responds to volatility, the window, lead times, penalties and escalation;
 - resale and break clauses: zero resale reproduces 2.0.0 exactly, neither right ever lowers a value, both are worth
   more the more uncertain demand is, fees and rent move the lease the right way, and a deterministic closed form;
+- switching: with it off the results are exactly 2.1.0's; mothballing and contraction never lower a value; the right
+  to mothball rises with volatility; idling always triggers below restarting (hysteresis); and with free switching the
+  site is worth the expected best of running and idling at every step (closed form);
 - that the simulated policies reproduce the lattice values;
 - convergence as the step shrinks.

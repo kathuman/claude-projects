@@ -69,6 +69,8 @@ table.rox th{font-family:var(--head); letter-spacing:.04em; color:var(--ink-fain
 .ctl .row output{font-family:var(--mono); font-size:12px; color:var(--accent); white-space:nowrap;}
 .ctl input[type=range]{width:100%; accent-color:var(--accent); margin:3px 0 0;}
 .ctl .hint{font-size:11.5px; color:var(--ink-faint); line-height:1.35;}
+.ctl .row.check{justify-content:flex-start; gap:8px;}
+.ctl .row.check input{accent-color:var(--accent); width:16px; height:16px; margin:0;}
 .seg{display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 8px;}
 .derived{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); line-height:1.6; border-top:1px solid var(--line-soft); padding-top:8px;}
 
@@ -189,7 +191,8 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
         <p class="blurb">The shaded fan is where demand may go (the middle 50% and 90% of outcomes, and the median). The lines
           are the optimal triggers: inside the decision window <b>wait &amp; see</b> builds once demand rises above its
           line and <b>stage &amp; expand</b> adds its first step above its own; at any time the <b>best fixed</b> design is
-          sold if demand falls below the dashed line, and at each break date the <b>lease</b> is handed back below its dot.</p>
+          sold if demand falls below the dashed line (or, if it cannot be resold, mothballed below the dotted line and
+          restarted above the thin one), and at each break date the <b>lease</b> is handed back below its dot.</p>
         <svg class="chart" id="mapChart" viewBox="0 0 720 340" role="img" aria-label="Demand fan and decision triggers over time"></svg>
         <div class="legend" id="mapLegend"></div>
         <p class="caption" id="mapCaption"></p>
@@ -223,7 +226,7 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
         <div class="panel">
           <h2 class="sec">What moves the value of flexibility</h2>
           <p class="blurb">Each bar moves one assumption down and up and shows the effect on the value of flexibility (best flexible minus best fixed). Pin down the long bars first.</p>
-          <svg class="chart" id="torChart" viewBox="0 0 360 340" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
+          <svg class="chart" id="torChart" viewBox="0 0 360 360" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
           <div class="legend" id="torLegend"></div>
         </div>
       </div>
@@ -231,7 +234,7 @@ details.tv summary{cursor:pointer; font-size:12.5px; color:var(--ink-faint); mar
       <div class="panel" id="model">
         <h2 class="sec">The model</h2>
         <p class="blurb">One facility, one product, money in $M. Every number on this page comes from these equations, which
-          run in <code>src/model.js</code>; the same file is checked by 54 automated tests, including a lattice-against-Black–Scholes
+          run in <code>src/model.js</code>; the same file is checked by 75 automated tests, including a lattice-against-Black–Scholes
           convergence test and a Monte Carlo replay of every optimal policy.</p>
         <div class="eqs">
           <div class="eq"><h4>Demand lattice</h4>
@@ -274,6 +277,15 @@ R_K(t,i) = max(hold, resale(K,t) + R_0(t,i))</div>
             <p>Any owned site can be sold at any time, irreversibly; demand is then served through the 3PL (R<sub>0</sub>).
               The resale value declines to zero at the end of the asset life. Staging can sell too, at whatever stage it has reached.
               This applies to the best fixed design as well, so the baseline is not penalised.</p></div>
+          <div class="eq"><h4>Mothballing and contraction</h4>
+            <div class="f">idle CF = CF(D, 0) − mothF·opcost·K
+A = max(hold_A, hold_B − c_moth, sell)
+B = max(hold_B, hold_A − c_restart, sell)
+contract k → k′:  V(k′) + salvF·v·(K_k − K_k′)·(1 − t/N)</div>
+            <p>An idle site sends demand to the 3PL and keeps part of its holding cost; switching each way has a one-off
+              cost, which opens a band between the demand at which it is idled and the demand at which it is restarted.
+              Comparing continuation values means no switch-and-back within a step. A site that resells well is usually
+              better sold than idled. The staged site can also sell capacity back in steps.</p></div>
           <div class="eq"><h4>Lease with break clauses</h4>
             <div class="f">CF_lease = CF(D, K) − rent·K
 at a break date b:
@@ -295,7 +307,7 @@ Risk-neutral:  drift g − λ·σ, discount at r_f</div>
           <div class="eq"><h4>Read it as</h4>
             <p>A decision-support model, not a project appraisal. Its value is the direction and rough size of the
               flexibility premium, the triggers, and which assumptions they hinge on. It does not yet model several sites,
-              partial contraction, mothballing or switching between sources, competition, or correlated cost risks.</p></div>
+              switching between sources or regions, competition, or correlated cost risks.</p></div>
         </div>
       </div>
     </main>

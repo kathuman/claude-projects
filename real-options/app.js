@@ -43,7 +43,13 @@
       { id: "leaseLead", label: "Fit-out time", min: 0, max: 2, step: 0.25, def: 0.5, fmt: yrs },
       { id: "minTerm", label: "First break date", min: 1, max: 15, step: 1, def: 5, fmt: function (v) { return "year " + v + " of the lease"; } },
       { id: "breakEvery", label: "Then a break every", min: 0, max: 10, step: 1, def: 5, fmt: function (v) { return v === 0 ? "no further breaks" : yrs(v); } },
-      { id: "breakFee", label: "Break fee", min: 0, max: 3, step: 0.25, def: 1, fmt: function (v) { return v + (v === 1 ? " year" : " years") + " of rent"; } } ] }
+      { id: "breakFee", label: "Break fee", min: 0, max: 3, step: 0.25, def: 1, fmt: function (v) { return v + (v === 1 ? " year" : " years") + " of rent"; } } ] },
+    { name: "Switching", items: [
+      { id: "moth", label: "Owned sites can be mothballed", check: true, def: 1, hint: "Idle the site and send demand to the 3PL, then restart it if demand returns." },
+      { id: "mothF", needs: "moth", label: "Holding cost while idle", min: 0, max: 80, step: 5, def: 20, scale: 0.01, fmt: function (v) { return v + "% of active"; } },
+      { id: "mothFix", needs: "moth", label: "Cost to mothball", min: 0, max: 5, step: 0.25, def: 0.5, fmt: function (v) { return "$" + v + "M"; } },
+      { id: "reactFix", needs: "moth", label: "Cost to restart", min: 0, max: 5, step: 0.25, def: 1, fmt: function (v) { return "$" + v + "M"; } },
+      { id: "contract", label: "Staged site can sell capacity back in steps", check: true, def: 1, hint: "Proceeds: the resale value of the capacity sold, without the site's fixed share." } ] }
   ];
   function pct(v) { return v + "%"; }
   function pctS(v) { return (v > 0 ? "+" : "") + v + "%/yr"; }
@@ -57,7 +63,8 @@
     "High-growth, uncertain": { sigma: 35, g: 9, smallF: 90, bigF: 260, stepF: 30, penalty: 12 },
     "Volatile & flat": { sigma: 45, g: 0, premium: 20, penalty: 12 },
     "Structural decline": { sigma: 20, g: -6, smallF: 60, bigF: 110, penalty: 6 },
-    "Capacity-crunch risk": { sigma: 30, g: 6, penalty: 26, margin: 28, premium: 30, smallF: 75 }
+    "Capacity-crunch risk": { sigma: 30, g: 6, penalty: 26, margin: 28, premium: 30, smallF: 75 },
+    "Specialised site": { sigma: 35, g: 0, salvF: 0, opcost: 10, mothF: 10 }
   };
   var state = { basis: "wacc" }, preset = null;
   Object.keys(SPECS).forEach(function (k) { state[k] = SPECS[k].def; });
@@ -82,10 +89,11 @@
       var r = el("div", { class: "row" }, w);
       var lab = el("label", { for: "c_" + s.id }, r); lab.textContent = s.label;
       outs[s.id] = el("output", { for: "c_" + s.id }, r);
-      var inp = el("input", { type: "range", id: "c_" + s.id, min: s.min, max: s.max, step: s.step }, w);
+      var inp = s.check ? el("input", { type: "checkbox", id: "c_" + s.id }, r) : el("input", { type: "range", id: "c_" + s.id, min: s.min, max: s.max, step: s.step }, w);
+      if (s.check) { r.classList.add("check"); r.insertBefore(inp, lab); }
       inputs[s.id] = inp;
       if (s.hint) el("div", { class: "hint" }, w).textContent = s.hint;
-      inp.addEventListener("input", function () { state[s.id] = parseFloat(inp.value); preset = null; sync(); update(); });
+      inp.addEventListener(s.check ? "change" : "input", function () { state[s.id] = s.check ? (inp.checked ? 1 : 0) : parseFloat(inp.value); preset = null; sync(); update(); });
     });
   });
   var ph = $("presets");
@@ -103,8 +111,9 @@
   function sync() {
     if (state.window > state.life) state.window = state.life;
     Object.keys(SPECS).forEach(function (k) {
-      var s = SPECS[k]; inputs[k].value = state[k]; outs[k].textContent = s.fmt(state[k]);
-      rows[k].hidden = !!s.only && s.only !== state.basis;
+      var s = SPECS[k];
+      if (s.check) { inputs[k].checked = !!state[k]; outs[k].textContent = ""; } else { inputs[k].value = state[k]; outs[k].textContent = s.fmt(state[k]); }
+      rows[k].hidden = (!!s.only && s.only !== state.basis) || (!!s.needs && !state[s.needs]);
     });
     document.querySelectorAll("[data-basis]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-basis") === state.basis); });
     document.querySelectorAll("[data-preset]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-preset") === preset); });
@@ -129,7 +138,7 @@
   function readHash() {
     location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
       var a = kv.split("="), k = a[0], v = decodeURIComponent(a[1] || "");
-      if (SPECS[k] && isFinite(parseFloat(v))) state[k] = Math.min(SPECS[k].max, Math.max(SPECS[k].min, parseFloat(v)));
+      if (SPECS[k] && isFinite(parseFloat(v))) state[k] = SPECS[k].check ? (parseFloat(v) ? 1 : 0) : Math.min(SPECS[k].max, Math.max(SPECS[k].min, parseFloat(v)));
       else if (k === "basis" && (v === "rn" || v === "wacc")) state.basis = v;
       else if (k === "preset" && PRESETS[v]) preset = v;
     });
@@ -156,6 +165,7 @@
   function bestFlexOf(s) { return FLEX.reduce(function (a, b) { return s[b].npv > s[a].npv ? b : a; }); }
   function flexOf(s) { return s[bestFlexOf(s)].npv - s.best.npv; }
   function share(k) { return Math.round(100 * sim.filter(function (r) { return r.sold[k] !== null; }).length / sim.length); }
+  function idled(k) { return Math.round(100 * sim.filter(function (r) { return r.mothballs[k] > 0; }).length / sim.length); }
   function mean(a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; }
 
   function headline() {
@@ -169,7 +179,9 @@
       "k). Most studies quote the second number; the first is the honest one.";
     else what.innerHTML = "<b>Flexibility does not pay here.</b> The best fixed design (" + sol.best.K.toFixed(0) + "k units built now) is worth " +
       money(-f) + " more than the best flexible strategy. " + (sol.params.sigma < 0.15 ? "Demand is too predictable for the right to wait to be worth much." : "Waiting, building twice or renting costs more than the uncertainty it resolves.");
-    if (sol.params.salvF > 0) what.innerHTML += " Every owned design here can be sold if demand collapses; that right adds " + money(sol.best.npv - sol.best.noExit) + " to the best fixed design.";
+    var rights = [sol.params.salvF > 0 ? "sold" : null, sol.params.moth ? "mothballed" : null].filter(Boolean);
+    if (rights.length) what.innerHTML += " Every owned design here can be " + rights.join(" or ") + " if demand collapses; " + (rights.length > 1 ? "those rights add " : "that right adds ") + money(sol.best.npv - sol.best.noExit) + " to the best fixed design" +
+      (sol.params.moth ? " (mothballing alone: " + money(sol.best.npv - sol.best.noMoth) + (sol.params.salvF >= 0.15 && sol.best.npv - sol.best.noMoth < 0.05 ? ", because a site that resells is better sold than idled" : "") + ")." : ".");
   }
 
   function scorecards() {
@@ -179,9 +191,10 @@
     var exp = mean(sim.map(function (r) { return r.expansions; })), firsts = sim.filter(function (r) { return r.firstExpansion !== null; }).map(function (r) { return r.firstExpansion; }).sort(function (a, b) { return a - b; });
     var desc = {
       full: "Build the full " + sol.Kbig.toFixed(0) + "k units now; ready in " + yrs(sol.params.buildLead) + ".",
-      best: "Build " + sol.best.K.toFixed(0) + "k units now: the capacity that maximises NPV without designed-in options." + (share("best") ? " Sold on " + share("best") + "% of paths." : ""),
+      best: "Build " + sol.best.K.toFixed(0) + "k units now: the capacity that maximises NPV without designed-in options." + (share("best") ? " Sold on " + share("best") + "% of paths." : "") + (idled("best") ? " Mothballed on " + idled("best") + "%." : ""),
       defer: built.length ? "Builds on " + Math.round(100 * built.length / sim.length) + "% of paths, typically in year " + years[Math.floor(years.length / 2)].toFixed(1) + "." : "Never builds inside the window: the 3PL is better.",
-      stage: "Starts at " + sol.levels[0].toFixed(0) + "k; " + exp.toFixed(1) + " expansions on average" + (firsts.length ? ", the first typically in year " + firsts[Math.floor(firsts.length / 2)].toFixed(1) : "") + ".",
+      stage: "Starts at " + sol.levels[0].toFixed(0) + "k; " + exp.toFixed(1) + " expansions on average" + (firsts.length ? ", the first typically in year " + firsts[Math.floor(firsts.length / 2)].toFixed(1) : "") + "." +
+        (function () { var c = Math.round(100 * sim.filter(function (r) { return r.contractions > 0; }).length / sim.length); return c ? " Sells capacity back on " + c + "% of paths." : ""; })(),
       lease: "Lease " + sol.lease.K.toFixed(0) + "k units; the break clauses are worth " + money(sol.lease.npv - sol.lease.noBreak) + " and are used on " + share("lease") + "% of paths."
     };
     keys.forEach(function (k) {
@@ -235,17 +248,25 @@
     for (var t = 0; t <= L.W && t < L.N; t++) {
       var td = null, ts = null;
       for (var i = 0; i <= t; i++) if (sol.defer.build[t][i]) { td = edge(t, i); break; }
-      if (t >= L.Lb) for (i = 0; i <= t; i++) { var c = sol.stage.pol[t][0][i]; if (c > 0 && c !== 255) { ts = edge(t, i); break; } }
+      if (t >= L.Lb) for (i = 0; i <= t; i++) { var c = sol.stage.pol[t][0][i]; if (c > 0 && c < 254) { ts = edge(t, i); break; } }
       trig.defer.push({ y: t * L.dt, D: td }); trig.stage.push({ y: t * L.dt, D: ts });
     }
     function edge(t, i) { return i === 0 ? M.demand(p, L, t, 0) : Math.min(p.D0 * Math.pow(L.u, 2 * i - t - 1), p.ceiling * p.D0); }
     // selling the best fixed design: below the line (once it is in place); breaking the lease at its break dates
     var sellT = [], breaksT = [];
-    function top(ex, t) { for (var i = t; i >= 0; i--) if (ex[t][i]) return i === t ? M.demand(p, L, t, t) : Math.min(p.D0 * Math.pow(L.u, 2 * i - t + 1), p.ceiling * p.D0); return null; }
-    if (sol.Rbest.ex) for (t = L.Lb; t < L.N; t++) sellT.push({ y: t * L.dt, D: top(sol.Rbest.ex, t) });
-    Object.keys(sol.lease.breaks).forEach(function (tb) { tb = +tb; var D = top(sol.lease.R.ex, tb); breaksT.push({ y: tb * L.dt, D: D }); });
+    function top(ex, t, code) { for (var i = t; i >= 0; i--) if (ex[t][i] === code) return i === t ? M.demand(p, L, t, t) : Math.min(p.D0 * Math.pow(L.u, 2 * i - t + 1), p.ceiling * p.D0); return null; }
+    function bottom(ex, t, code) { for (var i = 0; i <= t; i++) if (ex[t][i] === code) return edge(t, i); return null; }
+    var idleT = [], restartT = [];
+    if (sol.Rbest.ex) for (t = L.Lb; t < L.N; t++) {
+      sellT.push({ y: t * L.dt, D: top(sol.Rbest.ex, t, 1) });
+      idleT.push({ y: t * L.dt, D: top(sol.Rbest.ex, t, 2) });
+      restartT.push({ y: t * L.dt, D: bottom(sol.Rbest.exB, t, 3) });
+    }
+    Object.keys(sol.lease.breaks).forEach(function (tb) { tb = +tb; var D = top(sol.lease.R.ex, tb, 1); breaksT.push({ y: tb * L.dt, D: D }); });
+    // the restart line only matters where the site could be idle: show it where an idle line exists nearby
+    if (!idleT.some(function (q) { return q.D !== null; })) restartT = [];
     var thin = function (a) { return unzip(a, ["D"]).filter(function (q, j) { return j % every === 0 || j === a.length - 1; }); };
-    trig.defer = thin(trig.defer); trig.stage = thin(trig.stage); sellT = thin(sellT);
+    trig.defer = thin(trig.defer); trig.stage = thin(trig.stage); sellT = thin(sellT); idleT = thin(idleT); restartT = thin(restartT);
     var ymax = Math.max(p.ceiling * p.D0 * 1.04, sol.Kbig * 1.1), ymin = 0;
     var x = scale(0, p.life, m.l, W - m.r), y = scale(ymin, ymax, H - m.b, m.t);
     axes(svg, x, y, W, H, m, p.life, ymax, "year", "demand, k units/yr");
@@ -265,10 +286,13 @@
       segments(trig[k]).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL[k], "stroke-width": 2.5, fill: "none", "stroke-linejoin": "round" }); });
     });
     segments(sellT).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL.best, "stroke-width": 2, "stroke-dasharray": "6 4", fill: "none" }); });
+    segments(idleT).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL.best, "stroke-width": 2, "stroke-dasharray": "1.5 3.5", "stroke-linecap": "round", fill: "none" }); });
+    segments(restartT).forEach(function (sg) { path(svg, sg.map(function (q) { return [x(q.y), y(q.D)]; }), { stroke: COL.best, "stroke-width": 1.5, opacity: 0.75, fill: "none" }); });
     breaksT.forEach(function (q) { if (q.D !== null) el("circle", { cx: x(q.y), cy: y(q.D), r: 5, fill: COL.lease, stroke: "var(--panel)", "stroke-width": 2 }, svg, NS); });
     var items = [["band", "rgba(191,228,255,.18)", "middle 50% of demand"], ["band", "rgba(191,228,255,.10)", "middle 90%"], ["line", "var(--ink-dim)", "median"],
       ["line", COL.defer, "wait & see: build above"], ["line", COL.stage, "stage & expand: first step above"]];
     if (sellT.some(function (q) { return q.D !== null; })) items.push(["dash", COL.best, "best fixed: sell below"]);
+    if (idleT.some(function (q) { return q.D !== null; })) items.push(["dot2", COL.best, "best fixed: mothball below"], ["line", COL.best, "best fixed: restart above"]);
     if (breaksT.some(function (q) { return q.D !== null; })) items.push(["dot", COL.lease, "lease: break below, at break dates"]);
     legend($("mapLegend"), items);
     var d0 = trig.defer.find(function (q) { return q.D !== null; }), s0 = trig.stage.find(function (q) { return q.D !== null; });
@@ -282,6 +306,8 @@
       else s += "<br>outside the decision window";
       var sl = sellT.length ? nearest(sellT, yr) : null;
       if (sl && Math.abs(sl.y - yr) < 0.3) s += "<br>best fixed is sold below " + (sl.D !== null ? sl.D.toFixed(0) + "k" : "— (never)");
+      var il = idleT.length ? nearest(idleT, yr) : null, rl = restartT.length ? nearest(restartT, yr) : null;
+      if (il && il.D !== null && Math.abs(il.y - yr) < 0.3) s += "<br>mothballed below " + il.D.toFixed(0) + "k" + (rl && rl.D !== null ? ", restarted above " + rl.D.toFixed(0) + "k" : "");
       return { html: s, x: x(f.y) };
     });
   }
@@ -351,7 +377,8 @@
     ["Cost escalation", "escal", function (v) { return [Math.max(0, v - 0.03), v + 0.03]; }, function (v) { return (v * 100).toFixed(0) + "%"; }],
     ["Resale value", "salvF", function (v) { return [Math.max(0, v - 0.2), v + 0.2]; }, function (v) { return Math.round(v * 100) + "%"; }],
     ["Lease rent", "rent", function (v) { return [v * 0.85, v * 1.15]; }, function (v) { return "$" + (v * 1000).toFixed(2); }],
-    ["Break fee", "breakFee", function (v) { return [Math.max(0, v - 0.75), v + 0.75]; }, function (v) { return v.toFixed(2) + "y"; }]
+    ["Break fee", "breakFee", function (v) { return [Math.max(0, v - 0.75), v + 0.75]; }, function (v) { return v.toFixed(2) + "y"; }],
+    ["Holding cost of capacity", "opcost", function (v) { return [v * 0.7, v * 1.3]; }, function (v) { return "$" + (v * 1000).toFixed(1); }]
   ];
   function background(token) {
     var base = params(), jobs = [], volRes = [], torRes = [];
@@ -396,7 +423,7 @@
     });
   }
   function tornado(res, f0) {
-    var svg = $("torChart"), W = 360, H = 340, m = { l: 128, r: 20, t: 8, b: 30 }; clear(svg);
+    var svg = $("torChart"), W = 360, H = 360, m = { l: 128, r: 20, t: 8, b: 30 }; clear(svg);
     res.sort(function (a, b) { return Math.max(Math.abs(b.dlo), Math.abs(b.dhi)) - Math.max(Math.abs(a.dlo), Math.abs(a.dhi)); });
     var ext = Math.max(0.5, Math.max.apply(null, res.map(function (r) { return Math.max(Math.abs(r.dlo), Math.abs(r.dhi)); }))) * 1.1;
     var x = scale(-ext, ext, m.l, W - m.r), bh = (H - m.t - m.b) / res.length;
@@ -447,8 +474,10 @@
   function legend(host, items) {
     host.innerHTML = "";
     items.forEach(function (it) {
-      var s = el("span", {}, host), i = el("i", { class: it[0] === "line" ? "line" : it[0] === "dash" ? "dash" : "" }, s);
-      if (it[0] === "dash") i.style.borderColor = it[1]; else i.style.background = it[1];
+      var s = el("span", {}, host), i = el("i", { class: it[0] === "line" || it[0] === "dot2" ? "line" : it[0] === "dash" ? "dash" : "" }, s);
+      if (it[0] === "dash") i.style.borderColor = it[1];
+      else if (it[0] === "dot2") i.style.background = "repeating-linear-gradient(90deg, " + it[1] + " 0 2px, transparent 2px 5px)";
+      else i.style.background = it[1];
       if (it[0] === "dot") i.style.borderRadius = "50%";
       s.appendChild(document.createTextNode(it[2]));
     });

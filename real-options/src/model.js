@@ -14,13 +14,15 @@
 //   lease      lease capacity now (no capex, rent instead); break clauses let you hand it back at set dates for a fee
 // Every owned site can also be sold at any time for its resale value, which declines to zero over the asset life
 // (a generic, resellable building has a high resale value; a specialised one a low value). Selling is irreversible:
-// demand is then served through the 3PL.
+// demand is then served through the 3PL. An owned site can also be mothballed (idled at a fraction of its holding
+// cost, demand going to the 3PL) and reactivated later, each switch at a one-off cost; and the staged site can sell
+// capacity back in steps (partial contraction).
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
   else root.RealOptions = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var VERSION = "2.1.0";
+  var VERSION = "2.2.0";
 
   // money in $M, demand and capacity in thousand units per year, margins in $M per thousand units (= $/unit / 1000)
   function defaults() {
@@ -33,7 +35,9 @@
       buildLead: 1.5, expandLead: 1.0,
       salvF: 0.3,                                      // resale value of a new site, as a share of its cost
       rent: 0.0065, leaseLead: 0.5, leaseFit: 0.25,    // rent per unit of capacity per year; fit-out time; fit-out cost (x fixed cost)
-      minTerm: 5, breakEvery: 5, breakFee: 1.0         // first break date, then every breakEvery years; fee in years of rent
+      minTerm: 5, breakEvery: 5, breakFee: 1.0,        // first break date, then every breakEvery years; fee in years of rent
+      moth: 1, mothF: 0.2, mothFix: 0.5, reactFix: 1.0,  // mothballing allowed; holding cost while idle (share); one-off costs $M
+      contract: 1                                      // the staged site may sell capacity back in steps
     };
   }
   function merge(p) { var d = defaults(); Object.keys(p || {}).forEach(function (k) { d[k] = p[k]; }); return d; }
@@ -63,6 +67,10 @@
   function expandCost(p, dK) { return dK <= 0 ? 0 : 0.25 * p.fFix + p.fVar * dK * (1 + p.premium); }
   // what selling a site of capacity K at step t brings: a share of its cost, declining linearly to zero at end of life
   function salvage(p, L, K, t) { return K <= 0 || !(p.salvF > 0) ? 0 : p.salvF * (p.fFix + p.fVar * K) * Math.max(0, 1 - t / L.N); }
+  // selling part of a site (dK of capacity, no share of the fixed cost)
+  function contractProceeds(p, L, dK, t) { return dK <= 0 || !(p.salvF > 0) ? 0 : p.salvF * p.fVar * dK * Math.max(0, 1 - t / L.N); }
+  // cash flow per year of a mothballed site of capacity K: demand goes to the 3PL, a fraction of the holding cost remains
+  function cfIdle(p, D, K) { return cfRate(p, D, 0) - p.mothF * p.opcost * K; }
   // the steps at which a lease that starts at step `start` may be broken
   function breakSteps(p, L, start) {
     var out = {}, first = start + Math.round(p.minTerm / L.dt), every = p.breakEvery > 0 ? Math.max(1, Math.round(p.breakEvery / L.dt)) : Infinity;
@@ -70,19 +78,33 @@
     return out;
   }
 
-  // R[t][i] = value of operating capacity K from step t to the end of life. With R0 given, the site may also be sold
-  // at any step (then R0, the value of serving through the 3PL, takes over); R.ex marks where selling is optimal.
-  function operate(p, L, K, R0) {
-    var R = new Array(L.N + 1), sell = !!R0 && K > 0 && p.salvF > 0; R[L.N] = new Float64Array(L.N + 1);
-    if (sell) { R.ex = new Array(L.N + 1); R.ex[L.N] = new Uint8Array(L.N + 1); }
+  // R[t][i] = value of operating capacity K from step t to the end of life. With R0 given (an owned site) it may also
+  // be sold at any step (then R0, the value of serving through the 3PL, takes over), and mothballed and reactivated.
+  // R is the value while active; R.B while mothballed. Policies: R.ex (active: 1 sell, 2 mothball) and R.exB
+  // (mothballed: 1 sell, 3 reactivate). Comparing continuation values first means no switch-and-back in one step.
+  function operate(p, L, K, R0, noMoth) {
+    var sell = !!R0 && K > 0 && p.salvF > 0, moth = !!R0 && K > 0 && !!p.moth && !noMoth, opt = sell || moth;
+    var R = new Array(L.N + 1), B = new Array(L.N + 1); R[L.N] = new Float64Array(L.N + 1); B[L.N] = R[L.N];
+    if (opt) { R.ex = new Array(L.N + 1); R.exB = new Array(L.N + 1); R.ex[L.N] = new Uint8Array(L.N + 1); R.exB[L.N] = R.ex[L.N]; }
     for (var t = L.N - 1; t >= 0; t--) {
-      var row = new Float64Array(t + 1), nx = R[t + 1], ex = sell ? new Uint8Array(t + 1) : null, sv = sell ? salvage(p, L, K, t) : 0;
+      var row = new Float64Array(t + 1), rowB = moth ? new Float64Array(t + 1) : null, nx = R[t + 1], nb = B[t + 1];
+      var ex = opt ? new Uint8Array(t + 1) : null, exB = opt ? new Uint8Array(t + 1) : null, sv = sell ? salvage(p, L, K, t) : 0;
       for (var i = 0; i <= t; i++) {
-        var hold = cfRate(p, demand(p, L, t, i), K) * L.dt + L.disc * (L.p * nx[i + 1] + (1 - L.p) * nx[i]);
-        if (sell && sv + R0[t][i] > hold) { row[i] = sv + R0[t][i]; ex[i] = 1; } else row[i] = hold;
+        var D = demand(p, L, t, i);
+        var hold = cfRate(p, D, K) * L.dt + L.disc * (L.p * nx[i + 1] + (1 - L.p) * nx[i]), a = hold, c = 0;
+        if (moth) {
+          var idle = cfIdle(p, D, K) * L.dt + L.disc * (L.p * nb[i + 1] + (1 - L.p) * nb[i]), b = idle, cb = 0;
+          if (idle - p.mothFix > a) { a = idle - p.mothFix; c = 2; }
+          if (hold - p.reactFix > b) { b = hold - p.reactFix; cb = 3; }
+          if (sell && sv + R0[t][i] > b) { b = sv + R0[t][i]; cb = 1; }
+          rowB[i] = b; exB[i] = cb;
+        }
+        if (sell && sv + R0[t][i] > a) { a = sv + R0[t][i]; c = 1; }
+        row[i] = a; if (opt) ex[i] = c;
       }
-      R[t] = row; if (sell) R.ex[t] = ex;
+      R[t] = row; B[t] = moth ? rowB : row; if (opt) { R.ex[t] = ex; R.exB[t] = exB; }
     }
+    R.B = B;
     return R;
   }
   // a lease of capacity K: rent on top of operating costs; at break dates it may be handed back for a fee
@@ -125,6 +147,7 @@
     var Rbest = operate(p, L, best.K, R0);
     // the same design with no resale value: what the right to sell is worth to it
     best.noExit = committed(operate(p, L, best.K), R0, 0, 0) - buildCost(p, best.K, 0);
+    best.noMoth = committed(operate(p, L, best.K, R0, true), R0, 0, 0) - buildCost(p, best.K, 0);
     // ---- defer: build the full footprint once, inside the window, arriving after the build lead time
     var Wd = new Array(N + 1), build = new Array(N + 1);
     for (var t = N; t >= 0; t--) {
@@ -140,32 +163,60 @@
     }
     // ---- stage: initial footprint now; then expansions by steps, each arriving after the expansion lead time
     var nL = lv.length, Rk = lv.map(function (k) { return operate(p, L, k); });
-    var V = new Array(N + 1), pol = new Array(N + 1);
+    // V: active at level k; Mb: mothballed at level k. Policy codes, active: a level (expand or contract to it),
+    // 254 mothball, 255 sell everything; mothballed (polM): 0 stay idle, 1 reactivate, 255 sell everything.
+    var V = new Array(N + 1), Mb = new Array(N + 1), pol = new Array(N + 1), polM = new Array(N + 1), mothOn = !!p.moth;
+    var hA = new Float64Array(nL), hB = new Float64Array(nL);
     for (t = N; t >= 0; t--) {
-      V[t] = []; pol[t] = [];
+      V[t] = []; Mb[t] = []; pol[t] = []; polM[t] = [];
       var canAct = t <= W && t + L.Le <= N;
-      for (var k = 0; k < nL; k++) { V[t][k] = new Float64Array(t + 1); pol[t][k] = new Uint8Array(t + 1); }
+      for (var k = 0; k < nL; k++) { V[t][k] = new Float64Array(t + 1); Mb[t][k] = new Float64Array(t + 1); pol[t][k] = new Uint8Array(t + 1); polM[t][k] = new Uint8Array(t + 1); }
       for (i = 0; i <= t; i++) {
         var D = demand(p, L, t, i);
-        // what arrives later, for every target level (independent of the current level). With no lead time the
-        // target's value is this step's own, so levels are filled from the top down.
+        // what arrives later, for every target level (independent of the current level)
         var arrive = null;
         if (canAct && L.Le > 0) { arrive = new Float64Array(nL); for (var a = 0; a < nL; a++) arrive[a] = aheadLevel(V, t, i, L.Le, we, de, a); }
-        for (k = nL - 1; k >= 0; k--) {
-          var hold = t === N ? 0 : cfRate(p, D, lv[k]) * L.dt + L.disc * (L.p * V[t + 1][k][i + 1] + (1 - L.p) * V[t + 1][k][i]);
-          var bestV = hold, bk = k;
-          // selling everything is a choice at every step (policy code 255)
+        for (k = 0; k < nL; k++) {
+          hA[k] = t === N ? 0 : cfRate(p, D, lv[k]) * L.dt + L.disc * (L.p * V[t + 1][k][i + 1] + (1 - L.p) * V[t + 1][k][i]);
+          hB[k] = t === N ? 0 : cfIdle(p, D, lv[k]) * L.dt + L.disc * (L.p * Mb[t + 1][k][i + 1] + (1 - L.p) * Mb[t + 1][k][i]);
+        }
+        // choices that do not refer to this step's own values
+        for (k = 0; k < nL; k++) {
+          var bestV = hA[k], bk = k;
           var sv = salvage(p, L, lv[k], t);
           if (sv > 0 && sv + R0[t][i] > bestV) { bestV = sv + R0[t][i]; bk = 255; }
-          if (canAct) {
+          if (mothOn && t < N && hB[k] - p.mothFix > bestV) { bestV = hB[k] - p.mothFix; bk = 254; }
+          if (canAct && L.Le > 0) {
             var meanwhile = Rk[k][t][i] - ahead(Rk[k], t, i, L.Le, we, de);
             for (var k2 = k + 1; k2 < nL; k2++) {
-              var later = L.Le > 0 ? arrive[k2] : V[t][k2][i];
-              var val = meanwhile + later - expandCost(p, lv[k2] - lv[k]);
+              var val = meanwhile + arrive[k2] - expandCost(p, lv[k2] - lv[k]);
               if (val > bestV) { bestV = val; bk = k2; }
             }
           }
           V[t][k][i] = bestV; pol[t][k][i] = bk;
+        }
+        // moves to another level within this step (contraction; expansion with no lead time). Every round trip
+        // loses money, so repeated relaxation settles in at most nL rounds.
+        var contract = !!p.contract && t < N, instant = canAct && L.Le === 0;
+        for (var round = 0; (contract || instant) && round <= nL; round++) {
+          var changed = false;
+          for (k = 0; k < nL; k++) {
+            for (k2 = 0; k2 < nL; k2++) {
+              if (k2 === k) continue;
+              var cand = k2 < k ? (contract ? V[t][k2][i] + contractProceeds(p, L, lv[k] - lv[k2], t) : -Infinity) : (instant ? V[t][k2][i] - expandCost(p, lv[k2] - lv[k]) : -Infinity);
+              if (cand > V[t][k][i] + 1e-12) { V[t][k][i] = cand; pol[t][k][i] = k2; changed = true; }
+            }
+          }
+          if (!changed) break;
+        }
+        for (k = 0; k < nL; k++) {
+          var mb = hB[k], mk = 0;
+          if (mothOn) {
+            if (V[t][k][i] - p.reactFix > mb && t < N) { mb = V[t][k][i] - p.reactFix; mk = 1; }
+            sv = salvage(p, L, lv[k], t);
+            if (sv > 0 && sv + R0[t][i] > mb) { mb = sv + R0[t][i]; mk = 255; }
+          }
+          Mb[t][k][i] = mb; polM[t][k][i] = mk;
         }
       }
     }
@@ -181,7 +232,7 @@
     return {
       version: VERSION, params: p, lattice: L, levels: lv, Kbig: Kbig,
       full: { npv: full.npv, K: Kbig }, best: best,
-      defer: { npv: Wd[0][0], build: build }, stage: { npv: stageNpv, pol: pol, V: V }, lease: lease,
+      defer: { npv: Wd[0][0], build: build }, stage: { npv: stageNpv, pol: pol, polM: polM, V: V, M: Mb }, lease: lease,
       R0: R0, Rbig: Rbig, Rbest: Rbest, Rk: Rk
     };
   }
@@ -196,33 +247,55 @@
       var i = 0, df = 1, iW = 0, sumD = 0;
       // each strategy's state: capacity in place, and a pending project (target, arrival step)
       var S = {
-        full: { K: 0, pend: sol.Kbig, at: L.Lb, npv: -buildCost(p, sol.Kbig, 0), ex: sol.Rbig.ex, sold: null },
-        best: { K: 0, pend: sol.best.K, at: L.Lb, npv: -buildCost(p, sol.best.K, 0), ex: sol.Rbest.ex, sold: null },
-        defer: { K: 0, pend: null, at: -1, npv: 0, built: false, buildYear: null, ex: sol.Rbig.ex, sold: null },
-        stage: { k: -1, pend: 0, at: L.Lb, npv: -buildCost(p, lv[0], 0), expansions: 0, firstExpansion: null, sold: null },
+        full: { K: 0, pend: sol.Kbig, at: L.Lb, npv: -buildCost(p, sol.Kbig, 0), R: sol.Rbig, sold: null, idle: false, mothballs: 0 },
+        best: { K: 0, pend: sol.best.K, at: L.Lb, npv: -buildCost(p, sol.best.K, 0), R: sol.Rbest, sold: null, idle: false, mothballs: 0 },
+        defer: { K: 0, pend: null, at: -1, npv: 0, built: false, buildYear: null, R: sol.Rbig, sold: null, idle: false, mothballs: 0 },
+        stage: { k: -1, pend: 0, at: L.Lb, npv: -buildCost(p, lv[0], 0), expansions: 0, firstExpansion: null, sold: null, idle: false, mothballs: 0, contractions: 0 },
         lease: { K: 0, pend: sol.lease.K, at: sol.lease.lead, npv: -p.leaseFit * p.fFix, sold: null }
       };
       var events = [];
-      // sell an owned site where its policy says so (only once it is in place and no project is under way)
-      var sell = function (x, t, i, df) { if (x.ex && x.K > 0 && x.pend === null && x.ex[t][i]) { x.npv += df * salvage(p, L, x.K, t); x.K = 0; x.sold = t * L.dt; x.ex = null; } };
+      // an owned site's policy, once it is in place and no project is under way: sell, mothball or reactivate
+      var act = function (x, t, i, df) {
+        if (!x.R.ex || x.K <= 0 || x.pend !== null) return;
+        var c = x.idle ? x.R.exB[t][i] : x.R.ex[t][i];
+        if (c === 1) { x.npv += df * salvage(p, L, x.K, t); x.K = 0; x.sold = t * L.dt; x.idle = false; }
+        else if (c === 2) { x.npv -= df * p.mothFix; x.idle = true; x.mothballs++; }
+        else if (c === 3) { x.npv -= df * p.reactFix; x.idle = false; }
+      };
+      var cash = function (x, D) { return x.idle ? cfIdle(p, D, x.K) : cfRate(p, D, x.K); };
       for (var t = 0; t < N; t++) {
         var D = demand(p, L, t, i);
         if (t === L.W) iW = i;
         sumD += D;
-        ["full", "best"].forEach(function (s) { var x = S[s]; if (x.pend !== null && t >= x.at) { x.K = x.pend; x.pend = null; } sell(x, t, i, df); x.npv += df * cfRate(p, D, x.K) * L.dt; });
+        ["full", "best"].forEach(function (s) { var x = S[s]; if (x.pend !== null && t >= x.at) { x.K = x.pend; x.pend = null; } act(x, t, i, df); x.npv += df * cash(x, D) * L.dt; });
         var f = S.defer;
         if (f.pend !== null && t >= f.at) { f.K = f.pend; f.pend = null; }
         if (!f.built && sol.defer.build[t][i]) { f.built = true; f.pend = sol.Kbig; f.at = t + L.Lb; f.npv -= df * buildCost(p, sol.Kbig, t * L.dt); f.buildYear = t * L.dt; events.push(["defer", t, i]); }
-        sell(f, t, i, df);
-        f.npv += df * cfRate(p, D, f.K) * L.dt;
+        act(f, t, i, df);
+        f.npv += df * cash(f, D) * L.dt;
         var g = S.stage;
         if (g.pend !== null && t >= g.at) { g.k = g.pend; g.pend = null; }
         if (g.k >= 0 && g.pend === null) {
-          var k2 = sol.stage.pol[t][g.k][i];
-          if (k2 === 255) { g.npv += df * salvage(p, L, lv[g.k], t); g.k = -2; g.sold = t * L.dt; }
-          else if (k2 > g.k) { g.npv -= df * expandCost(p, lv[k2] - lv[g.k]); g.pend = k2; g.at = t + L.Le; g.expansions++; if (g.firstExpansion === null) g.firstExpansion = t * L.dt; events.push(["stage", t, i]); }
+          var go = true;
+          if (g.idle) {
+            var cm = sol.stage.polM[t][g.k][i];
+            if (cm === 255) { g.npv += df * salvage(p, L, lv[g.k], t); g.k = -2; g.sold = t * L.dt; g.idle = false; go = false; }
+            else if (cm === 1) { g.npv -= df * p.reactFix; g.idle = false; }
+            else go = false;
+          }
+          // follow the active policy until it settles (a contraction or an instant expansion can lead to another move)
+          for (var guard = 0; go && guard <= lv.length + 1; guard++) {
+            var k2 = sol.stage.pol[t][g.k][i];
+            if (k2 === g.k) break;
+            if (k2 === 255) { g.npv += df * salvage(p, L, lv[g.k], t); g.k = -2; g.sold = t * L.dt; break; }
+            if (k2 === 254) { g.npv -= df * p.mothFix; g.idle = true; g.mothballs++; break; }
+            if (k2 < g.k) { g.npv += df * contractProceeds(p, L, lv[g.k] - lv[k2], t); g.k = k2; g.contractions++; continue; }
+            g.npv -= df * expandCost(p, lv[k2] - lv[g.k]); g.expansions++; if (g.firstExpansion === null) g.firstExpansion = t * L.dt; events.push(["stage", t, i]);
+            if (L.Le === 0) { g.k = k2; continue; }
+            g.pend = k2; g.at = t + L.Le; break;
+          }
         }
-        g.npv += df * cfRate(p, D, g.k >= 0 ? lv[g.k] : 0) * L.dt;
+        g.npv += df * (g.k >= 0 ? (g.idle ? cfIdle(p, D, lv[g.k]) : cfRate(p, D, lv[g.k])) : cfRate(p, D, 0)) * L.dt;
         var e = S.lease;
         if (e.pend !== null && t >= e.at) { e.K = e.pend; e.pend = null; }
         if (e.K > 0 && sol.lease.breaks[t] && sol.lease.R.ex[t][i]) { e.npv -= df * p.breakFee * p.rent * e.K; e.K = 0; e.sold = t * L.dt; }
@@ -232,7 +305,8 @@
       }
       if (L.W >= N) iW = i;
       out.push({ windowDemand: demand(p, L, L.W, iW), meanDemand: sumD / N, full: S.full.npv, best: S.best.npv, defer: S.defer.npv, stage: S.stage.npv, lease: S.lease.npv, deferYear: S.defer.buildYear,
-        sold: { full: S.full.sold, best: S.best.sold, defer: S.defer.sold, stage: S.stage.sold, lease: S.lease.sold }, expansions: S.stage.expansions, firstExpansion: S.stage.firstExpansion,
+        sold: { full: S.full.sold, best: S.best.sold, defer: S.defer.sold, stage: S.stage.sold, lease: S.lease.sold },
+        mothballs: { full: S.full.mothballs, best: S.best.mothballs, defer: S.defer.mothballs, stage: S.stage.mothballs }, contractions: S.stage.contractions, expansions: S.stage.expansions, firstExpansion: S.stage.firstExpansion,
         endDemand: demand(p, L, N, i), growth: Math.pow(demand(p, L, N, i) / p.D0, 1 / p.life) - 1, events: events });
     }
     return out;
@@ -260,6 +334,6 @@
     return R0[0][0] - ahead(R0, 0, 0, Ll, w, dN) + ahead(RL, 0, 0, Ll, w, dN) - p.leaseFit * p.fFix;
   }
 
-  return { VERSION: VERSION, defaults: defaults, merge: merge, lattice: lattice, fixedNpv: fixedNpv, leaseNpv: leaseNpv, demand: demand, cfRate: cfRate, buildCost: buildCost, expandCost: expandCost, salvage: salvage, breakSteps: breakSteps,
+  return { VERSION: VERSION, defaults: defaults, merge: merge, lattice: lattice, fixedNpv: fixedNpv, leaseNpv: leaseNpv, demand: demand, cfRate: cfRate, buildCost: buildCost, expandCost: expandCost, salvage: salvage, contractProceeds: contractProceeds, cfIdle: cfIdle, breakSteps: breakSteps,
     operate: operate, levelsOf: levelsOf, solve: solve, simulate: simulate, europeanCall: europeanCall };
 });

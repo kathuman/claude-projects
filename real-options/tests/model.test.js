@@ -1,8 +1,8 @@
 // Real Options valuation checks — run with: node real-options/tests/model.test.js
 // The lattice against Black–Scholes and its own growth; a deterministic case against a closed form; the strategies'
 // dominance relations; option value against volatility, the decision window, lead times, penalties and
-// escalation; the right to sell a site and lease break clauses; Monte Carlo along the optimal policies against the
-// lattice values; convergence as the step shrinks.
+// escalation; the right to sell a site and lease break clauses; mothballing and partial contraction; Monte Carlo
+// along the optimal policies against the lattice values; convergence as the step shrinks.
 const M = require("../src/model.js");
 let pass = 0, fail = 0;
 function check(name, cond, detail) { if (cond) pass++; else fail++; if (!cond || process.env.VERBOSE) console.log((cond ? "ok   " : "FAIL ") + name + (detail !== undefined ? "  → " + detail : "")); }
@@ -53,8 +53,8 @@ const base = M.solve({});
 
 // ---- option value against its drivers
 {
-  // with no resale value, so that committing now holds no option of its own
-  const sig = [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6].map((s) => M.solve({ sigma: s, basis: "rn", salvF: 0 }));
+  // with no resale and no switching, so that committing now holds no option of its own
+  const sig = [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6].map((s) => M.solve({ sigma: s, basis: "rn", salvF: 0, moth: 0, contract: 0 }));
   const dv = sig.map((s) => s.defer.npv - s.full.npv), sv = sig.map((s) => s.stage.npv - s.full.npv);
   check("risk-neutral: the value of waiting rises with volatility", dv.every((v, i) => i === 0 || v >= dv[i - 1] - 1e-6), dv.map(f).join(" ≤ "));
   check("risk-neutral: the value of staging rises with volatility", sv.every((v, i) => i === 0 || v >= sv[i - 1] - 1e-6), sv.map(f).join(" ≤ "));
@@ -72,16 +72,16 @@ const base = M.solve({});
 
 // ---- contract & exit: the right to sell a site, and leases with break clauses
 {
-  const z = M.solve({ salvF: 0 });
-  check("with no resale value the valuation is exactly version 2.0.0's", [["full", 19.937568656], ["best", 22.832554721], ["defer", 22.325083326], ["stage", 26.069265776]].every((a) => near(z[a[0]].npv, a[1], 1e-8)));
+  const z = M.solve({ salvF: 0, moth: 0, contract: 0 });
+  check("with no resale value and no switching the valuation is exactly version 2.0.0's", [["full", 19.937568656], ["best", 22.832554721], ["defer", 22.325083326], ["stage", 26.069265776]].every((a) => near(z[a[0]].npv, a[1], 1e-8)));
   for (const o of [{}, { sigma: 0.45, g: 0 }, { sigma: 0.2, g: -0.06 }]) {
-    const a = M.solve(Object.assign({ salvF: 0 }, o)), b = M.solve(Object.assign({ salvF: 0.6 }, o));
+    const a = M.solve(Object.assign({ salvF: 0, moth: 0, contract: 0 }, o)), b = M.solve(Object.assign({ salvF: 0.6, moth: 0, contract: 0 }, o));
     check("the right to sell never lowers any owned strategy's value " + JSON.stringify(o), ["full", "best", "defer", "stage"].every((k) => b[k].npv >= a[k].npv - 1e-9), ["full", "best", "defer", "stage"].map((k) => f(a[k].npv) + "→" + f(b[k].npv)).join(" "));
   }
-  check("a higher resale value is worth more (best fixed design)", [0, 0.2, 0.4, 0.6].map((v) => M.solve({ salvF: v }).best.npv).every((v, i, a) => i === 0 || v >= a[i - 1] - 1e-9));
-  const sellV = [0.1, 0.2, 0.3, 0.45, 0.6].map((sg) => M.fixedNpv({ sigma: sg, basis: "rn", salvF: 0.5 }, 500) - M.fixedNpv({ sigma: sg, basis: "rn", salvF: 0 }, 500));
+  check("a higher resale value is worth more (best fixed design)", [0, 0.2, 0.4, 0.6].map((v) => M.solve({ salvF: v, moth: 0 }).best.npv).every((v, i, a) => i === 0 || v >= a[i - 1] - 1e-9));
+  const sellV = [0.1, 0.2, 0.3, 0.45, 0.6].map((sg) => M.fixedNpv({ sigma: sg, basis: "rn", salvF: 0.5, moth: 0 }, 500) - M.fixedNpv({ sigma: sg, basis: "rn", salvF: 0, moth: 0 }, 500));
   check("risk-neutral: the right to sell a site is worth more the more uncertain demand is", sellV.every((v, i) => i === 0 || v >= sellV[i - 1] - 1e-9), sellV.map(f).join(" ≤ "));
-  check("the stage strategy also uses it: it sells everything somewhere on the lattice when demand collapses", (() => { const s = M.solve({ sigma: 0.45, g: -0.04, salvF: 0.6 }); return s.stage.pol.some((row) => row && row[0] && Array.prototype.some.call(row[0], (c) => c === 255)); })());
+  check("the stage strategy also uses it: it sells everything somewhere on the lattice when demand collapses", (() => { const s = M.solve({ sigma: 0.45, g: -0.04, salvF: 0.6, moth: 0, contract: 0 }); return s.stage.pol.some((row) => row && row[0] && Array.prototype.some.call(row[0], (c) => c === 255)); })());
   // leases
   const L0 = M.solve({});
   check("break clauses never lower a lease's value", L0.lease.npv >= L0.lease.noBreak - 1e-9, f(L0.lease.noBreak) + " → " + f(L0.lease.npv));
@@ -102,10 +102,50 @@ const base = M.solve({});
   check("break dates: the first after the minimum term, then every interval, all within the asset life", (() => { const L = M.lattice(M.merge({})), b = Object.keys(M.breakSteps(M.merge({}), L, 2)).map(Number); return b[0] === 22 && b[1] === 42 && b[2] === 62 && b.every((t) => t < L.N); })());
 }
 
+// ---- switching: mothballing and reactivating an owned site; selling the staged site back in steps
+{
+  const v21 = M.solve({ moth: 0, contract: 0 });
+  check("with switching off the valuation is exactly version 2.1.0's", [["full", 21.543915116], ["best", 23.444825721], ["defer", 22.904579583], ["stage", 26.433358371], ["lease", 23.399606525]].every((a) => near(v21[a[0]].npv, a[1], 1e-8)));
+  // a specialised site (no resale value) with high fixed operating costs: idling is its fallback
+  const HI = { salvF: 0, mothF: 0.1, opcost: 0.01, sigma: 0.4, g: 0 };
+  for (const o of [{}, HI, { sigma: 0.2, g: -0.06, opcost: 0.01 }]) {
+    const a = M.solve(Object.assign({ moth: 0, contract: 0 }, o)), b = M.solve(Object.assign({ moth: 1, contract: 0 }, o)), c = M.solve(Object.assign({ moth: 0, contract: 1 }, o));
+    check("mothballing never lowers an owned strategy's value " + JSON.stringify(o), ["full", "best", "defer", "stage"].every((k) => b[k].npv >= a[k].npv - 1e-9), ["full", "best", "defer", "stage"].map((k) => f(a[k].npv) + "→" + f(b[k].npv)).join(" "));
+    check("partial contraction never lowers the staged value " + JSON.stringify(o), c.stage.npv >= a.stage.npv - 1e-9, f(a.stage.npv) + "→" + f(c.stage.npv));
+  }
+  const hi = M.solve(Object.assign({ contract: 1 }, HI));
+  check("with high fixed operating costs, mothballing adds real value to the best fixed design", hi.best.npv - hi.best.noMoth > 0.5, f(hi.best.npv - hi.best.noMoth));
+  check("a site that resells well is sold rather than mothballed: with resale value the right to mothball adds nothing here", (() => { const r = M.solve(Object.assign({}, HI, { salvF: 0.3 })); return r.best.npv - r.best.noMoth < 0.05; })());
+  check("cheaper switching and a lower idle holding cost are worth more", M.fixedNpv(Object.assign({}, HI, { mothFix: 0.2, reactFix: 0.2 }), 500) > M.fixedNpv(HI, 500) && M.fixedNpv(Object.assign({}, HI, { mothF: 0.02 }), 500) > M.fixedNpv(HI, 500));
+  const mv = [0.1, 0.2, 0.3, 0.45, 0.6].map((sg) => { const o = Object.assign({}, HI, { sigma: sg, basis: "rn", salvF: 0 }); return M.fixedNpv(o, 500) - M.fixedNpv(Object.assign({ moth: 0 }, o), 500); });
+  check("risk-neutral: the right to mothball is worth more the more uncertain demand is", mv.every((v, i) => i === 0 || v >= mv[i - 1] - 1e-9), mv.map(f).join(" ≤ "));
+  // hysteresis: the site is idled at lower demand than it is restarted at (switching costs open a band)
+  const R = hi.Rbest, Lh = hi.lattice; let band = 0, crossed = 0;
+  for (let t = Lh.Lb; t < Lh.N; t++) {
+    let idleTop = -1, restartBottom = Infinity;
+    for (let i = 0; i <= t; i++) { if (R.ex[t][i] === 2) idleTop = Math.max(idleTop, i); if (R.exB[t][i] === 3) restartBottom = Math.min(restartBottom, i); }
+    if (idleTop >= 0 && restartBottom < Infinity) { band++; if (!(idleTop < restartBottom)) crossed++; }
+  }
+  check("hysteresis: at every step the mothball trigger lies below the reactivation trigger", band > 10 && crossed === 0, band + " steps with both triggers");
+  // closed form: with free switching and no resale, a site is worth the expected best of running and idling, step by step
+  const pz = M.merge(Object.assign({}, HI, { salvF: 0, mothFix: 0, reactFix: 0 })), Lz = M.lattice(pz), K = 500;
+  let pm = [1], pv = -M.buildCost(pz, K, 0);
+  for (let t = 0; t < Lz.N; t++) {
+    let e = 0;
+    for (let i = 0; i <= t; i++) { const D = M.demand(pz, Lz, t, i); e += pm[i] * (t < Lz.Lb ? M.cfRate(pz, D, 0) : Math.max(M.cfRate(pz, D, K), M.cfIdle(pz, D, K))); }
+    pv += Math.pow(Lz.disc, t) * e * Lz.dt;
+    const nx = new Array(t + 2).fill(0); for (let i = 0; i <= t; i++) { nx[i] += pm[i] * (1 - Lz.p); nx[i + 1] += pm[i] * Lz.p; } pm = nx;
+  }
+  check("free switching: the site is worth the expected best of running and idling at every step (closed form)", near(M.fixedNpv(pz, K), pv, 1e-9), f(M.fixedNpv(pz, K)) + " vs " + f(pv));
+  const cs = M.solve(Object.assign({ contract: 1, moth: 0 }, HI, { g: -0.04 }));
+  check("the staged site sells capacity back in steps somewhere on the lattice when demand falls", cs.stage.pol.some((row) => row && row.some((lvl, k) => k > 0 && Array.prototype.some.call(lvl, (c) => c < k))));
+}
+
 // ---- the policies, simulated, reproduce the lattice values; demand respects the market ceiling
-for (const o of [{}, { sigma: 0.45, g: 0, salvF: 0.6 }]) {
+for (const o of [{}, { sigma: 0.45, g: 0, salvF: 0.6 }, { sigma: 0.4, g: -0.02, opcost: 0.01, salvF: 0, mothF: 0.1 }]) {
   const s = M.solve(o), sim = M.simulate(s, 6000, 3);
   if (o.salvF) check("in a volatile market sites are sold and leases broken on some paths", sim.some((r) => r.sold.best !== null) && sim.some((r) => r.sold.stage !== null) && sim.some((r) => r.sold.lease !== null));
+  if (o.opcost) check("with high fixed operating costs sites are mothballed and the staged site contracts on some paths", sim.some((r) => r.mothballs.best > 0) && sim.some((r) => r.mothballs.stage > 0 || r.contractions > 0) && sim.some((r) => r.contractions > 0));
   ["full", "best", "defer", "stage", "lease"].forEach((k) => {
     const xs = sim.map((r) => r[k]), m = xs.reduce((a, b) => a + b, 0) / xs.length, se = Math.sqrt(xs.reduce((a, b) => a + (b - m) * (b - m), 0) / xs.length / xs.length);
     check("simulated " + k + " policy matches the lattice value within 3 standard errors " + JSON.stringify(o), Math.abs(m - s[k].npv) <= 3 * se + 1e-9, f(m) + " vs " + f(s[k].npv) + " (se " + f(se) + ")");
