@@ -132,7 +132,7 @@ network-stress-test/web/index.html — https://kathuman.github.io/claude-project
 scientific-calculator/index.html   — https://kathuman.github.io/claude-projects/scientific-calculator/
 rubiks-cube/index.html             — https://kathuman.github.io/claude-projects/rubiks-cube/
 supply-chain-viz/index.html        — https://kathuman.github.io/claude-projects/supply-chain-viz/
-real-options/index.html            — https://kathuman.github.io/claude-projects/real-options/
+real-options/                      — https://kathuman.github.io/claude-projects/real-options/
 othello/index.html                 — https://kathuman.github.io/claude-projects/othello/
 go/index.html                      — https://kathuman.github.io/claude-projects/go/
 chess/index.html                   — https://kathuman.github.io/claude-projects/chess/
