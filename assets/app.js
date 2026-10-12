@@ -8,6 +8,8 @@ const SITE_CONFIG = {
 
 const els = {
   grid: document.getElementById("grid"),
+  earlyGrid: document.getElementById("earlyGrid"),
+  earlySection: document.getElementById("earlySection"),
   search: document.getElementById("searchInput"),
   tagFilters: document.getElementById("tagFilters"),
   stats: document.getElementById("stats"),
@@ -77,8 +79,10 @@ fetch("projects.json", { cache: "no-store" })
 function renderStats() {
   const tagCount = new Set(allProjects.flatMap((p) => p.tags || [])).size;
   els.stats.innerHTML = "";
+  const early = allProjects.filter(isEarly).length;
   const items = [
-    { num: allProjects.length, label: "projects" },
+    { num: allProjects.length - early, label: "projects" },
+    { num: early, label: "in early development" },
     { num: tagCount, label: "tags" },
   ];
   for (const item of items) {
@@ -124,14 +128,18 @@ function renderGrid() {
     return matchesTag && matchesQuery;
   });
 
+  // projects still in early development get their own section below the rest
   els.grid.innerHTML = "";
+  els.earlyGrid.innerHTML = "";
   els.empty.hidden = filtered.length !== 0;
-
-  for (const project of filtered) {
-    els.grid.appendChild(buildCard(project));
-  }
+  const early = filtered.filter(isEarly);
+  for (const project of filtered.filter((p) => !isEarly(p))) els.grid.appendChild(buildCard(project));
+  for (const project of early) els.earlyGrid.appendChild(buildCard(project));
+  els.earlySection.hidden = early.length === 0;
   updateMoreButtons();
 }
+
+function isEarly(p) { return p.status === "early"; }
 
 function buildCard(project) {
   const node = els.template.content.cloneNode(true);
@@ -139,6 +147,12 @@ function buildCard(project) {
   node.querySelector(".card-title").textContent = project.title || "Untitled project";
   node.querySelector(".card-date").textContent = formatDate(project.date);
   node.querySelector(".card-desc").textContent = project.description || "";
+  if (isEarly(project)) {
+    const badge = document.createElement("span");
+    badge.className = "badge-early";
+    badge.textContent = "Early development";
+    node.querySelector(".card-top").after(badge);
+  }
 
   const tagsEl = node.querySelector(".card-tags");
   for (const tag of project.tags || []) {
@@ -202,7 +216,7 @@ function buildCard(project) {
 
 // show "More" only where the description is actually cut off (re-checked when the layout changes)
 function updateMoreButtons() {
-  for (const card of els.grid.querySelectorAll(".card")) {
+  for (const card of document.querySelectorAll(".grid .card")) {
     if (card.classList.contains("expanded")) continue;
     const desc = card.querySelector(".card-desc");
     card.querySelector(".card-more").hidden = desc.scrollHeight <= desc.clientHeight + 1;

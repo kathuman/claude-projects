@@ -279,6 +279,12 @@ body {
   color: var(--accent-contrast);
 }
 
+/* Early development: a separate section, and a badge on its cards */
+.early-section { margin-top: 8px; padding-top: 22px; border-top: 1px dashed var(--border); }
+.early-head h2 { margin: 0 0 4px; font-size: 1.35rem; }
+.early-head p { margin: 0 0 18px; color: var(--text-muted); max-width: 70ch; }
+.card .badge-early { align-self: flex-start; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px dashed var(--accent); color: var(--accent); }
+
 /* Grid + cards */
 .grid {
   display: grid;

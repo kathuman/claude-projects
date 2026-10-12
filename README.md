@@ -70,7 +70,9 @@ If you use any of this, [CITATION.cff](CITATION.cff) has the citation.
 
 ## Adding a new project
 
-Open [`projects.json`](projects.json) and add an entry to the array:
+Open [`projects.json`](projects.json) and add an entry to the array. Add `"status": "early"` to list a
+working prototype in the separate **Early development** section (on this site and on the GitHub profile)
+instead of with the finished projects.
 
 ```json
 {
