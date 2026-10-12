@@ -1,0 +1,26 @@
+name: Clockspeed Balancing tests
+
+# The strategy-misalignment model: steady state, exact accounting, the three clock speeds, the promise ratchet, the
+# cost of an unsupported push and the value of pacing, firefighting, complexity, resilience and the scenarios.
+on:
+  push:
+    paths:
+      - 'clockspeed/**'
+      - '.github/workflows/clockspeed-ci.yml'
+  pull_request:
+    paths:
+      - 'clockspeed/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node clockspeed/tests/model.test.js
+      - name: Syntax-check the model
+        run: node --check clockspeed/src/model.js
