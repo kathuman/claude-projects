@@ -28,7 +28,10 @@
   //          glTF 3D model and the FreeCAD command for the current design; import of real movement and
   //          inventory CSVs to derive throughput, peak factor, operating hours, inventory and demand skew
   //   7.0.1  an About page with the author; no "by kathuman" in the header, footer or exported IFC files
-  const APP_VERSION = "7.0.1";
+  //   7.1.0  Spanish (Latin America): every page text, control, parameter, result, warning, trace, chart and panel,
+  //          with a language switch; Spanish column names in imported data
+  const APP_VERSION = "7.1.0";
+  const I18 = window.ROi18n, T = I18.T, ES = I18.lang === "es" && window.WH_ES ? window.WH_ES : null;
 
   const model = new window.WH.ParameterModel();
   const calc = window.WH.calc;
@@ -69,8 +72,17 @@
   // -------------------------------------------------------------------
   model.load("../data/parameters.json", function (err) {
     if (err) {
-      railEl.innerHTML = '<p class="load-error">Could not load parameters.json: ' + err.message + "</p>";
+      railEl.innerHTML = '<p class="load-error">' + T("Could not load parameters.json: {e}", { e: err.message }) + "</p>";
       return;
+    }
+    // in Spanish: the parameters' descriptions and choice labels, and the rack types' names and trucks, from i18n-es.js
+    if (ES) {
+      for (const name in model.schema) {
+        const o = ES.PARAMS[name], def = model.schema[name];
+        if (o && o.description) def.description = o.description;
+        if (def.labels && ES.CHOICES[name]) for (const k in def.labels) if (ES.CHOICES[name][k]) def.labels[k] = ES.CHOICES[name][k];
+      }
+      for (const k in model.rackTypes) { const o = ES.RACK[k]; if (o) { model.rackTypes[k].label = o.label; model.rackTypes[k].truck = o.truck; } }
     }
     buildRail();
     viz = new window.WH.Visualization(stageEl);
@@ -87,7 +99,7 @@
       } catch (e) { console.warn("Ignoring a malformed share link"); }
     }
     viz._onQuality = function (q) {
-      if (q === "low") document.querySelector(".caption").textContent = "Shadows switched off to keep the view smooth on this device · drag to orbit · right-drag to pan · scroll to zoom";
+      if (q === "low") document.querySelector(".caption").textContent = T("Shadows switched off to keep the view smooth on this device · drag to orbit · right-drag to pan · scroll to zoom");
     };
     recompute();
     if (window.WH.initDecisions) window.WH.initDecisions();
@@ -118,7 +130,7 @@
       const section = document.createElement("div");
       section.className = "rail-section";
       const h2 = document.createElement("h2");
-      h2.textContent = cat;
+      h2.textContent = T(cat);
       section.appendChild(h2);
       names.forEach(function (name) {
         section.appendChild(model.schema[name].type === "choice" ? buildChoiceRow(name) : buildSliderRow(name));
@@ -146,6 +158,16 @@
     return def.unit === "$" ? (v >= 1000 ? Math.round(v / 1000) + "k" : String(v)) : String(+x.toFixed(x < 10 ? 2 : 0));
   }
 
+  // a parameter's name on screen; in Spanish the translated name, with the code name (used in every formula) beneath
+  function paramLabel(name) { return ES && ES.PARAMS[name] ? ES.PARAMS[name].label : name.replace(/_/g, " "); }
+  function labelEl(name) {
+    const label = document.createElement("span");
+    label.className = "name";
+    label.textContent = paramLabel(name);
+    if (ES && ES.PARAMS[name]) { const code = document.createElement("code"); code.className = "pname"; code.textContent = name; label.appendChild(code); }
+    return label;
+  }
+  window.WH.paramLabel = paramLabel;
   function buildSliderRow(name) {
     const def = model.schema[name];
     const row = document.createElement("div");
@@ -154,14 +176,12 @@
 
     const head = document.createElement("div");
     head.className = "row-head";
-    const label = document.createElement("span");
-    label.className = "name";
-    label.textContent = name.replace(/_/g, " ");
+    const label = labelEl(name);
     const val = document.createElement("button");
     val.type = "button";
     val.className = "val";
-    val.title = "Click to type a value";
-    val.setAttribute("aria-label", label.textContent + ": click to type a value");
+    val.title = T("Click to type a value");
+    val.setAttribute("aria-label", T("{name}: click to type a value", { name: paramLabel(name) }));
     head.appendChild(label); head.appendChild(val);
     row.appendChild(head);
 
@@ -173,7 +193,7 @@
     input.type = "range";
     input.min = def.minimum; input.max = def.maximum;
     input.step = def.unit === "count" || def.unit === "$" || def.unit === "min" || def.unit === "s" || def.unit === "hr" || def.unit === "mm" ? 1 : (def.maximum - def.minimum > 5 ? 0.1 : 0.01);
-    input.setAttribute("aria-label", label.textContent);
+    input.setAttribute("aria-label", paramLabel(name));
     input.addEventListener("input", function () { model.set(name, parseFloat(input.value)); });
     track.appendChild(lo); track.appendChild(input); track.appendChild(hi);
     row.appendChild(track);
@@ -185,7 +205,7 @@
       box.type = "number"; box.className = "val-edit";
       box.step = "any";
       box.value = +(model.get(name) * u[1]).toFixed(4);
-      box.setAttribute("aria-label", label.textContent + " (" + (u[0] || "") + ")");
+      box.setAttribute("aria-label", paramLabel(name) + " (" + (u[0] || "") + ")");
       head.replaceChild(box, val);
       box.focus(); box.select();
       let done = false;
@@ -217,14 +237,12 @@
     row.title = def.description;
     const head = document.createElement("div");
     head.className = "row-head";
-    const label = document.createElement("span");
-    label.className = "name";
-    label.textContent = name.replace(/_/g, " ");
+    const label = labelEl(name);
     head.appendChild(label);
     row.appendChild(head);
     const sel = document.createElement("select");
     sel.className = "choice";
-    sel.setAttribute("aria-label", label.textContent);
+    sel.setAttribute("aria-label", paramLabel(name));
     def.options.forEach(function (o) {
       const opt = document.createElement("option");
       opt.value = o;
@@ -239,7 +257,7 @@
     function sync() {
       sel.value = model.get(name);
       const rt = name === "rack_type" ? model.rackTypes[model.get(name)] : null;
-      note.textContent = rt ? rt.deep + " deep · " + Math.round(rt.selectivity * 100) + "% selective · " + rt.truck + ", aisle ≥ " + lenText(rt.min_aisle, 1) : "";
+      note.textContent = rt ? T("{d} deep · {s}% selective · {truck}, aisle ≥ {a}", { d: rt.deep, s: Math.round(rt.selectivity * 100), truck: rt.truck, a: lenText(rt.min_aisle, 1) }) : "";
       note.hidden = !rt;
     }
     sync();
@@ -292,20 +310,20 @@
     const range = function (m, f) { return f(S[m].p10) === f(S[m].p90) ? "" : f(S[m].p10) + " – " + f(S[m].p90); };
     const lifts = mc.lifts, hours = p.operating_hours_per_day;
     const rows = [
-      ["Truck wait in the peak hour (min)", isFinite(t.maxWait) ? f1(t.maxWait) : "no limit", f1(S.peakHourWait.mean), range("peakHourWait", f1)],
-      ["Truck wait, whole day (min)", "—", f1(S.meanWait.mean), range("meanWait", f1)],
-      ["Trucks waiting over 30 min", "—", pc(S.shareWaitingOver30.mean), range("shareWaitingOver30", pc)],
-      ["Longest yard queue (trucks)", "—", f1(S.maxYard.mean), range("maxYard", f0)],
-      ["Door utilization, day (in / out)", pc(t.inbound.utilizationPct / 100 / p.peak_hour_factor) + " / " + pc(t.outbound.utilizationPct / 100 / p.peak_hour_factor), pc(S.doorUtilIn.mean) + " / " + pc(S.doorUtilOut.mean), ""],
-      ["Lift-truck utilization (" + lifts + " trucks)", pc(tr.dailyWorkHours / p.truck_efficiency / (lifts * hours)), pc(S.liftUtil.mean), range("liftUtil", pc)],
-      ["Dual-command share", pc(tr.dualShare), pc(S.dualShareAchieved.mean), ""],
-      ["Most pallets waiting in staging", "—", f0(S.maxStaging.mean), range("maxStaging", f0)],
-      ["Tasks left at closing", "—", f0(S.backlogAtClose.mean), range("backlogAtClose", f0)],
-      ["Work finishes after closing (min)", "—", f0(S.overtime.mean), range("overtime", f0)]
+      [T("Truck wait in the peak hour (min)"), isFinite(t.maxWait) ? f1(t.maxWait) : T("no limit"), f1(S.peakHourWait.mean), range("peakHourWait", f1)],
+      [T("Truck wait, whole day (min)"), "—", f1(S.meanWait.mean), range("meanWait", f1)],
+      [T("Trucks waiting over 30 min"), "—", pc(S.shareWaitingOver30.mean), range("shareWaitingOver30", pc)],
+      [T("Longest yard queue (trucks)"), "—", f1(S.maxYard.mean), range("maxYard", f0)],
+      [T("Door utilization, day (in / out)"), pc(t.inbound.utilizationPct / 100 / p.peak_hour_factor) + " / " + pc(t.outbound.utilizationPct / 100 / p.peak_hour_factor), pc(S.doorUtilIn.mean) + " / " + pc(S.doorUtilOut.mean), ""],
+      [T("Lift-truck utilization ({n} trucks)", { n: lifts }), pc(tr.dailyWorkHours / p.truck_efficiency / (lifts * hours)), pc(S.liftUtil.mean), range("liftUtil", pc)],
+      [T("Dual-command share"), pc(tr.dualShare), pc(S.dualShareAchieved.mean), ""],
+      [T("Most pallets waiting in staging"), "—", f0(S.maxStaging.mean), range("maxStaging", f0)],
+      [T("Tasks left at closing"), "—", f0(S.backlogAtClose.mean), range("backlogAtClose", f0)],
+      [T("Work finishes after closing (min)"), "—", f0(S.overtime.mean), range("overtime", f0)]
     ];
-    document.getElementById("sim-table").innerHTML = "<thead><tr><th></th><th>Analytic</th><th>Simulated (mean)</th><th>10–90% of days</th></tr></thead><tbody>" +
+    document.getElementById("sim-table").innerHTML = "<thead><tr><th></th><th>" + T("Analytic") + "</th><th>" + T("Simulated (mean)") + "</th><th>" + T("10–90% of days") + "</th></tr></thead><tbody>" +
       rows.map(function (rw) { return "<tr><th>" + rw[0] + "</th><td>" + rw[1] + "</td><td>" + rw[2] + "</td><td>" + rw[3] + "</td></tr>"; }).join("") + "</tbody>";
-    document.getElementById("sim-meta").textContent = mc.replications + " simulated days · " + Math.round(ms) + " ms";
+    document.getElementById("sim-meta").textContent = T("{n} simulated days · {ms} ms", { n: mc.replications, ms: Math.round(ms) });
     document.getElementById("sim-reps").textContent = mc.replications;
     renderSimChart(mc, p, r);
   }
@@ -320,20 +338,20 @@
     const bw = iw / H, X = function (h) { return pad.l + h * bw; }, Y = function (v) { return pad.t + ih - v / yMax * ih; };
     const Y2 = function (v) { return pad.t + ih - v / y2Max * ih; }, Y3 = function (v) { return pad.t + ih - v * ih; };
     const start = close >= 24 ? 0 : 6;
-    let s = '<svg viewBox="0 0 ' + Wd + " " + Ht + '" width="100%" role="img" aria-label="Average truck arrivals, yard queue and lift-truck use per hour over the simulated days">';
+    let s = '<svg viewBox="0 0 ' + Wd + " " + Ht + '" width="100%" role="img" aria-label="' + T("Average truck arrivals, yard queue and lift-truck use per hour over the simulated days") + '">';
     s += '<rect x="' + X(close) + '" y="' + pad.t + '" width="' + Math.max(0, X(H) - X(close)) + '" height="' + ih + '" fill="rgba(227,73,72,.08)"/>';
-    arr.forEach(function (v, h) { s += '<rect x="' + (X(h) + bw * 0.15) + '" y="' + Y(v) + '" width="' + bw * 0.7 + '" height="' + (pad.t + ih - Y(v)) + '" fill="#3987e5" opacity="0.85"><title>' + v.toFixed(1) + " trucks</title></rect>"; });
+    arr.forEach(function (v, h) { s += '<rect x="' + (X(h) + bw * 0.15) + '" y="' + Y(v) + '" width="' + bw * 0.7 + '" height="' + (pad.t + ih - Y(v)) + '" fill="#3987e5" opacity="0.85"><title>' + T("{v} trucks", { v: v.toFixed(1) }) + "</title></rect>"; });
     const line = function (vals, Yf, color, dash) { return '<polyline fill="none" stroke="' + color + '" stroke-width="2"' + (dash ? ' stroke-dasharray="4,3"' : "") + ' points="' + vals.map(function (v, h) { return (X(h) + bw / 2) + "," + Yf(v); }).join(" ") + '"/>'; };
     s += line(yard, Y2, "#eda100") + line(lifts, Y3, "#7be0c4", true);
     for (let h = 0; h <= H; h += Math.max(1, Math.round(H / 8))) s += '<text x="' + X(h) + '" y="' + (Ht - 8) + '" fill="#6fa8c9" font-size="9" text-anchor="middle">' + String((start + h) % 24).padStart(2, "0") + ":00</text>";
     s += '<text x="' + (pad.l - 4) + '" y="' + (pad.t + 8) + '" fill="#3987e5" font-size="9" text-anchor="end">' + Math.round(yMax) + "</text>";
     s += '<text x="' + (Wd - pad.r + 4) + '" y="' + (pad.t + 8) + '" fill="#eda100" font-size="9">' + y2Max.toFixed(1) + "</text>";
     s += '<line x1="' + pad.l + '" y1="' + (pad.t + ih) + '" x2="' + (Wd - pad.r) + '" y2="' + (pad.t + ih) + '" stroke="#2a5580"/>';
-    if (H > close) s += '<text x="' + (X(close) + 4) + '" y="' + (pad.t + 10) + '" fill="#e34948" font-size="9">after closing</text>';
+    if (H > close) s += '<text x="' + (X(close) + 4) + '" y="' + (pad.t + 10) + '" fill="#e34948" font-size="9">' + T("after closing") + "</text>";
     s += "</svg>";
-    s += '<div class="chart-legend"><span class="legend-item"><span class="swatch" style="background:#3987e5"></span>trucks arriving / h (left axis)</span>' +
-      '<span class="legend-item"><span class="swatch" style="background:#eda100"></span>trucks waiting in the yard (right axis)</span>' +
-      '<span class="legend-item"><span class="swatch" style="background:#7be0c4"></span>lift trucks busy (0–100%)</span></div>';
+    s += '<div class="chart-legend"><span class="legend-item"><span class="swatch" style="background:#3987e5"></span>' + T("trucks arriving / h (left axis)") + "</span>" +
+      '<span class="legend-item"><span class="swatch" style="background:#eda100"></span>' + T("trucks waiting in the yard (right axis)") + "</span>" +
+      '<span class="legend-item"><span class="swatch" style="background:#7be0c4"></span>' + T("lift trucks busy (0–100%)") + "</span></div>";
     el.innerHTML = s;
   }
 
@@ -350,8 +368,8 @@
       clockEl.hidden = !info;
       if (!info) return;
       const start = p.operating_hours_per_day >= 24 ? 0 : 6, mins = Math.floor(info.t / 60) + start * 60;
-      document.getElementById("clock-time").textContent = String(Math.floor(mins / 60) % 24).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0") + (info.t > info.close ? " (after closing)" : "");
-      document.getElementById("clock-info").textContent = info.yard + " truck" + (info.yard === 1 ? "" : "s") + " waiting · " + info.busy + " of " + info.lifts + " lift trucks busy" + (info.done ? " · day complete" : "");
+      document.getElementById("clock-time").textContent = String(Math.floor(mins / 60) % 24).padStart(2, "0") + ":" + String(mins % 60).padStart(2, "0") + (info.t > info.close ? " " + T("(after closing)") : "");
+      document.getElementById("clock-info").textContent = (info.yard === 1 ? T("1 truck waiting") : T("{n} trucks waiting", { n: info.yard })) + " · " + T("{b} of {n} lift trucks busy", { b: info.busy, n: info.lifts }) + (info.done ? " · " + T("day complete") : "");
     };
     viz.playDay(day, p, results, daySpeed);
   });
@@ -383,24 +401,24 @@
     const n = function (v) { return Math.round(v).toLocaleString("en-US"); };
     const t = r.throughput, tr = r.travel;
     kpiEl.innerHTML = "";
-    kpiEl.appendChild(kpiTile("Storage Capacity", n(r.capacity.storageCapacity), "positions · " + n(r.capacity.practicalCapacity) + " usable", null, "capacity"));
-    kpiEl.appendChild(kpiTile("Utilization", pct(r.utilization.utilizationPct),
-      r.utilization.overflowPallets > 0 ? n(r.utilization.overflowPallets) + " pallets over capacity" : "ceiling " + Math.round(r.utilization.ceilingPct) + "% for this rack",
+    kpiEl.appendChild(kpiTile(T("Storage Capacity"), n(r.capacity.storageCapacity), T("positions · {u} usable", { u: n(r.capacity.practicalCapacity) }), null, "capacity"));
+    kpiEl.appendChild(kpiTile(T("Utilization"), pct(r.utilization.utilizationPct),
+      r.utilization.overflowPallets > 0 ? T("{n} pallets over capacity", { n: n(r.utilization.overflowPallets) }) : T("ceiling {c}% for this rack", { c: Math.round(r.utilization.ceilingPct) }),
       r.utilization.status, "utilization"));
-    kpiEl.appendChild(kpiTile("Rack Rows", r.layout.numRackRows, r.layout.baysPerRow + " bays × " + p.levels_per_rack + " levels", null, "rows"));
-    kpiEl.appendChild(kpiTile("Selectivity", Math.round(r.capacity.selectivity * 100) + "%", "pallets reachable directly", r.capacity.selectivity < 0.5 ? "warning" : null, "selectivity"));
-    kpiEl.appendChild(kpiTile("Time per Move", Math.round(tr.perMove) + " s",
-      tr.dualShare > 0 ? "single " + Math.round(tr.cycleTime) + " s · dual " + Math.round(tr.dcCycle / 2) + " s/pallet" : lenText(tr.avgRoundTrip, 0) + " round trip + lift", null, "cycle"));
-    kpiEl.appendChild(kpiTile("Lift Trucks", tr.forkliftsNeeded, "for the peak hour (avg " + tr.trucksAverage.toFixed(1) + ")", null, "trucks"));
-    kpiEl.appendChild(kpiTile("Dock Utilization", pct(t.dockUtilizationPct), "peak hour · in " + pct(t.inbound.utilizationPct) + " / out " + pct(t.outbound.utilizationPct), t.status, "docks"));
+    kpiEl.appendChild(kpiTile(T("Rack Rows"), r.layout.numRackRows, T("{b} bays × {l} levels", { b: r.layout.baysPerRow, l: p.levels_per_rack }), null, "rows"));
+    kpiEl.appendChild(kpiTile(T("Selectivity"), Math.round(r.capacity.selectivity * 100) + "%", T("pallets reachable directly"), r.capacity.selectivity < 0.5 ? "warning" : null, "selectivity"));
+    kpiEl.appendChild(kpiTile(T("Time per Move"), Math.round(tr.perMove) + " s",
+      tr.dualShare > 0 ? T("single {s} s · dual {d} s/pallet", { s: Math.round(tr.cycleTime), d: Math.round(tr.dcCycle / 2) }) : T("{d} round trip + lift", { d: lenText(tr.avgRoundTrip, 0) }), null, "cycle"));
+    kpiEl.appendChild(kpiTile(T("Lift Trucks"), tr.forkliftsNeeded, T("for the peak hour (avg {a})", { a: tr.trucksAverage.toFixed(1) }), null, "trucks"));
+    kpiEl.appendChild(kpiTile(T("Dock Utilization"), pct(t.dockUtilizationPct), T("peak hour · in {i} / out {o}", { i: pct(t.inbound.utilizationPct), o: pct(t.outbound.utilizationPct) }), t.status, "docks"));
     const wait = t.maxWait;
-    kpiEl.appendChild(kpiTile("Truck Wait (Peak)", isFinite(wait) ? (wait < 1 ? "<1" : Math.round(wait)) + " min" : "no limit",
-      (t.inbound.trucksPerDay + t.outbound.trucksPerDay).toFixed(0) + " trucks/day · " + Math.round(Math.max(t.inbound.pWait, t.outbound.pWait) * 100) + "% wait",
+    kpiEl.appendChild(kpiTile(T("Truck Wait (Peak)"), isFinite(wait) ? (wait < 1 ? "<1" : Math.round(wait)) + " min" : T("no limit"),
+      T("{t} trucks/day · {w}% wait", { t: (t.inbound.trucksPerDay + t.outbound.trucksPerDay).toFixed(0), w: Math.round(Math.max(t.inbound.pWait, t.outbound.pWait) * 100) }),
       !isFinite(wait) || wait > 60 ? "critical" : wait > 30 ? "warning" : null, "wait"));
-    kpiEl.appendChild(kpiTile("Capital Cost", "$" + (r.cost.capitalCost / 1e6).toFixed(1) + "M", "build $" + (r.cost.totalCost / 1e6).toFixed(1) + "M + trucks $" + (r.cost.fleetCost / 1e6).toFixed(2) + "M", null, "cost"));
-    kpiEl.appendChild(kpiTile("Annual Cost", "$" + (r.cost.annualTCO / 1e6).toFixed(2) + "M", "total cost of ownership / year", null, "tco"));
-    kpiEl.appendChild(kpiTile("Cost per Move", isFinite(r.cost.costPerMove) ? "$" + r.cost.costPerMove.toFixed(2) : "—", "per pallet in or out", null, "permove"));
-    kpiEl.appendChild(kpiTile("Footprint", areaText(r.cost.footprint), (r.cost.footprint / 10000).toFixed(2) + " hectares", null, "footprint"));
+    kpiEl.appendChild(kpiTile(T("Capital Cost"), "$" + (r.cost.capitalCost / 1e6).toFixed(1) + "M", T("build ${b}M + trucks ${t}M", { b: (r.cost.totalCost / 1e6).toFixed(1), t: (r.cost.fleetCost / 1e6).toFixed(2) }), null, "cost"));
+    kpiEl.appendChild(kpiTile(T("Annual Cost"), "$" + (r.cost.annualTCO / 1e6).toFixed(2) + "M", T("total cost of ownership / year"), null, "tco"));
+    kpiEl.appendChild(kpiTile(T("Cost per Move"), isFinite(r.cost.costPerMove) ? "$" + r.cost.costPerMove.toFixed(2) : "—", T("per pallet in or out"), null, "permove"));
+    kpiEl.appendChild(kpiTile(T("Footprint"), areaText(r.cost.footprint), T("{h} hectares", { h: (r.cost.footprint / 10000).toFixed(2) }), null, "footprint"));
   }
 
   function renderWarnings(warnings) {
@@ -408,7 +426,7 @@
     warningsEl.hidden = false;
     const worst = warnings.some(function (w) { return w.level === "critical"; }) ? "critical" : warnings.some(function (w) { return w.level === "warning"; }) ? "warning" : "info";
     warningsEl.className = "warnings level-" + worst;
-    warningsEl.innerHTML = '<div class="warn-title">' + (worst === "info" ? "ⓘ Design notes" : "⚠ Engineering warnings") + "</div>" +
+    warningsEl.innerHTML = '<div class="warn-title">' + (worst === "info" ? T("ⓘ Design notes") : T("⚠ Engineering warnings")) + "</div>" +
       warnings.map(function (w) { return '<div class="warn-line ' + w.level + '">' + w.text + "</div>"; }).join("");
   }
 
@@ -420,12 +438,12 @@
     const open = {};
     traceEl.querySelectorAll("details[open]").forEach(function (d) { open[d.getAttribute("data-k")] = true; });
     const sections = [
-      ["layout", "Layout (geometry fit)", r.layout.trace],
-      ["capacity", "Storage capacity", r.capacity.trace],
-      ["utilization", "Utilization", r.utilization.trace],
-      ["travel", "Lift-truck cycle and fleet", r.travel.trace],
-      ["throughput", "Docks and trucks", r.throughput.trace],
-      ["cost", "Cost", r.cost.trace]
+      ["layout", T("Layout (geometry fit)"), r.layout.trace],
+      ["capacity", T("Storage capacity"), r.capacity.trace],
+      ["utilization", T("Utilization"), r.utilization.trace],
+      ["travel", T("Lift-truck cycle and fleet"), r.travel.trace],
+      ["throughput", T("Docks and trucks"), r.throughput.trace],
+      ["cost", T("Cost"), r.cost.trace]
     ];
     traceEl.innerHTML = sections.map(function (s) {
       const rows = s[2].map(function (t) {
@@ -442,10 +460,10 @@
   // -------------------------------------------------------------------
   let lastSvg = "";
   function renderBlueprint(r, p) {
-    lastSvg = window.WH.renderBlueprint(p, r, { len: function (m) { return lenText(m, 1); }, area: areaText, title: "WAREHOUSE MODEL — FLOOR PLAN (LIVE)" });
+    lastSvg = window.WH.renderBlueprint(p, r, { len: function (m) { return lenText(m, 1); }, area: areaText, title: T("WAREHOUSE MODEL — FLOOR PLAN (LIVE)") });
     blueprintEl.innerHTML = lastSvg;
     const svg = blueprintEl.querySelector("svg");
-    if (svg) { svg.removeAttribute("width"); svg.removeAttribute("height"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Dimensioned floor plan of the current design: " + r.layout.numRackRows + " rack rows, " + r.capacity.storageCapacity + " positions."); }
+    if (svg) { svg.removeAttribute("width"); svg.removeAttribute("height"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", T("Dimensioned floor plan of the current design: {r} rack rows, {p} positions.", { r: r.layout.numRackRows, p: r.capacity.storageCapacity })); }
   }
   document.getElementById("btn-svg").addEventListener("click", function () {
     const a = document.createElement("a");
@@ -499,56 +517,56 @@
   }
 
   function costBreakdownChart(r) {
-    const wrap = card("Cost Breakdown");
+    const wrap = card(T("Cost Breakdown"));
     const els = stackedBar([
-      { label: "Racking", value: r.cost.rackingCost, color: "#3987e5" },
-      { label: "Building", value: r.cost.buildingCost, color: "#6da7ec" },
-      { label: "Docks", value: r.cost.dockCost, color: "#9ec5f4" }
+      { label: T("Racking"), value: r.cost.rackingCost, color: "#3987e5" },
+      { label: T("Building"), value: r.cost.buildingCost, color: "#6da7ec" },
+      { label: T("Docks"), value: r.cost.dockCost, color: "#9ec5f4" }
     ], r.cost.totalCost, function (v) { return "$" + Math.round(v / 1000).toLocaleString("en-US") + "k"; });
     els.forEach(function (e) { wrap.appendChild(e); });
     return wrap;
   }
 
   function annualCostChart(r) {
-    const c = r.cost, wrap = card("Annual Cost of Ownership ($" + (c.annualTCO / 1e6).toFixed(2) + "M / year)");
+    const c = r.cost, wrap = card(T("Annual Cost of Ownership (${v}M / year)", { v: (c.annualTCO / 1e6).toFixed(2) }));
     const els = stackedBar([
-      { label: "Capital", value: c.annualCapital, color: "#3987e5" },
-      { label: "Drivers", value: c.labour, color: "#6da7ec" },
-      { label: "Truck running", value: c.running, color: "#9ec5f4" }
+      { label: T("Capital"), value: c.annualCapital, color: "#3987e5" },
+      { label: T("Drivers"), value: c.labour, color: "#6da7ec" },
+      { label: T("Truck running"), value: c.running, color: "#9ec5f4" }
     ], c.annualTCO, function (v) { return "$" + Math.round(v / 1000).toLocaleString("en-US") + "k"; });
     els.forEach(function (e) { wrap.appendChild(e); });
     return wrap;
   }
 
   function cycleChart(r) {
-    const tr = r.travel, wrap = card("Where a Lift-Truck Cycle Goes (" + Math.round(tr.cycleTime) + " s)");
+    const tr = r.travel, wrap = card(T("Where a Lift-Truck Cycle Goes ({v} s)", { v: Math.round(tr.cycleTime) }));
     const els = stackedBar([
-      { label: "Driving", value: tr.travelTime, color: "#3987e5" },
-      { label: "Lifting", value: tr.liftTime, color: "#6da7ec" },
-      { label: "Handling", value: tr.cycleTime - tr.travelTime - tr.liftTime, color: "#9ec5f4" }
+      { label: T("Driving"), value: tr.travelTime, color: "#3987e5" },
+      { label: T("Lifting"), value: tr.liftTime, color: "#6da7ec" },
+      { label: T("Handling"), value: tr.cycleTime - tr.travelTime - tr.liftTime, color: "#9ec5f4" }
     ], tr.cycleTime, function (v) { return Math.round(v) + " s"; });
     els.forEach(function (e) { wrap.appendChild(e); });
     return wrap;
   }
 
   function capacityBarChart(r) {
-    const wrap = card("Capacity vs. Inventory");
+    const wrap = card(T("Capacity vs. Inventory"));
     const cap = r.capacity.storageCapacity, prac = r.capacity.practicalCapacity;
     const inv = model.get("current_inventory_pallets");
     const maxVal = Math.max(cap, inv, 1) * 1.08;
     const W = 320, H = 70, barH = 22, gap = 12;
     const svg = svgEl("svg", { width: "100%", height: H, viewBox: "0 0 " + W + " " + H });
     svg.appendChild(svgEl("rect", { x: 0, y: 0, width: (cap / maxVal) * W, height: barH, fill: "#3987e5", rx: 3 }));
-    svg.appendChild(svgEl("text", { x: 4, y: barH / 2 + 4, fill: "#e7edf3", "font-size": 11 })).textContent = "Capacity " + cap.toLocaleString("en-US");
+    svg.appendChild(svgEl("text", { x: 4, y: barH / 2 + 4, fill: "#e7edf3", "font-size": 11 })).textContent = T("Capacity {v}", { v: cap.toLocaleString("en-US") });
     const invColor = r.utilization.status === "critical" ? "#e34948" : r.utilization.status === "warning" ? "#eda100" : "#1baf7a";
     svg.appendChild(svgEl("rect", { x: 0, y: barH + gap, width: (inv / maxVal) * W, height: barH, fill: invColor, rx: 3 }));
-    svg.appendChild(svgEl("text", { x: 4, y: barH + gap + barH / 2 + 4, fill: "#e7edf3", "font-size": 11 })).textContent = "Inventory " + Math.round(inv).toLocaleString("en-US");
+    svg.appendChild(svgEl("text", { x: 4, y: barH + gap + barH / 2 + 4, fill: "#e7edf3", "font-size": 11 })).textContent = T("Inventory {v}", { v: Math.round(inv).toLocaleString("en-US") });
     const px = (prac / maxVal) * W;
     svg.appendChild(svgEl("line", { x1: px, y1: -2, x2: px, y2: H, stroke: "#eda100", "stroke-width": 1.5, "stroke-dasharray": "4,3" }));
     wrap.appendChild(svg);
     const legend = document.createElement("div");
     legend.className = "chart-legend";
-    legend.innerHTML = '<span class="legend-item"><span class="swatch" style="background:#eda100"></span>planning ceiling — ' + prac.toLocaleString("en-US") + " pallets</span>";
+    legend.innerHTML = '<span class="legend-item"><span class="swatch" style="background:#eda100"></span>' + T("planning ceiling — {v} pallets", { v: prac.toLocaleString("en-US") }) + "</span>";
     wrap.appendChild(legend);
     return wrap;
   }
@@ -556,12 +574,14 @@
   // -------------------------------------------------------------------
   // Inspector (click a component in the 3D view)
   // -------------------------------------------------------------------
+  const INSPECT = { "ABC class": T("ABC class"), "beam height": T("beam height"), "putaway cycle": T("putaway cycle"), "retrieval cycle": T("retrieval cycle"), "vs. average": T("vs. average"),
+    "route shown": T("route shown"), "positions here": T("positions here"), "served by": T("served by"), dimensions: T("dimensions"), role: T("role"), "truck turn": T("truck turn") };
   function renderInspector(info) {
-    if (!info) { inspectorEl.innerHTML = '<p class="hint">Click a rack in the 3D view to see that slot\'s route and cycle time, or a dock door to inspect it.</p>'; return; }
+    if (!info) { inspectorEl.innerHTML = '<p class="hint">' + T("Click a rack in the 3D view to see that slot's route and cycle time, or a dock door to inspect it.") + "</p>"; return; }
     let rows = "";
     for (const k in info) {
       if (k === "name" || k === "type") continue;
-      rows += '<div class="insp-row"><span>' + k + "</span><b>" + info[k] + "</b></div>";
+      rows += '<div class="insp-row"><span>' + (INSPECT[k] || k) + "</span><b>" + info[k] + "</b></div>";
     }
     inspectorEl.innerHTML = '<div class="insp-title">' + info.name + '</div><div class="insp-type">' + info.type + "</div>" + rows;
   }
@@ -583,8 +603,8 @@
         viz.setMode("reference");
         viz.loadReferenceModel("models/warehouse_baseline.glb", function (ok) {
           document.getElementById("reference-note").textContent = ok
-            ? "Showing the real FreeCAD export (freecad/warehouse_model.FCStd) at its baseline parameter values. It does not move when you drag a slider — that's the honest limit of a static mesh."
-            : "Could not load the FreeCAD GLB export — run freecad/create_model.py to generate web/models/warehouse_baseline.glb, then reload.";
+            ? T("Showing the real FreeCAD export (freecad/warehouse_model.FCStd) at its baseline parameter values. It does not move when you drag a slider — that's the honest limit of a static mesh.")
+            : T("Could not load the FreeCAD GLB export — run freecad/create_model.py to generate web/models/warehouse_baseline.glb, then reload.");
         });
       } else {
         viz.setMode("live");
@@ -619,12 +639,12 @@
       const g = results.slots.grid;
       document.getElementById("heat-min").textContent = isFinite(g.min) ? Math.round(g.min) + " s" : "—";
       document.getElementById("heat-max").textContent = isFinite(g.max) ? Math.round(g.max) + " s" : "—";
-      legend.querySelector("small").textContent = "average cycle time per position";
+      legend.querySelector("small").textContent = T("average cycle time per position");
     } else if (mode === "class") {
       const sh = results.slots.weights.shares || [0, 0, 0];
       document.getElementById("heat-min").textContent = "";
       document.getElementById("heat-max").textContent = "";
-      legend.querySelector("small").innerHTML = '<span class="cls a"></span>A ' + Math.round(sh[0] * 100) + '% of moves · <span class="cls b"></span>B ' + Math.round(sh[1] * 100) + '% · <span class="cls c"></span>C ' + Math.round(sh[2] * 100) + "% — A = the quickest 20% of positions";
+      legend.querySelector("small").innerHTML = T('<span class="cls a"></span>A {a}% of moves · <span class="cls b"></span>B {b}% · <span class="cls c"></span>C {c}% — A = the quickest 20% of positions', { a: Math.round(sh[0] * 100), b: Math.round(sh[1] * 100), c: Math.round(sh[2] * 100) });
     }
   }
   model.onChange(function () { updateLegend(); });
@@ -637,7 +657,7 @@
   document.getElementById("btn-reset-view").addEventListener("click", function () { if (viz) viz.resetView(); });
 
   const unitsBtn = document.getElementById("btn-units");
-  function showUnits() { unitsBtn.innerHTML = '<span class="long">Units: </span>' + (imperial ? "imperial" : "metric"); unitsBtn.setAttribute("aria-pressed", String(imperial)); }
+  function showUnits() { unitsBtn.innerHTML = '<span class="long">' + T("Units:") + " </span>" + (imperial ? T("imperial") : T("metric")); unitsBtn.setAttribute("aria-pressed", String(imperial)); }
   showUnits();
   unitsBtn.addEventListener("click", function () {
     imperial = !imperial;

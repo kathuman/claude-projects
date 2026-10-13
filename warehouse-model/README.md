@@ -9,6 +9,12 @@ reasoning environment.
 **Live demo:** `https://kathuman.github.io/claude-projects/warehouse-model/web/`
 *(deploys automatically — see [Deployment](#deployment) below)*
 
+**Languages:** English and Latin American Spanish (button in the header, or `?lang=es`; the choice is
+remembered). In Spanish every parameter shows its Spanish name with its code name (`warehouse_length`…)
+beneath, because formulas, experiments, share links and the FreeCAD command use the code names. Data import
+recognises Spanish column names and directions (*artículo, cantidad, fecha, entrada/salida*…). Exported
+IFC/DXF/glTF/JSON/CSV files stay in English, as is usual for CAD/BIM data exchange.
+
 ## Architecture
 
 ```text
@@ -73,6 +79,8 @@ warehouse-model/
 │   ├── dataimport.test.js       CSV parsing, hand-checked derivations, the sample data set
 │   ├── exporters.test.js        IFC/DXF structure; IfcOpenShell + FreeCAD read them back
 │   ├── ifc_check.py, dxf_check.py   the independent checks (run with freecadcmd)
+│   ├── i18n.test.js             every translated string, page text, parameter, choice, rack type
+│   │                             and data-import message has a Spanish version with the same placeholders
 │   ├── parity.test.js           runs create_model.py's layout code and calculations.js on
 │   └── parity_layout.py           the same 400 random designs and requires identical rows
 │
@@ -83,6 +91,7 @@ warehouse-model/
 └── web/
     ├── index.html
     ├── style.css
+    ├── i18n.js, i18n-es.js       language switch and the Spanish dictionary (text, parameters, rack types)
     ├── models/
     │   └── warehouse_baseline.glb   generated output (exported by create_model.py)
     ├── assets/
@@ -340,10 +349,11 @@ node warehouse-model/tests/parity.test.js
   JSON/CSV export, sensitivity (tornado + sweeps) and an optimiser. (Automated alternatives — unit-load
   AS/RS cranes, shuttles, AMR goods-to-person — need their own travel and equipment models, e.g.
   a crane per aisle moving horizontally and vertically at once; they are listed under "Later".)
-- **v7 (current)** — CAD/BIM and data: IFC4, DXF, glTF and FreeCAD-command export, and
+- **v7** — CAD/BIM and data: IFC4, DXF, glTF and FreeCAD-command export, and
   movement/inventory data import. (An in-browser B-rep kernel — OpenCascade.js — was considered
   and left out: it is tens of megabytes of WebAssembly, and the FreeCAD command plus IFC/DXF
   export give CAD users the real model without it.)
+- **v7.1 (current)** — the whole app in Latin American Spanish.
 
 ## Later
 

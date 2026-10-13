@@ -48,7 +48,7 @@
     if (field !== "" || row.length) { row.push(field); if (row.length > 1 || row[0].trim() !== "") rows.push(row); }
     return rows;
   }
-  const norm = function (s) { return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); };
+  const norm = function (s) { return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, ""); };
   function findCol(header, names) {
     const h = header.map(norm);
     for (let k = 0; k < names.length; k++) { const i = h.indexOf(names[k]); if (i >= 0) return i; }
@@ -56,12 +56,12 @@
     return -1;
   }
   const COLS = {
-    sku: ["sku", "item", "itemcode", "itemnumber", "article", "product", "productcode", "material", "partnumber", "part"],
-    qty: ["pallets", "palletqty", "qty", "quantity", "units", "count", "pal"],
-    date: ["datetime", "timestamp", "date", "day", "transactiondate", "shipdate"],
-    time: ["time", "hour", "clock"],
-    dir: ["direction", "inout", "movementtype", "movement", "type", "flow", "transactiontype"],
-    onhand: ["pallets", "palletsonhand", "onhand", "stock", "inventory", "qty", "quantity"]
+    sku: ["sku", "item", "itemcode", "itemnumber", "article", "product", "productcode", "material", "partnumber", "part", "articulo", "producto", "codigo", "referencia"],
+    qty: ["pallets", "palletqty", "qty", "quantity", "units", "count", "pal", "paletas", "palets", "cantidad", "unidades"],
+    date: ["datetime", "timestamp", "date", "day", "transactiondate", "shipdate", "fechahora", "fecha", "dia"],
+    time: ["time", "hour", "clock", "hora"],
+    dir: ["direction", "inout", "movementtype", "movement", "type", "flow", "transactiontype", "sentido", "tipomovimiento", "movimiento", "tipo", "flujo"],
+    onhand: ["pallets", "palletsonhand", "onhand", "stock", "inventory", "qty", "quantity", "paletas", "palets", "existencias", "inventario", "cantidad"]
   };
   // "2026-03-02 14:35", "2026-03-02T14:35:00", "02/03/2026 14:35", "2026-03-02" (+ separate time)
   function parseWhen(dateStr, timeStr) {
@@ -83,6 +83,8 @@
     if (!s) return null;
     if (/^(in|inbound|i|r|rec|receipt|receiving|receive|putaway|gr|goodsreceipt|asn)$/.test(s) || /^in/.test(s) || /receiv|receipt|putaway/.test(s)) return "in";
     if (/^(out|outbound|o|s|ship|shipment|shipping|pick|picking|dispatch|gi|order)$/.test(s) || /^out/.test(s) || /ship|pick|dispatch|order/.test(s)) return "out";
+    if (/^(e|entrada|ingreso|recepcion|recibo|almacenaje)$/.test(s) || /entrada|ingreso|recep/.test(s)) return "in";
+    if (/^(salida|despacho|egreso|expedicion|pedido|preparacion)$/.test(s) || /salida|despach|egreso|expedic|pedido/.test(s)) return "out";
     return null;
   }
   const numOf = function (v) { const x = parseFloat(String(v).replace(/\s/g, "").replace(/,(\d{1,2})$/, ".$1")); return isFinite(x) ? x : NaN; };

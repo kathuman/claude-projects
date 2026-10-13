@@ -146,6 +146,9 @@ input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:va
 .insp-type{font-family:var(--mono); font-size:10.5px; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;}
 .insp-row{display:flex; justify-content:space-between; gap:10px; padding:2px 0; border-bottom:1px dashed var(--line-soft);}
 .insp-row span{color:var(--ink-faint); text-transform:capitalize;}
+:lang(es) .ctrl-row .row-head .name, :lang(es) .insp-row span{text-transform:none;}
+:lang(es) .insp-row span{display:inline-block;}
+:lang(es) .insp-row span::first-letter{text-transform:uppercase;}
 .insp-row b{color:var(--ink); font-weight:500; text-align:right;}
 
 .lower{max-width:1400px; margin:0 auto; padding:26px 22px 0; width:100%;}
@@ -280,7 +283,7 @@ select.choice:focus{outline:none; border-color:var(--accent);}
 
 /* v6: decisions panel */
 .decisions-panel{margin-bottom:20px;}
-.dtabs{display:flex; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:3px;}
+.dtabs{display:flex; gap:4px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:3px; flex-wrap:wrap; max-width:100%;}
 .dtabs button{background:transparent; border:none; border-radius:6px; color:var(--ink-dim); font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.05em; text-transform:uppercase; padding:5px 10px; cursor:pointer;}
 .dtabs button.active{background:var(--accent); color:var(--accent-ink);}
 .dpane[hidden]{display:none;}
@@ -329,3 +332,6 @@ svg.lorenz{max-width:340px; display:block; margin-top:6px;}
 
 .data-grid > *{min-width:0;}
 .imp-table th, .imp-table td{white-space:normal;}
+
+/* Spanish: the parameter's code name (used in every formula) beneath its translated name */
+.ctrl-row .name code.pname{display:block; font-family:var(--mono, "IBM Plex Mono", monospace); font-size:10px; color:var(--ink-faint, #6fa8c9); font-weight:400; text-transform:none; letter-spacing:0; margin-top:1px;}

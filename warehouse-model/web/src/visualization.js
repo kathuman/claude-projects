@@ -19,6 +19,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
+function T(t, v) { const g = typeof self !== "undefined" ? self : globalThis, I = g.ROi18n; return I ? I.T(t, v) : String(t).replace(/\{(\w+)\}/g, function (m, k) { return v && v[k] != null ? v[k] : m; }); }
 
 const COLOR = {
   bg: 0x0a2f52,
@@ -228,14 +229,14 @@ Visualization.prototype.selectSlot = function (rowIndex, point, bay, level) {
 
   const W = res.slots && res.slots.weights, ci = (rowIndex * L.baysPerRow + bay) * L.levelHeights.length + level;
   if (this._onSelect) this._onSelect({
-    type: "Storage slot · " + L.rackType.label,
-    ...(W && W.abc ? { "ABC class": "ABC"[W.cls[ci]] + " (" + Math.round(W.shares[W.cls[ci]] * 100) + "% of moves)" } : {}),
-    name: "Row " + row.index + " · bay " + (bay + 1) + " · level " + (level + 1),
+    type: T("Storage slot · {rack}", { rack: L.rackType.label }),
+    ...(W && W.abc ? { "ABC class": T("{c} ({p}% of moves)", { c: "ABC"[W.cls[ci]], p: Math.round(W.shares[W.cls[ci]] * 100) }) } : {}),
+    name: T("Row {r} · bay {b} · level {l}", { r: row.index, b: bay + 1, l: level + 1 }),
     "beam height": st.z.toFixed(2) + " m",
-    "putaway cycle": Math.round(st.tIn) + " s (in)",
-    "retrieval cycle": Math.round(st.tOut) + " s (out)",
+    "putaway cycle": T("{v} s (in)", { v: Math.round(st.tIn) }),
+    "retrieval cycle": T("{v} s (out)", { v: Math.round(st.tOut) }),
     "vs. average": (st.t >= res.travel.cycleTime ? "+" : "−") + Math.abs(Math.round(st.t - res.travel.cycleTime)) + " s",
-    "route shown": "from/to the nearest doors",
+    "route shown": T("from/to the nearest doors"),
     "positions here": p.positions_per_level_per_bay * L.rackType.deep,
     "served by": L.rackType.truck
   });
@@ -420,7 +421,7 @@ Visualization.prototype._build = function (p, results) {
     for (let i = 0; i < count; i++) {
       const y = centres[i] - p.dock_bay_width / 2;
       const door = box(0.25, p.dock_bay_width - 0.7, 3.0, xWall - 0.125, y + 0.35, 0, std(COLOR.dock, { roughness: 0.5 }));
-      door.userData.info = { type: "Dock door", name: role + " Dock " + (i + 1), dimensions: p.dock_bay_width.toFixed(1) + " m bay", role: role === "Receiving" ? "Inbound" : "Outbound", "truck turn": p.truck_turn_time + " min" };
+      door.userData.info = { type: T("Dock door"), name: role === "Receiving" ? T("Receiving Dock {n}", { n: i + 1 }) : T("Shipping Dock {n}", { n: i + 1 }), dimensions: T("{v} m bay", { v: p.dock_bay_width.toFixed(1) }), role: role === "Receiving" ? T("Inbound") : T("Outbound"), "truck turn": p.truck_turn_time + " min" };
       G.add(door); this.selectable.push(door);
       if (i < busy) {
         const tx = outward < 0 ? xWall - WT - 13.8 : xWall + WT + 0.2;

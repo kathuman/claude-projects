@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About the Warehouse Model</title>
-  <meta name="description" content="The Warehouse Model connects a FreeCAD engineering model, an analytical capacity, travel and cost model, and a live 3D view through one set of parameters. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <title data-i18n="title.about">About the Warehouse Model</title>
+  <meta data-i18n-attr="content=meta.about" name="description" content="The Warehouse Model connects a FreeCAD engineering model, an analytical capacity, travel and cost model, and a live 3D view through one set of parameters. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏭</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,31 +29,33 @@
     .open:hover{filter:brightness(1.08);}
     .cite{font-size:13px !important; color:var(--ink-faint) !important; margin-top:16px !important;}
     @media (max-width:760px){ .cols{grid-template-columns:1fr;} .about h1{font-size:32px;} .about .lede{font-size:16px;} }
-  </style>
+  button.back-link{background:transparent; cursor:pointer; font-family:inherit;}
+</style>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
     <div class="brand">
       <div class="mark">WAREHOUSE<span>MODEL</span></div>
-      <div class="sub"><span class="rest">ABOUT THE APP</span></div>
+      <div data-i18n="a.sub" class="sub"><span class="rest">ABOUT THE APP</span></div>
     </div>
     <div class="header-actions">
-      <a class="back-link" href="index.html">Open the model</a>
-      <a class="back-link" href="../../">← Projects</a>
+      <button class="back-link" type="button" id="langBtn" lang="es">Español</button>
+      <a data-i18n="a.open" class="back-link" href="index.html">Open the model</a>
+      <a data-i18n="nav.projects" class="back-link" href="../../">← Projects</a>
     </div>
   </header>
 
   <main class="about">
-    <div class="eyebrow">About the app</div>
-    <h1>Warehouse Model</h1>
-    <p class="lede">A warehouse you can reason about before you build it. One set of parameters drives a real FreeCAD engineering model, a traceable analytical model and a live 3D view. Change the racking, the docks or the throughput, and the physical, operational and financial consequences update together.</p>
-    <p><a class="open" href="index.html">Open the Warehouse Model →</a></p>
+    <div data-i18n="a.eyebrow" class="eyebrow">About the app</div>
+    <h1 data-i18n="a.h1">Warehouse Model</h1>
+    <p data-i18n="a.lede" class="lede">A warehouse you can reason about before you build it. One set of parameters drives a real FreeCAD engineering model, a traceable analytical model and a live 3D view. Change the racking, the docks or the throughput, and the physical, operational and financial consequences update together.</p>
+    <p data-i18n="a.openbtn"><a class="open" href="index.html">Open the Warehouse Model →</a></p>
 
     <div class="cols">
       <section class="card">
-        <h2>What it does</h2>
-        <ul>
+        <h2 data-i18n="a.what.h">What it does</h2>
+        <ul data-i18n="a.what.list">
           <li><b>Designs the building</b>Racks, aisles, receiving and shipping docks and the building around them, laid out from the parameters and shown in 3D.</li>
           <li><b>Calculates capacity and cost</b>Storage capacity, utilisation, lift-truck travel, dock and truck queues, labour and annual cost of ownership. Every result shows how it was derived.</li>
           <li><b>Simulates a working day</b>Random truck arrivals, yard queues and lift-truck tasks, repeated over 30 days to show the range around each result.</li>
@@ -63,21 +65,23 @@
       </section>
 
       <section class="card">
-        <h2>How it is built</h2>
-        <p>Every input lives in a single parameter file, read by both the FreeCAD script and the web app, so the CAD model and the calculations cannot drift apart. Automated tests check the calculations, the simulation, the optimiser and the exports, and confirm that the FreeCAD model and the web app lay out the same designs identically. The app runs entirely in your browser.</p>
+        <h2 data-i18n="a.how.h">How it is built</h2>
+        <p data-i18n="a.how.p">Every input lives in a single parameter file, read by both the FreeCAD script and the web app, so the CAD model and the calculations cannot drift apart. Automated tests check the calculations, the simulation, the optimiser and the exports, and confirm that the FreeCAD model and the web app lay out the same designs identically. The app runs entirely in your browser.</p>
 
-        <h2 style="margin-top:22px;">Author</h2>
-        <p>The Warehouse Model was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics, simulation and network optimisation for supply chains and operations. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
-        <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a> · <a href="https://kathuman.github.io/estay-dynamics/contact.html" target="_blank" rel="noopener">Get in touch</a></p>
-        <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Warehouse Model</em> (version <span id="cite-ver">7.0.1</span>) [Software]. https://kathuman.github.io/claude-projects/warehouse-model/web/</p>
+        <h2 data-i18n="a.author.h" style="margin-top:22px;">Author</h2>
+        <p data-i18n="a.author.p">The Warehouse Model was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics, simulation and network optimisation for supply chains and operations. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+        <p data-i18n="a.author.links"><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a> · <a href="https://kathuman.github.io/estay-dynamics/contact.html" target="_blank" rel="noopener">Get in touch</a></p>
+        <p data-i18n="a.cite" class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Warehouse Model</em> (version <span id="cite-ver">7.1.0</span>) [Software]. https://kathuman.github.io/claude-projects/warehouse-model/web/</p>
       </section>
     </div>
   </main>
 
   <footer class="foot">
-    <span class="consult">Warehouse Model v7.0.1 · <a href="index.html">Open the model</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    A parametric warehouse model: real FreeCAD geometry, a traceable analytical model, and a live interactive 3D view sharing one parameter source of truth. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    <span data-i18n="a.foot" class="consult">Warehouse Model v7.1.0 · <a href="index.html">Open the model</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span data-i18n="a.foot.note">A parametric warehouse model: real FreeCAD geometry, a traceable analytical model, and a live interactive 3D view sharing one parameter source of truth. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
   </footer>
 </div>
+<script src="i18n-es.js"></script>
+<script src="i18n.js"></script>
 </body>
 </html>

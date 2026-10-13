@@ -19,6 +19,7 @@
   const INK = "#bfe4ff", INK_DIM = "#6fa8c9", BG = "#0a2f52", BG2 = "#0d3a63";
   const RACK = "#ffb27a", RACK_FILL = "rgba(217,89,38,0.35)", DOCK = "#7be0c4", ZONE = "#eda100", ACCENT = "#7dd3fc";
 
+  function T(t, v) { const g = typeof self !== "undefined" ? self : globalThis, I = g.ROi18n; return I ? I.T(t, v) : String(t).replace(/\{(\w+)\}/g, function (m, k) { return v && v[k] != null ? v[k] : m; }); }
   return function renderBlueprint(p, results, opts) {
     opts = opts || {};
     const len = opts.len || function (m) { return m.toFixed(1) + " m"; };
@@ -65,8 +66,8 @@
       el(`<text x="${cx}" y="${cy}" fill="${ZONE}" font-size="10" text-anchor="middle" transform="rotate(-90 ${cx} ${cy})">${label}</text>`);
     }
     const U = p.flow_layout === "u_flow";
-    zone(WT, p.cross_aisle_width, U ? "RECEIVING + SHIPPING STAGING" : "RECEIVING STAGING");
-    zone(WT + p.warehouse_length - p.cross_aisle_width, p.cross_aisle_width, U ? "CROSS-AISLE" : "SHIPPING STAGING");
+    zone(WT, p.cross_aisle_width, U ? T("RECEIVING + SHIPPING STAGING") : T("RECEIVING STAGING"));
+    zone(WT + p.warehouse_length - p.cross_aisle_width, p.cross_aisle_width, U ? T("CROSS-AISLE") : T("SHIPPING STAGING"));
     for (let k = 0; k + 1 < layout.segments.length; k++) {
       const mx = WT + layout.segments[k].x0 + layout.segmentLength;
       el(`<rect x="${X(mx)}" y="${Y(WT)}" width="${p.mid_cross_aisle_width * PX}" height="${p.warehouse_width * PX}" fill="${DOCK}" fill-opacity="0.06" stroke="${DOCK}" stroke-width="0.6" stroke-dasharray="3,4"/>`);
@@ -90,7 +91,7 @@
     layout.aisles.forEach(function (a) { segs.forEach(function (sg) { el(`<line x1="${X(WT + sg.x0)}" y1="${Y(WT + a.y)}" x2="${X(WT + sg.x0 + sg.length)}" y2="${Y(WT + a.y)}"/>`); }); });
     el(`</g>`);
     if (layout.rows.length) {
-      el(`<text x="${X(WT + p.warehouse_length / 2)}" y="${Y(WT + layout.yOffset - 1.2)}" fill="${INK}" font-size="8" text-anchor="middle">${layout.numRackRows} ROWS &#183; ${layout.baysPerRow} BAYS/ROW${segs.length > 1 ? " IN " + segs.length + " SEGMENTS" : ""} &#183; ${layout.rackType.label.toUpperCase()} &#183; ${capacity.storageCapacity.toLocaleString("en-US")} POSITIONS</text>`);
+      el(`<text x="${X(WT + p.warehouse_length / 2)}" y="${Y(WT + layout.yOffset - 1.2)}" fill="${INK}" font-size="8" text-anchor="middle">${T("{r} ROWS", { r: layout.numRackRows })} &#183; ${T("{b} BAYS/ROW", { b: layout.baysPerRow })}${segs.length > 1 ? " " + T("IN {n} SEGMENTS", { n: segs.length }) : ""} &#183; ${layout.rackType.label.toUpperCase()} &#183; ${T("{p} POSITIONS", { p: capacity.storageCapacity.toLocaleString("en-US") })}</text>`);
     }
 
     // dock doors (west = receiving, east = shipping)
@@ -101,8 +102,8 @@
       el(`<text x="${X(xEdge) + dx}" y="${Y(y0 + p.dock_bay_width * 0.6)}" fill="${color}" font-size="7" text-anchor="${anchor}">${label}</text>`);
     }
     const D = results.doors || { inY: [], outY: [] };
-    doors(0, D.inY, D.inY.length + "\u00d7 RECEIVING", "end", -6, DOCK);
-    doors(D.u ? 0 : buildingW, D.outY, D.outY.length + "\u00d7 SHIPPING", D.u ? "end" : "start", D.u ? -6 : 6, D.u ? RACK : DOCK);
+    doors(0, D.inY, T("{n}× RECEIVING", { n: D.inY.length }), "end", -6, DOCK);
+    doors(D.u ? 0 : buildingW, D.outY, T("{n}× SHIPPING", { n: D.outY.length }), D.u ? "end" : "start", D.u ? -6 : 6, D.u ? RACK : DOCK);
 
     // dimension lines
     function dimH(y, x1, x2, label) {
@@ -115,14 +116,14 @@
       if (right) { el(`<text x="${X(x) + 6}" y="${cy + 3}" fill="${ACCENT}" font-size="9">${label}</text>`); return; }
       el(`<text x="${X(x) - 8}" y="${cy}" fill="${ACCENT}" font-size="9" text-anchor="middle" transform="rotate(-90 ${X(x) - 8} ${cy})">${label}</text>`);
     }
-    dimH(-3.5, WT, WT + p.warehouse_length, len(p.warehouse_length) + " inside (+ 2 × " + (p.wall_thickness).toFixed(0) + " mm wall)");
-    dimV(-4.5, WT, WT + p.warehouse_width, len(p.warehouse_width) + " inside");
+    dimH(-3.5, WT, WT + p.warehouse_length, T("{l} inside (+ 2 × {w} mm wall)", { l: len(p.warehouse_length), w: (p.wall_thickness).toFixed(0) }));
+    dimV(-4.5, WT, WT + p.warehouse_width, T("{l} inside", { l: len(p.warehouse_width) }));
     if (layout.rows.length >= 2 && layout.baysPerRow > 0) {
       // detail dimensions on an aisle in the middle of the block, clear of the row labels
       const a = layout.aisles[Math.floor(layout.aisles.length / 2)];
       const bx = WT + layout.bayX[Math.floor(layout.baysPerRow / 2)];
-      dimH(WT + a.y, bx, bx + p.bay_width, "bay " + len(p.bay_width));
-      dimV(bx + p.bay_width + 2.5, WT + a.y - p.aisle_width / 2, WT + a.y + p.aisle_width / 2, "aisle " + len(p.aisle_width), true);
+      dimH(WT + a.y, bx, bx + p.bay_width, T("bay {l}", { l: len(p.bay_width) }));
+      dimV(bx + p.bay_width + 2.5, WT + a.y - p.aisle_width / 2, WT + a.y + p.aisle_width / 2, T("aisle {l}", { l: len(p.aisle_width) }), true);
     }
 
     // north arrow
@@ -140,13 +141,13 @@
     const tbY = (MARGIN_TOP + buildingH + MARGIN_BOTTOM) * PX;
     el(`<rect x="12" y="${tbY}" width="${W - 24}" height="${TITLE_H * PX - 6}" fill="none" stroke="${INK}" stroke-width="1.5"/>`);
     const ty = tbY + 22;
-    el(`<text x="26" y="${ty}" fill="${INK}" font-size="15" font-weight="700">${opts.title || "WAREHOUSE MODEL — FLOOR PLAN"}</text>`);
-    el(`<text x="26" y="${ty + 18}" fill="${INK_DIM}" font-size="9.5">calculations.js layout &#183; same rows as the 3D view and the FreeCAD model &#183; scale bar above</text>`);
+    el(`<text x="26" y="${ty}" fill="${INK}" font-size="15" font-weight="700">${opts.title || T("WAREHOUSE MODEL — FLOOR PLAN")}</text>`);
+    el(`<text x="26" y="${ty + 18}" fill="${INK_DIM}" font-size="9.5">${T("calculations.js layout &#183; same rows as the 3D view and the FreeCAD model &#183; scale bar above")}</text>`);
     const stats = [
-      ["CAPACITY", capacity.storageCapacity.toLocaleString("en-US") + " pos"],
-      ["RACK ROWS", String(layout.numRackRows)],
-      ["FOOTPRINT", opts.area ? opts.area(results.cost.footprint) : Math.round(results.cost.footprint).toLocaleString("en-US") + " m²"],
-      ["DOCKS", p.num_receiving_docks + " in / " + p.num_shipping_docks + " out"]
+      [T("CAPACITY"), T("{v} pos", { v: capacity.storageCapacity.toLocaleString("en-US") })],
+      [T("RACK ROWS"), String(layout.numRackRows)],
+      [T("FOOTPRINT"), opts.area ? opts.area(results.cost.footprint) : Math.round(results.cost.footprint).toLocaleString("en-US") + " m²"],
+      [T("DOCKS"), T("{i} in / {o} out", { i: p.num_receiving_docks, o: p.num_shipping_docks })]
     ];
     let sx = W - 470;
     stats.forEach(function (st) {

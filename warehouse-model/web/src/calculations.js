@@ -33,6 +33,8 @@
   // Allen–Cunneen correction of the M/M/c queue at the doors.
   const TURN_CS2 = 0.25;
 
+  // text in the page's language (web/i18n.js); English, with {placeholders} filled, when no translation is loaded
+  function T(t, v) { const g = typeof self !== "undefined" ? self : globalThis, I = g.ROi18n; return I ? I.T(t, v) : String(t).replace(/\{(\w+)\}/g, function (m, k) { return v && v[k] != null ? v[k] : m; }); }
   const fmt = function (v, d) { return Number(v).toFixed(d === undefined ? 1 : d); };
   const int = function (v) { return Math.round(v).toLocaleString("en-US"); };
   const mean = function (a) { return a.length ? a.reduce(function (s, v) { return s + v; }, 0) / a.length : 0; };
@@ -93,14 +95,14 @@
     crossAisleX.push(p.warehouse_length - p.cross_aisle_width / 2);
     const baysPerRow = bayX.length;
     const rackRowLength = baysPerRow * p.bay_width;
-    if (baysPerRow < 1) warn(warnings, "critical", "Warehouse is too short for even one rack bay once the cross-aisles are reserved.");
+    if (baysPerRow < 1) warn(warnings, "critical", T("Warehouse is too short for even one rack bay once the cross-aisles are reserved."));
 
     const rowDepth = rt.deep * p.rack_depth;
     const widthPerAisleUnit = 2 * rowDepth + p.aisle_width;
     const numAisleUnits = Math.max(0, Math.floor((p.warehouse_width + p.flue_space) / (widthPerAisleUnit + p.flue_space) + 1e-9));
     const numRackRows = numAisleUnits * 2;
     const rackingWidthUsed = numAisleUnits > 0 ? numAisleUnits * widthPerAisleUnit + (numAisleUnits - 1) * p.flue_space : 0;
-    if (numAisleUnits < 1) warn(warnings, "critical", "Warehouse is too narrow to fit a single pair of rack rows plus an aisle.");
+    if (numAisleUnits < 1) warn(warnings, "critical", T("Warehouse is too narrow to fit a single pair of rack rows plus an aisle."));
 
     // Row and aisle positions (y measured from the inside face of the south wall)
     const yOffset = (p.warehouse_width - rackingWidthUsed) / 2;
@@ -118,34 +120,33 @@
     for (let k = 0; k < p.levels_per_rack; k++) levelHeights.push(k * levelPitch);
     const pitchNeeded = p.load_height + BEAM_ALLOWANCE;
     if (levelPitch + 1e-9 < pitchNeeded) {
-      warn(warnings, "critical", p.levels_per_rack + " levels in a " + fmt(p.rack_height) + " m rack leaves " + fmt(levelPitch, 2) +
-        " m per level — a " + fmt(p.load_height, 2) + " m load plus beam and lift-off gap needs " + fmt(pitchNeeded, 2) + " m.");
+      warn(warnings, "critical", T("{n} levels in a {h} m rack leaves {pitch} m per level — a {load} m load plus beam and lift-off gap needs {need} m.",
+        { n: p.levels_per_rack, h: fmt(p.rack_height), pitch: fmt(levelPitch, 2), load: fmt(p.load_height, 2), need: fmt(pitchNeeded, 2) }));
     }
     const clearanceNeeded = p.rack_height + p.load_height + p.sprinkler_clearance;
     if (clearanceNeeded > p.clear_height + 1e-9) {
-      warn(warnings, "critical", "Top beam (" + fmt(p.rack_height) + " m) + load (" + fmt(p.load_height, 2) + " m) + sprinkler clearance (" +
-        fmt(p.sprinkler_clearance, 2) + " m) = " + fmt(clearanceNeeded, 2) + " m, above the " + fmt(p.clear_height) + " m clear height.");
+      warn(warnings, "critical", T("Top beam ({h} m) + load ({load} m) + sprinkler clearance ({sc} m) = {need} m, above the {clear} m clear height.",
+        { h: fmt(p.rack_height), load: fmt(p.load_height, 2), sc: fmt(p.sprinkler_clearance, 2), need: fmt(clearanceNeeded, 2), clear: fmt(p.clear_height) }));
     }
 
     if (p.aisle_width + 1e-9 < rt.min_aisle) {
-      warn(warnings, "critical", "A " + fmt(p.aisle_width, 2) + " m aisle is too narrow for the " + rt.truck + " that serves " +
-        rt.label.toLowerCase() + " racking (needs about " + fmt(rt.min_aisle, 1) + " m).");
+      warn(warnings, "critical", T("A {a} m aisle is too narrow for the {truck} that serves {rack} racking (needs about {min} m).",
+        { a: fmt(p.aisle_width, 2), truck: rt.truck, rack: rt.label.toLowerCase(), min: fmt(rt.min_aisle, 1) }));
     } else if (p.rack_type === "vna" && p.aisle_width > 2.2) {
-      warn(warnings, "info", "VNA turret trucks work in aisles of about " + fmt(rt.min_aisle, 1) + "–1.9 m; at " + fmt(p.aisle_width, 2) +
-        " m the layout gives away most of VNA's space advantage.");
+      warn(warnings, "info", T("VNA turret trucks work in aisles of about {min}–1.9 m; at {a} m the layout gives away most of VNA's space advantage.", { min: fmt(rt.min_aisle, 1), a: fmt(p.aisle_width, 2) }));
     }
     if (mids > 0 && midW + 1e-9 < p.aisle_width) {
-      warn(warnings, "warning", "Mid cross-aisles (" + fmt(midW, 1) + " m) are narrower than the aisles (" + fmt(p.aisle_width, 1) + " m) — trucks need room to turn out of an aisle.");
+      warn(warnings, "warning", T("Mid cross-aisles ({m} m) are narrower than the aisles ({a} m) — trucks need room to turn out of an aisle.", { m: fmt(midW, 1), a: fmt(p.aisle_width, 1) }));
     }
 
     const u = p.flow_layout === "u_flow";
     const receivingWallNeeded = p.num_receiving_docks * p.dock_bay_width;
     const shippingWallNeeded = p.num_shipping_docks * p.dock_bay_width;
     if (u) {
-      if (receivingWallNeeded + shippingWallNeeded > p.warehouse_width) warn(warnings, "critical", "U-flow puts all " + (p.num_receiving_docks + p.num_shipping_docks) + " doors (" + fmt(receivingWallNeeded + shippingWallNeeded) + " m) on the " + fmt(p.warehouse_width) + " m west wall — they don't fit.");
+      if (receivingWallNeeded + shippingWallNeeded > p.warehouse_width) warn(warnings, "critical", T("U-flow puts all {n} doors ({w} m) on the {W} m west wall — they don't fit.", { n: p.num_receiving_docks + p.num_shipping_docks, w: fmt(receivingWallNeeded + shippingWallNeeded), W: fmt(p.warehouse_width) }));
     } else {
-      if (receivingWallNeeded > p.warehouse_width) warn(warnings, "critical", "Receiving docks (" + fmt(receivingWallNeeded) + " m of wall) don't fit along a " + fmt(p.warehouse_width) + " m end wall.");
-      if (shippingWallNeeded > p.warehouse_width) warn(warnings, "critical", "Shipping docks (" + fmt(shippingWallNeeded) + " m of wall) don't fit along a " + fmt(p.warehouse_width) + " m end wall.");
+      if (receivingWallNeeded > p.warehouse_width) warn(warnings, "critical", T("Receiving docks ({w} m of wall) don't fit along a {W} m end wall.", { w: fmt(receivingWallNeeded), W: fmt(p.warehouse_width) }));
+      if (shippingWallNeeded > p.warehouse_width) warn(warnings, "critical", T("Shipping docks ({w} m of wall) don't fit along a {W} m end wall.", { w: fmt(shippingWallNeeded), W: fmt(p.warehouse_width) }));
     }
 
     return {
@@ -155,15 +156,15 @@
       receivingWallNeeded, shippingWallNeeded,
       warnings,
       trace: [
-        { label: "Usable length (racking zone)", expr: "warehouse_length − 2 × cross_aisle_width", value: fmt(usableLength) + " m" },
-        { label: "Segments", expr: "(usable − mid_aisles × mid_width) / (mid_aisles + 1)", value: (mids + 1) + " × " + fmt(segmentLength) + " m" },
-        { label: "Bays per row", expr: "segments × floor(segment / bay_width)", value: (mids + 1) + " × " + baysPerSegment + " = " + baysPerRow },
-        { label: "Row depth", expr: "pallets_deep (" + rt.label + ") × rack_depth", value: rt.deep + " × " + fmt(p.rack_depth, 2) + " = " + fmt(rowDepth, 2) + " m" },
-        { label: "Width per aisle unit", expr: "2 × row_depth + aisle_width", value: fmt(widthPerAisleUnit, 2) + " m" },
-        { label: "Aisle units that fit", expr: "floor((warehouse_width + flue) / (unit + flue))", value: numAisleUnits },
-        { label: "Rack rows", expr: "aisle_units × 2", value: numRackRows },
-        { label: "Level pitch", expr: "rack_height / (levels − 1)  ≥  load_height + " + BEAM_ALLOWANCE + " m", value: fmt(levelPitch, 2) + " m (needs " + fmt(pitchNeeded, 2) + ")" },
-        { label: "Clear height needed", expr: "rack_height + load_height + sprinkler_clearance", value: fmt(clearanceNeeded, 2) + " m of " + fmt(p.clear_height) + " m" }
+        { label: T("Usable length (racking zone)"), expr: "warehouse_length − 2 × cross_aisle_width", value: fmt(usableLength) + " m" },
+        { label: T("Segments"), expr: T("(usable − mid_aisles × mid_width) / (mid_aisles + 1)"), value: (mids + 1) + " × " + fmt(segmentLength) + " m" },
+        { label: T("Bays per row"), expr: T("segments × floor(segment / bay_width)"), value: (mids + 1) + " × " + baysPerSegment + " = " + baysPerRow },
+        { label: T("Row depth"), expr: T("pallets_deep ({rack}) × rack_depth", { rack: rt.label }), value: rt.deep + " × " + fmt(p.rack_depth, 2) + " = " + fmt(rowDepth, 2) + " m" },
+        { label: T("Width per aisle unit"), expr: "2 × row_depth + aisle_width", value: fmt(widthPerAisleUnit, 2) + " m" },
+        { label: T("Aisle units that fit"), expr: T("floor((warehouse_width + flue) / (unit + flue))"), value: numAisleUnits },
+        { label: T("Rack rows"), expr: "aisle_units × 2", value: numRackRows },
+        { label: T("Level pitch"), expr: T("rack_height / (levels − 1)  ≥  load_height + {b} m", { b: BEAM_ALLOWANCE }), value: T("{v} m (needs {n})", { v: fmt(levelPitch, 2), n: fmt(pitchNeeded, 2) }) },
+        { label: T("Clear height needed"), expr: "rack_height + load_height + sprinkler_clearance", value: T("{v} m of {c} m", { v: fmt(clearanceNeeded, 2), c: fmt(p.clear_height) }) }
       ]
     };
   }
@@ -183,11 +184,11 @@
       positionsPerBay, totalBays, storageCapacity, practicalCapacity, directAccess,
       selectivity: rt.selectivity, usable: rt.usable,
       trace: [
-        { label: "Positions per bay", expr: "levels × pallets_side_by_side × pallets_deep", value: p.levels_per_rack + " × " + p.positions_per_level_per_bay + " × " + rt.deep + " = " + positionsPerBay },
-        { label: "Total bays", expr: "rack_rows × bays_per_row", value: layout.numRackRows + " × " + layout.baysPerRow + " = " + totalBays },
-        { label: "Storage capacity", expr: "total_bays × positions_per_bay", value: int(storageCapacity) + " positions" },
-        { label: "Practical capacity", expr: "capacity × planning ceiling (" + Math.round(rt.usable * 100) + "% for " + rt.label.toLowerCase() + ")", value: int(practicalCapacity) + " pallets" },
-        { label: "Directly reachable", expr: "capacity × selectivity (" + Math.round(rt.selectivity * 100) + "%)", value: int(directAccess) + " positions" }
+        { label: T("Positions per bay"), expr: T("levels × pallets_side_by_side × pallets_deep"), value: p.levels_per_rack + " × " + p.positions_per_level_per_bay + " × " + rt.deep + " = " + positionsPerBay },
+        { label: T("Total bays"), expr: "rack_rows × bays_per_row", value: layout.numRackRows + " × " + layout.baysPerRow + " = " + totalBays },
+        { label: T("Storage capacity"), expr: "total_bays × positions_per_bay", value: T("{v} positions", { v: int(storageCapacity) }) },
+        { label: T("Practical capacity"), expr: T("capacity × planning ceiling ({p}% for {rack})", { p: Math.round(rt.usable * 100), rack: rt.label.toLowerCase() }), value: T("{v} pallets", { v: int(practicalCapacity) }) },
+        { label: T("Directly reachable"), expr: T("capacity × selectivity ({p}%)", { p: Math.round(rt.selectivity * 100) }), value: T("{v} positions", { v: int(directAccess) }) }
       ]
     };
   }
@@ -203,8 +204,8 @@
       utilizationPct, overflowPallets, ceilingPct,
       status: utilizationPct > 100 ? "critical" : utilizationPct > ceilingPct ? "warning" : "good",
       trace: [
-        { label: "Utilization", expr: "current_inventory_pallets / storage_capacity", value: int(p.current_inventory_pallets) + " / " + int(capacity.storageCapacity) + " = " + fmt(utilizationPct) + "%" },
-        { label: "Planning ceiling", expr: "practical / physical capacity", value: Math.round(ceilingPct) + "%" }
+        { label: T("Utilization"), expr: "current_inventory_pallets / storage_capacity", value: int(p.current_inventory_pallets) + " / " + int(capacity.storageCapacity) + " = " + fmt(utilizationPct) + "%" },
+        { label: T("Planning ceiling"), expr: T("practical / physical capacity"), value: Math.round(ceilingPct) + "%" }
       ]
     };
   }
@@ -358,15 +359,15 @@
     const forkliftsNeeded = Math.max(moves > 0 ? 1 : 0, Math.ceil(peakWorkHoursPerHour / p.truck_efficiency - 1e-9));
 
     const trace = [
-      { label: "Storage policy", expr: weights.abc ? "ABC: A = fastest 20% of cells, B = next 30%, C = rest; F(u) = u^" + fmt(weights.k, 2) : "random: every cell equally likely",
-        value: weights.abc ? "A " + Math.round(weights.shares[0] * 100) + "% · B " + Math.round(weights.shares[1] * 100) + "% · C " + Math.round(weights.shares[2] * 100) + "% of moves" : "uniform" },
-      { label: "Putaway cycle (single command)", expr: "Σ weight × [2 × (door-to-aisle + to bay) / v + 2 × lift / v_lift + overhead]", value: fmt(eIn, 0) + " s" },
-      { label: "Retrieval cycle (single command)", expr: "same, from the shipping doors", value: fmt(eOut, 0) + " s" },
-      { label: "Single-command cycle", expr: "(putaway + retrieval) / 2", value: fmt(travelTime, 0) + " driving + " + fmt(liftTime, 0) + " lifting + " + fmt(p.forklift_cycle_overhead, 0) + " = " + fmt(scCycle, 0) + " s" },
-      { label: "Dual-command cycle", expr: "in door → A → B → out door → back; A→B via the shorter cross-aisle (" + DC_SAMPLES + " sampled pairs)", value: fmt(dcCycle, 0) + " s for 2 moves" },
-      { label: "Time per pallet move", expr: "(1 − dual_share) × single + dual_share × dual / 2", value: fmt(perMove, 0) + " s" },
-      { label: "Peak-hour work", expr: "moves / hours × peak_factor × time per move", value: fmt(peakMovesPerHour, 0) + " moves/h × " + fmt(perMove, 0) + " s = " + fmt(peakWorkHoursPerHour, 2) + " truck-h/h" },
-      { label: "Lift trucks needed", expr: "ceil(peak truck-hours per hour / efficiency)", value: forkliftsNeeded + " (average " + fmt(trucksAverage, 1) + ")" }
+      { label: T("Storage policy"), expr: weights.abc ? T("ABC: A = fastest 20% of cells, B = next 30%, C = rest; F(u) = u^{k}", { k: fmt(weights.k, 2) }) : T("random: every cell equally likely"),
+        value: weights.abc ? T("A {a}% · B {b}% · C {c}% of moves", { a: Math.round(weights.shares[0] * 100), b: Math.round(weights.shares[1] * 100), c: Math.round(weights.shares[2] * 100) }) : T("uniform") },
+      { label: T("Putaway cycle (single command)"), expr: T("Σ weight × [2 × (door-to-aisle + to bay) / v + 2 × lift / v_lift + overhead]"), value: fmt(eIn, 0) + " s" },
+      { label: T("Retrieval cycle (single command)"), expr: T("same, from the shipping doors"), value: fmt(eOut, 0) + " s" },
+      { label: T("Single-command cycle"), expr: T("(putaway + retrieval) / 2"), value: T("{d} driving + {l} lifting + {o} = {c} s", { d: fmt(travelTime, 0), l: fmt(liftTime, 0), o: fmt(p.forklift_cycle_overhead, 0), c: fmt(scCycle, 0) }) },
+      { label: T("Dual-command cycle"), expr: T("in door → A → B → out door → back; A→B via the shorter cross-aisle ({n} sampled pairs)", { n: DC_SAMPLES }), value: T("{v} s for 2 moves", { v: fmt(dcCycle, 0) }) },
+      { label: T("Time per pallet move"), expr: T("(1 − dual_share) × single + dual_share × dual / 2"), value: fmt(perMove, 0) + " s" },
+      { label: T("Peak-hour work"), expr: T("moves / hours × peak_factor × time per move"), value: T("{m} moves/h × {t} s = {w} truck-h/h", { m: fmt(peakMovesPerHour, 0), t: fmt(perMove, 0), w: fmt(peakWorkHoursPerHour, 2) }) },
+      { label: T("Lift trucks needed"), expr: T("ceil(peak truck-hours per hour / efficiency)"), value: T("{n} (average {a})", { n: forkliftsNeeded, a: fmt(trucksAverage, 1) }) }
     ];
     return {
       cycleTime: scCycle, putawayCycle: eIn, retrievalCycle: eOut, travelTime, liftTime, avgRoundTrip, avgLiftHeight: eZ,
@@ -418,12 +419,12 @@
       dockBound: dockUtilizationPct >= 100,
       status: dockUtilizationPct >= 100 ? "critical" : (dockUtilizationPct > 85 || maxWait > 30) ? "warning" : "good",
       trace: [
-        { label: "Trucks per day (each way)", expr: "throughput / 2 / pallets_per_truck", value: fmt(inbound.pallets, 0) + " / " + p.pallets_per_truck + " = " + fmt(inbound.trucksPerDay, 1) },
-        { label: "Peak trucks per hour", expr: "trucks_per_day / hours × peak_factor", value: fmt(inbound.peakTrucksPerHour, 2) },
-        { label: "Door capacity (in / out)", expr: "doors × 60 / truck_turn_time", value: fmt(inbound.capacityTrucksPerHour, 2) + " / " + fmt(outbound.capacityTrucksPerHour, 2) + " trucks/h" },
-        { label: "Peak door utilization (in / out)", expr: "peak trucks/h ÷ door capacity", value: fmt(inbound.utilizationPct, 0) + "% / " + fmt(outbound.utilizationPct, 0) + "%" },
-        { label: "Chance a truck waits (in / out)", expr: "Erlang C(doors, peak trucks/h × turn time)", value: fmt(inbound.pWait * 100, 0) + "% / " + fmt(outbound.pWait * 100, 0) + "%" },
-        { label: "Mean wait at the peak (in / out)", expr: "Erlang C / (c·μ − λ) × (1 + " + TURN_CS2 + ") / 2  (Allen–Cunneen)", value: (isFinite(inbound.waitMin) ? fmt(inbound.waitMin, 1) : "∞") + " / " + (isFinite(outbound.waitMin) ? fmt(outbound.waitMin, 1) : "∞") + " min" }
+        { label: T("Trucks per day (each way)"), expr: T("throughput / 2 / pallets_per_truck"), value: fmt(inbound.pallets, 0) + " / " + p.pallets_per_truck + " = " + fmt(inbound.trucksPerDay, 1) },
+        { label: T("Peak trucks per hour"), expr: T("trucks_per_day / hours × peak_factor"), value: fmt(inbound.peakTrucksPerHour, 2) },
+        { label: T("Door capacity (in / out)"), expr: T("doors × 60 / truck_turn_time"), value: T("{a} / {b} trucks/h", { a: fmt(inbound.capacityTrucksPerHour, 2), b: fmt(outbound.capacityTrucksPerHour, 2) }) },
+        { label: T("Peak door utilization (in / out)"), expr: T("peak trucks/h ÷ door capacity"), value: fmt(inbound.utilizationPct, 0) + "% / " + fmt(outbound.utilizationPct, 0) + "%" },
+        { label: T("Chance a truck waits (in / out)"), expr: T("Erlang C(doors, peak trucks/h × turn time)"), value: fmt(inbound.pWait * 100, 0) + "% / " + fmt(outbound.pWait * 100, 0) + "%" },
+        { label: T("Mean wait at the peak (in / out)"), expr: "Erlang C / (c·μ − λ) × (1 + " + TURN_CS2 + ") / 2  (Allen–Cunneen)", value: (isFinite(inbound.waitMin) ? fmt(inbound.waitMin, 1) : "∞") + " / " + (isFinite(outbound.waitMin) ? fmt(outbound.waitMin, 1) : "∞") + " min" }
       ]
     };
   }
@@ -468,17 +469,17 @@
       footprint, rackingCost, buildingCost, dockCost, totalCost, costPerPosition,
       fleetCost, capitalCost, annualCapital, labour, running, annualTCO, movesPerYear, costPerMove, costPerPositionYear,
       trace: [
-        { label: "Building footprint", expr: "(length + 2 × wall) × (width + 2 × wall)", value: int(footprint) + " m²" },
-        { label: "Racking cost", expr: "storage_capacity × cost_per_position", value: "$" + int(rackingCost) },
-        { label: "Building shell cost", expr: "footprint × cost_per_sqm", value: "$" + int(buildingCost) },
-        { label: "Dock cost", expr: "total_docks × cost_per_dock", value: "$" + int(dockCost) },
-        { label: "Build cost", expr: "racking + building + docks", value: "$" + int(totalCost) },
-        { label: "Lift-truck fleet", expr: "trucks × price of a " + rt.truck, value: fleet + " × $" + int(truckPrice) + " = $" + int(fleetCost) },
-        { label: "Annual capital cost", expr: "Σ cost × CRF(" + rate + "%, life) — building " + ASSET_LIFE.building + " y, racking/docks " + ASSET_LIFE.racking + " y, trucks " + ASSET_LIFE.trucks + " y", value: "$" + int(annualCapital) },
-        { label: "Drivers", expr: "trucks × hours/day × days/year × labour_cost_per_hour", value: "$" + int(labour) },
-        { label: "Truck running cost", expr: "working truck-hours/day × days × running cost/h", value: "$" + int(running) },
-        { label: "Total cost of ownership", expr: "annual capital + drivers + running", value: "$" + int(annualTCO) + " / year" },
-        { label: "Cost per pallet move", expr: "TCO / (throughput × days)", value: "$" + fmt(costPerMove, 2) }
+        { label: T("Building footprint"), expr: T("(length + 2 × wall) × (width + 2 × wall)"), value: int(footprint) + " m²" },
+        { label: T("Racking cost"), expr: "storage_capacity × cost_per_position", value: "$" + int(rackingCost) },
+        { label: T("Building shell cost"), expr: "footprint × cost_per_sqm", value: "$" + int(buildingCost) },
+        { label: T("Dock cost"), expr: "total_docks × cost_per_dock", value: "$" + int(dockCost) },
+        { label: T("Build cost"), expr: T("racking + building + docks"), value: "$" + int(totalCost) },
+        { label: T("Lift-truck fleet"), expr: T("trucks × price of a {truck}", { truck: rt.truck }), value: fleet + " × $" + int(truckPrice) + " = $" + int(fleetCost) },
+        { label: T("Annual capital cost"), expr: T("Σ cost × CRF({r}%, life) — building {b} y, racking/docks {k} y, trucks {t} y", { r: rate, b: ASSET_LIFE.building, k: ASSET_LIFE.racking, t: ASSET_LIFE.trucks }), value: "$" + int(annualCapital) },
+        { label: T("Drivers"), expr: T("trucks × hours/day × days/year × labour_cost_per_hour"), value: "$" + int(labour) },
+        { label: T("Truck running cost"), expr: T("working truck-hours/day × days × running cost/h"), value: "$" + int(running) },
+        { label: T("Total cost of ownership"), expr: T("annual capital + drivers + running"), value: T("${v} / year", { v: int(annualTCO) }) },
+        { label: T("Cost per pallet move"), expr: T("TCO / (throughput × days)"), value: "$" + fmt(costPerMove, 2) }
       ]
     };
   }
@@ -498,22 +499,21 @@
 
     const warnings = layout.warnings.slice();
     if (utilization.status === "critical") {
-      warn(warnings, "critical", "Inventory (" + int(p.current_inventory_pallets) + ") exceeds storage capacity (" + int(capacity.storageCapacity) + ") by " + int(utilization.overflowPallets) + " pallets.");
+      warn(warnings, "critical", T("Inventory ({inv}) exceeds storage capacity ({cap}) by {over} pallets.", { inv: int(p.current_inventory_pallets), cap: int(capacity.storageCapacity), over: int(utilization.overflowPallets) }));
     } else if (utilization.status === "warning") {
-      warn(warnings, "warning", "Inventory is above the " + Math.round(utilization.ceilingPct) + "% planning ceiling for " + layout.rackType.label.toLowerCase() +
-        " racking — expect part-empty lanes you can't use and slow putaway.");
+      warn(warnings, "warning", T("Inventory is above the {c}% planning ceiling for {rack} racking — expect part-empty lanes you can't use and slow putaway.", { c: Math.round(utilization.ceilingPct), rack: layout.rackType.label.toLowerCase() }));
     }
     if (throughput.status === "critical") {
-      warn(warnings, "critical", "At the peak hour, trucks arrive faster than the " + throughput.bottleneck + " doors can turn them — the yard queue grows without limit; docks, not storage, are the bottleneck.");
+      warn(warnings, "critical", T("At the peak hour, trucks arrive faster than the {side} doors can turn them — the yard queue grows without limit; docks, not storage, are the bottleneck.", { side: throughput.bottleneck === "receiving" ? T("receiving") : T("shipping") }));
     } else if (throughput.status === "warning") {
-      warn(warnings, "warning", "At the peak hour the " + throughput.bottleneck + " doors run at " + Math.round(throughput.dockUtilizationPct) + "% and trucks wait about " + Math.round(throughput.maxWait) + " min on average — expect a yard queue.");
+      warn(warnings, "warning", T("At the peak hour the {side} doors run at {u}% and trucks wait about {w} min on average — expect a yard queue.", { side: throughput.bottleneck === "receiving" ? T("receiving") : T("shipping"), u: Math.round(throughput.dockUtilizationPct), w: Math.round(throughput.maxWait) }));
     }
     if (travel.dualShare > 0 && travel.dcCycle / 2 > travel.cycleTime) {
-      warn(warnings, "info", "Here a dual-command trip takes longer per pallet (" + Math.round(travel.dcCycle / 2) + " s) than a single-command one (" + Math.round(travel.cycleTime) + " s)" +
-        (p.flow_layout === "u_flow" ? "." : ": with I-flow the truck finishes at the shipping end and drives back empty."));
+      warn(warnings, "info", T("Here a dual-command trip takes longer per pallet ({d} s) than a single-command one ({s} s)", { d: Math.round(travel.dcCycle / 2), s: Math.round(travel.cycleTime) }) +
+        (p.flow_layout === "u_flow" ? "." : T(": with I-flow the truck finishes at the shipping end and drives back empty.")));
     }
     if (weights.abc && p.flow_layout !== "u_flow") {
-      warn(warnings, "info", "With I-flow, a bay near one end is far from the other end's doors, so ABC slotting only gains across the width and in height; U-flow lets it gain along the aisles too.");
+      warn(warnings, "info", T("With I-flow, a bay near one end is far from the other end's doors, so ABC slotting only gains across the width and in height; U-flow lets it gain along the aisles too."));
     }
 
     return { layout, capacity, utilization, travel, throughput, cost, warnings, doors: grid.doors, slots: { grid: grid, weights: weights } };
