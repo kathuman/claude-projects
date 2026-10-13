@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About Real Options for Network Design</title>
-  <meta name="description" content="Real Options for Network Design prices the flexibility in a supply network design — waiting, and staging capacity — against the best fixed design. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <title data-i18n="title.about">About Real Options for Network Design</title>
+  <meta data-i18n-attr="content=meta.about" name="description" content="Real Options for Network Design prices the flexibility in a supply network design — waiting, and staging capacity — against the best fixed design. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127922;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,6 +27,7 @@ body{background-image:linear-gradient(rgba(125,211,252,.05) 1px, transparent 1px
 .brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
 .actions{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
 .back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
+button.back-link{background:transparent; cursor:pointer; font-family:var(--head);}
 .back-link:hover{color:var(--accent); border-color:var(--accent);}
 main{max-width:980px; margin:0 auto; padding:34px 22px 10px;}
 .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
@@ -54,25 +55,26 @@ a{color:var(--accent);}
 <body>
 <header class="topbar">
   <div class="brand">
-    <div class="mark">REAL<span> OPTIONS</span></div>
-    <div class="sub">ABOUT THE APP</div>
+    <div class="mark" data-i18n="a.mark">REAL<span> OPTIONS</span></div>
+    <div data-i18n="a.sub" class="sub">ABOUT THE APP</div>
   </div>
   <div class="actions">
-    <a class="back-link" href="./">Open the app</a>
-    <a class="back-link" href="../">← Projects</a>
+    <button class="back-link" type="button" id="langBtn" lang="es">Español</button>
+    <a data-i18n="a.open" class="back-link" href="./">Open the app</a>
+    <a data-i18n="a.projects" class="back-link" href="../">← Projects</a>
   </div>
 </header>
 
 <main>
-  <div class="eyebrow">About the app</div>
-  <h1>Real Options for Network Design</h1>
-  <p class="lede">A network study usually optimises for the expected forecast and commits. Real Options for Network Design asks what the right to decide later is worth: waiting until demand is confirmed, starting small on a big site and expanding in steps, or leasing with the right to hand the space back. A second page values a two-region network: a central hub that pools demand, regional hubs, or a pilot hub that makes the next one cheaper. You can calibrate it from your own demand history, compare scenarios, print a decision report, and learn it with a three-level tutorial. It values those strategies on a demand lattice and compares them with the best fixed design a competent planner would choose, not with a straw man.</p>
-  <p><a class="open" href="./">Open the app →</a></p>
+  <div data-i18n="a.eyebrow" class="eyebrow">About the app</div>
+  <h1 data-i18n="a.h1">Real Options for Network Design</h1>
+  <p data-i18n="a.lede" class="lede">A network study usually optimises for the expected forecast and commits. Real Options for Network Design asks what the right to decide later is worth: waiting until demand is confirmed, starting small on a big site and expanding in steps, or leasing with the right to hand the space back. A second page values a two-region network: a central hub that pools demand, regional hubs, or a pilot hub that makes the next one cheaper. You can calibrate it from your own demand history, compare scenarios, print a decision report, and learn it with a three-level tutorial, in English or Spanish. It values those strategies on a demand lattice and compares them with the best fixed design a competent planner would choose, not with a straw man.</p>
+  <p><a data-i18n="a.openbtn" class="open" href="./">Open the app →</a></p>
 
   <div class="cols">
     <section class="card">
-      <h2>What it does</h2>
-      <ul>
+      <h2 data-i18n="a.what.h">What it does</h2>
+      <ul data-i18n="a.what.list">
         <li><b>Five strategies, one fair comparison</b>Commit now to the full footprint, the best fixed design, wait and see, stage and expand, and lease with break clauses, each with its optimal policy. Every owned site can be sold for a resale value, or mothballed and restarted; the staged site can sell capacity back in steps. The headline is the value of flexibility over the best fixed design.</li>
         <li><b>The realism that moves the answer</b>A decision window separate from the asset life, build and expansion lead times, a 3PL that covers unmet demand at a lower margin up to a limit, lost-sale penalties, cost escalation, a staging premium and a market ceiling.</li>
         <li><b>Two valuation bases</b>Expected cash flows at a WACC, as practitioners do, or risk-neutral valuation with a market price of demand risk, as option theory requires.</li>
@@ -81,20 +83,22 @@ a{color:var(--accent);}
     </section>
 
     <section class="card">
-      <h2>How it is built</h2>
-      <p>Demand follows a recombining binomial lattice whose step adapts so the growth you set is represented exactly. Each strategy is solved by backward induction, with lead times handled as multi-step expectations, and then replayed forward along simulated paths. Its tests check the lattice against Black–Scholes and a closed form, the dominance relations between strategies, how option value responds to volatility, the window, lead times and penalties, that the simulated policies reproduce the lattice values, and convergence as the step shrinks. Everything runs in your browser.</p>
+      <h2 data-i18n="a.how.h">How it is built</h2>
+      <p data-i18n="a.how.p">Demand follows a recombining binomial lattice whose step adapts so the growth you set is represented exactly. Each strategy is solved by backward induction, with lead times handled as multi-step expectations, and then replayed forward along simulated paths. Its tests check the lattice against Black–Scholes and a closed form, the dominance relations between strategies, how option value responds to volatility, the window, lead times and penalties, that the simulated policies reproduce the lattice values, and convergence as the step shrinks. Everything runs in your browser.</p>
 
-      <h2 style="margin-top:22px;">Author</h2>
-      <p>Real Options for Network Design was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
-      <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a> · <a href="https://kathuman.github.io/estay-dynamics/contact.html" target="_blank" rel="noopener">Get in touch</a></p>
-      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Real Options for Network Design</em> (version 4.1.0) [Software]. https://kathuman.github.io/claude-projects/real-options/</p>
+      <h2 data-i18n="a.author.h" style="margin-top:22px;">Author</h2>
+      <p data-i18n="a.author.p">Real Options for Network Design was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+      <p data-i18n="a.author.links"><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a> · <a href="https://kathuman.github.io/estay-dynamics/contact.html" target="_blank" rel="noopener">Get in touch</a></p>
+      <p data-i18n="a.cite" class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Real Options for Network Design</em> (version 4.2.0) [Software]. https://kathuman.github.io/claude-projects/real-options/</p>
     </section>
   </div>
 </main>
 
 <footer class="foot">
-  <span class="consult">Real Options for Network Design v4.1.0 · <a href="./">Open the app</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-  Synthetic, illustrative model — not investment advice. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+  <span data-i18n="a.foot" class="consult">Real Options for Network Design v4.2.0 · <a href="./">Open the app</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+  <span data-i18n="a.foot.note">Synthetic, illustrative model — not investment advice. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
 </footer>
+  <script src="i18n-es.js"></script>
+  <script src="i18n.js"></script>
 </body>
 </html>

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Real Options for Network Design</title>
-  <meta name="description" content="Price the flexibility in a supply network design: commit now, the best fixed design, wait and see, stage and expand, or lease with break clauses, valued on a binomial demand lattice with lead times, outsourcing, a decision window and a risk-neutral option, against a fair baseline." />
+  <title data-i18n="title.index">Real Options for Network Design</title>
+  <meta data-i18n-attr="content=meta.index" name="description" content="Price the flexibility in a supply network design: commit now, the best fixed design, wait and see, stage and expand, or lease with break clauses, valued on a binomial demand lattice with lead times, outsourcing, a decision window and a risk-neutral option, against a fair baseline." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127922;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,42 +14,43 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <p class="mark">Real <span>Options</span></p>
+      <p class="mark" data-i18n="brand.mark">Real <span>Options</span></p>
       <span class="ver" id="ver"></span>
-      <span class="sub">flexibility in network design, priced</span>
+      <span data-i18n="brand.sub" class="sub">flexibility in network design, priced</span>
     </div>
     <nav class="actions">
-      <a class="back-link" href="index.html" aria-current="page">One site</a>
-      <a class="back-link" href="network.html">Network</a>
-      <a class="back-link" href="#model">Model</a>
-      <a class="back-link" href="report.html" id="reportLink" target="_blank" rel="noopener">Report</a>
-      <button class="back-link" type="button" id="tourBtn" aria-haspopup="true">Tutorial</button>
-      <a class="back-link" href="about.html">About</a>
-      <a class="back-link" href="../index.html">← All projects</a>
+      <a data-i18n="nav.one" class="back-link" href="index.html" aria-current="page">One site</a>
+      <a data-i18n="nav.network" class="back-link" href="network.html">Network</a>
+      <a data-i18n="nav.model" class="back-link" href="#model">Model</a>
+      <a data-i18n="nav.report" class="back-link" href="report.html" id="reportLink" target="_blank" rel="noopener">Report</a>
+      <button class="back-link" type="button" id="langBtn" lang="es">Español</button>
+      <button data-i18n="nav.tutorial" class="back-link" type="button" id="tourBtn" aria-haspopup="true">Tutorial</button>
+      <a data-i18n="nav.about" class="back-link" href="about.html">About</a>
+      <a data-i18n="nav.all" class="back-link" href="../index.html">← All projects</a>
     </nav>
   </header>
 
   <section class="intro">
-    <h1>What is flexibility in a network design worth?</h1>
-    <p class="lede">A classic network study optimises for the expected forecast and commits. But demand grows, stalls or
+    <h1 data-i18n="i.h1">What is flexibility in a network design worth?</h1>
+    <p data-i18n="i.lede" class="lede">A classic network study optimises for the expected forecast and commits. But demand grows, stalls or
       collapses. A <b>real option</b> is the right, not the obligation, to act later: build once demand is confirmed, or
       start small on a big site and expand in steps, or rent with the right to hand the space back. Those rights cost money today. This page prices them on a demand
       lattice and compares them with the <b>best fixed design</b>, not with a straw man.</p>
-    <div class="gallery" aria-label="The five strategies">
+    <div data-i18n-attr="aria-label=i.gallery" class="gallery" aria-label="The five strategies">
       <figure class="scard" style="--c:var(--s4)"><div class="scard-il" data-illus="strategy:full"></div>
-        <figcaption><span class="tag">No option</span><b>Commit now</b><span>Build the full footprint today. Simple, but you carry unused capacity for years if demand is slow.</span></figcaption></figure>
+        <figcaption data-i18n="i.c.full"><span class="tag">No option</span><b>Commit now</b><span>Build the full footprint today. Simple, but you carry unused capacity for years if demand is slow.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s1)"><div class="scard-il" data-illus="strategy:best"></div>
-        <figcaption><span class="tag">The fair baseline</span><b>Best fixed</b><span>Build the single size that maximises NPV today. Flexibility is measured against this.</span></figcaption></figure>
+        <figcaption data-i18n="i.c.best"><span class="tag">The fair baseline</span><b>Best fixed</b><span>Build the single size that maximises NPV today. Flexibility is measured against this.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s2)"><div class="scard-il" data-illus="strategy:defer"></div>
-        <figcaption><span class="tag">Deferral option</span><b>Wait &amp; see</b><span>Serve demand through a 3PL and hold the permits; build once demand crosses a trigger. Later builds cost more.</span></figcaption></figure>
+        <figcaption data-i18n="i.c.defer"><span class="tag">Deferral option</span><b>Wait &amp; see</b><span>Serve demand through a 3PL and hold the permits; build once demand crosses a trigger. Later builds cost more.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s3)"><div class="scard-il" data-illus="strategy:stage"></div>
-        <figcaption><span class="tag">Growth option</span><b>Stage &amp; expand</b><span>Build small on a big footprint and add capacity in steps where demand justifies it, at a premium per step.</span></figcaption></figure>
+        <figcaption data-i18n="i.c.stage"><span class="tag">Growth option</span><b>Stage &amp; expand</b><span>Build small on a big footprint and add capacity in steps where demand justifies it, at a premium per step.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s5)"><div class="scard-il" data-illus="strategy:lease"></div>
-        <figcaption><span class="tag">Exit option</span><b>Lease &amp; break</b><span>Rent instead of building, with break clauses to hand the space back. Owned sites can be sold too.</span></figcaption></figure>
+        <figcaption data-i18n="i.c.lease"><span class="tag">Exit option</span><b>Lease &amp; break</b><span>Rent instead of building, with break clauses to hand the space back. Owned sites can be sold too.</span></figcaption></figure>
     </div>
     <details class="map">
-      <summary>How financial options map onto network decisions</summary>
-      <table class="rox">
+      <summary data-i18n="i.map.sum">How financial options map onto network decisions</summary>
+      <table data-i18n="i.map.table" class="rox">
         <thead><tr><th>Financial analogue</th><th>Real option in network design</th><th>How you build it in</th></tr></thead>
         <tbody>
           <tr><td>Call option</td><td>Option to expand</td><td>Oversized land, utilities and permits; modular buildings; scalable automation; framework contracts with 3PLs</td></tr>
@@ -63,8 +64,8 @@
   </section>
 
   <div class="layout">
-    <aside class="controls panel" id="controls" aria-label="Scenario">
-      <h2 class="sec">Scenario</h2>
+    <aside data-i18n-attr="aria-label=aria.scenario" class="controls panel" id="controls" aria-label="Scenario">
+      <h2 data-i18n="sec.scenario" class="sec">Scenario</h2>
       <div class="presets" id="presets"></div>
       <div id="ctlHost"></div>
       <div class="derived" id="derived"></div>
@@ -78,29 +79,29 @@
       <div class="scorecards" id="scorecards"></div>
 
       <div class="panel">
-        <h2 class="sec">Decision map: when to act</h2>
-        <p class="blurb">The shaded fan is where demand may go (the middle 50% and 90% of outcomes, and the median). The lines
+        <h2 data-i18n="i.map.h" class="sec">Decision map: when to act</h2>
+        <p data-i18n="i.map.blurb" class="blurb">The shaded fan is where demand may go (the middle 50% and 90% of outcomes, and the median). The lines
           are the optimal triggers: inside the decision window <b>wait &amp; see</b> builds once demand rises above its
           line and <b>stage &amp; expand</b> adds its first step above its own; at any time the <b>best fixed</b> design is
           sold if demand falls below the dashed line (or, if it cannot be resold, mothballed below the dotted line and
           restarted above the thin one), and at each break date the <b>lease</b> is handed back below its dot.</p>
-        <svg class="chart" id="mapChart" viewBox="0 0 720 340" role="img" aria-label="Demand fan and decision triggers over time"></svg>
+        <svg data-i18n-attr="aria-label=aria.mapChart" class="chart" id="mapChart" viewBox="0 0 720 340" role="img" aria-label="Demand fan and decision triggers over time"></svg>
         <div class="legend" id="mapLegend"></div>
         <p class="caption" id="mapCaption"></p>
       </div>
 
       <div class="grid2">
         <div class="panel">
-          <h2 class="sec">Payoff by outcome</h2>
-          <p class="blurb">Each dot is one simulated demand path, with each strategy following its optimal policy. Flexible
+          <h2 data-i18n="i.pay.h" class="sec">Payoff by outcome</h2>
+          <p data-i18n="i.pay.blurb" class="blurb">Each dot is one simulated demand path, with each strategy following its optimal policy. Flexible
             strategies give up a little in the middle and cut the losses when demand disappoints.</p>
-          <svg class="chart" id="payChart" viewBox="0 0 360 300" role="img" aria-label="NPV against final demand for each strategy"></svg>
+          <svg data-i18n-attr="aria-label=aria.payChart" class="chart" id="payChart" viewBox="0 0 360 300" role="img" aria-label="NPV against final demand for each strategy"></svg>
           <div class="legend" id="payLegend"></div>
         </div>
         <div class="panel">
-          <h2 class="sec">Distribution of NPV</h2>
-          <p class="blurb">The best fixed design against the best flexible strategy, over the same paths.</p>
-          <svg class="chart" id="distChart" viewBox="0 0 360 300" role="img" aria-label="Histogram of NPV for the best fixed and the best flexible strategy"></svg>
+          <h2 data-i18n="i.dist.h" class="sec">Distribution of NPV</h2>
+          <p data-i18n="i.dist.blurb" class="blurb">The best fixed design against the best flexible strategy, over the same paths.</p>
+          <svg data-i18n-attr="aria-label=aria.distChart" class="chart" id="distChart" viewBox="0 0 360 300" role="img" aria-label="Histogram of NPV for the best fixed and the best flexible strategy"></svg>
           <div class="legend" id="distLegend"></div>
           <p class="caption" id="distCaption"></p>
         </div>
@@ -108,111 +109,111 @@
 
       <div class="grid2">
         <div class="panel">
-          <h2 class="sec">Uncertainty makes flexibility valuable</h2>
-          <p class="blurb">The value of each flexible strategy over the best fixed design, as demand volatility changes (everything else as set). The dashed line is your setting.</p>
-          <svg class="chart" id="volChart" viewBox="0 0 360 280" role="img" aria-label="Value of flexibility against volatility"></svg>
+          <h2 data-i18n="i.vol.h" class="sec">Uncertainty makes flexibility valuable</h2>
+          <p data-i18n="i.vol.blurb" class="blurb">The value of each flexible strategy over the best fixed design, as demand volatility changes (everything else as set). The dashed line is your setting.</p>
+          <svg data-i18n-attr="aria-label=aria.volChart" class="chart" id="volChart" viewBox="0 0 360 280" role="img" aria-label="Value of flexibility against volatility"></svg>
           <div class="legend" id="volLegend"></div>
-          <details class="tv"><summary>Table view</summary><div id="volTable"></div></details>
+          <details class="tv"><summary data-i18n="tv.sum">Table view</summary><div id="volTable"></div></details>
         </div>
         <div class="panel">
-          <h2 class="sec">What moves the value of flexibility</h2>
-          <p class="blurb">Each bar moves one assumption down and up and shows the effect on the value of flexibility (best flexible minus best fixed). Pin down the long bars first.</p>
-          <svg class="chart" id="torChart" viewBox="0 0 360 360" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
+          <h2 data-i18n="i.tor.h" class="sec">What moves the value of flexibility</h2>
+          <p data-i18n="i.tor.blurb" class="blurb">Each bar moves one assumption down and up and shows the effect on the value of flexibility (best flexible minus best fixed). Pin down the long bars first.</p>
+          <svg data-i18n-attr="aria-label=aria.torChart" class="chart" id="torChart" viewBox="0 0 360 360" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
           <div class="legend" id="torLegend"></div>
         </div>
       </div>
 
       <div class="panel" id="comparePanel">
-        <h2 class="sec">Compare scenarios</h2>
-        <p class="blurb">Save the scenario you are looking at, change the assumptions, save again, and compare them side by side.
+        <h2 data-i18n="i.cmp.h" class="sec">Compare scenarios</h2>
+        <p data-i18n="i.cmp.blurb" class="blurb">Save the scenario you are looking at, change the assumptions, save again, and compare them side by side.
           Saved scenarios stay in this browser; each has a link and a decision report.</p>
         <div class="cmp-save">
-          <input type="text" id="cmpName" maxlength="40" placeholder="Name this scenario" aria-label="Scenario name">
-          <button type="button" class="btn-apply" id="cmpSave">Save current scenario</button>
+          <input data-i18n-attr="aria-label=aria.cmpName,placeholder=ph.cmpName" type="text" id="cmpName" maxlength="40" placeholder="Name this scenario" aria-label="Scenario name">
+          <button data-i18n="i.cmp.save" type="button" class="btn-apply" id="cmpSave">Save current scenario</button>
         </div>
         <div class="cmp-wrap" id="cmpTable"></div>
       </div>
 
       <div class="panel" id="model">
-        <h2 class="sec">The model</h2>
-        <p class="blurb">One facility, one product, money in $M. Every number on this page comes from these equations, which
-          run in <code>src/model.js</code>; the same file is checked by 75 automated tests, including a lattice-against-Black–Scholes
+        <h2 data-i18n="model.h" class="sec">The model</h2>
+        <p data-i18n="i.model.blurb" class="blurb">One facility, one product, money in $M. Every number on this page comes from these equations, which
+          run in <code>src/model.js</code>; the same file is checked by automated tests, including a lattice-against-Black–Scholes
           convergence test and a Monte Carlo replay of every optimal policy.</p>
         <div class="figs">
-          <figure><div data-illus="lattice"></div><figcaption>Demand moves up or down each step; the lattice recombines, so it stays small enough to solve exactly.</figcaption></figure>
-          <figure><div data-illus="induction"></div><figcaption>Each strategy is solved backwards from the end of the asset's life: at every node, act or wait, whichever is worth more.</figcaption></figure>
-          <figure><div data-illus="payoff"></div><figcaption>The result: a flexible design gives up a little in the middle and cuts the losses when demand disappoints.</figcaption></figure>
+          <figure><div data-illus="lattice"></div><figcaption data-i18n="i.fig.lattice">Demand moves up or down each step; the lattice recombines, so it stays small enough to solve exactly.</figcaption></figure>
+          <figure><div data-illus="induction"></div><figcaption data-i18n="i.fig.induction">Each strategy is solved backwards from the end of the asset's life: at every node, act or wait, whichever is worth more.</figcaption></figure>
+          <figure><div data-illus="payoff"></div><figcaption data-i18n="i.fig.payoff">The result: a flexible design gives up a little in the middle and cuts the losses when demand disappoints.</figcaption></figure>
         </div>
         <div class="eqs">
-          <div class="eq"><h4>Demand lattice</h4>
-            <div class="f">u = e^(σ·√Δt)   d = 1/u
+          <div class="eq"><h4 data-i18n="i.eq.lattice.h">Demand lattice</h4>
+            <div class="f" data-i18n="f.i0">u = e^(σ·√Δt)   d = 1/u
 p = (e^(g·Δt) − d) / (u − d)
 D(t,i) = min(D₀·u^(2i−t), ceiling·D₀)</div>
-            <p>A recombining binomial tree over the whole asset life. The step Δt is a quarter, or monthly or weekly when
+            <p data-i18n="i.eq.lattice.p">A recombining binomial tree over the whole asset life. The step Δt is a quarter, or monthly or weekly when
               needed so that <code>p</code> stays inside (0, 1) and the growth you set is reproduced exactly; the page says
               when that happens. Demand saturates at the market ceiling.</p></div>
-          <div class="eq"><h4>Cash flow per year</h4>
-            <div class="f">own  = min(D, K)
+          <div class="eq"><h4 data-i18n="i.eq.cf.h">Cash flow per year</h4>
+            <div class="f" data-i18n="f.i1">own  = min(D, K)
 out  = min(D − own, outCap·D₀)
 lost = D − own − out
 CF = margin·own + outMargin·out
      − penalty·lost − opcost·K</div>
-            <p>Unmet demand goes to a 3PL at a lower margin up to a limit, and the rest is lost with a penalty. The rule is
+            <p data-i18n="i.eq.cf.p">Unmet demand goes to a 3PL at a lower margin up to a limit, and the rest is lost with a penalty. The rule is
               the same for every strategy, including while waiting or while a site is being built.</p></div>
-          <div class="eq"><h4>Operating a capacity</h4>
-            <div class="f">R_K(t,i) = CF(D(t,i), K)·Δt
+          <div class="eq"><h4 data-i18n="i.eq.op.h">Operating a capacity</h4>
+            <div class="f" data-i18n="f.i2">R_K(t,i) = CF(D(t,i), K)·Δt
    + e^(−rΔt)·[p·R_K(t+1,i+1) + (1−p)·R_K(t+1,i)]
 R_K(N,·) = 0</div>
-            <p>The value of running capacity K to the end of the asset life, with no decisions. There is no terminal
+            <p data-i18n="i.eq.op.p">The value of running capacity K to the end of the asset life, with no decisions. There is no terminal
               perpetuity: the asset life is explicit.</p></div>
-          <div class="eq"><h4>Committing with a lead time</h4>
-            <div class="f">commit(t,i) = R_old(t,i) − E_t[e^(−rL)·R_old(t+L)]
+          <div class="eq"><h4 data-i18n="i.eq.commit.h">Committing with a lead time</h4>
+            <div class="f" data-i18n="f.i3">commit(t,i) = R_old(t,i) − E_t[e^(−rL)·R_old(t+L)]
             + E_t[e^(−rL)·R_new(t+L)] − cost</div>
-            <p>A project started at step t keeps the old capacity running for the lead time L and the new one after it.
+            <p data-i18n="i.eq.commit.p">A project started at step t keeps the old capacity running for the lead time L and the new one after it.
               The L-step expectation uses binomial weights.</p></div>
-          <div class="eq"><h4>Strategies</h4>
-            <div class="f">fixed(K)  = commit(0,0; 0 → K) − (F + v·K)
+          <div class="eq"><h4 data-i18n="i.eq.strat.h">Strategies</h4>
+            <div class="f" data-i18n="f.i4">fixed(K)  = commit(0,0; 0 → K) − (F + v·K)
 best      = max over K of fixed(K)
 defer(t)  = max(commit now − (F+v·K)(1+e)^t,  wait)
 stage(t,k)= max(hold,  max over k′>k of
             commit(k → k′) − (F/4 + v·ΔK·(1+premium)))</div>
-            <p>Decisions are possible only inside the decision window; after it the capacity stays as it is until the end
+            <p data-i18n="i.eq.strat.p">Decisions are possible only inside the decision window; after it the capacity stays as it is until the end
               of the asset life. Staging runs one project at a time.</p></div>
-          <div class="eq"><h4>Selling a site</h4>
-            <div class="f">resale(K,t) = salvF·(F + v·K)·(1 − t/N)
+          <div class="eq"><h4 data-i18n="i.eq.sell.h">Selling a site</h4>
+            <div class="f" data-i18n="f.i5">resale(K,t) = salvF·(F + v·K)·(1 − t/N)
 R_K(t,i) = max(hold, resale(K,t) + R_0(t,i))</div>
-            <p>Any owned site can be sold at any time, irreversibly; demand is then served through the 3PL (R<sub>0</sub>).
+            <p data-i18n="i.eq.sell.p">Any owned site can be sold at any time, irreversibly; demand is then served through the 3PL (R<sub>0</sub>).
               The resale value declines to zero at the end of the asset life. Staging can sell too, at whatever stage it has reached.
               This applies to the best fixed design as well, so the baseline is not penalised.</p></div>
-          <div class="eq"><h4>Mothballing and contraction</h4>
-            <div class="f">idle CF = CF(D, 0) − mothF·opcost·K
+          <div class="eq"><h4 data-i18n="i.eq.moth.h">Mothballing and contraction</h4>
+            <div class="f" data-i18n="f.i6">idle CF = CF(D, 0) − mothF·opcost·K
 A = max(hold_A, hold_B − c_moth, sell)
 B = max(hold_B, hold_A − c_restart, sell)
 contract k → k′:  V(k′) + salvF·v·(K_k − K_k′)·(1 − t/N)</div>
-            <p>An idle site sends demand to the 3PL and keeps part of its holding cost; switching each way has a one-off
+            <p data-i18n="i.eq.moth.p">An idle site sends demand to the 3PL and keeps part of its holding cost; switching each way has a one-off
               cost, which opens a band between the demand at which it is idled and the demand at which it is restarted.
               Comparing continuation values means no switch-and-back within a step. A site that resells well is usually
               better sold than idled. The staged site can also sell capacity back in steps.</p></div>
-          <div class="eq"><h4>Lease with break clauses</h4>
-            <div class="f">CF_lease = CF(D, K) − rent·K
+          <div class="eq"><h4 data-i18n="i.eq.lease.h">Lease with break clauses</h4>
+            <div class="f" data-i18n="f.i7">CF_lease = CF(D, K) − rent·K
 at a break date b:
   R_L(b,i) = max(hold, R_0(b,i) − fee·rent·K)
 lease = commit(0,0; 0 → K, lead L_f) − fit·F</div>
-            <p>No capex: rent instead, plus a fit-out cost and time. Break dates fall at the minimum term after the lease
+            <p data-i18n="i.eq.lease.p">No capex: rent instead, plus a fit-out cost and time. Break dates fall at the minimum term after the lease
               starts and then at fixed intervals; breaking costs a fee in years of rent. The leased capacity is chosen to
               maximise NPV, and the break clauses' value is the lease with them minus the same lease without.</p></div>
-          <div class="eq"><h4>Valuation basis</h4>
-            <div class="f">WACC:          drift g,       discount at WACC
+          <div class="eq"><h4 data-i18n="i.eq.basis.h">Valuation basis</h4>
+            <div class="f" data-i18n="f.i8">WACC:          drift g,       discount at WACC
 Risk-neutral:  drift g − λ·σ, discount at r_f</div>
-            <p>Discounting expected cash flows at a WACC is the practitioner's convention. Risk-neutral valuation is the
+            <p data-i18n="i.eq.basis.p">Discounting expected cash flows at a WACC is the practitioner's convention. Risk-neutral valuation is the
               theoretically consistent one for options: it reduces the drift by the market price of demand risk λ and
               discounts at the risk-free rate.</p></div>
-          <div class="eq"><h4>Value of flexibility</h4>
-            <div class="f">flexibility = max(defer, stage, lease) − best fixed</div>
-            <p>Measured against the best fixed design, which is what a competent planner would choose without options.
+          <div class="eq"><h4 data-i18n="i.eq.flex.h">Value of flexibility</h4>
+            <div class="f" data-i18n="f.i9">flexibility = max(defer, stage, lease) − best fixed</div>
+            <p data-i18n="i.eq.flex.p">Measured against the best fixed design, which is what a competent planner would choose without options.
               The gap to the full footprint is shown as well, because that is the comparison most studies make.</p></div>
-          <div class="eq"><h4>Read it as</h4>
-            <p>A decision-support model, not a project appraisal. Its value is the direction and rough size of the
+          <div class="eq"><h4 data-i18n="i.eq.read.h">Read it as</h4>
+            <p data-i18n="i.eq.read.p">A decision-support model, not a project appraisal. Its value is the direction and rough size of the
               flexibility premium, the triggers, and which assumptions they hinge on. It does not yet model several sites,
               switching between sources or regions, competition, or correlated cost risks.</p></div>
         </div>
@@ -221,11 +222,13 @@ Risk-neutral:  drift g − λ·σ, discount at r_f</div>
   </div>
 
   <footer class="foot">
-    <span class="consult">Real Options for Network Design <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Synthetic, illustrative model — not investment advice.
+    <span data-i18n="foot.consult" class="consult">Real Options for Network Design <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span data-i18n="foot.note">Synthetic, illustrative model — not investment advice.</span>
   </footer>
   <div id="tt" role="tooltip"></div>
 
+  <script src="i18n-es.js"></script>
+  <script src="i18n.js"></script>
   <script src="src/model.js"></script>
   <script src="charts.js"></script>
   <script src="illustrations.js"></script>
@@ -234,6 +237,7 @@ Risk-neutral:  drift g − λ·σ, discount at r_f</div>
   <script src="calib-ui.js"></script>
   <script src="app.js"></script>
   <script src="tour-content.js"></script>
+  <script src="tour-content-es.js"></script>
   <script src="tour.js"></script>
 </body>
 </html>

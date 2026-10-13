@@ -6,6 +6,18 @@
   "use strict";
   var CONTENT = window.ROTourContent;
   if (!CONTENT) return;
+  var I18 = window.ROi18n, T = I18.T;
+  // in Spanish, each level and step takes its text from tour-content-es.js (same ids; setups stay as they are)
+  var ES = I18.lang === "es" ? window.ROTourContentES : null;
+  if (ES) CONTENT = { TOKENS: CONTENT.TOKENS, LEVELS: CONTENT.LEVELS.map(function (l) {
+    var lt = ES.levels[l.id] || {};
+    return Object.assign({}, l, { title: lt.title || l.title, blurb: lt.blurb || l.blurb, steps: l.steps.map(function (st) {
+      var e = ES.steps[st.id]; if (!e) return st;
+      var out = Object.assign({}, st, { title: e.title, body: e.body });
+      if (st.quiz && e.quiz) out.quiz = Object.assign({}, st.quiz, { q: e.quiz.q, options: e.quiz.options, explain: e.quiz.explain });
+      return out;
+    }) });
+  }) };
   var PAGE = window.RONet ? "network" : "index", KEY = "ro-tour-v1";
   var level = null, idx = 0, card = null, menu = null, lit = null;
   function load() { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } }
@@ -18,9 +30,9 @@
   if (btn) btn.addEventListener("click", function (ev) { ev.stopPropagation(); menu ? closeMenu() : openMenu(); });
   function openMenu() {
     closeMenu(); var prog = load();
-    menu = document.createElement("div"); menu.className = "tour-menu"; menu.setAttribute("role", "dialog"); menu.setAttribute("aria-label", "Tutorial levels");
-    menu.innerHTML = "<p class='tour-menu-h'>Tutorial</p>" + CONTENT.LEVELS.map(function (l) {
-      var pr = prog[l.id] || {}, state = pr.done ? "done ✓" : pr.step ? "step " + (pr.step + 1) + " of " + l.steps.length : l.steps.length + " steps · " + l.minutes + " min";
+    menu = document.createElement("div"); menu.className = "tour-menu"; menu.setAttribute("role", "dialog"); menu.setAttribute("aria-label", T("Tutorial levels"));
+    menu.innerHTML = "<p class='tour-menu-h'>" + T("Tutorial") + "</p>" + CONTENT.LEVELS.map(function (l) {
+      var pr = prog[l.id] || {}, state = pr.done ? T("done ✓") : pr.step ? T("step {k} of {n}", { k: pr.step + 1, n: l.steps.length }) : T("{n} steps · {m} min", { n: l.steps.length, m: l.minutes });
       return "<button type='button' class='tour-level' data-level='" + l.id + "'><b>" + l.title + "</b><span>" + l.blurb + "</span><em>" + state + "</em></button>";
     }).join("");
     document.body.appendChild(menu);
@@ -39,7 +51,7 @@
   function go(k) {
     var st = level.steps[k];
     var prog = load(); prog[level.id] = { step: k, done: (prog[level.id] || {}).done || false }; save(prog);
-    if (st.page !== PAGE) { location.href = (st.page === "network" ? "network.html" : "index.html") + "?tour=" + level.id + "&step=" + k; return; }
+    if (st.page !== PAGE) { location.href = (st.page === "network" ? "network.html" : "index.html") + "?tour=" + level.id + "&step=" + k + (I18.lang === "es" ? "&lang=es" : ""); return; }
     idx = k; setup(st.setup || {}); show(st);
   }
   function setup(s) {
@@ -64,7 +76,7 @@
           case "flex": return money(sol[bf].npv - sol.best.npv, true);
           case "vsFull": return money(sol[bf].npv - sol.full.npv, true);
           case "top": return a.names[top];
-          case "bestK": return sol.best.K.toFixed(0) + "k units, " + money(sol.best.npv);
+          case "bestK": return T("{K}k units, {v}", { K: sol.best.K.toFixed(0), v: money(sol.best.npv) });
           case "fullNpv": return money(sol.full.npv);
           case "deferNpv": return money(sol.defer.npv);
           case "leaseBreak": return money(sol.lease.npv - sol.lease.noBreak);
@@ -87,12 +99,12 @@
       document.addEventListener("keydown", keys);
     }
     var n = level.steps.length;
-    card.innerHTML = "<div class='tour-top'><span>" + level.title + " · step " + (idx + 1) + " of " + n + "</span><button type='button' class='tour-x' aria-label='Leave the tutorial'>×</button></div>" +
+    card.innerHTML = "<div class='tour-top'><span>" + level.title + " · " + T("step {k} of {n}", { k: idx + 1, n: n }) + "</span><button type='button' class='tour-x' aria-label='" + T("Leave the tutorial") + "'>×</button></div>" +
       "<div class='tour-bar'><i style='width:" + Math.round(100 * (idx + 1) / n) + "%'></i></div>" +
       (st.illus && window.ROIllus ? "<div class='tour-il'>" + window.ROIllus.svg(st.illus) + "</div>" : "") +
       "<h3>" + st.title + "</h3><div class='tour-body'>" + fill(st.body) + "</div>" +
       (st.quiz ? "<div class='tour-quiz'><p>" + st.quiz.q + "</p>" + st.quiz.options.map(function (o, k) { return "<button type='button' data-opt='" + k + "'>" + o + "</button>"; }).join("") + "<div class='tour-fb' hidden></div></div>" : "") +
-      "<div class='tour-nav'><button type='button' class='tour-back'" + (idx === 0 ? " disabled" : "") + ">Back</button><button type='button' class='tour-next'>" + (idx === n - 1 ? "Finish" : "Next") + "</button></div>";
+      "<div class='tour-nav'><button type='button' class='tour-back'" + (idx === 0 ? " disabled" : "") + ">" + T("Back") + "</button><button type='button' class='tour-next'>" + (idx === n - 1 ? T("Finish") : T("Next")) + "</button></div>";
     card.querySelector(".tour-x").addEventListener("click", stop);
     card.querySelector(".tour-back").addEventListener("click", function () { if (idx > 0) go(idx - 1); });
     card.querySelector(".tour-next").addEventListener("click", next);
@@ -101,7 +113,7 @@
         var k = +b.getAttribute("data-opt"), ok = k === st.quiz.answer, fb = card.querySelector(".tour-fb");
         card.querySelectorAll("[data-opt]").forEach(function (o) { o.disabled = true; o.classList.toggle("right", +o.getAttribute("data-opt") === st.quiz.answer); });
         if (!ok) b.classList.add("wrong");
-        fb.hidden = false; fb.innerHTML = "<b>" + (ok ? "Right." : "Not quite.") + "</b> " + fill(st.quiz.explain);
+        fb.hidden = false; fb.innerHTML = "<b>" + (ok ? T("Right.") : T("Not quite.")) + "</b> " + fill(st.quiz.explain);
       });
     });
     highlight(st.target);
@@ -121,8 +133,8 @@
     if (idx < level.steps.length - 1) { go(idx + 1); return; }
     var prog = load(); prog[level.id] = { step: 0, done: true }; save(prog);
     var nextLevel = CONTENT.LEVELS[CONTENT.LEVELS.indexOf(level) + 1];
-    card.innerHTML = "<div class='tour-top'><span>" + level.title + " complete</span><button type='button' class='tour-x' aria-label='Close'>×</button></div><h3>Well done</h3><div class='tour-body'>You finished the " + level.title.toLowerCase() + " level." +
-      (nextLevel ? " Ready for <b>" + nextLevel.title.toLowerCase() + "</b>? " + nextLevel.blurb : " That is the whole tutorial.") + "</div><div class='tour-nav'>" + (nextLevel ? "<button type='button' class='tour-next'>Start " + nextLevel.title.toLowerCase() + "</button>" : "") + "<button type='button' class='tour-back'>Close</button></div>";
+    card.innerHTML = "<div class='tour-top'><span>" + T("{level} complete", { level: level.title }) + "</span><button type='button' class='tour-x' aria-label='" + T("Close") + "'>×</button></div><h3>" + T("Well done") + "</h3><div class='tour-body'>" + T("You finished the {level} level.", { level: level.title.toLowerCase() }) + " " +
+      (nextLevel ? T("Ready for <b>{next}</b>?", { next: nextLevel.title.toLowerCase() }) + " " + nextLevel.blurb : T("That is the whole tutorial.")) + "</div><div class='tour-nav'>" + (nextLevel ? "<button type='button' class='tour-next'>" + T("Start {next}", { next: nextLevel.title.toLowerCase() }) + "</button>" : "") + "<button type='button' class='tour-back'>" + T("Close") + "</button></div>";
     card.querySelector(".tour-x").addEventListener("click", stop);
     card.querySelector(".tour-back").addEventListener("click", stop);
     var nb = card.querySelector(".tour-next"); if (nb) nb.addEventListener("click", function () { start(nextLevel.id, 0); });

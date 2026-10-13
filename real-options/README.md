@@ -1,6 +1,6 @@
 # Real Options for Network Design
 
-**Live: https://kathuman.github.io/claude-projects/real-options/ · version 4.1.0 (roadmap complete: phases 0–5, with a three-level tutorial and explanatory diagrams).**
+**Live: https://kathuman.github.io/claude-projects/real-options/ · version 4.2.0 (roadmap complete: phases 0–5, with a three-level tutorial and explanatory diagrams; in English and Spanish).**
 
 What is the right to decide later worth in a supply network design? The app values five strategies on a binomial
 demand lattice, each with its optimal policy, and reports the value of flexibility against the **best fixed
@@ -69,6 +69,21 @@ The page shows:
 
 `charts.js`, `specs.js` (every control and preset) and `style.css` are shared by both pages.
 
+## Languages
+
+Everything is available in English and in Latin American Spanish:
+- every page, control, chart, message, diagram, report and tutorial step;
+- the formulas' wording.
+
+The **Español / English** button in the header switches language. `?lang=es` in a link opens a page in Spanish, and
+the browser remembers the choice.
+- `i18n.js` picks the language and translates page text marked `data-i18n`.
+- Scripts call `T("English text", {placeholders})`, and the engines' messages are translated by pattern.
+- `i18n-es.js` holds the Spanish, and `tour-content-es.js` the Spanish tutorial.
+- Numbers keep a decimal point, as in Mexico and Central America; money is in $M.
+- `tests/i18n.test.js` checks that nothing is missing or left unused, that placeholders, tokens and markup match,
+  that every tutorial step and answer is in place, and that every kind of engine message is translated.
+
 ## Diagrams
 
 `illustrations.js` draws 26 explanatory diagrams as inline SVG in the theme's colour tokens:
@@ -115,7 +130,7 @@ The page shows:
 
 ## Tests
 
-`node real-options/tests/model.test.js` checks 75 things, `network.test.js` 29, `calibrate.test.js` 24, `tutorial.test.js` 22 and `illustrations.test.js` 10. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
+`node real-options/tests/model.test.js` checks 75 things, `network.test.js` 29, `calibrate.test.js` 24, `tutorial.test.js` 22, `illustrations.test.js` 10 and `i18n.test.js` 21. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
 - the lattice: no clamping, exact growth, convergence to Black–Scholes, and a deterministic closed form;
 - the dominance relations between the strategies;
 - how option value responds to volatility, the window, lead times, penalties and escalation;

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Network Options — Real Options for Network Design</title>
-  <meta name="description" content="Real options across a two-region supply network: a central hub that pools demand, regional hubs, a pilot hub that creates a cheaper option on the next, or waiting — valued on a correlated two-region demand lattice." />
+  <title data-i18n="title.network">Network Options — Real Options for Network Design</title>
+  <meta data-i18n-attr="content=meta.network" name="description" content="Real options across a two-region supply network: a central hub that pools demand, regional hubs, a pilot hub that creates a cheaper option on the next, or waiting — valued on a correlated two-region demand lattice." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127922;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,41 +14,42 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <p class="mark">Real <span>Options</span></p>
+      <p class="mark" data-i18n="brand.mark">Real <span>Options</span></p>
       <span class="ver" id="ver"></span>
-      <span class="sub">flexibility in network design, priced</span>
+      <span data-i18n="brand.sub" class="sub">flexibility in network design, priced</span>
     </div>
     <nav class="actions">
-      <a class="back-link" href="index.html">One site</a>
-      <a class="back-link" href="network.html" aria-current="page">Network</a>
-      <a class="back-link" href="#model">Model</a>
-      <button class="back-link" type="button" id="tourBtn" aria-haspopup="true">Tutorial</button>
-      <a class="back-link" href="about.html">About</a>
-      <a class="back-link" href="../index.html">← All projects</a>
+      <a data-i18n="nav.one" class="back-link" href="index.html">One site</a>
+      <a data-i18n="nav.network" class="back-link" href="network.html" aria-current="page">Network</a>
+      <a data-i18n="nav.model" class="back-link" href="#model">Model</a>
+      <button class="back-link" type="button" id="langBtn" lang="es">Español</button>
+      <button data-i18n="nav.tutorial" class="back-link" type="button" id="tourBtn" aria-haspopup="true">Tutorial</button>
+      <a data-i18n="nav.about" class="back-link" href="about.html">About</a>
+      <a data-i18n="nav.all" class="back-link" href="../index.html">← All projects</a>
     </nav>
   </header>
 
   <section class="intro">
-    <h1>From one site to a network</h1>
-    <p class="lede">With two regions the choice is no longer only <i>when</i> and <i>how much</i>, but <i>where</i>. One
+    <h1 data-i18n="n.h1">From one site to a network</h1>
+    <p data-i18n="n.lede" class="lede">With two regions the choice is no longer only <i>when</i> and <i>how much</i>, but <i>where</i>. One
       central hub pools both regions' demand; regional hubs are close to their customers; and opening one hub creates a
       cheaper option on the next, because systems, people and supplier terms carry over. Here two regions with
       correlated, uncertain demand are valued together.</p>
-    <div class="gallery g4" aria-label="The network strategies">
+    <div data-i18n-attr="aria-label=n.gallery" class="gallery g4" aria-label="The network strategies">
       <figure class="scard" style="--c:var(--s1)"><div class="scard-il" data-illus="net:central"></div>
-        <figcaption><span class="tag">Pooling</span><b>Central hub</b><span>One hub serves both regions; its spare capacity covers whichever region is busy. Best when the regions move independently and shipping is cheap.</span></figcaption></figure>
+        <figcaption data-i18n="n.c.central"><span class="tag">Pooling</span><b>Central hub</b><span>One hub serves both regions; its spare capacity covers whichever region is busy. Best when the regions move independently and shipping is cheap.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s2)"><div class="scard-il" data-illus="net:two"></div>
-        <figcaption><span class="tag">Proximity</span><b>Two hubs now</b><span>A hub in each region, sized together: close to customers, but each must cover its own region's peaks.</span></figcaption></figure>
+        <figcaption data-i18n="n.c.two"><span class="tag">Proximity</span><b>Two hubs now</b><span>A hub in each region, sized together: close to customers, but each must cover its own region's peaks.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s3)"><div class="scard-il" data-illus="net:pilot"></div>
-        <figcaption><span class="tag">Compound option</span><b>Pilot hub</b><span>Open one region's hub now and keep the option on the other, cheaper because the first hub exists.</span></figcaption></figure>
+        <figcaption data-i18n="n.c.pilot"><span class="tag">Compound option</span><b>Pilot hub</b><span>Open one region's hub now and keep the option on the other, cheaper because the first hub exists.</span></figcaption></figure>
       <figure class="scard" style="--c:var(--s5)"><div class="scard-il" data-illus="net:wait"></div>
-        <figcaption><span class="tag">Deferral</span><b>Wait &amp; see network</b><span>Serve both regions through 3PLs and open either hub, or both, at the best moment inside the window.</span></figcaption></figure>
+        <figcaption data-i18n="n.c.wait"><span class="tag">Deferral</span><b>Wait &amp; see network</b><span>Serve both regions through 3PLs and open either hub, or both, at the best moment inside the window.</span></figcaption></figure>
     </div>
   </section>
 
   <div class="layout">
-    <aside class="controls panel" id="controls" aria-label="Scenario">
-      <h2 class="sec">Scenario</h2>
+    <aside data-i18n-attr="aria-label=aria.scenario" class="controls panel" id="controls" aria-label="Scenario">
+      <h2 data-i18n="sec.scenario" class="sec">Scenario</h2>
       <div class="presets" id="presets"></div>
       <div id="ctlHost"></div>
       <div class="derived" id="derived"></div>
@@ -61,76 +62,76 @@
       <div class="scorecards" id="scorecards"></div>
 
       <div class="panel">
-        <h2 class="sec">Decision map: what to open, and when</h2>
-        <p class="blurb">Each cell is one combination of the two regions' demand at the chosen year (further right: more demand in
+        <h2 data-i18n="n.map.h" class="sec">Decision map: what to open, and when</h2>
+        <p data-i18n="n.map.blurb" class="blurb">Each cell is one combination of the two regions' demand at the chosen year (further right: more demand in
           region A; further up: more in region B). Its colour is the optimal move from the network you would have then; faint cells
           are unlikely to be reached.</p>
         <div class="maptools">
-          <div class="seg" id="mapState" role="group" aria-label="Network in place">
-            <button type="button" data-state="none">No hub yet</button>
-            <button type="button" data-state="A">Hub A open</button>
-            <button type="button" data-state="B">Hub B open</button>
+          <div data-i18n-attr="aria-label=aria.mapState" class="seg" id="mapState" role="group" aria-label="Network in place">
+            <button data-i18n="n.state.none" type="button" data-state="none">No hub yet</button>
+            <button data-i18n="n.state.A" type="button" data-state="A">Hub A open</button>
+            <button data-i18n="n.state.B" type="button" data-state="B">Hub B open</button>
           </div>
-          <label class="yr">Year <input type="range" id="mapYear" min="0" max="8" step="0.25" value="2"><output id="mapYearOut">2</output></label>
+          <label class="yr"><span data-i18n="n.year">Year</span> <input type="range" id="mapYear" min="0" max="8" step="0.25" value="2"><output id="mapYearOut">2</output></label>
         </div>
-        <svg class="chart" id="netMap" viewBox="0 0 720 420" role="img" aria-label="Optimal action for each combination of regional demands"></svg>
+        <svg data-i18n-attr="aria-label=aria.netMap" class="chart" id="netMap" viewBox="0 0 720 420" role="img" aria-label="Optimal action for each combination of regional demands"></svg>
         <div class="legend" id="netMapLegend"></div>
         <p class="caption" id="netMapCaption"></p>
       </div>
 
       <div class="grid2">
         <div class="panel">
-          <h2 class="sec">Distribution of NPV</h2>
-          <p class="blurb">The best fixed network against the best flexible strategy, over the same simulated demand paths.</p>
-          <svg class="chart" id="netDist" viewBox="0 0 360 300" role="img" aria-label="Histogram of NPV"></svg>
+          <h2 data-i18n="i.dist.h" class="sec">Distribution of NPV</h2>
+          <p data-i18n="n.dist.blurb" class="blurb">The best fixed network against the best flexible strategy, over the same simulated demand paths.</p>
+          <svg data-i18n-attr="aria-label=aria.netDist" class="chart" id="netDist" viewBox="0 0 360 300" role="img" aria-label="Histogram of NPV"></svg>
           <div class="legend" id="netDistLegend"></div>
           <p class="caption" id="netDistCaption"></p>
         </div>
         <div class="panel">
-          <h2 class="sec">Pooling and correlation</h2>
-          <p class="blurb">Each strategy's NPV as the correlation between the regions changes (everything else as set). The dashed line is your setting.</p>
-          <svg class="chart" id="rhoChart" viewBox="0 0 360 300" role="img" aria-label="NPV against correlation"></svg>
+          <h2 data-i18n="n.rho.h" class="sec">Pooling and correlation</h2>
+          <p data-i18n="n.rho.blurb" class="blurb">Each strategy's NPV as the correlation between the regions changes (everything else as set). The dashed line is your setting.</p>
+          <svg data-i18n-attr="aria-label=aria.rhoChart" class="chart" id="rhoChart" viewBox="0 0 360 300" role="img" aria-label="NPV against correlation"></svg>
           <div class="legend" id="rhoLegend"></div>
           <p class="caption" id="rhoCaption"></p>
-          <details class="tv"><summary>Table view</summary><div id="rhoTable"></div></details>
+          <details class="tv"><summary data-i18n="tv.sum">Table view</summary><div id="rhoTable"></div></details>
         </div>
       </div>
 
       <div class="panel" id="model">
-        <h2 class="sec">The model</h2>
-        <p class="blurb">Two regions, money in $M. The equations run in <code>src/network.js</code>, which is checked by
+        <h2 data-i18n="model.h" class="sec">The model</h2>
+        <p data-i18n="n.model.blurb" class="blurb">Two regions, money in $M. The equations run in <code>src/network.js</code>, which is checked by
           its own automated tests, including an exact reduction to the single-site engine when one region is empty.</p>
         <div class="figs">
-          <figure><div data-illus="pooling"></div><figcaption>When the regions move apart, their total is steadier than either: a shared hub can be sized for it.</figcaption></figure>
-          <figure><div data-illus="compound"></div><figcaption>A pilot hub buys a cheaper option on the second hub: a compound option.</figcaption></figure>
-          <figure><div data-illus="map2d"></div><figcaption>With two regions every decision depends on both demands, so the decision map is two-dimensional.</figcaption></figure>
+          <figure><div data-illus="pooling"></div><figcaption data-i18n="n.fig.pooling">When the regions move apart, their total is steadier than either: a shared hub can be sized for it.</figcaption></figure>
+          <figure><div data-illus="compound"></div><figcaption data-i18n="n.fig.compound">A pilot hub buys a cheaper option on the second hub: a compound option.</figcaption></figure>
+          <figure><div data-illus="map2d"></div><figcaption data-i18n="n.fig.map2d">With two regions every decision depends on both demands, so the decision map is two-dimensional.</figcaption></figure>
         </div>
         <div class="eqs">
-          <div class="eq"><h4>Joint demand lattice</h4>
-            <div class="f">each region: u = e^(σ√Δt), p = (e^(gΔt) − d)/(u − d)
+          <div class="eq"><h4 data-i18n="n.eq.lattice.h">Joint demand lattice</h4>
+            <div class="f" data-i18n="f.n0">each region: u = e^(σ√Δt), p = (e^(gΔt) − d)/(u − d)
 p_uu = p_A·p_B + c    p_ud = p_A(1−p_B) − c
 p_du = (1−p_A)p_B − c  p_dd = (1−p_A)(1−p_B) + c
 c = ρ·√(p_A(1−p_A)p_B(1−p_B))</div>
-            <p>Four branches per quarter. Each region's growth is reproduced exactly and the moves have correlation ρ;
+            <p data-i18n="n.eq.lattice.p">Four branches per quarter. Each region's growth is reproduced exactly and the moves have correlation ρ;
               if a growth or a correlation cannot be represented, the page says what is used instead.</p></div>
-          <div class="eq"><h4>Serving the network</h4>
-            <div class="f">own_r   = min(D_r, K_r)
+          <div class="eq"><h4 data-i18n="n.eq.serve.h">Serving the network</h4>
+            <div class="f" data-i18n="f.n1">own_r   = min(D_r, K_r)
 cross   = spare capacity → the other region's shortfall
 3PL_r   = min(rest_r, outCap·D_r,0)
 CF = margin·own + (margin − x)·cross
    + outMargin·3PL − penalty·lost − opcost·(K_A + K_B)</div>
-            <p>Cross-region service earns the margin less the transport cost x, and is used before the 3PL when it earns more.</p></div>
-          <div class="eq"><h4>Compound option</h4>
-            <div class="f">second hub: (F·(1 − learn) + v·K)·(1+e)^t
+            <p data-i18n="n.eq.serve.p">Cross-region service earns the margin less the transport cost x, and is used before the 3PL when it earns more.</p></div>
+          <div class="eq"><h4 data-i18n="n.eq.compound.h">Compound option</h4>
+            <div class="f" data-i18n="f.n2">second hub: (F·(1 − learn) + v·K)·(1+e)^t
 V_A(t) = max(hold, commit(A → AB) − cost_B)
 V_0(t) = max(wait, → A, → B, → AB)</div>
-            <p>With one hub open, the option to open the other; with none, the choice of which to open first, or both.
+            <p data-i18n="n.eq.compound.p">With one hub open, the option to open the other; with none, the choice of which to open first, or both.
               Each project arrives after the build lead time; during it no other project starts.</p></div>
-          <div class="eq"><h4>Fixed designs</h4>
-            <div class="f">fixed(K_A, K_B) = Σ_t e^(−rt) E[CF_t]·Δt − cost
+          <div class="eq"><h4 data-i18n="n.eq.fixed.h">Fixed designs</h4>
+            <div class="f" data-i18n="f.n3">fixed(K_A, K_B) = Σ_t e^(−rt) E[CF_t]·Δt − cost
 central = max over K of fixed(K, 0)
 two     = max over K_A, K_B of fixed(K_A, K_B)</div>
-            <p>The best fixed network is the better of a central hub and two regional hubs, each optimally sized; the value of
+            <p data-i18n="n.eq.fixed.p">The best fixed network is the better of a central hub and two regional hubs, each optimally sized; the value of
               flexibility is measured against it.</p></div>
         </div>
       </div>
@@ -138,11 +139,13 @@ two     = max over K_A, K_B of fixed(K_A, K_B)</div>
   </div>
 
   <footer class="foot">
-    <span class="consult">Real Options for Network Design <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Synthetic, illustrative model — not investment advice.
+    <span data-i18n="foot.consult" class="consult">Real Options for Network Design <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span data-i18n="foot.note">Synthetic, illustrative model — not investment advice.</span>
   </footer>
   <div id="tt" role="tooltip"></div>
 
+  <script src="i18n-es.js"></script>
+  <script src="i18n.js"></script>
   <script src="src/network.js"></script>
   <script src="charts.js"></script>
   <script src="illustrations.js"></script>
@@ -151,6 +154,7 @@ two     = max over K_A, K_B of fixed(K_A, K_B)</div>
   <script src="calib-ui.js"></script>
   <script src="network-app.js"></script>
   <script src="tour-content.js"></script>
+  <script src="tour-content-es.js"></script>
   <script src="tour.js"></script>
 </body>
 </html>

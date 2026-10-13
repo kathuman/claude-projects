@@ -11,12 +11,13 @@
   }
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
+  function T(s, v) { var g = typeof self !== "undefined" ? self : globalThis, I = g.ROi18n; return I ? I.T(s, v) : String(s); }
   var C = { s1: "var(--s1)", s2: "var(--s2)", s3: "var(--s3)", s4: "var(--s4)", s5: "var(--s5)", ink: "var(--ink)", dim: "var(--ink-dim)", faint: "var(--ink-faint)", line: "var(--line)", acc: "var(--accent)", bad: "var(--bad)", good: "var(--good)" };
   function wrap(w, h, label, body) {
-    return "<svg class='il' viewBox='0 0 " + w + " " + h + "' role='img' aria-label='" + esc(label) + "' xmlns='http://www.w3.org/2000/svg'>" + body + "</svg>";
+    return "<svg class='il' viewBox='0 0 " + w + " " + h + "' role='img' aria-label='" + esc(T(label)) + "' xmlns='http://www.w3.org/2000/svg'>" + body + "</svg>";
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function t(x, y, s, o) { o = o || {}; return "<text x='" + x + "' y='" + y + "' class='il-t" + (o.cls ? " " + o.cls : "") + "'" + (o.anchor ? " text-anchor='" + o.anchor + "'" : "") + (o.fill ? " style='fill:" + o.fill + "'" : "") + ">" + esc(s) + "</text>"; }
+  function t(x, y, s, o) { o = o || {}; return "<text x='" + x + "' y='" + y + "' class='il-t" + (o.cls ? " " + o.cls : "") + "'" + (o.anchor ? " text-anchor='" + o.anchor + "'" : "") + (o.fill ? " style='fill:" + o.fill + "'" : "") + ">" + esc(T(s)) + "</text>"; }
   function pl(pts, o) { o = o || {}; return "<polyline points='" + pts.map(function (p) { return p[0] + "," + p[1]; }).join(" ") + "' fill='none' stroke='" + (o.stroke || C.dim) + "' stroke-width='" + (o.w || 1.6) + "'" + (o.dash ? " stroke-dasharray='" + o.dash + "'" : "") + " stroke-linejoin='round' stroke-linecap='round'" + (o.op ? " opacity='" + o.op + "'" : "") + "/>"; }
   function rc(x, y, w, h, o) { o = o || {}; return "<rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "' rx='" + (o.rx == null ? 2 : o.rx) + "' fill='" + (o.fill || "none") + "'" + (o.fop != null ? " fill-opacity='" + o.fop + "'" : "") + " stroke='" + (o.stroke || "none") + "' stroke-width='" + (o.w || 1.5) + "'" + (o.dash ? " stroke-dasharray='" + o.dash + "'" : "") + "/>"; }
   function ln(x1, y1, x2, y2, o) { o = o || {}; return "<line x1='" + x1 + "' y1='" + y1 + "' x2='" + x2 + "' y2='" + y2 + "' stroke='" + (o.stroke || C.line) + "' stroke-width='" + (o.w || 1) + "'" + (o.dash ? " stroke-dasharray='" + o.dash + "'" : "") + (o.cap ? " stroke-linecap='round'" : "") + "/>"; }
@@ -175,8 +176,8 @@
   var uid = 0;
   function svg(key) {
     var parts = String(key).split(":");
-    if (parts[0] === "strategy" && STRAT[parts[1]]) { var id = "ilh" + (++uid); return wrap(240, 120, NAMES[parts[1]] + ": capacity over time against demand", STRAT[parts[1]]().replace(/ilh/g, id)); }
-    if (parts[0] === "net" && NET[parts[1]]) return wrap(240, 124, NAMES[parts[1]] + ": the network", NET[parts[1]]());
+    if (parts[0] === "strategy" && STRAT[parts[1]]) { var id = "ilh" + (++uid); return wrap(240, 120, T("{name}: capacity over time against demand", { name: T(NAMES[parts[1]]) }), STRAT[parts[1]]().replace(/ilh/g, id)); }
+    if (parts[0] === "net" && NET[parts[1]]) return wrap(240, 124, T("{name}: the network", { name: T(NAMES[parts[1]]) }), NET[parts[1]]());
     if (CON[key]) return CON[key]();
     return "";
   }

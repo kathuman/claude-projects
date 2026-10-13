@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Decision Report — Real Options for Network Design</title>
-  <meta name="description" content="A printable decision report for a real-options network design scenario: recommendation, strategies, triggers, sensitivity, assumptions and method." />
+  <title data-i18n="title.report">Decision Report — Real Options for Network Design</title>
+  <meta data-i18n-attr="content=meta.report" name="description" content="A printable decision report for a real-options network design scenario: recommendation, strategies, triggers, sensitivity, assumptions and method." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127922;</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,20 +14,23 @@
 <body class="report-page">
   <header class="topbar no-print">
     <div class="brand">
-      <p class="mark">Real <span>Options</span></p>
+      <p class="mark" data-i18n="brand.mark">Real <span>Options</span></p>
       <span class="ver" id="ver"></span>
-      <span class="sub">decision report</span>
+      <span data-i18n="r.sub" class="sub">decision report</span>
     </div>
     <nav class="actions">
-      <a class="back-link" id="backLink" href="index.html">← Back to the scenario</a>
-      <button class="back-link" type="button" id="printBtn">Print or save as PDF</button>
+      <a data-i18n="r.back" class="back-link" id="backLink" href="index.html">← Back to the scenario</a>
+      <button class="back-link" type="button" id="langBtn" lang="es">Español</button>
+      <button data-i18n="r.print" class="back-link" type="button" id="printBtn">Print or save as PDF</button>
     </nav>
   </header>
-  <main class="report" id="report" aria-live="polite"><p class="hint">Preparing the report…</p></main>
+  <main class="report" id="report" aria-live="polite"><p data-i18n="r.preparing" class="hint">Preparing the report…</p></main>
   <footer class="foot no-print">
-    <span class="consult">Real Options for Network Design <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Synthetic, illustrative model — not investment advice.
+    <span data-i18n="foot.consult" class="consult">Real Options for Network Design <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span data-i18n="foot.note">Synthetic, illustrative model — not investment advice.</span>
   </footer>
+  <script src="i18n-es.js"></script>
+  <script src="i18n.js"></script>
   <script src="src/model.js"></script>
   <script src="specs.js"></script>
   <script src="illustrations.js"></script>

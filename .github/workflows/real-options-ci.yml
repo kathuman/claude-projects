@@ -28,6 +28,7 @@ jobs:
       - run: node real-options/tests/calibrate.test.js
       - run: node real-options/tests/tutorial.test.js
       - run: node real-options/tests/illustrations.test.js
+      - run: node real-options/tests/i18n.test.js
       - name: Syntax-check the page scripts
         run: for f in real-options/src/*.js real-options/*.js; do node --check "$f"; done
         shell: bash

@@ -26,7 +26,7 @@
     var t = text(svg, 12, (m.t + H - m.b) / 2, yl, { "text-anchor": "middle", transform: "rotate(-90 12 " + (m.t + H - m.b) / 2 + ")" });
     return t;
   }
-  function fmtNum(v) { return Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + "k" : Math.abs(v) < 1 && v !== 0 ? v.toFixed(2) : String(Math.round(v * 10) / 10); }
+  function fmtNum(v) { return Math.abs(v) >= 1000 ? (window.ROi18n ? window.ROi18n.T("{v}k", { v: (v / 1000).toFixed(1) }) : (v / 1000).toFixed(1) + "k") : Math.abs(v) < 1 && v !== 0 ? v.toFixed(2) : String(Math.round(v * 10) / 10); }
   function legend(host, items) {
     host.innerHTML = "";
     items.forEach(function (it) {
