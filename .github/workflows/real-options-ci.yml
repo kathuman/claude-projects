@@ -2,7 +2,8 @@ name: Real Options tests
 
 # The valuation engine: the lattice against Black–Scholes and a closed form, exact growth with no clamping, the
 # strategies' dominance relations, option value against its drivers, simulated policies against lattice values,
-# convergence as the step shrinks; and the two-region network engine.
+# convergence as the step shrinks; the two-region network engine; calibration from demand histories; and the
+# tutorial (well-formed steps, and every claim its questions make checked against the engines).
 on:
   push:
     paths:
@@ -24,6 +25,8 @@ jobs:
           node-version: 22
       - run: node real-options/tests/model.test.js
       - run: node real-options/tests/network.test.js
+      - run: node real-options/tests/calibrate.test.js
+      - run: node real-options/tests/tutorial.test.js
       - name: Syntax-check the page scripts
         run: for f in real-options/src/*.js real-options/*.js; do node --check "$f"; done
         shell: bash

@@ -8,66 +8,9 @@
     legend = C.legend, hover = C.hover, segments = C.segments, nearest = C.nearest, quant = C.quant;
   $("ver").textContent = "v" + M.VERSION; $("ver-foot").textContent = "v" + M.VERSION;
 
-  // ---- controls: shown in friendly units, stored in model units (model = shown × scale)
-  var GROUPS = [
-    { name: "Demand", items: [
-      { id: "D0", label: "Demand today", min: 100, max: 2000, step: 50, def: 500, fmt: function (v) { return v + "k units/yr"; } },
-      { id: "sigma", label: "Volatility", min: 5, max: 60, step: 1, def: 25, scale: 0.01, fmt: pct, hint: "Yearly standard deviation of demand growth." },
-      { id: "g", label: "Expected growth", min: -10, max: 12, step: 0.5, def: 4, scale: 0.01, fmt: pctS },
-      { id: "ceiling", label: "Market ceiling", min: 1.5, max: 6, step: 0.5, def: 3, fmt: function (v) { return v + "× today"; }, hint: "Demand saturates here." } ] },
-    { name: "Time", items: [
-      { id: "life", label: "Asset life", min: 10, max: 30, step: 1, def: 20, fmt: yrs },
-      { id: "window", label: "Decision window", min: 1, max: 15, step: 1, def: 8, fmt: yrs, hint: "How long you can still build or expand. After it the network stays as it is." },
-      { id: "buildLead", label: "Build lead time", min: 0, max: 3, step: 0.25, def: 1.5, fmt: yrs },
-      { id: "expandLead", label: "Expansion lead time", min: 0, max: 2, step: 0.25, def: 1, fmt: yrs } ] },
-    { name: "Economics", items: [
-      { id: "margin", label: "Margin, own network", min: 5, max: 40, step: 1, def: 20, scale: 0.001, fmt: perUnit },
-      { id: "opcost", label: "Holding cost of capacity", min: 1, max: 15, step: 0.5, def: 6, scale: 0.001, fmt: function (v) { return "$" + v + "/unit·yr"; } },
-      { id: "outMargin", label: "Margin, outsourced (3PL)", min: 0, max: 20, step: 0.5, def: 6, scale: 0.001, fmt: perUnit },
-      { id: "outCap", label: "Outsourcing limit", min: 0, max: 200, step: 10, def: 100, scale: 0.01, fmt: function (v) { return v + "% of today"; } },
-      { id: "penalty", label: "Penalty, lost sale", min: 0, max: 40, step: 1, def: 10, scale: 0.001, fmt: perUnit } ] },
-    { name: "Valuation", basis: true, items: [
-      { id: "wacc", label: "WACC", min: 4, max: 16, step: 0.5, def: 10, scale: 0.01, fmt: pct, only: "wacc" },
-      { id: "rf", label: "Risk-free rate", min: 0, max: 8, step: 0.25, def: 3, scale: 0.01, fmt: pct, only: "rn" },
-      { id: "lambda", label: "Market price of demand risk λ", min: 0, max: 1, step: 0.05, def: 0.3, fmt: function (v) { return v.toFixed(2); }, only: "rn", hint: "Risk-neutral drift = growth − λ·volatility." } ] },
-    { name: "Design & costs", items: [
-      { id: "bigF", label: "Full footprint", min: 60, max: 300, step: 5, def: 140, scale: 0.01, fmt: ofToday },
-      { id: "smallF", label: "Initial stage", min: 30, max: 150, step: 5, def: 80, scale: 0.01, fmt: ofToday },
-      { id: "stepF", label: "Expansion step", min: 5, max: 60, step: 5, def: 15, scale: 0.01, fmt: ofToday },
-      { id: "premium", label: "Staging premium", min: 0, max: 60, step: 5, def: 25, scale: 0.01, fmt: pct, hint: "Extra cost per unit added in a later step." },
-      { id: "fFix", label: "Fixed cost of a site", min: 0, max: 30, step: 1, def: 8, fmt: function (v) { return "$" + v + "M"; } },
-      { id: "fVar", label: "Capex per unit of capacity", min: 10, max: 60, step: 1, def: 30, scale: 0.001, fmt: perUnit },
-      { id: "escal", label: "Cost escalation if delayed", min: 0, max: 15, step: 1, def: 6, scale: 0.01, fmt: function (v) { return v + "%/yr"; } } ] },
-    { name: "Exit & leasing", items: [
-      { id: "salvF", label: "Resale value of a site", min: 0, max: 80, step: 5, def: 30, scale: 0.01, fmt: function (v) { return v + "% of cost"; }, hint: "What an owned site sells for when new; it declines to zero over the asset life. Generic buildings resell well, specialised ones do not." },
-      { id: "rent", label: "Lease rent", min: 2, max: 12, step: 0.25, def: 6.5, scale: 0.001, fmt: function (v) { return "$" + v + "/unit·yr"; } },
-      { id: "leaseFit", label: "Fit-out cost of a lease", min: 0, max: 100, step: 5, def: 25, scale: 0.01, fmt: function (v) { return v + "% of site fixed cost"; } },
-      { id: "leaseLead", label: "Fit-out time", min: 0, max: 2, step: 0.25, def: 0.5, fmt: yrs },
-      { id: "minTerm", label: "First break date", min: 1, max: 15, step: 1, def: 5, fmt: function (v) { return "year " + v + " of the lease"; } },
-      { id: "breakEvery", label: "Then a break every", min: 0, max: 10, step: 1, def: 5, fmt: function (v) { return v === 0 ? "no further breaks" : yrs(v); } },
-      { id: "breakFee", label: "Break fee", min: 0, max: 3, step: 0.25, def: 1, fmt: function (v) { return v + (v === 1 ? " year" : " years") + " of rent"; } } ] },
-    { name: "Switching", items: [
-      { id: "moth", label: "Owned sites can be mothballed", check: true, def: 1, hint: "Idle the site and send demand to the 3PL, then restart it if demand returns." },
-      { id: "mothF", needs: "moth", label: "Holding cost while idle", min: 0, max: 80, step: 5, def: 20, scale: 0.01, fmt: function (v) { return v + "% of active"; } },
-      { id: "mothFix", needs: "moth", label: "Cost to mothball", min: 0, max: 5, step: 0.25, def: 0.5, fmt: function (v) { return "$" + v + "M"; } },
-      { id: "reactFix", needs: "moth", label: "Cost to restart", min: 0, max: 5, step: 0.25, def: 1, fmt: function (v) { return "$" + v + "M"; } },
-      { id: "contract", label: "Staged site can sell capacity back in steps", check: true, def: 1, hint: "Proceeds: the resale value of the capacity sold, without the site's fixed share." } ] }
-  ];
-  function pct(v) { return v + "%"; }
-  function pctS(v) { return (v > 0 ? "+" : "") + v + "%/yr"; }
-  function yrs(v) { return v + (v === 1 ? " year" : " years"); }
-  function perUnit(v) { return "$" + v + "/unit"; }
-  function ofToday(v) { return v + "% of today"; }
-
-  var SPECS = {}; GROUPS.forEach(function (g) { g.items.forEach(function (s) { SPECS[s.id] = s; }); });
-  var PRESETS = {
-    "Mature & stable": { sigma: 12, g: 1, penalty: 8, premium: 25, bigF: 125 },
-    "High-growth, uncertain": { sigma: 35, g: 9, smallF: 90, bigF: 260, stepF: 30, penalty: 12 },
-    "Volatile & flat": { sigma: 45, g: 0, premium: 20, penalty: 12 },
-    "Structural decline": { sigma: 20, g: -6, smallF: 60, bigF: 110, penalty: 6 },
-    "Capacity-crunch risk": { sigma: 30, g: 6, penalty: 26, margin: 28, premium: 30, smallF: 75 },
-    "Specialised site": { sigma: 35, g: 0, salvF: 0, opcost: 10, mothF: 10 }
-  };
+  // ---- controls (shared definitions in specs.js): shown in friendly units, stored in model units (model = shown × scale)
+  var GROUPS = window.ROSpecs.single.GROUPS, SPECS = window.ROSpecs.single.SPECS, PRESETS = window.ROSpecs.single.PRESETS;
+  var yrs = window.ROSpecs.fmt.yrs;
   var state = { basis: "wacc" }, preset = null;
   Object.keys(SPECS).forEach(function (k) { state[k] = SPECS[k].def; });
 
@@ -443,6 +386,68 @@
       return { html: "<b>" + r.name + "</b><br>" + r.fmt(r.lo) + ": " + money(r.dlo, true) + "<br>" + r.fmt(r.hi) + ": " + money(r.dhi, true) };
     });
   }
+
+  // ---- an interface for the tutorial and the calibration panel: values are in the units shown on the sliders
+  function set(shown, opts) {
+    opts = opts || {};
+    if (opts.reset !== false) Object.keys(SPECS).forEach(function (k) { state[k] = SPECS[k].def; });
+    Object.keys(shown || {}).forEach(function (k) { if (SPECS[k]) state[k] = shown[k]; });
+    state.basis = opts.basis || (opts.reset !== false ? "wacc" : state.basis);
+    preset = opts.preset || null;
+    sync(); render();
+  }
+  window.ROApp = { set: set, preset: applyPreset, state: function () { return JSON.parse(JSON.stringify(state)); }, solution: function () { return sol; }, simulation: function () { return sim; }, specs: SPECS, names: NAMES };
+
+  // ---- calibration: estimates go to demand today, volatility and growth
+  window.ROCalibUI.mount($("calib"), [{ label: "Apply to the model", name: "the model", apply: function (est) {
+    var a = window.ROCalibUI.snap(SPECS.D0, est.D0, "Demand today"), b = window.ROCalibUI.snap(SPECS.sigma, est.sigma, "Volatility"), c = window.ROCalibUI.snap(SPECS.g, est.g, "Growth");
+    set({ D0: a.value, sigma: b.value, g: c.value }, { reset: false });
+    return [a.note, b.note, c.note].filter(Boolean);
+  } }]);
+
+  // ---- the report link follows the scenario
+  function reportHref(hash, name) { return "report.html" + (hash || "") + (name ? (hash ? "&" : "#") + "name=" + encodeURIComponent(name) : ""); }
+  var _wh = writeHash; writeHash = function () { _wh(); $("reportLink").href = reportHref(location.hash); };
+
+  // ---- scenario comparison (saved in this browser only)
+  var CMP_KEY = "ro-scenarios-v1", cmpCache = {};
+  function loadSaved() { try { var v = JSON.parse(localStorage.getItem(CMP_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  function storeSaved(list) { try { localStorage.setItem(CMP_KEY, JSON.stringify(list)); return true; } catch (e) { return false; } }
+  function stateFromHash(h) {
+    var st = { basis: "wacc" }; Object.keys(SPECS).forEach(function (k) { st[k] = SPECS[k].def; });
+    String(h || "").replace(/^#/, "").split("&").forEach(function (kv) { var a = kv.split("="), k = a[0], v = decodeURIComponent(a[1] || ""); if (SPECS[k] && isFinite(parseFloat(v))) st[k] = parseFloat(v); else if (k === "basis") st.basis = v; });
+    return st;
+  }
+  function solveHash(h) {
+    if (cmpCache[h]) return cmpCache[h];
+    var st = stateFromHash(h), p = { basis: st.basis }; Object.keys(SPECS).forEach(function (k) { p[k] = st[k] * (SPECS[k].scale || 1); });
+    var s = M.solve(p), r = { st: st, sol: s }; cmpCache[h] = r; return r;
+  }
+  var savedList = loadSaved();
+  $("cmpSave").addEventListener("click", function () {
+    var nm = $("cmpName").value.trim() || ("Scenario " + (savedList.length + 1));
+    savedList = savedList.filter(function (x) { return x.name !== nm; }).concat([{ name: nm, hash: location.hash || "" }]).slice(-8);
+    var ok = storeSaved(savedList); $("cmpName").value = ""; compare(ok ? null : "Saved for this visit only: this browser does not allow storage.");
+  });
+  function compare(msg) {
+    var host = $("cmpTable"), list = [{ name: "Current", hash: location.hash || "", current: true }].concat(savedList);
+    if (savedList.length === 0) { host.innerHTML = "<p class='hint'>No saved scenarios yet." + (msg ? " " + msg : "") + "</p>"; return; }
+    var rows = list.map(function (x) { var r = solveHash(x.hash); return { x: x, st: r.st, sol: r.sol }; });
+    var changed = Object.keys(SPECS).filter(function (k) { return rows.some(function (r) { return r.st[k] !== SPECS[k].def; }); });
+    var keys = ["full", "best", "defer", "stage", "lease"];
+    var h = "<table class='data cmp'><thead><tr><th></th>" + rows.map(function (r) { return "<th>" + esc(r.x.name) + "</th>"; }).join("") + "</tr></thead><tbody>";
+    changed.forEach(function (k) { h += "<tr><td>" + esc(SPECS[k].label) + "</td>" + rows.map(function (r) { var v = r.st[k], d = v === SPECS[k].def; return "<td class='" + (d ? "dflt" : "") + "'>" + esc(SPECS[k].check ? (v ? "yes" : "no") : SPECS[k].fmt(v)) + "</td>"; }).join("") + "</tr>"; });
+    if (rows.some(function (r) { return r.st.basis !== "wacc"; })) h += "<tr><td>Valuation basis</td>" + rows.map(function (r) { return "<td>" + (r.st.basis === "rn" ? "risk-neutral" : "WACC") + "</td>"; }).join("") + "</tr>";
+    h += "<tr class='sep'><td colspan='" + (rows.length + 1) + "'></td></tr>";
+    keys.forEach(function (k) { h += "<tr><td>" + NAMES[k] + "</td>" + rows.map(function (r) { var top = keys.reduce(function (a, b) { return r.sol[b].npv > r.sol[a].npv ? b : a; }); return "<td" + (k === top ? " class='top'" : "") + ">" + money(r.sol[k].npv) + "</td>"; }).join("") + "</tr>"; });
+    h += "<tr><td><b>Value of flexibility</b></td>" + rows.map(function (r) { return "<td><b>" + money(flexOf(r.sol), true) + "</b></td>"; }).join("") + "</tr>";
+    h += "<tr><td></td>" + rows.map(function (r, k) { return "<td class='acts'>" + (r.x.current ? "" : "<a href='" + location.pathname + esc(r.x.hash || "#") + "' data-open='" + k + "'>Open</a> · ") + "<a href='" + reportHref(r.x.hash, r.x.current ? null : r.x.name) + "' target='_blank' rel='noopener'>Report</a>" + (r.x.current ? "" : " · <button type='button' class='linkish' data-del='" + k + "'>Remove</button>") + "</td>"; }).join("") + "</tr>";
+    host.innerHTML = h + "</tbody></table>" + (msg ? "<p class='hint'>" + msg + "</p>" : "");
+    host.querySelectorAll("[data-open]").forEach(function (a) { a.addEventListener("click", function (ev) { ev.preventDefault(); var r = rows[+a.getAttribute("data-open")]; history.replaceState(null, "", r.x.hash || location.pathname); var st = stateFromHash(r.x.hash); Object.keys(st).forEach(function (k) { state[k] = st[k]; }); preset = null; sync(); render(); }); });
+    host.querySelectorAll("[data-del]").forEach(function (b) { b.addEventListener("click", function () { var nm = rows[+b.getAttribute("data-del")].x.name; savedList = savedList.filter(function (x) { return x.name !== nm; }); storeSaved(savedList); compare(); }); });
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var _render = render; render = function () { _render(); compare(); };
 
   readHash(); sync(); render();
 })();

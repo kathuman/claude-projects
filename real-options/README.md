@@ -1,6 +1,6 @@
 # Real Options for Network Design
 
-**Live: https://kathuman.github.io/claude-projects/real-options/ · version 3.0.0 (roadmap phases 0–2 of 5).**
+**Live: https://kathuman.github.io/claude-projects/real-options/ · version 4.0.0 (roadmap complete: phases 0–5, with a three-level tutorial).**
 
 What is the right to decide later worth in a supply network design? The app values five strategies on a binomial
 demand lattice, each with its optimal policy, and reports the value of flexibility against the **best fixed
@@ -24,9 +24,9 @@ sell capacity back in steps.
 | 1 | Contract & exit: resale of owned sites (all strategies), leases with break clauses, sell and break thresholds on the decision map | done, 2.1.0 |
 | 1b | Switching: mothballing and reactivation of owned sites, partial contraction of the staged site, idle and restart thresholds (hysteresis) on the decision map | done, 2.2.0 |
 | 2 | Network page: two correlated regions, cross-region service, a central hub vs regional hubs, a pilot hub with a cheaper option on the second (compound option), waiting across the network; 2D decision map, correlation sweep | done, 3.0.0 |
-| 3 | Calibration from data: volatility and growth from demand history | |
-| 4 | Decision report and scenario comparison | |
-| 5 | Teaching mode and guided cases | |
+| 3 | Calibration from demand history (both pages): paste, CSV or samples; frequency detection; season removal; 90% intervals; warnings; apply to the model or a region | done, 4.0.0 |
+| 4 | Decision report (printable) and scenario comparison (saved in the browser) | done, 4.0.0 |
+| 5 | Tutorial: beginner, intermediate and advanced levels with guided steps and checked questions, across both pages | done, 4.0.0 |
 
 ## The model
 
@@ -67,7 +67,31 @@ The page shows:
 - the NPV distribution;
 - an NPV-against-correlation sweep (pooling).
 
-`charts.js` and `style.css` are shared by both pages.
+`charts.js`, `specs.js` (every control and preset) and `style.css` are shared by both pages.
+
+## Calibration, report, comparison and tutorial
+
+- **Calibration** (`src/calibrate.js`, `calib-ui.js`): reads a pasted history, a CSV file or a sample, and detects the
+  frequency from the dates. It estimates volatility and growth from log changes (g = μ + σ²/2), with 90% intervals,
+  and can remove the season. It warns about short histories, autocorrelation and seasonality. **Apply** snaps the
+  estimates to the sliders and says when a value had to be limited.
+- **Decision report** (`report.html`, `report.js`): rebuilt from the scenario link. It covers the recommendation with
+  concrete triggers, every strategy's NPV, 5th percentile and P(loss) from 4,000 simulated paths, a year-by-year
+  trigger table, the main sensitivities, all assumptions (changes highlighted) and the method. A print style is
+  included.
+- **Scenario comparison**: save up to 8 scenarios in the browser. They are compared side by side (changed inputs,
+  every strategy, the value of flexibility), and each can be opened or reported.
+- **Tutorial** (`tour-content.js`, `tour.js`): three levels.
+
+  | Level | Steps | Covers |
+  |---|---|---|
+  | Beginner | 9 | the answer, volatility, triggers, presets, risk |
+  | Intermediate | 10 | fair baseline, the 3PL bridge, the window, sensitivities, leases, resale, payoff shape, calibration, comparison, report |
+  | Advanced | 11 | risk-neutral valuation, the adaptive lattice, mothballing and hysteresis, selling vs idling, and the network: pooling, correlation, compound option, the 2D map, waiting |
+
+  Each step sets up its scenario and highlights what it explains; questions give feedback. The levels move between
+  pages, and progress is remembered in the browser.
+
 
 ## The single-site page
 
@@ -81,7 +105,7 @@ The page shows:
 
 ## Tests
 
-`node real-options/tests/model.test.js` checks 75 things, and `node real-options/tests/network.test.js` 29 more. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
+`node real-options/tests/model.test.js` checks 75 things, `network.test.js` 29, `calibrate.test.js` 24 and `tutorial.test.js` 22. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
 - the lattice: no clamping, exact growth, convergence to Black–Scholes, and a deterministic closed form;
 - the dominance relations between the strategies;
 - how option value responds to volatility, the window, lead times, penalties and escalation;
@@ -99,4 +123,10 @@ The page shows:
   - separability without cross-region service;
   - dominance;
   - learning, pooling (a central hub is worth less as correlation rises), the window and volatility;
-  - a Monte Carlo replay of every policy.
+  - a Monte Carlo replay of every policy;
+- calibration:
+  - the formats people paste;
+  - frequency detection;
+  - unbiased estimates, with 90% intervals that cover the truth about 90% of the time (400 synthetic histories);
+  - season removal and the warnings;
+- the tutorial: every step well formed and in range, and every claim its questions make true in the engines.

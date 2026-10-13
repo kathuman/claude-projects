@@ -22,6 +22,8 @@
       <a class="back-link" href="index.html" aria-current="page">One site</a>
       <a class="back-link" href="network.html">Network</a>
       <a class="back-link" href="#model">Model</a>
+      <a class="back-link" href="report.html" id="reportLink" target="_blank" rel="noopener">Report</a>
+      <button class="back-link" type="button" id="tourBtn" aria-haspopup="true">Tutorial</button>
       <a class="back-link" href="about.html">About</a>
       <a class="back-link" href="../index.html">← All projects</a>
     </nav>
@@ -66,6 +68,7 @@
 
     <main class="stage">
       <div class="warn" id="warn" hidden></div>
+      <details class="panel calib" id="calib"></details>
 
       <div class="panel headline" id="headline"></div>
       <div class="scorecards" id="scorecards"></div>
@@ -113,6 +116,17 @@
           <svg class="chart" id="torChart" viewBox="0 0 360 360" role="img" aria-label="Sensitivity of the value of flexibility"></svg>
           <div class="legend" id="torLegend"></div>
         </div>
+      </div>
+
+      <div class="panel" id="comparePanel">
+        <h2 class="sec">Compare scenarios</h2>
+        <p class="blurb">Save the scenario you are looking at, change the assumptions, save again, and compare them side by side.
+          Saved scenarios stay in this browser; each has a link and a decision report.</p>
+        <div class="cmp-save">
+          <input type="text" id="cmpName" maxlength="40" placeholder="Name this scenario" aria-label="Scenario name">
+          <button type="button" class="btn-apply" id="cmpSave">Save current scenario</button>
+        </div>
+        <div class="cmp-wrap" id="cmpTable"></div>
       </div>
 
       <div class="panel" id="model">
@@ -205,6 +219,11 @@ Risk-neutral:  drift g − λ·σ, discount at r_f</div>
 
   <script src="src/model.js"></script>
   <script src="charts.js"></script>
+  <script src="specs.js"></script>
+  <script src="src/calibrate.js"></script>
+  <script src="calib-ui.js"></script>
   <script src="app.js"></script>
+  <script src="tour-content.js"></script>
+  <script src="tour.js"></script>
 </body>
 </html>

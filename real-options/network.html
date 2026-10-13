@@ -22,6 +22,7 @@
       <a class="back-link" href="index.html">One site</a>
       <a class="back-link" href="network.html" aria-current="page">Network</a>
       <a class="back-link" href="#model">Model</a>
+      <button class="back-link" type="button" id="tourBtn" aria-haspopup="true">Tutorial</button>
       <a class="back-link" href="about.html">About</a>
       <a class="back-link" href="../index.html">← All projects</a>
     </nav>
@@ -53,6 +54,7 @@
 
     <main class="stage">
       <div class="warn" id="warn" hidden></div>
+      <details class="panel calib" id="calib"></details>
       <div class="panel headline" id="headline"></div>
       <div class="scorecards" id="scorecards"></div>
 
@@ -136,6 +138,11 @@ two     = max over K_A, K_B of fixed(K_A, K_B)</div>
 
   <script src="src/network.js"></script>
   <script src="charts.js"></script>
+  <script src="specs.js"></script>
+  <script src="src/calibrate.js"></script>
+  <script src="calib-ui.js"></script>
   <script src="network-app.js"></script>
+  <script src="tour-content.js"></script>
+  <script src="tour.js"></script>
 </body>
 </html>

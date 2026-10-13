@@ -6,56 +6,8 @@
   var $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + NW.VERSION; $("ver-foot").textContent = "v" + NW.VERSION;
 
-  function pct(v) { return v + "%"; }
-  function pctS(v) { return (v > 0 ? "+" : "") + v + "%/yr"; }
-  function yrs(v) { return v + (v === 1 ? " year" : " years"); }
-  function perUnit(v) { return "$" + v + "/unit"; }
-  function kU(v) { return v + "k units/yr"; }
-  var GROUPS = [
-    { name: "Region A", items: [
-      { id: "DA", label: "Demand today", min: 50, max: 1500, step: 50, def: 500, fmt: kU },
-      { id: "sigA", label: "Volatility", min: 5, max: 60, step: 1, def: 20, scale: 0.01, fmt: pct },
-      { id: "gA", label: "Expected growth", min: -10, max: 12, step: 0.5, def: 2, scale: 0.01, fmt: pctS } ] },
-    { name: "Region B", items: [
-      { id: "DB", label: "Demand today", min: 50, max: 1500, step: 50, def: 250, fmt: kU },
-      { id: "sigB", label: "Volatility", min: 5, max: 60, step: 1, def: 40, scale: 0.01, fmt: pct },
-      { id: "gB", label: "Expected growth", min: -10, max: 12, step: 0.5, def: 8, scale: 0.01, fmt: pctS } ] },
-    { name: "Between the regions", items: [
-      { id: "rho", label: "Correlation of demand", min: -0.9, max: 0.9, step: 0.1, def: 0.2, fmt: function (v) { return v.toFixed(1); }, hint: "Low or negative: one region is busy when the other is quiet, so a shared hub pools them." },
-      { id: "xcost", label: "Cross-region service cost", min: 0, max: 20, step: 1, def: 6, scale: 0.001, fmt: perUnit, hint: "Extra transport per unit served from the other region's hub." },
-      { id: "learn", label: "Second-hub saving", min: 0, max: 80, step: 5, def: 40, scale: 0.01, fmt: function (v) { return v + "% of fixed cost"; }, hint: "How much cheaper the second hub's fixed cost is once the first exists." } ] },
-    { name: "Planned hubs", items: [
-      { id: "sizeA", label: "Hub A", min: 50, max: 250, step: 10, def: 120, scale: 0.01, fmt: function (v) { return v + "% of A today"; } },
-      { id: "sizeB", label: "Hub B", min: 50, max: 250, step: 10, def: 140, scale: 0.01, fmt: function (v) { return v + "% of B today"; } } ] },
-    { name: "Time", items: [
-      { id: "life", label: "Asset life", min: 10, max: 30, step: 1, def: 20, fmt: yrs },
-      { id: "window", label: "Decision window", min: 1, max: 15, step: 1, def: 8, fmt: yrs },
-      { id: "buildLead", label: "Build lead time", min: 0, max: 3, step: 0.25, def: 1.5, fmt: yrs } ] },
-    { name: "Economics", items: [
-      { id: "margin", label: "Margin, own network", min: 5, max: 40, step: 1, def: 20, scale: 0.001, fmt: perUnit },
-      { id: "opcost", label: "Holding cost of capacity", min: 1, max: 15, step: 0.5, def: 6, scale: 0.001, fmt: function (v) { return "$" + v + "/unit·yr"; } },
-      { id: "outMargin", label: "Margin, outsourced (3PL)", min: 0, max: 20, step: 0.5, def: 6, scale: 0.001, fmt: perUnit },
-      { id: "outCap", label: "Outsourcing limit", min: 0, max: 200, step: 10, def: 100, scale: 0.01, fmt: function (v) { return v + "% of today, each"; } },
-      { id: "penalty", label: "Penalty, lost sale", min: 0, max: 40, step: 1, def: 10, scale: 0.001, fmt: perUnit },
-      { id: "ceiling", label: "Market ceiling", min: 1.5, max: 6, step: 0.5, def: 3, fmt: function (v) { return v + "× today, each"; } } ] },
-    { name: "Costs", items: [
-      { id: "fFix", label: "Fixed cost of a hub", min: 0, max: 30, step: 1, def: 8, fmt: function (v) { return "$" + v + "M"; } },
-      { id: "fVar", label: "Capex per unit of capacity", min: 10, max: 60, step: 1, def: 30, scale: 0.001, fmt: perUnit },
-      { id: "escal", label: "Cost escalation if delayed", min: 0, max: 15, step: 1, def: 6, scale: 0.01, fmt: function (v) { return v + "%/yr"; } } ] },
-    { name: "Valuation", basis: true, items: [
-      { id: "wacc", label: "WACC", min: 4, max: 16, step: 0.5, def: 10, scale: 0.01, fmt: pct, only: "wacc" },
-      { id: "rf", label: "Risk-free rate", min: 0, max: 8, step: 0.25, def: 3, scale: 0.01, fmt: pct, only: "rn" },
-      { id: "lambda", label: "Market price of demand risk λ", min: 0, max: 1, step: 0.05, def: 0.3, fmt: function (v) { return v.toFixed(2); }, only: "rn" } ] }
-  ];
-  var SPECS = {}; GROUPS.forEach(function (g) { g.items.forEach(function (s) { SPECS[s.id] = s; }); });
-  var PRESETS = {
-    "Core + growth market": {},
-    "Twin markets": { DB: 500, sigA: 25, sigB: 25, gA: 3, gB: 3, rho: 0.6 },
-    "Pooling pays": { rho: -0.5, xcost: 2 },
-    "Distant regions": { xcost: 14 },
-    "Uncertain new region": { DB: 150, sigB: 55, gB: 6, learn: 60 },
-    "Both markets uncertain": { sigA: 40, gA: 0, sigB: 50, gB: 0 }
-  };
+  // control definitions and presets are shared (specs.js)
+  var GROUPS = window.ROSpecs.network.GROUPS, SPECS = window.ROSpecs.network.SPECS, PRESETS = window.ROSpecs.network.PRESETS;
   var state = { basis: "wacc" }, preset = null, mapState = "none";
   Object.keys(SPECS).forEach(function (k) { state[k] = SPECS[k].def; });
   var NAMES = { central: "Central hub", two: "Two hubs now", both: "Commit both", pilot: "Pilot hub", wait: "Wait & see network" };
@@ -299,6 +251,26 @@
       return { html: "<b>Correlation " + r.set.toFixed(1) + "</b><br>" + keys.map(function (k) { return NAMES[k] + ": " + money(r[k]); }).join("<br>"), x: x(r.set) };
     });
   }
+
+  // ---- an interface for the tutorial and the calibration panel (values in the units shown)
+  function set(shown, opts) {
+    opts = opts || {};
+    if (opts.reset !== false) Object.keys(SPECS).forEach(function (k) { state[k] = SPECS[k].def; });
+    Object.keys(shown || {}).forEach(function (k) { if (SPECS[k]) state[k] = shown[k]; });
+    state.basis = opts.basis || (opts.reset !== false ? "wacc" : state.basis);
+    preset = opts.preset || null;
+    if (opts.mapState) { mapState = opts.mapState; syncMap(); }
+    if (opts.mapYear != null) $("mapYear").value = opts.mapYear;
+    sync(); render();
+  }
+  window.RONet = { set: set, state: function () { return JSON.parse(JSON.stringify(state)); }, solution: function () { return sol; }, specs: SPECS, names: NAMES };
+  window.ROCalibUI.mount($("calib"), ["A", "B"].map(function (r) {
+    return { label: "Apply to region " + r, name: "region " + r, apply: function (est) {
+      var a = window.ROCalibUI.snap(SPECS["D" + r], est.D0, "Demand today"), b = window.ROCalibUI.snap(SPECS["sig" + r], est.sigma, "Volatility"), c = window.ROCalibUI.snap(SPECS["g" + r], est.g, "Growth");
+      var o = {}; o["D" + r] = a.value; o["sig" + r] = b.value; o["g" + r] = c.value; set(o, { reset: false });
+      return [a.note, b.note, c.note].filter(Boolean);
+    } };
+  }));
 
   readHash(); syncMap(); sync(); render();
 })();
