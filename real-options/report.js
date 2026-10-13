@@ -33,7 +33,7 @@
     h += "<header class='rep-head'><p class='eyebrow'>Decision report · Real Options for Network Design v" + M.VERSION + "</p><h1>" + esc(name || "Network design scenario") + "</h1>" +
       "<p class='rep-meta'>Prepared " + new Date().toISOString().slice(0, 10) + " · demand today " + SPECS.D0.fmt(state.D0) + ", volatility " + SPECS.sigma.fmt(state.sigma) + ", growth " + SPECS.g.fmt(state.g) + " · " + (state.basis === "rn" ? "risk-neutral valuation" : "expected cash flows at a " + SPECS.wacc.fmt(state.wacc) + " WACC") + "</p></header>";
     // 1. recommendation
-    h += "<section><h2>1. Recommendation</h2><div class='rep-rec'><p class='rep-big'>" + NAMES[top] + " <span>" + money(sol[top].npv) + "</span></p><p>" + recommendation(sol, top, tr) + "</p>" +
+    h += "<section><h2>1. Recommendation</h2><div class='rep-rec'><div class='rep-il'>" + (window.ROIllus ? window.ROIllus.svg("strategy:" + top) : "") + "</div><p class='rep-big'>" + NAMES[top] + " <span>" + money(sol[top].npv) + "</span></p><p>" + recommendation(sol, top, tr) + "</p>" +
       "<p>" + (flex > 0.05 ? "The value of flexibility is <b>" + money(flex) + "</b>: the best flexible strategy (" + NAMES[bf] + ") against the best fixed design. Against committing to the full footprint now it is " + money(sol[bf].npv - sol.full.npv) + "; most studies quote that larger number." :
         "Flexibility does not pay in this scenario: the best fixed design beats every flexible strategy by " + money(-flex) + ".") + "</p>" +
       "<p>Risk of the recommended strategy: a loss on " + Math.round(100 * stats[top].loss) + "% of simulated demand paths; 90% of outcomes between " + money(stats[top].p5) + " and " + money(stats[top].p95) + ".</p></div></section>";

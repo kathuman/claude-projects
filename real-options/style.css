@@ -216,3 +216,26 @@ button.back-link{background:transparent; cursor:pointer; font-family:var(--head)
   .report section{border:none; border-top:1px solid #bbb; border-radius:0; padding:10px 0; margin:8px 0;}
   a{color:#0b5c8a;}
 }
+
+/* ---- illustrations */
+svg.il{width:100%; height:auto; display:block; overflow:visible;}
+svg.il .il-t{fill:var(--ink-faint); font-family:var(--mono); font-size:9px; paint-order:stroke; stroke:var(--panel-2); stroke-width:3px; stroke-linejoin:round;}
+svg.il .il-t.sm{font-size:8px;}
+.gallery{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:18px 0 8px;}
+.gallery.g4{grid-template-columns:repeat(4,minmax(0,1fr));}
+.scard{margin:0; background:var(--panel); border:1px solid var(--line); border-top:4px solid var(--c); border-radius:12px; padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px;}
+.scard-il{background:var(--panel-2); border-radius:8px; padding:6px 4px 2px;}
+.scard figcaption{display:flex; flex-direction:column; gap:2px;}
+.scard .tag{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em;}
+.scard b{font-family:var(--head); font-size:17px; letter-spacing:.03em; color:var(--ink);}
+.scard figcaption > span:last-child{font-size:13px; color:var(--ink-dim); line-height:1.45;}
+.figs{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:4px 0 16px;}
+.figs figure{margin:0; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:10px 10px 8px;}
+.figs figcaption{font-size:12.5px; color:var(--ink-dim); line-height:1.45; margin-top:6px;}
+.tour-il{background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:6px 6px 2px; margin:2px 0 8px;}
+.tour-il svg.il{max-height:130px;}
+.rep-il{float:right; width:min(260px, 42%); margin:0 0 8px 14px; background:var(--panel-2); border-radius:10px; padding:6px;}
+@media (max-width:1100px){ .gallery{grid-template-columns:repeat(3,minmax(0,1fr));} .gallery.g4{grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media (max-width:760px){ .gallery, .gallery.g4{grid-template-columns:repeat(2,minmax(0,1fr));} .figs{grid-template-columns:1fr;} }
+@media (max-width:480px){ .gallery, .gallery.g4{grid-template-columns:1fr;} .rep-il{float:none; width:100%; margin:0 0 8px;} .tour-il svg.il{max-height:96px;} }
+@media print{ .rep-il{background:#fff; border:1px solid #ddd;} svg.il .il-t{fill:#555;} }

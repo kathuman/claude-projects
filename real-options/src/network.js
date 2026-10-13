@@ -18,7 +18,7 @@
   else root.RealNetwork = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var VERSION = "4.0.0";
+  var VERSION = "4.1.0";
 
   // money in $M, demand and capacity in thousand units per year, margins in $M per thousand units
   function defaults() {

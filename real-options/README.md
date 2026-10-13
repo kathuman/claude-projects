@@ -1,6 +1,6 @@
 # Real Options for Network Design
 
-**Live: https://kathuman.github.io/claude-projects/real-options/ · version 4.0.0 (roadmap complete: phases 0–5, with a three-level tutorial).**
+**Live: https://kathuman.github.io/claude-projects/real-options/ · version 4.1.0 (roadmap complete: phases 0–5, with a three-level tutorial and explanatory diagrams).**
 
 What is the right to decide later worth in a supply network design? The app values five strategies on a binomial
 demand lattice, each with its optimal policy, and reports the value of flexibility against the **best fixed
@@ -69,6 +69,16 @@ The page shows:
 
 `charts.js`, `specs.js` (every control and preset) and `style.css` are shared by both pages.
 
+## Diagrams
+
+`illustrations.js` draws 26 explanatory diagrams as inline SVG in the theme's colour tokens:
+- the five strategies as capacity over time against a demand path, on the single-site page;
+- the four network strategies as schematics, on the network page;
+- figures in the Model sections: lattice, backward induction, payoff shape, pooling, compound option, 2D map;
+- the recommended strategy in the decision report;
+- a diagram on most tutorial steps: volatility fan, fair baseline, trigger, 3PL bridge, decision window, hysteresis,
+  sell vs idle, risk-neutral basis, calibration, report.
+
 ## Calibration, report, comparison and tutorial
 
 - **Calibration** (`src/calibrate.js`, `calib-ui.js`): reads a pasted history, a CSV file or a sample, and detects the
@@ -105,7 +115,7 @@ The page shows:
 
 ## Tests
 
-`node real-options/tests/model.test.js` checks 75 things, `network.test.js` 29, `calibrate.test.js` 24 and `tutorial.test.js` 22. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
+`node real-options/tests/model.test.js` checks 75 things, `network.test.js` 29, `calibrate.test.js` 24, `tutorial.test.js` 22 and `illustrations.test.js` 10. CI runs it on every change (`.github/workflows/real-options-ci.yml`):
 - the lattice: no clamping, exact growth, convergence to Black–Scholes, and a deterministic closed form;
 - the dominance relations between the strategies;
 - how option value responds to volatility, the window, lead times, penalties and escalation;

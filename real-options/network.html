@@ -34,13 +34,15 @@
       central hub pools both regions' demand; regional hubs are close to their customers; and opening one hub creates a
       cheaper option on the next, because systems, people and supplier terms carry over. Here two regions with
       correlated, uncertain demand are valued together.</p>
-    <div class="optcards">
-      <div class="optcard" style="border-color:var(--s1)"><span class="tag">Pooling</span><b>Central hub</b>
-        <p>One hub serves both regions; its spare capacity covers whichever region is busy. Worth most when the regions' demands move independently, and when shipping between them is cheap.</p></div>
-      <div class="optcard" style="border-color:var(--s3)"><span class="tag">Compound option</span><b>Pilot hub</b>
-        <p>Open one region's hub now and keep the option to open the other later, at a lower cost because the first hub exists.</p></div>
-      <div class="optcard" style="border-color:var(--s5)"><span class="tag">Deferral</span><b>Wait &amp; see network</b>
-        <p>Serve both regions through 3PLs and open either hub, or both, at the best moment inside the decision window.</p></div>
+    <div class="gallery g4" aria-label="The network strategies">
+      <figure class="scard" style="--c:var(--s1)"><div class="scard-il" data-illus="net:central"></div>
+        <figcaption><span class="tag">Pooling</span><b>Central hub</b><span>One hub serves both regions; its spare capacity covers whichever region is busy. Best when the regions move independently and shipping is cheap.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s2)"><div class="scard-il" data-illus="net:two"></div>
+        <figcaption><span class="tag">Proximity</span><b>Two hubs now</b><span>A hub in each region, sized together: close to customers, but each must cover its own region's peaks.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s3)"><div class="scard-il" data-illus="net:pilot"></div>
+        <figcaption><span class="tag">Compound option</span><b>Pilot hub</b><span>Open one region's hub now and keep the option on the other, cheaper because the first hub exists.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s5)"><div class="scard-il" data-illus="net:wait"></div>
+        <figcaption><span class="tag">Deferral</span><b>Wait &amp; see network</b><span>Serve both regions through 3PLs and open either hub, or both, at the best moment inside the window.</span></figcaption></figure>
     </div>
   </section>
 
@@ -98,6 +100,11 @@
         <h2 class="sec">The model</h2>
         <p class="blurb">Two regions, money in $M. The equations run in <code>src/network.js</code>, which is checked by
           its own automated tests, including an exact reduction to the single-site engine when one region is empty.</p>
+        <div class="figs">
+          <figure><div data-illus="pooling"></div><figcaption>When the regions move apart, their total is steadier than either: a shared hub can be sized for it.</figcaption></figure>
+          <figure><div data-illus="compound"></div><figcaption>A pilot hub buys a cheaper option on the second hub: a compound option.</figcaption></figure>
+          <figure><div data-illus="map2d"></div><figcaption>With two regions every decision depends on both demands, so the decision map is two-dimensional.</figcaption></figure>
+        </div>
         <div class="eqs">
           <div class="eq"><h4>Joint demand lattice</h4>
             <div class="f">each region: u = e^(σ√Δt), p = (e^(gΔt) − d)/(u − d)
@@ -138,6 +145,7 @@ two     = max over K_A, K_B of fixed(K_A, K_B)</div>
 
   <script src="src/network.js"></script>
   <script src="charts.js"></script>
+  <script src="illustrations.js"></script>
   <script src="specs.js"></script>
   <script src="src/calibrate.js"></script>
   <script src="calib-ui.js"></script>

@@ -35,13 +35,17 @@
       collapses. A <b>real option</b> is the right, not the obligation, to act later: build once demand is confirmed, or
       start small on a big site and expand in steps, or rent with the right to hand the space back. Those rights cost money today. This page prices them on a demand
       lattice and compares them with the <b>best fixed design</b>, not with a straw man.</p>
-    <div class="optcards">
-      <div class="optcard" style="border-color:var(--s2)"><span class="tag">Deferral option</span><b>Wait &amp; see</b>
-        <p>Serve demand through a 3PL now; hold the permits. Build the full site once, at the best moment inside the decision window. Later builds cost more.</p></div>
-      <div class="optcard" style="border-color:var(--s3)"><span class="tag">Growth option</span><b>Stage &amp; expand</b>
-        <p>Build a smaller facility on a big footprint now, and add capacity in steps where demand justifies it. Each step costs a premium and takes time.</p></div>
-      <div class="optcard" style="border-color:var(--s5)"><span class="tag">Exit option</span><b>Lease &amp; break</b>
-        <p>Rent instead of building, with break clauses to hand the space back if demand falls. Owned sites can be sold too, for a resale value that a generic building keeps and a specialised one loses.</p></div>
+    <div class="gallery" aria-label="The five strategies">
+      <figure class="scard" style="--c:var(--s4)"><div class="scard-il" data-illus="strategy:full"></div>
+        <figcaption><span class="tag">No option</span><b>Commit now</b><span>Build the full footprint today. Simple, but you carry unused capacity for years if demand is slow.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s1)"><div class="scard-il" data-illus="strategy:best"></div>
+        <figcaption><span class="tag">The fair baseline</span><b>Best fixed</b><span>Build the single size that maximises NPV today. Flexibility is measured against this.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s2)"><div class="scard-il" data-illus="strategy:defer"></div>
+        <figcaption><span class="tag">Deferral option</span><b>Wait &amp; see</b><span>Serve demand through a 3PL and hold the permits; build once demand crosses a trigger. Later builds cost more.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s3)"><div class="scard-il" data-illus="strategy:stage"></div>
+        <figcaption><span class="tag">Growth option</span><b>Stage &amp; expand</b><span>Build small on a big footprint and add capacity in steps where demand justifies it, at a premium per step.</span></figcaption></figure>
+      <figure class="scard" style="--c:var(--s5)"><div class="scard-il" data-illus="strategy:lease"></div>
+        <figcaption><span class="tag">Exit option</span><b>Lease &amp; break</b><span>Rent instead of building, with break clauses to hand the space back. Owned sites can be sold too.</span></figcaption></figure>
     </div>
     <details class="map">
       <summary>How financial options map onto network decisions</summary>
@@ -134,6 +138,11 @@
         <p class="blurb">One facility, one product, money in $M. Every number on this page comes from these equations, which
           run in <code>src/model.js</code>; the same file is checked by 75 automated tests, including a lattice-against-Black–Scholes
           convergence test and a Monte Carlo replay of every optimal policy.</p>
+        <div class="figs">
+          <figure><div data-illus="lattice"></div><figcaption>Demand moves up or down each step; the lattice recombines, so it stays small enough to solve exactly.</figcaption></figure>
+          <figure><div data-illus="induction"></div><figcaption>Each strategy is solved backwards from the end of the asset's life: at every node, act or wait, whichever is worth more.</figcaption></figure>
+          <figure><div data-illus="payoff"></div><figcaption>The result: a flexible design gives up a little in the middle and cuts the losses when demand disappoints.</figcaption></figure>
+        </div>
         <div class="eqs">
           <div class="eq"><h4>Demand lattice</h4>
             <div class="f">u = e^(σ·√Δt)   d = 1/u
@@ -219,6 +228,7 @@ Risk-neutral:  drift g − λ·σ, discount at r_f</div>
 
   <script src="src/model.js"></script>
   <script src="charts.js"></script>
+  <script src="illustrations.js"></script>
   <script src="specs.js"></script>
   <script src="src/calibrate.js"></script>
   <script src="calib-ui.js"></script>

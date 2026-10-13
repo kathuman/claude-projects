@@ -89,6 +89,7 @@
     var n = level.steps.length;
     card.innerHTML = "<div class='tour-top'><span>" + level.title + " · step " + (idx + 1) + " of " + n + "</span><button type='button' class='tour-x' aria-label='Leave the tutorial'>×</button></div>" +
       "<div class='tour-bar'><i style='width:" + Math.round(100 * (idx + 1) / n) + "%'></i></div>" +
+      (st.illus && window.ROIllus ? "<div class='tour-il'>" + window.ROIllus.svg(st.illus) + "</div>" : "") +
       "<h3>" + st.title + "</h3><div class='tour-body'>" + fill(st.body) + "</div>" +
       (st.quiz ? "<div class='tour-quiz'><p>" + st.quiz.q + "</p>" + st.quiz.options.map(function (o, k) { return "<button type='button' data-opt='" + k + "'>" + o + "</button>"; }).join("") + "<div class='tour-fb' hidden></div></div>" : "") +
       "<div class='tour-nav'><button type='button' class='tour-back'" + (idx === 0 ? " disabled" : "") + ">Back</button><button type='button' class='tour-next'>" + (idx === n - 1 ? "Finish" : "Next") + "</button></div>";
