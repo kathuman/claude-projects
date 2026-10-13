@@ -1,5 +1,21 @@
 [
   {
+    "title": "PharmaSim",
+    "description": "A system-dynamics simulator of a pharmaceutical supply chain. Demand steps up, surges for a season, or the plant stops for weeks, and you watch the delays of a medicine's supply chain turn reasonable decisions into shortages, amplification and expired stock. Forecasting, hiring and qualifying people, QA release and shipping each add a delay. Batches wait in QA quarantine and some are rejected; finished stock is aged first-in, first-out, and packs with too little shelf life left for customers to accept are written off. An optional distributor tier orders from the plant with a backlog and transit time. The levers are overtime, QA expedited when stock runs low, and the planning policy: target cover, forecast smoothing, correction speed and the weight on the supply line. Each is measured on profit, fill rate, weeks short, bullwhip and waste against a saved baseline that sees the same random demand. The trade-offs are real: overtime ends the shortage after a demand step but makes more stock expire for a short-life product, and expediting QA pays in an outage only if shortages carry a penalty. Six ready-made scenarios, share links, CSV export, charts with hover read-outs, a live stock-and-flow diagram and every equation with its value in any week. A tutorial in three levels (beginner, intermediate, advanced) asks questions whose answers are checked against the model by tests. Fully available in English and Latin American Spanish. The model's tests check exact balance at the start, that every pack is accounted for, that a smaller time step gives the same answers, and that the forecast matches its exact solution. 323 passing tests.",
+    "date": "2026-10-13",
+    "tags": [
+      "javascript",
+      "web",
+      "simulation",
+      "system-dynamics",
+      "supply-chain",
+      "operations",
+      "education"
+    ],
+    "repoUrl": "https://github.com/kathuman/pharma-sim",
+    "demoUrl": "https://kathuman.github.io/pharma-sim/"
+  },
+  {
     "title": "Clockspeed Balancing",
     "status": "early",
     "description": "A management flight simulator for the conflict between commercial strategy (which moves in months), the product supply chain (about a year) and the network (years). You fly a company for 20 years in quarterly turns. Each quarter you set price, service promise, promotions, launches and markets; inventory cover, flexible capacity and dual sourcing; and capacity to build, close or automate in three regions. Every gap between the three costs money, and it wears down the slow, inertial parts of the company: operational capability (eroded by firefighting), trust between functions, supplier relationships, and customer expectations that ratchet up with every promise and come down slowly. Six weathers, from calm skies to an innovation wave, Eastern growth, a promise war, a storm of disruption and tariffs, and all at once. The cockpit has gauges, fit bars for each level, plain-language advisories, a radar of decisions still in flight, regional detail and 20-year history charts, with undo, autosave and flight files. At landing it compares your flight with holding the starting course. A system dynamics model in the tradition of Sterman's flight simulators, with 34 tests: a steady state that holds for 20 years, exact accounting, the three clock speeds (about 4, 10 and 33 months), the promise ratchet, an unsupported push against support and pacing, firefighting, complexity creep and resilience.",
