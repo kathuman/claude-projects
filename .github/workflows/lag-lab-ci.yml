@@ -24,6 +24,7 @@ jobs:
       - run: node lag-lab/tests/model.test.js
       - run: node lag-lab/tests/decompose.test.js
       - run: node lag-lab/tests/equations.test.js
+      - run: node lag-lab/tests/i18n.test.js
       - name: Syntax-check the page scripts
-        run: for f in lag-lab/src/*.js lag-lab/app.js lag-lab/diagram.js; do node --check "$f"; done
+        run: for f in lag-lab/src/*.js lag-lab/*.js; do node --check "$f"; done
         shell: bash

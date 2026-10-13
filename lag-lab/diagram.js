@@ -5,6 +5,16 @@
 (function () {
   "use strict";
   var EQ = window.LagEquations, L = window.LagLab, $ = function (id) { return document.getElementById(id); };
+  var I18 = window.ROi18n, T = I18.T;
+  // in Spanish, the variables' names, units, equations and meanings come from the overlay in i18n-es.js (same ids,
+  // same {references}: the tests check that the arrows drawn from the equations cannot change)
+  var OV = I18.lang === "es" && window.LL_ES ? window.LL_ES.EQ : null;
+  if (OV) {
+    EQ.VARS.forEach(function (v) { var o = OV.vars[v.id]; if (!o) return; ["name", "units", "init", "about"].forEach(function (k) { if (o[k] != null) v[k] = o[k]; });
+      if (o.eq != null) v.eq = typeof o.eq === "function" ? o.eq : o.eq; if (o.alt != null) v.alt = o.alt; });
+    EQ.PARAMS.forEach(function (q) { var o = OV.params[q[0]]; if (o) { q[1] = o[0]; q[2] = o[1]; } });
+    Object.keys(OV.labels).forEach(function (k) { EQ.PARAM_LABEL[k] = OV.labels[k]; });
+  }
   var NS = "http://www.w3.org/2000/svg";
   var W = 1240, H = 800, BOX = { w: 132, h: 52 };
 
@@ -50,7 +60,7 @@
   function build() {
     var p = window.lagLab.params();
     host.innerHTML = "";
-    svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Stock-and-flow diagram of the Lag Lab model" }, host);
+    svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": T("Stock-and-flow diagram of the Lag Lab model") }, host);
     var defs = el("defs", {}, svg);
     [["ar-info", "#6fa8c9"], ["ar-in", "#7dd3fc"], ["ar-out", "#e0558f"], ["ar-pipe", "#bfe4ff"]].forEach(function (m) {
       var mk = el("marker", { id: m[0], viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
@@ -87,7 +97,7 @@
     nodes = {};
     EQ.VARS.forEach(function (v) {
       var c = POS[v.id]; if (!c) return;
-      var g = el("g", { "class": "node " + v.kind, tabindex: 0, role: "button", "aria-label": v.name + " (" + kindName(v.kind) + "): show its equation", "data-id": v.id }, gNodes);
+      var g = el("g", { "class": "node " + v.kind, tabindex: 0, role: "button", "aria-label": T("{name} ({kind}): show its equation", { name: v.name, kind: kindName(v.kind) }), "data-id": v.id }, gNodes);
       var lines = wrap(v.name);
       if (v.kind === "stock") {
         el("rect", { x: c[0] - BOX.w / 2, y: c[1] - BOX.h / 2, width: BOX.w, height: BOX.h, rx: 4, "class": "shape" }, g);
@@ -115,7 +125,7 @@
     });
     highlight(selected);
   }
-  function kindName(k) { return { stock: "stock", flow: "flow", aux: "auxiliary", exo: "input" }[k]; }
+  function kindName(k) { return { stock: T("stock"), flow: T("flow"), aux: T("auxiliary"), exo: T("input") }[k]; }
 
   function highlight(id) {
     var ins = {}, outs = {};
@@ -137,8 +147,11 @@
 
   // ---- the equation panel
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  // the parameters that are choices show their value in the page's language
+  var CHOICE = { capacity: T("capacity"), inventory: T("inventory"), smooth: T("smooth"), perfect: T("perfect") };
   function fmtParam(p, key) {
     var v = EQ.paramValue(p, key);
+    if (typeof v === "string" && CHOICE[v]) return CHOICE[v];
     if (key === "demand.size") return (v > 0 ? "+" : "") + Math.round(v * 100) + "%";
     return typeof v === "number" ? String(+v.toFixed(4)) : String(v);
   }
@@ -160,24 +173,24 @@
 
   function panel() {
     var box = $("eq-panel"), d = window.lagLab.last(), p = window.lagLab.params();
-    if (!selected || !d) { box.innerHTML = '<p class="muted">Click any stock, flow or auxiliary in the diagram, or any name in the equation list below, to see its equation, what it reads, what reads it, and the values at a chosen week of your plan.</p>'; return; }
+    if (!selected || !d) { box.innerHTML = '<p class="muted">' + T("Click any stock, flow or auxiliary in the diagram, or any name in the equation list below, to see its equation, what it reads, what reads it, and the values at a chosen week of your plan.") + "</p>"; return; }
     var v = EQ.BY_ID[selected], run = d.runs.a, idx = Math.max(0, Math.min(run.t.length - 1, Math.round(week)));
     var ins = EQ.inputs(v.id, p), usedBy = EQ.VARS.filter(function (u) { return u.kind !== "stock" && EQ.inputs(u.id, p).indexOf(v.id) >= 0; }).map(function (u) { return u.id; });
     if (v.kind !== "stock") PIPES.forEach(function (pp) { if (pp[0] === v.id && EQ.BY_ID[pp[1]] && EQ.BY_ID[pp[1]].kind === "stock") usedBy.push(pp[1]); });
     var h = '<div class="eq-kind ' + v.kind + '">' + kindName(v.kind) + '</div><h3>' + esc(v.name) + ' <span class="u">' + esc(v.units) + "</span></h3>";
     h += '<div class="eq">' + render(EQ.equation(v, p), p) + "</div>";
-    if (v.init) h += '<div class="eq-init">Initial value: ' + render(v.init, p) + " (the model starts in equilibrium)</div>";
+    if (v.init) h += '<div class="eq-init">' + T("Initial value: {v} (the model starts in equilibrium)", { v: render(v.init, p) }) + "</div>";
     if (v.alt) h += '<div class="eq-init">' + render(v.alt(p), p) + "</div>";
     h += '<p class="about">' + render(v.about, p) + "</p>";
     h = '<div class="eq-cols"><div>' + h + '</div><div>';
-    h += '<div class="wk"><label for="eq-week">Values in your plan at week <b>' + idx + '</b></label><input type="range" id="eq-week" min="0" max="' + (run.t.length - 1) + '" step="1" value="' + idx + '" /></div>';
+    h += '<div class="wk"><label for="eq-week">' + T("Values in your plan at week <b>{n}</b>", { n: idx }) + '</label><input type="range" id="eq-week" min="0" max="' + (run.t.length - 1) + '" step="1" value="' + idx + '" /></div>';
     h += '<table class="eqvals"><tr><td>' + esc(v.name) + "</td><td>" + num(valueAt(v.id, run, idx, p), v.units) + "</td></tr>";
-    if (v.kind === "stock" && idx + 1 < run.t.length) h += '<tr><td class="muted">change over the next week</td><td>' + num(valueAt(v.id, run, idx + 1, p) - valueAt(v.id, run, idx, p), v.units) + "</td></tr>";
+    if (v.kind === "stock" && idx + 1 < run.t.length) h += '<tr><td class="muted">' + T("change over the next week") + "</td><td>" + num(valueAt(v.id, run, idx + 1, p) - valueAt(v.id, run, idx, p), v.units) + "</td></tr>";
     h += "</table>";
-    if (ins.length) h += '<h4>' + (v.kind === "stock" ? "Flows in and out" : "Reads") + '</h4><table class="eqvals">' + ins.map(function (u) { var w = EQ.BY_ID[u]; return '<tr><td><button type="button" class="vref ' + w.kind + '" data-id="' + u + '">' + esc(w.name) + "</button></td><td>" + num(valueAt(u, run, idx, p), w.units) + "</td></tr>"; }).join("") + "</table>";
+    if (ins.length) h += '<h4>' + (v.kind === "stock" ? T("Flows in and out") : T("Reads")) + '</h4><table class="eqvals">' + ins.map(function (u) { var w = EQ.BY_ID[u]; return '<tr><td><button type="button" class="vref ' + w.kind + '" data-id="' + u + '">' + esc(w.name) + "</button></td><td>" + num(valueAt(u, run, idx, p), w.units) + "</td></tr>"; }).join("") + "</table>";
     var prm = EQ.params(v.id, p);
-    if (prm.length) h += "<h4>Parameters</h4><table class=\"eqvals\">" + prm.map(function (k) { var meta = EQ.PARAMS.filter(function (q) { return q[0] === k; })[0] || [k, k, ""]; return "<tr><td>" + esc(meta[1]) + ' <span class="muted">(' + esc(EQ.PARAM_LABEL[k] || k) + ")</span></td><td>" + esc(fmtParam(p, k)) + ' <span class="u">' + esc(meta[2]) + "</span></td></tr>"; }).join("") + "</table>";
-    if (usedBy.length) h += "<h4>Read by</h4><p>" + usedBy.map(function (u) { var w = EQ.BY_ID[u]; return '<button type="button" class="vref ' + w.kind + '" data-id="' + u + '">' + esc(w.name) + "</button>"; }).join(" ") + "</p>";
+    if (prm.length) h += "<h4>" + T("Parameters") + "</h4><table class=\"eqvals\">" + prm.map(function (k) { var meta = EQ.PARAMS.filter(function (q) { return q[0] === k; })[0] || [k, k, ""]; return "<tr><td>" + esc(meta[1]) + ' <span class="muted">(' + esc(EQ.PARAM_LABEL[k] || k) + ")</span></td><td>" + esc(fmtParam(p, k)) + ' <span class="u">' + esc(meta[2]) + "</span></td></tr>"; }).join("") + "</table>";
+    if (usedBy.length) h += "<h4>" + T("Read by") + "</h4><p>" + usedBy.map(function (u) { var w = EQ.BY_ID[u]; return '<button type="button" class="vref ' + w.kind + '" data-id="' + u + '">' + esc(w.name) + "</button>"; }).join(" ") + "</p>";
     box.innerHTML = h + "</div></div>";
     $("eq-week").addEventListener("input", function () { week = +this.value; panel(); var w2 = $("eq-week"); if (w2) w2.focus(); });
   }
@@ -191,14 +204,14 @@
 
   // ---- every equation, grouped, and the parameters with their current values
   function list() {
-    var p = window.lagLab.params(), groups = [["Stocks", "stock"], ["Flows", "flow"], ["Auxiliaries", "aux"], ["Input", "exo"]];
+    var p = window.lagLab.params(), groups = [[T("Stocks"), "stock"], [T("Flows"), "flow"], [T("Auxiliaries"), "aux"], [T("Input"), "exo"]];
     var h = groups.map(function (g) {
       var vs = EQ.VARS.filter(function (v) { return v.kind === g[1]; });
       return "<h4>" + g[0] + '</h4><table class="eqlist">' + vs.map(function (v) {
-        return '<tr class="' + (v.id === selected ? "sel" : "") + '"><td><button type="button" class="vref ' + v.kind + '" data-id="' + v.id + '">' + esc(v.name) + '</button><div class="u">' + esc(v.units) + "</div></td><td>" + render(EQ.equation(v, p), p) + (v.init ? '<div class="u">initial: ' + render(v.init, p) + "</div>" : "") + "</td></tr>";
+        return '<tr class="' + (v.id === selected ? "sel" : "") + '"><td><button type="button" class="vref ' + v.kind + '" data-id="' + v.id + '">' + esc(v.name) + '</button><div class="u">' + esc(v.units) + "</div></td><td>" + render(EQ.equation(v, p), p) + (v.init ? '<div class="u">' + T("initial: {v}", { v: render(v.init, p) }) + "</div>" : "") + "</td></tr>";
       }).join("") + "</table>";
     }).join("");
-    h += '<h4>Parameters (current values)</h4><table class="eqlist params">' + EQ.PARAMS.map(function (q) {
+    h += "<h4>" + T("Parameters (current values)") + '</h4><table class="eqlist params">' + EQ.PARAMS.map(function (q) {
       return "<tr><td>" + esc(q[1]) + ' <span class="muted">' + esc(EQ.PARAM_LABEL[q[0]] || "") + "</span></td><td>" + esc(fmtParam(p, q[0])) + ' <span class="u">' + esc(q[2]) + "</span></td></tr>";
     }).join("") + "</table>";
     $("eq-list").innerHTML = h;

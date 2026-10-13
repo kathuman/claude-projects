@@ -6,39 +6,41 @@
 //   1.1.0  the Model tab: a stock-and-flow diagram of the model, every variable clickable for its equation, inputs,
 //          readers, parameters and values in your plan's run; the full equation and parameter list. The published
 //          equations are tested against the model's own output
+//   1.2.0  Spanish (Latin America): every page text, control, chart, message and equation, with a language switch
 (function () {
   "use strict";
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
   var L = window.LagLab, Dc = window.LagDecompose, $ = function (id) { return document.getElementById(id); };
+  var I18 = window.ROi18n, T = I18.T, tw = I18.tw;
   $("ver").textContent = "v" + VERSION; $("ver-foot").textContent = "v" + VERSION;
 
   var COLORS = { necessary: "#4f9f15", structural: "#1f9fd8", policy: "#c7820c", forecast: "#e0558f", run: "#e6f3ff", faint: "#6fa8c9", line: "#2a5580", s: ["#1f9fd8", "#c7820c", "#e0558f", "#4f9f15"] };
 
   // ---- controls: [path, label, min, max, step, unit, hint]
   var GROUPS = [
-    ["Demand change", [
-      ["demand.size", "Step size", -50, 100, 5, "%", "Change in customer orders, as a share of the old rate"],
-      ["demand.at", "Step at week", 2, 40, 1, "wk"]]],
-    ["Delays", [
-      ["productionLeadTime", "Production lead time", 1, 20, 0.5, "wk", "From production start to finished goods"],
-      ["hiringDelay", "Hiring delay", 1, 26, 0.5, "wk", "From opening a vacancy to filling it"],
-      ["trainingTime", "Training ramp", 1, 52, 1, "wk", "Recruits work at half productivity until trained"]]],
-    ["Replenishment policy", [
-      ["TAI", "Inventory adjustment time (TAI)", 1, 20, 0.5, "wk", "How fast production closes the inventory gap"],
-      ["TASL", "Supply-line adjustment time (TASL)", 1, 20, 0.5, "wk"],
-      ["wSL", "Supply-line weight (w_SL)", 0, 1, 0.05, "", "1 = the work already in the pipeline counts fully"],
-      ["forecastTime", "Forecast smoothing time", 1, 26, 0.5, "wk", "How fast expected demand follows actual demand"]]],
-    ["Hiring policy", [
-      ["TAW", "Workforce adjustment time (TAW)", 1, 26, 0.5, "wk"],
-      ["wV", "Vacancy weight (w_V)", 0, 1, 0.05, "", "1 = open vacancies count fully"],
-      ["hiringDriver", "Hire on the…", null, null, null, "", "Inventory gap: blind to the work already in the pipeline"]]]
+    [T("Demand change"), [
+      ["demand.size", T("Step size"), -50, 100, 5, "%", T("Change in customer orders, as a share of the old rate")],
+      ["demand.at", T("Step at week"), 2, 40, 1, T("wk")]]],
+    [T("Delays"), [
+      ["productionLeadTime", T("Production lead time"), 1, 20, 0.5, T("wk"), T("From production start to finished goods")],
+      ["hiringDelay", T("Hiring delay"), 1, 26, 0.5, T("wk"), T("From opening a vacancy to filling it")],
+      ["trainingTime", T("Training ramp"), 1, 52, 1, T("wk"), T("Recruits work at half productivity until trained")]]],
+    [T("Replenishment policy"), [
+      ["TAI", T("Inventory adjustment time (TAI)"), 1, 20, 0.5, T("wk"), T("How fast production closes the inventory gap")],
+      ["TASL", T("Supply-line adjustment time (TASL)"), 1, 20, 0.5, T("wk")],
+      ["wSL", T("Supply-line weight (w_SL)"), 0, 1, 0.05, "", T("1 = the work already in the pipeline counts fully")],
+      ["forecastTime", T("Forecast smoothing time"), 1, 26, 0.5, T("wk"), T("How fast expected demand follows actual demand")]]],
+    [T("Hiring policy"), [
+      ["TAW", T("Workforce adjustment time (TAW)"), 1, 26, 0.5, T("wk")],
+      ["wV", T("Vacancy weight (w_V)"), 0, 1, 0.05, "", T("1 = open vacancies count fully")],
+      ["hiringDriver", T("Hire on the…"), null, null, null, "", T("Inventory gap: blind to the work already in the pipeline")]]]
   ];
   var PRESETS = {
-    typical: { name: "Typical plant", p: {} },
-    textbook: { name: "Textbook rules (w = 1, hire on capacity)", p: { wSL: 1, wV: 1, hiringDriver: "capacity" } },
-    firefight: { name: "Fire-fighting (fast, pipeline ignored)", p: { TAI: 2, TASL: 2, wSL: 0, wV: 0, TAW: 3 } },
-    slowfc: { name: "Good rules, slow forecast", p: { wSL: 1, wV: 1, hiringDriver: "capacity", forecastTime: 16 } },
-    longhire: { name: "Long hiring pipeline", p: { hiringDelay: 16, trainingTime: 26 } }
+    typical: { name: T("Typical plant"), p: {} },
+    textbook: { name: T("Textbook rules (w = 1, hire on capacity)"), p: { wSL: 1, wV: 1, hiringDriver: "capacity" } },
+    firefight: { name: T("Fire-fighting (fast, pipeline ignored)"), p: { TAI: 2, TASL: 2, wSL: 0, wV: 0, TAW: 3 } },
+    slowfc: { name: T("Good rules, slow forecast"), p: { wSL: 1, wV: 1, hiringDriver: "capacity", forecastTime: 16 } },
+    longhire: { name: T("Long hiring pipeline"), p: { hiringDelay: 16, trainingTime: 26 } }
   };
 
   var params = L.defaults();
@@ -50,14 +52,14 @@
 
   // ---- build the rail
   var rail = $("rail"), inputs = {};
-  rail.insertAdjacentHTML("beforeend", '<h2>Preset</h2><select class="sel" id="preset" aria-label="Preset">' +
-    Object.keys(PRESETS).map(function (k) { return '<option value="' + k + '">' + PRESETS[k].name + "</option>"; }).join("") + '<option value="custom" hidden>Custom</option></select>');
+  rail.insertAdjacentHTML("beforeend", "<h2>" + T("Preset") + '</h2><select class="sel" id="preset" aria-label="' + T("Preset") + '">' +
+    Object.keys(PRESETS).map(function (k) { return '<option value="' + k + '">' + PRESETS[k].name + "</option>"; }).join("") + '<option value="custom" hidden>' + T("Custom") + "</option></select>");
   GROUPS.forEach(function (g) {
     rail.insertAdjacentHTML("beforeend", "<h2>" + g[0] + "</h2>");
     g[1].forEach(function (c) {
       var id = "in-" + c[0].replace(".", "-"), box = document.createElement("div"); box.className = "ctl";
       if (c[0] === "hiringDriver") {
-        box.innerHTML = '<div class="row"><label>' + c[1] + '</label></div><div class="seg" role="group" aria-label="Hiring driver"><button type="button" data-v="capacity">Capacity gap</button><button type="button" data-v="inventory">Inventory gap</button></div><div class="hint">' + c[6] + "</div>";
+        box.innerHTML = '<div class="row"><label>' + c[1] + '</label></div><div class="seg" role="group" aria-label="' + T("Hiring driver") + '"><button type="button" data-v="capacity">' + T("Capacity gap") + '</button><button type="button" data-v="inventory">' + T("Inventory gap") + '</button></div><div class="hint">' + c[6] + "</div>";
         box.querySelectorAll("button").forEach(function (b) { b.addEventListener("click", function () { setP("hiringDriver", b.dataset.v); custom(); paintRail(); schedule(); }); });
       } else {
         box.innerHTML = '<div class="row"><label for="' + id + '">' + c[1] + '</label><output id="' + id + '-out"></output></div><input type="range" id="' + id + '" min="' + c[2] + '" max="' + c[3] + '" step="' + c[4] + '" />' + (c[6] ? '<div class="hint">' + c[6] + "</div>" : "");
@@ -68,8 +70,8 @@
       rail.appendChild(box);
     });
   });
-  rail.insertAdjacentHTML("beforeend", '<h2>Run</h2><div class="ctl"><div class="row"><label for="in-horizon">Run length</label></div><select class="sel" id="in-horizon"><option value="104">2 years</option><option value="156">3 years</option><option value="260">5 years</option></select></div>' +
-    '<div class="rail-actions"><button class="btn" id="btn-reset" type="button">Reset</button></div>');
+  rail.insertAdjacentHTML("beforeend", "<h2>" + T("Run") + '</h2><div class="ctl"><div class="row"><label for="in-horizon">' + T("Run length") + '</label></div><select class="sel" id="in-horizon"><option value="104">' + T("{n} years", { n: 2 }) + '</option><option value="156">' + T("{n} years", { n: 3 }) + '</option><option value="260">' + T("{n} years", { n: 5 }) + "</option></select></div>" +
+    '<div class="rail-actions"><button class="btn" id="btn-reset" type="button">' + T("Reset") + "</button></div>");
   $("in-horizon").addEventListener("change", function () { params.horizon = +$("in-horizon").value; schedule(); });
   $("preset").addEventListener("change", function () { if ($("preset").value !== "custom") applyPreset($("preset").value); });
   $("btn-reset").addEventListener("click", function () { applyPreset("typical"); });
@@ -115,10 +117,10 @@
     var pad = (hi - lo) * 0.08 || Math.abs(hi) * 0.05 || 1; lo -= pad; hi += pad;
     var X = function (tt) { return Lm + pw * (tt - t[0]) / (t[n - 1] - t[0]); }, Y = function (v) { return Tm + ph * (hi - v) / (hi - lo); };
     cx.font = "10.5px IBM Plex Mono, monospace"; cx.fillStyle = COLORS.faint; cx.strokeStyle = COLORS.line; cx.lineWidth = 1;
-    niceTicks(lo, hi, 4).forEach(function (v) { var y = Math.round(Y(v)) + 0.5; cx.globalAlpha = 0.6; cx.beginPath(); cx.moveTo(Lm, y); cx.lineTo(W - Rm, y); cx.stroke(); cx.globalAlpha = 1; cx.fillText(Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + "k" : String(+v.toFixed(2)), 2, y + 3); });
+    niceTicks(lo, hi, 4).forEach(function (v) { var y = Math.round(Y(v)) + 0.5; cx.globalAlpha = 0.6; cx.beginPath(); cx.moveTo(Lm, y); cx.lineTo(W - Rm, y); cx.stroke(); cx.globalAlpha = 1; cx.fillText(Math.abs(v) >= 1000 ? T("{v}k", { v: (v / 1000).toFixed(1) }) : String(+v.toFixed(2)), 2, y + 3); });
     var xs = niceTicks(t[0], t[n - 1], 6);
-    xs.forEach(function (v, i) { var s = String(v) + (i === xs.length - 1 ? " wk" : ""), w = cx.measureText(s).width; cx.fillText(s, Math.min(W - Rm - w, X(v) - 6), H - 6); });
-    if (d.marker != null) { var mx = Math.round(X(d.marker)) + 0.5; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(mx, Tm); cx.lineTo(mx, Tm + ph); cx.stroke(); cx.setLineDash([]); cx.fillText("step", mx + 4, Tm + 10); }
+    xs.forEach(function (v, i) { var s = String(v) + (i === xs.length - 1 ? " " + T("wk") : ""), w = cx.measureText(s).width; cx.fillText(s, Math.min(W - Rm - w, X(v) - 6), H - 6); });
+    if (d.marker != null) { var mx = Math.round(X(d.marker)) + 0.5; cx.setLineDash([3, 3]); cx.beginPath(); cx.moveTo(mx, Tm); cx.lineTo(mx, Tm + ph); cx.stroke(); cx.setLineDash([]); cx.fillText(T("step"), mx + 4, Tm + 10); }
     (d.hlines || []).forEach(function (h) { var y = Math.round(Y(h.y)) + 0.5; cx.strokeStyle = h.color || COLORS.faint; cx.setLineDash(h.dash || [4, 4]); cx.beginPath(); cx.moveTo(Lm, y); cx.lineTo(W - Rm, y); cx.stroke(); cx.setLineDash([]); });
     cx.save(); cx.beginPath(); cx.rect(Lm, Tm, pw, ph); cx.clip();
     (d.bands || []).forEach(function (b) {
@@ -140,7 +142,7 @@
       var bx = Math.round(X(t[idx])) + 0.5; cx.strokeStyle = COLORS.faint; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(bx, Tm); cx.lineTo(bx, Tm + ph); cx.stroke();
       d.series.forEach(function (s) { cx.fillStyle = s.color; cx.beginPath(); cx.arc(bx, Y(s.ys[idx]), 3.5, 0, 7); cx.fill(); });
       var dig = d.digits != null ? d.digits : 1;
-      this.tip.innerHTML = '<span class="k">week ' + t[idx] + "</span><br>" + d.series.map(function (s) { return lineSample(s) + " " + esc(s.name) + " " + s.ys[idx].toFixed(dig); }).join("<br>");
+      this.tip.innerHTML = '<span class="k">' + T("week {n}", { n: t[idx] }) + "</span><br>" + d.series.map(function (s) { return lineSample(s) + " " + esc(s.name) + " " + s.ys[idx].toFixed(dig); }).join("<br>");
       this.tip.hidden = false;
       var tw = this.tip.offsetWidth; this.tip.style.left = Math.max(0, Math.min(W - tw - 2, bx + 12)) + "px"; this.tip.style.top = "4px";
     }
@@ -158,32 +160,34 @@
     $(hostId).appendChild(box);
     var ch = new Chart(box.querySelector(".plot")); ch.legend = box.querySelector(".legend"); return ch;
   }
-  var RUN_STYLE = { a: { name: "(a) your plan", dash: [] }, b: { name: "(b) perfect forecast", dash: [7, 4] }, c: { name: "(c) full accounting", dash: [2, 3] } };
+  var RUN_STYLE = { a: { name: T("(a) your plan"), dash: [] }, b: { name: T("(b) perfect forecast"), dash: [7, 4] }, c: { name: T("(c) full accounting"), dash: [2, 3] } };
   var decCharts = {
-    starts: makeChart("dec-charts", "starts", "Production starts", "Above the demand line is overproduction. Shading shows where it comes from: refill and structure (green), policy (amber), forecast (magenta)."),
-    inventory: makeChart("dec-charts", "inventory", "Finished inventory", "The gap between the runs: policy (b → c) and forecast (a → b)."),
-    backlog: makeChart("dec-charts", "backlog", "Backlog", "Orders waiting to ship."),
-    workforce: makeChart("dec-charts", "workforce", "Effective workforce", "Experienced workers plus trainees at half productivity.")
+    starts: makeChart("dec-charts", "starts", T("Production starts"), T("Above the demand line is overproduction. Shading shows where it comes from: refill and structure (green), policy (amber), forecast (magenta).")),
+    inventory: makeChart("dec-charts", "inventory", T("Finished inventory"), T("The gap between the runs: policy (b → c) and forecast (a → b).")),
+    backlog: makeChart("dec-charts", "backlog", T("Backlog"), T("Orders waiting to ship.")),
+    workforce: makeChart("dec-charts", "workforce", T("Effective workforce"), T("Experienced workers plus trainees at half productivity."))
   };
   var runCharts = {
-    demand: makeChart("run-charts", "r-demand", "Demand and expected demand", "The forecast's lag behind the step."),
-    flows: makeChart("run-charts", "r-flows", "Starts, completions, shipments", "Production starts lead; completions follow after the production lead time."),
-    inventory: makeChart("run-charts", "r-inv", "Inventory and its target", "The target moves with expected demand."),
-    supply: makeChart("run-charts", "r-sl", "Supply line and its target", "Work in the production pipeline."),
-    backlog: makeChart("run-charts", "r-backlog", "Backlog", "Orders waiting to ship."),
-    people: makeChart("run-charts", "r-people", "Workforce, trainees, vacancies", "People arrive through vacancies and training."),
-    util: makeChart("run-charts", "r-util", "Utilisation", "Working time against normal: the band is 0.8 to 1.2.")
+    demand: makeChart("run-charts", "r-demand", T("Demand and expected demand"), T("The forecast's lag behind the step.")),
+    flows: makeChart("run-charts", "r-flows", T("Starts, completions, shipments"), T("Production starts lead; completions follow after the production lead time.")),
+    inventory: makeChart("run-charts", "r-inv", T("Inventory and its target"), T("The target moves with expected demand.")),
+    supply: makeChart("run-charts", "r-sl", T("Supply line and its target"), T("Work in the production pipeline.")),
+    backlog: makeChart("run-charts", "r-backlog", T("Backlog"), T("Orders waiting to ship.")),
+    people: makeChart("run-charts", "r-people", T("Workforce, trainees, vacancies"), T("People arrive through vacancies and training.")),
+    util: makeChart("run-charts", "r-util", T("Utilisation"), T("Working time against normal: the band is 0.8 to 1.2."))
   };
 
   // ---- results
   var last = null, pending = false;
   function schedule() { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; recompute(); }); }
   function pct(x) { return (Math.abs(x) < 0.005 ? 0 : Math.round(x * 100)) + "%"; }
-  function units(x) { return Math.round(x).toLocaleString(); }
+  function units(x) { return Math.round(x).toLocaleString("en-US"); }
+  // the four layers, with their names and remedies in the page's language
+  function lname(l) { return T(l.name); }
 
   function recompute() {
     var errs = L.validate(L.merge(params));
-    if (errs.length) { $("headline").textContent = "These settings can't be simulated"; $("subline").textContent = errs.join("; "); return; }
+    if (errs.length) { $("headline").textContent = T("These settings can't be simulated"); $("subline").textContent = errs.map(tw).join("; "); return; }
     var d = Dc.decompose(params); last = d;
     renderAnswer(d); renderDecCharts(d); renderRun(d);
     writeHash();
@@ -193,35 +197,34 @@
   function renderAnswer(d) {
     var ly = d.layers, total = d.total, notes = [];
     if (d.direction === 0 || total < 1e-9) {
-      $("headline").textContent = "No demand change: nothing to decompose.";
-      $("subline").textContent = "Set a step size to see how the overshoot splits."; $("sharebar").innerHTML = ""; $("layers").innerHTML = ""; $("notes").innerHTML = ""; return;
+      $("headline").textContent = T("No demand change: nothing to decompose.");
+      $("subline").textContent = T("Set a step size to see how the overshoot splits."); $("sharebar").innerHTML = ""; $("layers").innerHTML = ""; $("notes").innerHTML = ""; return;
     }
-    var word = d.direction > 0 ? "above" : "below", stepWord = d.direction > 0 ? "rise" : "fall";
     var needStruct = ly.necessary + ly.structural;
     if (ly.forecast >= 0) {
-      $("headline").innerHTML = 'Only <span class="big">' + pct(d.shares.forecast) + "</span> of the overshoot is a forecasting problem.";
+      $("headline").innerHTML = T('Only <span class="big">{p}</span> of the overshoot is a forecasting problem.', { p: pct(d.shares.forecast) });
     } else {
-      $("headline").innerHTML = 'None of the overshoot is a forecasting problem: the forecast\'s lag <span class="big">reduced it by ' + units(-ly.forecast) + " units</span>.";
+      $("headline").innerHTML = T('None of the overshoot is a forecasting problem: the forecast\'s lag <span class="big">reduced it by {n} units</span>.', { n: units(-ly.forecast) });
     }
-    $("subline").textContent = "After the demand " + stepWord + ", your plan produced " + units(total) + " units " + word + " demand. Planning would book all of it as forecast error. " +
-      pct(needStruct / total) + " was the necessary refill and structure, and " + pct(ly.policy / total) + " came from the decision rules.";
+    $("subline").textContent = (d.direction > 0 ? T("After the demand rise, your plan produced {n} units above demand.", { n: units(total) }) : T("After the demand fall, your plan produced {n} units below demand.", { n: units(total) })) + " " +
+      T("Planning would book all of it as forecast error. {a} was the necessary refill and structure, and {b} came from the decision rules.", { a: pct(needStruct / total), b: pct(ly.policy / total) });
     var pos = Dc.LAYERS.filter(function (l) { return ly[l.id] > Math.max(1e-6, 1e-3 * total); }), spos = pos.reduce(function (a, l) { return a + ly[l.id]; }, 0);
     $("sharebar").innerHTML = pos.map(function (l) {
-      var w = ly[l.id] / spos, label = w > 0.09 ? l.name + " " + pct(ly[l.id] / total) : w > 0.04 ? pct(ly[l.id] / total) : "";
-      return '<div style="width:' + (w * 100).toFixed(3) + "%;background:" + COLORS[l.id] + '" title="' + esc(l.name + ": " + units(ly[l.id]) + " units, " + pct(ly[l.id] / total)) + '">' + esc(label) + "</div>";
+      var w = ly[l.id] / spos, label = w > 0.09 ? lname(l) + " " + pct(ly[l.id] / total) : w > 0.04 ? pct(ly[l.id] / total) : "";
+      return '<div style="width:' + (w * 100).toFixed(3) + "%;background:" + COLORS[l.id] + '" title="' + esc(T("{name}: {n} units, {p}", { name: lname(l), n: units(ly[l.id]), p: pct(ly[l.id] / total) })) + '">' + esc(label) + "</div>";
     }).join("");
-    $("sharebar").setAttribute("aria-label", Dc.LAYERS.map(function (l) { return l.name + " " + pct(ly[l.id] / total); }).join(", "));
+    $("sharebar").setAttribute("aria-label", Dc.LAYERS.map(function (l) { return lname(l) + " " + pct(ly[l.id] / total); }).join(", "));
     $("layers").innerHTML = Dc.LAYERS.map(function (l) {
       // rounding-level residues are zero, not "negative"
       var v = Math.abs(ly[l.id]) < Math.max(1e-6, 1e-3 * total) ? 0 : ly[l.id], neg = v < 0;
-      return '<div class="layer" style="border-color:' + COLORS[l.id] + '"><b>' + l.name + '</b><div class="num">' + (neg ? "−" : "") + units(Math.abs(v)) + " units · " + (neg ? "−" : "") + pct(Math.abs(v) / total) + (neg ? " (reduced the overshoot)" : "") + "</div><p>" + l.remedy + "</p></div>";
+      return '<div class="layer" style="border-color:' + COLORS[l.id] + '"><b>' + lname(l) + '</b><div class="num">' + T("{n} units · {p}", { n: (neg ? "−" : "") + units(Math.abs(v)), p: (neg ? "−" : "") + pct(Math.abs(v) / total) }) + (neg ? " " + T("(reduced the overshoot)") : "") + "</div><p>" + T(l.remedy) + "</p></div>";
     }).join("");
     if (!d.allSettled) {
       var still = ["a", "b", "c"].filter(function (k) { return !d.settled[k]; }).map(function (k) { return "(" + k + ")"; }).join(", ");
-      notes.push('<div class="note">Run ' + still + " is still moving at the end of the run, so these numbers cover only what happened in it. Lengthen the run, or calm the policy.</div>");
+      notes.push('<div class="note">' + T("Run {runs} is still moving at the end of the run, so these numbers cover only what happened in it. Lengthen the run, or calm the policy.", { runs: still }) + "</div>");
     }
-    if (Math.abs(ly.policy) < 1e-9 && params.wSL === 1 && params.wV === 1 && params.hiringDriver === "capacity") notes.push('<div class="note info">Your policy already is full accounting, so there is no policy layer: run (b) and run (c) are the same.</div>');
-    if (params.forecast === "perfect") notes.push('<div class="note info">Your plan forecasts perfectly, so there is no forecast layer.</div>');
+    if (Math.abs(ly.policy) < 1e-9 && params.wSL === 1 && params.wV === 1 && params.hiringDriver === "capacity") notes.push('<div class="note info">' + T("Your policy already is full accounting, so there is no policy layer: run (b) and run (c) are the same.") + "</div>");
+    if (params.forecast === "perfect") notes.push('<div class="note info">' + T("Your plan forecasts perfectly, so there is no forecast layer.") + "</div>");
     $("notes").innerHTML = notes.join("");
   }
 
@@ -229,17 +232,17 @@
     return ["c", "b", "a"].map(function (k) { return { name: RUN_STYLE[k].name, ys: d.runs[k][key], color: COLORS.run, dash: RUN_STYLE[k].dash, width: k === "a" ? 2.2 : 1.6 }; }).concat(extra || []);
   }
   function legend(ch, items) { ch.legend.innerHTML = items.join(""); }
-  var BAND_NAME = { necessary: "refill and structure", policy: "policy", forecast: "forecast" };
+  var BAND_NAME = { necessary: T("refill and structure"), policy: T("policy"), forecast: T("forecast") };
   function runLegend(bands) {
     return ["a", "b", "c"].map(function (k) { return "<span>" + lineSample({ color: COLORS.run, dash: RUN_STYLE[k].dash, width: k === "a" ? 2.2 : 1.6 }) + RUN_STYLE[k].name + "</span>"; })
       .concat(bands.map(function (b) { return "<span>" + bandSample(COLORS[b]) + BAND_NAME[b] + "</span>"; }));
   }
   function renderDecCharts(d) {
     var t = d.runs.a.t, step = d.params.demand.at;
-    var dem = { name: "demand", ys: d.runs.a.demand, color: COLORS.faint, dash: [1, 0], width: 1.2 };
+    var dem = { name: T("demand"), ys: d.runs.a.demand, color: COLORS.faint, dash: [1, 0], width: 1.2 };
     var s = runSeries(d, "starts"); s.unshift(dem);  // 0 demand, 1 c, 2 b, 3 a
     decCharts.starts.set({ t: t, series: s, bands: [{ a: 0, b: 1, color: COLORS.necessary }, { a: 1, b: 2, color: COLORS.policy }, { a: 2, b: 3, color: COLORS.forecast }], marker: step, digits: 1 });
-    legend(decCharts.starts, runLegend(["necessary", "policy", "forecast"]).concat(["<span>" + lineSample(dem) + "demand</span>"]));
+    legend(decCharts.starts, runLegend(["necessary", "policy", "forecast"]).concat(["<span>" + lineSample(dem) + T("demand") + "</span>"]));
     ["inventory", "backlog"].forEach(function (k) {
       decCharts[k].set({ t: t, series: runSeries(d, k), bands: [{ a: 0, b: 1, color: COLORS.policy }, { a: 1, b: 2, color: COLORS.forecast }], marker: step, digits: 1 });
       legend(decCharts[k], runLegend(["policy", "forecast"]));
@@ -252,19 +255,19 @@
     var r = d.runs.a, t = r.t, step = d.params.demand.at, S = COLORS.s;
     var line = function (name, ys, i, dash) { return { name: name, ys: ys, color: i == null ? COLORS.faint : S[i], dash: dash || [], width: dash ? 1.4 : 2 }; };
     var simple = function (ch, series, extra) { ch.set(Object.assign({ t: t, series: series, marker: step, digits: 1 }, extra || {})); legend(ch, series.map(function (s) { return "<span>" + lineSample(s) + esc(s.name) + "</span>"; })); };
-    simple(runCharts.demand, [line("demand", r.demand, 0), line("expected demand", r.expectedDemand, 1)]);
-    simple(runCharts.flows, [line("demand", r.demand, null, [4, 3]), line("starts", r.starts, 0), line("completions", r.completions, 1), line("shipments", r.shipments, 2)]);
-    simple(runCharts.inventory, [line("inventory", r.inventory, 0), line("target", r.desiredInventory, null, [5, 4])]);
-    simple(runCharts.supply, [line("supply line", r.supplyLine, 0), line("target", r.desiredSupplyLine, null, [5, 4])]);
-    simple(runCharts.backlog, [line("backlog", r.backlog, 0)]);
-    simple(runCharts.people, [line("effective", r.effectiveWorkforce, 0), line("experienced", r.workforce, 1), line("trainees", r.trainees, 2), line("vacancies", r.vacancies, 3)], { zero: true });
-    simple(runCharts.util, [line("utilisation", r.utilisation, 0)], { digits: 3, hlines: [{ y: d.params.uMin }, { y: d.params.uMax }, { y: 1, dash: [1, 3] }] });
+    simple(runCharts.demand, [line(T("demand"), r.demand, 0), line(T("expected demand"), r.expectedDemand, 1)]);
+    simple(runCharts.flows, [line(T("demand"), r.demand, null, [4, 3]), line(T("starts"), r.starts, 0), line(T("completions"), r.completions, 1), line(T("shipments"), r.shipments, 2)]);
+    simple(runCharts.inventory, [line(T("inventory"), r.inventory, 0), line(T("target"), r.desiredInventory, null, [5, 4])]);
+    simple(runCharts.supply, [line(T("supply line"), r.supplyLine, 0), line(T("target"), r.desiredSupplyLine, null, [5, 4])]);
+    simple(runCharts.backlog, [line(T("backlog"), r.backlog, 0)]);
+    simple(runCharts.people, [line(T("effective"), r.effectiveWorkforce, 0), line(T("experienced"), r.workforce, 1), line(T("trainees"), r.trainees, 2), line(T("vacancies"), r.vacancies, 3)], { zero: true });
+    simple(runCharts.util, [line(T("utilisation"), r.utilisation, 0)], { digits: 3, hlines: [{ y: d.params.uMin }, { y: d.params.uMax }, { y: 1, dash: [1, 3] }] });
     // the plan's response, stock by stock
-    var rows = [["Production starts", "starts"], ["Inventory", "inventory"], ["Backlog", "backlog"], ["Effective workforce", "effectiveWorkforce"], ["Expected demand", "expectedDemand"]];
-    $("metrics").innerHTML = "<thead><tr><th>Your plan (a)</th><th>Before</th><th>After</th><th>Peak</th><th>Overshoot</th><th>Settles in</th><th>Oscillates</th></tr></thead><tbody>" +
+    var rows = [[T("Production starts"), "starts"], [T("Inventory"), "inventory"], [T("Backlog"), "backlog"], [T("Effective workforce"), "effectiveWorkforce"], [T("Expected demand"), "expectedDemand"]];
+    $("metrics").innerHTML = "<thead><tr><th>" + T("Your plan (a)") + "</th><th>" + T("Before") + "</th><th>" + T("After") + "</th><th>" + T("Peak") + "</th><th>" + T("Overshoot") + "</th><th>" + T("Settles in") + "</th><th>" + T("Oscillates") + "</th></tr></thead><tbody>" +
       rows.map(function (rw) {
         var a = L.analyze(r[rw[1]], t, step);
-        return "<tr><td>" + rw[0] + "</td><td>" + a.start.toFixed(1) + "</td><td>" + a.final.toFixed(1) + "</td><td>" + a.peak.toFixed(1) + "</td><td>" + pct(a.overshoot) + "</td><td>" + a.settlingTime.toFixed(0) + " wk</td><td>" + (a.crossings >= 2 ? "yes" : "no") + "</td></tr>";
+        return "<tr><td>" + rw[0] + "</td><td>" + a.start.toFixed(1) + "</td><td>" + a.final.toFixed(1) + "</td><td>" + a.peak.toFixed(1) + "</td><td>" + pct(a.overshoot) + "</td><td>" + a.settlingTime.toFixed(0) + " " + T("wk") + "</td><td>" + (a.crossings >= 2 ? T("yes") : T("no")) + "</td></tr>";
       }).join("") + "</tbody>";
   }
 
@@ -311,8 +314,8 @@
     custom();
   }
   $("btn-share").addEventListener("click", function () {
-    var done = function () { $("btn-share").textContent = "Link copied"; setTimeout(function () { $("btn-share").textContent = "Share"; }, 1600); };
-    var manual = function () { $("btn-share").textContent = "Copy the address bar"; setTimeout(function () { $("btn-share").textContent = "Share"; }, 2400); };
+    var done = function () { $("btn-share").textContent = T("Link copied"); setTimeout(function () { $("btn-share").textContent = T("Share"); }, 1600); };
+    var manual = function () { $("btn-share").textContent = T("Copy the address bar"); setTimeout(function () { $("btn-share").textContent = T("Share"); }, 2400); };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(done, manual);
     else manual();
   });

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lag Lab — Capacity That Lags Demand</title>
-  <meta name="description" content="After a demand step, planning calls the overshoot forecast error. Lag Lab splits it into the necessary refill, the structure, the decision rules and the forecast, with a Sterman-style production and workforce model, so you can see how much is really a forecasting problem." />
+  <title data-i18n="title.index">Lag Lab — Capacity That Lags Demand</title>
+  <meta data-i18n-attr="content=meta.index" name="description" content="After a demand step, planning calls the overshoot forecast error. Lag Lab splits it into the necessary refill, the structure, the decision rules and the forecast, with a Sterman-style production and workforce model, so you can see how much is really a forecasting problem." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📈</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -162,24 +162,25 @@ table.eqlist tr.sel td{background:rgba(255,207,74,.08);}
   <header class="topbar">
     <div class="brand">
       <div class="mark">LAG<span> LAB</span></div>
-      <span class="ver" id="ver" title="App version"></span>
-      <div class="sub">CAPACITY THAT LAGS DEMAND · WHAT IS REALLY FORECAST ERROR?</div>
+      <span data-i18n-attr="title=attr.ver" class="ver" id="ver" title="App version"></span>
+      <div data-i18n="brand.sub" class="sub">CAPACITY THAT LAGS DEMAND · WHAT IS REALLY FORECAST ERROR?</div>
     </div>
     <div class="actions">
-      <button class="back-link" id="btn-share" type="button" title="Copy a link to this exact setup">Share</button>
-      <a class="back-link" href="about.html">About</a>
-      <a class="back-link" href="../">← Projects</a>
+      <button class="back-link" type="button" id="langBtn" lang="es">Español</button>
+      <button data-i18n-attr="title=attr.share" data-i18n="nav.share" class="back-link" id="btn-share" type="button" title="Copy a link to this exact setup">Share</button>
+      <a data-i18n="nav.about" class="back-link" href="about.html">About</a>
+      <a data-i18n="nav.projects" class="back-link" href="../">← Projects</a>
     </div>
   </header>
 
   <main class="layout">
-    <aside class="rail" id="rail" aria-label="Step and policy"></aside>
+    <aside data-i18n-attr="aria-label=aria.rail" class="rail" id="rail" aria-label="Step and policy"></aside>
 
     <section class="content">
       <div class="tabs" role="tablist">
-        <button type="button" role="tab" id="tab-dec" aria-selected="true">Decomposition</button>
-        <button type="button" role="tab" id="tab-run" aria-selected="false">Run details</button>
-        <button type="button" role="tab" id="tab-model" aria-selected="false">Model</button>
+        <button data-i18n="tab.dec" type="button" role="tab" id="tab-dec" aria-selected="true">Decomposition</button>
+        <button data-i18n="tab.run" type="button" role="tab" id="tab-run" aria-selected="false">Run details</button>
+        <button data-i18n="tab.model" type="button" role="tab" id="tab-model" aria-selected="false">Model</button>
       </div>
 
       <!-- ===== the decision screen ===== -->
@@ -194,9 +195,9 @@ table.eqlist tr.sel td{background:rgba(255,207,74,.08);}
         <div class="charts" id="dec-charts"></div>
         <div class="panel" style="margin-top:14px;">
           <div class="runs-explain">
-            <div><b>(a) Your plan.</b> The policy as set on the left, with its smoothed forecast. This is what actually happens.</div>
-            <div><b>(b) Perfect forecast.</b> The same policy, but expected demand is always right. The gap (a)–(b) is the forecast's share.</div>
-            <div><b>(c) Perfect forecast, full accounting.</b> The supply line and vacancies weighted fully (w = 1) and hiring on the capacity gap. The gap (b)–(c) is the policy's share. What is left above the refill is structure.</div>
+            <div data-i18n="runs.a"><b>(a) Your plan.</b> The policy as set on the left, with its smoothed forecast. This is what actually happens.</div>
+            <div data-i18n="runs.b"><b>(b) Perfect forecast.</b> The same policy, but expected demand is always right. The gap (a)–(b) is the forecast's share.</div>
+            <div data-i18n="runs.c"><b>(c) Perfect forecast, full accounting.</b> The supply line and vacancies weighted fully (w = 1) and hiring on the capacity gap. The gap (b)–(c) is the policy's share. What is left above the refill is structure.</div>
           </div>
         </div>
       </div>
@@ -205,7 +206,7 @@ table.eqlist tr.sel td{background:rgba(255,207,74,.08);}
       <div id="view-run" hidden>
         <div class="panel">
           <table class="metrics" id="metrics"></table>
-          <div class="rail-actions"><button class="btn" id="btn-csv" type="button">Download runs (CSV)</button></div>
+          <div class="rail-actions"><button data-i18n="btn.csv" class="btn" id="btn-csv" type="button">Download runs (CSV)</button></div>
         </div>
         <div class="charts" id="run-charts"></div>
       </div>
@@ -213,34 +214,36 @@ table.eqlist tr.sel td{background:rgba(255,207,74,.08);}
       <!-- ===== the model: stock-and-flow diagram and every equation ===== -->
       <div id="view-model" hidden>
         <div class="panel model-intro">
-          <p>The model as a stock-and-flow diagram: <b>stocks</b> are boxes, <b>flows</b> are valves on pipes, <b>auxiliaries</b> are circles, and clouds mark the model's boundary. The curved arrows are drawn from the equations themselves. Click any variable to see its equation, what it reads, what reads it, and its values in your plan's run.</p>
-          <div class="key"><span><svg width="30" height="16"><rect x="1" y="2" width="28" height="12" rx="2" fill="#0d3a63" stroke="#bfe4ff"/></svg>stock</span><span><svg width="22" height="16"><path d="M2,2 L20,14 L20,2 L2,14 z" fill="#0d3a63" stroke="#bfe4ff"/></svg>flow</span><span><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#082444" stroke="#8fd0f2"/></svg>auxiliary</span><span><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#bfe4ff" stroke-width="6"/><line x1="0" y1="5" x2="30" y2="5" stroke="#0d3a63" stroke-width="2"/></svg>material</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#6fa8c9" stroke-width="1.4"/></svg>information</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#7dd3fc" stroke-width="2.2"/></svg>reads (selected)</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#e0558f" stroke-width="2.2"/></svg>read by (selected)</span></div>
+          <p data-i18n="model.intro">The model as a stock-and-flow diagram: <b>stocks</b> are boxes, <b>flows</b> are valves on pipes, <b>auxiliaries</b> are circles, and clouds mark the model's boundary. The curved arrows are drawn from the equations themselves. Click any variable to see its equation, what it reads, what reads it, and its values in your plan's run.</p>
+          <div data-i18n="model.key" class="key"><span><svg width="30" height="16"><rect x="1" y="2" width="28" height="12" rx="2" fill="#0d3a63" stroke="#bfe4ff"/></svg>stock</span><span><svg width="22" height="16"><path d="M2,2 L20,14 L20,2 L2,14 z" fill="#0d3a63" stroke="#bfe4ff"/></svg>flow</span><span><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#082444" stroke="#8fd0f2"/></svg>auxiliary</span><span><svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#bfe4ff" stroke-width="6"/><line x1="0" y1="5" x2="30" y2="5" stroke="#0d3a63" stroke-width="2"/></svg>material</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#6fa8c9" stroke-width="1.4"/></svg>information</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#7dd3fc" stroke-width="2.2"/></svg>reads (selected)</span><span><svg width="30" height="10"><path d="M0,8 Q15,0 28,6" fill="none" stroke="#e0558f" stroke-width="2.2"/></svg>read by (selected)</span></div>
         </div>
         <div class="model-grid">
           <div class="panel diagram-wrap"><div id="diagram"></div></div>
           <aside class="panel" id="eq-panel" aria-live="polite"></aside>
         </div>
-        <div class="panel"><h3 class="section-h">All equations</h3><div id="eq-list"></div></div>
+        <div class="panel"><h3 data-i18n="model.all" class="section-h">All equations</h3><div id="eq-list"></div></div>
       </div>
 
       <details class="panel" style="margin-top:14px;">
-        <summary style="cursor:pointer; font-family:var(--head); font-weight:700; letter-spacing:.05em; text-transform:uppercase;">How the model and the decomposition work</summary>
+        <summary data-i18n="how.sum" style="cursor:pointer; font-family:var(--head); font-weight:700; letter-spacing:.05em; text-transform:uppercase;">How the model and the decomposition work</summary>
         <div class="prose">
-          <p>The model is a production and workforce chain in the style of Sterman, <i>Business Dynamics</i>, ch. 17–19. Orders build a <b>backlog</b> and are shipped from <b>inventory</b>. Production starts enter a <b>supply line</b> (a third-order delay of the production lead time) before they become inventory. Production follows the <b>workforce</b>, with ±20% flexible working time. New people come through <b>vacancies</b> (the hiring delay) and <b>training</b> (half as productive until trained).</p>
-          <p><b>Decision rules (anchor and adjust).</b> Production starts = expected demand + inventory gap / TAI + w<sub>SL</sub> · supply-line gap / TASL. Hiring = attrition + workforce gap / TAW + w<sub>V</sub> · vacancy gap / TAV. The workforce target follows either the <b>capacity</b> the production plan needs or the <b>inventory gap</b>, which is blind to the work already in the pipeline.</p>
-          <p><b>The decomposition.</b> Overshoot is the production above demand after the step (below it, for a step down), counted only where it happens: over a whole run, the net extra production always equals the refill, so a net measure would hide the oscillation. The <b>necessary refill</b> is (inventory coverage + lead time − delivery delay) × the change in demand: a bigger inventory and pipeline to fill, less of it waiting as backlog. <b>Structure</b> is what run (c) produces beyond that. <b>Policy</b> is (b) − (c), and <b>forecast</b> is (a) − (b). The four add up to your plan's overshoot exactly. A layer can be negative: a slow forecast sometimes damps an aggressive policy.</p>
-          <p>The model, the decomposition and their tests are in <a href="https://github.com/kathuman/claude-projects/tree/main/lag-lab" target="_blank" rel="noopener">lag-lab/</a>: an analytic check of the delay and smoothing, exact conservation of material and people, and the textbook results that ignoring the supply line oscillates and full accounting does not.</p>
+          <p data-i18n="how.p1">The model is a production and workforce chain in the style of Sterman, <i>Business Dynamics</i>, ch. 17–19. Orders build a <b>backlog</b> and are shipped from <b>inventory</b>. Production starts enter a <b>supply line</b> (a third-order delay of the production lead time) before they become inventory. Production follows the <b>workforce</b>, with ±20% flexible working time. New people come through <b>vacancies</b> (the hiring delay) and <b>training</b> (half as productive until trained).</p>
+          <p data-i18n="how.p2"><b>Decision rules (anchor and adjust).</b> Production starts = expected demand + inventory gap / TAI + w<sub>SL</sub> · supply-line gap / TASL. Hiring = attrition + workforce gap / TAW + w<sub>V</sub> · vacancy gap / TAV. The workforce target follows either the <b>capacity</b> the production plan needs or the <b>inventory gap</b>, which is blind to the work already in the pipeline.</p>
+          <p data-i18n="how.p3"><b>The decomposition.</b> Overshoot is the production above demand after the step (below it, for a step down), counted only where it happens: over a whole run, the net extra production always equals the refill, so a net measure would hide the oscillation. The <b>necessary refill</b> is (inventory coverage + lead time − delivery delay) × the change in demand: a bigger inventory and pipeline to fill, less of it waiting as backlog. <b>Structure</b> is what run (c) produces beyond that. <b>Policy</b> is (b) − (c), and <b>forecast</b> is (a) − (b). The four add up to your plan's overshoot exactly. A layer can be negative: a slow forecast sometimes damps an aggressive policy.</p>
+          <p data-i18n="how.p4">The model, the decomposition and their tests are in <a href="https://github.com/kathuman/claude-projects/tree/main/lag-lab" target="_blank" rel="noopener">lag-lab/</a>: an analytic check of the delay and smoothing, exact conservation of material and people, and the textbook results that ignoring the supply line oscillates and full accounting does not.</p>
         </div>
       </details>
     </section>
   </main>
 
   <footer class="foot">
-    <span class="consult">Lag Lab <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    A simulator for capacity that lags demand: it splits the overshoot after a demand step into the necessary refill, structure, policy and forecast. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+    <span data-i18n="foot.consult" class="consult">Lag Lab <span id="ver-foot"></span> · <a href="about.html">About</a> · Open to consulting engagements — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+    <span data-i18n="foot.note">A simulator for capacity that lags demand: it splits the overshoot after a demand step into the necessary refill, structure, policy and forecast. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
   </footer>
 </div>
 
+<script src="i18n-es.js"></script>
+<script src="i18n.js"></script>
 <script src="src/model.js"></script>
 <script src="src/decompose.js"></script>
 <script src="src/equations.js"></script>

@@ -1,6 +1,13 @@
 # Lag Lab — capacity that lags demand
 
-**Live: https://kathuman.github.io/claude-projects/lag-lab/ · version 1.1.0 (phases 1–3 of 6, plus the model diagram).**
+**Live: https://kathuman.github.io/claude-projects/lag-lab/ · version 1.2.0 (phases 1–3 of 6, plus the model diagram; in English and Spanish).**
+
+Available in English and Latin American Spanish: the **Español / English** button in the header, or `?lang=es` in a link.
+Every control, chart, message and page text is translated, and so is the Model tab: the names, units, equations and
+meanings of every variable. `i18n.js` translates the page; `i18n-es.js` holds the Spanish, including an overlay of the
+equations that keeps exactly the same references, so the diagram's arrows cannot change. `tests/i18n.test.js` checks
+that nothing is missing or unused, that placeholders and markup match, that every equation names the same variables
+and parameters for every policy, and that the validation messages are translated.
 
 After a demand step, planning sees the overshoot and calls it forecast error. Lag Lab will show that this attribution
 is usually wrong, and by how much. It splits the overshoot into three layers, each with its own remedy:
