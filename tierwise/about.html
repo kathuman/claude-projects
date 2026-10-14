@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Tierwise</title>
+  <meta name="description" content="Tierwise is a multi-tier capacity planning app for a food supply chain across latitudes. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+body{background-image:linear-gradient(rgba(125,211,252,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,.05) 1px, transparent 1px); background-size:28px 28px;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52);}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.actions{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+main{max-width:980px; margin:0 auto; padding:34px 22px 10px;}
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
+h1{font-family:var(--head); font-weight:700; font-size:40px; letter-spacing:.02em; margin:8px 0 12px;}
+.lede{font-size:18px; line-height:1.6; color:var(--ink-dim); max-width:760px; margin:0 0 22px;}
+h2{font-family:var(--head); font-weight:700; font-size:20px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 12px;}
+p{line-height:1.65; color:var(--ink-dim); margin:0 0 12px;}
+b{color:var(--ink);}
+a{color:var(--accent);}
+.open{display:inline-block; font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.06em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink); text-decoration:none; padding:10px 16px; border-radius:8px;}
+.open:hover{filter:brightness(1.08);}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:28px;}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px;}
+.card ul{list-style:none; margin:0; padding:0;}
+.card li{padding:10px 0; border-bottom:1px dashed var(--line-soft); line-height:1.55; color:var(--ink-dim);}
+.card li:last-child{border-bottom:none;}
+.card li b{display:block; font-family:var(--head); font-weight:600; font-size:15px; letter-spacing:.04em; margin-bottom:2px;}
+.cite{font-size:13px; color:var(--ink-faint); margin-top:16px;}
+.foot{max-width:980px; margin:30px auto 0; padding:18px 22px 40px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-faint); line-height:1.7;}
+.foot .consult{display:block; color:var(--ink); font-weight:600; margin-bottom:4px;}
+.foot a{color:var(--accent);}
+@media (max-width:760px){ .cols{grid-template-columns:1fr;} h1{font-size:32px;} .lede{font-size:16px;} .brand .sub{display:none;} }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">TIER<span>WISE</span></div>
+    <div class="sub">ABOUT THE APP</div>
+  </div>
+  <div class="actions">
+    <a class="back-link" href="./">Open the planner</a>
+    <a class="back-link" href="../">← Projects</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">About the app</div>
+  <h1>Tierwise</h1>
+  <p class="lede">A pack of fortified milk powder on a shelf in Jakarta starts as milk on a farm in New Zealand more than five months earlier. Tierwise turns a final consumption forecast into the capacity each site of a six-tier food supply chain needs, and shows when it needs it: 36 months in monthly periods, then 10 more years in yearly periods.</p>
+  <p><a class="open" href="./">Open the planner →</a></p>
+
+  <div class="cols">
+    <section class="card">
+      <h2>What it does</h2>
+      <ul>
+        <li><b>Six tiers, several suppliers per tier</b>Consumption points, warehouses, packaging CMOs, final dosing CMOs, product manufacturing CMOs and raw ingredient CMOs. Each site sources from one or more sites in the tier above, by share.</li>
+        <li><b>Latitudes and seasons</b>Sites run from 52°N to 38°S. Demand peaks in the local cold season, six months apart between hemispheres. Raw milk capacity follows the grass season, more strongly away from the equator.</li>
+        <li><b>Lead times and release times</b>Production lead time, quality release (test and hold), warehouse handling and transit between sites shift every requirement earlier. A lead-time ladder shows how far ahead each tier must act.</li>
+        <li><b>Visual capacity requirements</b>A heatmap of every site across 46 periods, a latitude map with shortfall rings, load against capacity for each site and tier, the forecast for each market, scenarios, an editor for every parameter, and a CSV of the plan.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>How it is built</h2>
+      <p>The engine is a time-phased requirements plan, worked tier by tier from the consumer upstream over 156 months. A warehouse ships what its markets need and builds or draws safety stock. A CMO makes its output the release time early, grossed up for yield. Its inputs must arrive the lead time earlier still. Needs are split across suppliers by share, shifted by each lane's transit time and converted through the bill of materials. Yearly periods are built from their months, and each keeps its busiest month as well as its average, so a seasonal shortfall is not averaged away. Tests check the bill of materials chain, the time shifts, conservation of volume, safety stock, sourcing shares, the seasons of both hemispheres, expansions and outages. It is an infinite-capacity plan: it shows where capacity is short, but it does not re-route volume or pre-build stock. Everything runs in your browser.</p>
+
+      <h2 style="margin-top:22px;">Author</h2>
+      <p>Tierwise was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+      <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a> · <a href="https://kathuman.github.io/estay-dynamics/contact.html" target="_blank" rel="noopener">Get in touch</a></p>
+      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 1.0.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/</p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <span class="consult">Tierwise v1.0.0 · <a href="./">Open the planner</a> · Available for consulting — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
+  Multi-tier capacity planning for a food supply chain across latitudes. All figures in the example network are illustrative. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+</footer>
+</body>
+</html>
