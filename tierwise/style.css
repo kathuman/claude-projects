@@ -73,7 +73,7 @@ input[type=range]:focus-visible{box-shadow:0 0 0 2px var(--accent);}
 
 /* ---- map */
 .map-wrap{position:relative;}
-svg.map{display:block; width:100%; height:auto; background:#08223f; border:1px solid var(--line-soft); border-radius:6px;}
+svg.map, .chart svg.map{overflow:hidden; display:block; width:100%; height:auto; background:#08223f; border:1px solid var(--line-soft); border-radius:6px;}
 .map .land{fill:var(--land); stroke:var(--land-edge); stroke-width:.6;}
 .map .grat{stroke:var(--line-soft); stroke-width:.6; fill:none;}
 .map .grat.eq{stroke:var(--ink-faint); stroke-dasharray:4 3;}
