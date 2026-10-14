@@ -1,7 +1,6 @@
 [
   {
     "title": "Tierwise",
-    "status": "early",
     "description": "Multi-tier capacity planning for a food supply chain across latitudes. A final consumption forecast at eight consumption points (Mexico City to Manila) becomes the capacity each site needs, tier by tier: warehouses, packaging CMOs, final dosing CMOs, product manufacturing CMOs and raw ingredient CMOs, with several CMOs per tier and fixed sourcing shares between them. Production lead times, quality release times, warehouse handling, safety stock and transit between sites shift every requirement earlier; yields gross it up; the bill of materials converts packs to sachets to tonnes of powder and dairy base. Sites run from 52°N to 38°S, so demand and raw-milk seasons run six months apart between hemispheres. The outlook is 36 months in monthly periods and 10 more years in yearly periods, each year keeping its busiest month so a seasonal shortfall is never averaged away. A latitude map, a capacity heatmap of every site across 46 periods, load against capacity per site and tier, a lead-time ladder per market, forecast small multiples, scenarios (fast growth, a New Zealand drought, an expansion programme, dual sourcing), an editor for every parameter and a CSV of the plan. 42 engine tests.",
     "date": "2026-10-14",
     "tags": ["javascript", "web", "planning", "supply-chain", "capacity", "food", "data-visualization"],
