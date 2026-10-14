@@ -127,8 +127,67 @@ function chain(o) {
   const ts = P.tierSummary(r, net, "dosing");
   check("tier summary adds up the sites", near(ts[40].load, net.sites.filter((s) => s.tier === "dosing").reduce((a, s) => a + r.sites[s.id].periods[40].load, 0), 1e-9));
 }
+// ---- tracing a load back to what causes it
+{
+  const net = N.build("base"), r = P.plan(net);
+  let worst = 0, worstC = 0;
+  net.sites.filter((s) => s.tier !== "market").forEach((s) => {
+    const o = r.sites[s.id];
+    for (let m = 0; m < P.MONTHS; m++) {
+      let a = 0; Object.values(o.byMarket).forEach((x) => { a += x[m]; });
+      worst = Math.max(worst, Math.abs(a - o.load[m]) / Math.max(1e-9, o.load[m]));
+      if (s.tier !== "raw" || true) { let c = 0; Object.values(o.byCustomer).forEach((x) => { c += x[m]; }); if (Object.keys(o.byCustomer).length) worstC = Math.max(worstC, Math.abs(c - o.load[m]) / Math.max(1e-9, o.load[m])); }
+    }
+  });
+  check("tracing: every site's load splits exactly into the consumption points it serves", worst < 1e-9, worst);
+  check("tracing: …and exactly into its direct customers", worstC < 1e-9, worstC);
+  const sg = r.sites["w-sg"].byMarket;
+  check("tracing: a warehouse's load comes only from the markets it serves", Object.keys(sg).filter((k) => sum(sg[k], 0, P.MONTHS) > 1e-6).sort().join() === "m-jkt,m-mnl");
+  const qro = r.sites["pk-qro"].byMarket;
+  check("tracing: a packer serving two warehouses carries the markets behind both", sum(qro["m-mex"], 0, 60) > 0 && sum(qro["m-sao"], 0, 60) > 0 && sum(qro["m-jkt"], 0, 60) === 0);
+  const ae = r.sites["w-ae"].byMarket;
+  check("tracing: Dhaka, launching later and growing faster, drives more of Jebel Ali DC than Cairo by 2035", sum(ae["m-dac"], 96, 108) > sum(ae["m-cai"], 96, 108) && sum(ae["m-dac"], 0, 12) < sum(ae["m-cai"], 0, 12));
+  // the chain: a market alone drives exactly its share up the main path
+  const n1 = chain(), r1 = P.plan(n1);
+  check("tracing: in a single chain one market carries the whole load", near(sum(r1.sites.r.byMarket.m, 0, P.MONTHS), sum(r1.sites.r.load, 0, P.MONTHS), 1e-12));
+}
+// ---- the capacity to add
+{
+  const net = N.build("base"), r = P.plan(net);
+  let ok = true, any = 0, detail = "";
+  net.sites.filter((s) => s.tier !== "market").forEach((s) => {
+    const q = P.requiredCapacity(net, r, s.id, 0.9);
+    if (q.additions.length) any++;
+    const n2 = N.build("base"), s2 = n2.sites.find((x) => x.id === s.id);
+    s2.expansions = (s2.expansions || []).concat(q.additions);
+    const o = P.plan(n2).sites[s.id];
+    const mx = Math.max(...Array.from(o.util));
+    if (mx > 0.9 + 1e-9) { ok = false; detail += s.id + ":" + mx.toFixed(4) + " "; }
+  });
+  check("required capacity: adding it keeps every site at or under the target in every month", ok, detail);
+  check("required capacity: most sites of the base plan need some", any >= 15, any);
+  const q = P.requiredCapacity(net, r, "p-ham", 0.9);
+  check("required capacity: additions are a year apart and rounded to two significant digits", q.additions.every((a, i) => (i === 0 || a.from - q.additions[i - 1].from >= 12) && a.add === P.roundUp2(a.add)));
+  check("required capacity: the first need comes before the first shortfall at a 90% target", q.firstNeed >= 0 && q.firstNeed <= r.sites["p-ham"].firstOver);
+  const q1 = P.requiredCapacity(net, r, "p-wis", 1);
+  check("required capacity: at a 100% target the first need is the first shortfall", q1.firstNeed === r.sites["p-wis"].firstOver);
+  check("required capacity: none for a consumption point", P.requiredCapacity(net, r, "m-mex", 0.9) === null);
+  check("roundUp2 rounds up to two significant digits", P.roundUp2(37432) === 38000 && P.roundUp2(4.21) === 4.3 && P.roundUp2(120) === 120 && P.roundUp2(0) === 0);
+  // a raw site: the season lowers capacity, so the need is sized for the leanest month
+  const n3 = chain({ growth: 0 }), rr = n3.sites.find((s) => s.id === "r"); rr.lat = 45; n3.config.rawSeasonMax = 30; rr.capacity = 0.1;
+  const r3 = P.plan(n3), q3 = P.requiredCapacity(n3, r3, "r", 1);
+  rr.expansions = q3.additions; const o3 = P.plan(n3).sites.r;
+  check("required capacity: a seasonal raw site is sized for its leanest month", Math.max(...Array.from(o3.util)) <= 1 + 1e-9 && Math.max(...Array.from(o3.util)) > 0.9);
+}
+// ---- a network's own names for its tiers
+{
+  const n = chain(); n.tiers = { dosing: { name: "Filling CMOs", unit: "bottles" } };
+  const t = P.plan(n).tiers;
+  check("custom tiers: a network can rename a tier and its unit", t[3].name === "Filling CMOs" && t[3].unit === "bottles" && t[3].one === "Filling CMOs" && t[3].custom && t[2].name === "Packaging CMOs" && !t[2].custom);
+}
 // ---- refused with a reason
-[(n) => { n.sites[1].suppliers = []; }, (n) => { n.sites[1].suppliers = [{ from: "r", share: 100 }]; }, (n) => { n.bom.packPerUnit = 0; }, (n) => { n.sites[2].yield = 0; }, (n) => { n.sites[2].lead = -1; }, (n) => { n.sites.push(Object.assign({}, n.sites[2])); }]
+[(n) => { n.sites[1].suppliers = []; }, (n) => { n.sites[1].suppliers = [{ from: "r", share: 100 }]; }, (n) => { n.bom.packPerUnit = 0; }, (n) => { n.sites[2].yield = 0; }, (n) => { n.sites[2].lead = -1; }, (n) => { n.sites.push(Object.assign({}, n.sites[2])); },
+  (n) => { n.sites[2].lat = 95; }, (n) => { delete n.sites[3].lon; }, (n) => { n.sites = n.sites.filter((s) => s.tier !== "market"); }, (n) => { n.sites = []; }]
   .forEach((f, i) => { const n = chain(); f(n); const r = P.plan(n); check("an impossible network is refused (" + (i + 1) + ")", !r.ok && r.errors.length > 0, r.errors && r.errors[0]); });
 
 console.log(pass + "/" + (pass + fail) + " checks passed");

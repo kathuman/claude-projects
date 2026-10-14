@@ -1,0 +1,191 @@
+// Tierwise — dansk. T: tekster fra scripts, efter deres engelske tekst ({navne} bevares);
+// H: sidetekster efter deres data-i18n-nøgle; P: mønstre for motorens og filindlæsningens meddelelser.
+(function (root) {
+  "use strict";
+  var T = {
+    // ---- enheder, kalender, led
+    "pts": "point", "S": "S", "N": "N", "d": "d", "t": "t", "packs": "pakker", "sachets": "breve",
+    "Jan": "jan", "Feb": "feb", "Mar": "mar", "Apr": "apr", "May": "maj", "Jun": "jun", "Jul": "jul", "Aug": "aug", "Sep": "sep", "Oct": "okt", "Nov": "nov", "Dec": "dec",
+    "Year {n} ({a}–{b})": "År {n} ({a}–{b})", "36 months": "36 måneder", "10 years": "10 år",
+    "Consumption points": "Forbrugssteder", "Consumption point": "Forbrugssted", "Markets": "Markeder",
+    "Warehouses": "Distributionslagre", "Warehouse": "Distributionslager",
+    "Packaging CMOs": "Pakke-CMO'er", "Packaging CMO": "Pakke-CMO", "Packaging": "Pakning",
+    "Final dosing CMOs": "Doserings-CMO'er", "Final dosing CMO": "Doserings-CMO", "Dosing": "Dosering",
+    "Product manufacturing CMOs": "Produktions-CMO'er", "Product manufacturing CMO": "Produktions-CMO", "Product": "Produkt",
+    "Raw ingredient CMOs": "Råvare-CMO'er", "Raw ingredient CMO": "Råvare-CMO", "Raw ingredient": "Råvare",
+    // ---- overskrift og resultater
+    "The network cannot be planned:": "Netværket kan ikke planlægges:",
+    "Consumption grows from <b>{a}</b> in the first year to <b>{b}</b> in the last.": "Forbruget vokser fra <b>{a}</b> det første år til <b>{b}</b> det sidste.",
+    "Every site keeps up over all 13 years.": "Alle steder kan følge med i alle 13 år.",
+    "The first site to run short is <b>{site}</b> ({tier}) in <b>{when}</b>.": "Det første sted, der mangler kapacitet, er <b>{site}</b> ({tier}) i <b>{when}</b>.",
+    "Nothing runs short within the 3-year monthly window.": "Intet mangler kapacitet inden for det treårige månedsvindue.",
+    "<b>1 site</b> runs short within the 3-year monthly window.": "<b>1 sted</b> mangler kapacitet inden for det treårige månedsvindue.",
+    "<b>{n} sites</b> run short within the 3-year monthly window.": "<b>{n} steder</b> mangler kapacitet inden for det treårige månedsvindue.",
+    "the first shortfall is the same": "den første mangel er den samme", "the first shortfall comes later": "den første mangel kommer senere", "the first shortfall comes sooner": "den første mangel kommer tidligere",
+    "Against <b>{name}</b>: {what} ({a} vs {b}); {n} sites short at some point vs {m}.": "I forhold til <b>{name}</b>: {what} ({a} mod {b}); {n} steder med mangel på et tidspunkt mod {m}.",
+    "never": "aldrig", "Never": "Aldrig", "None": "Ingen",
+    "Consumption, year 1": "Forbrug, år 1", "{n} a month on average": "{n} om måneden i gennemsnit", "Consumption, year 13": "Forbrug, år 13", "×{x} on year 1": "×{x} i forhold til år 1",
+    "First shortfall": "Første mangel", "within 13 years": "inden for 13 år", "Sites short at some point": "Steder med mangel på et tidspunkt", "{n} of {m}": "{n} af {m}", "across the 13 years": "over de 13 år",
+    "Tightest tier, year 1": "Mest pressede led, år 1", "Longest chain": "Længste kæde", "{n} days": "{n} dage", "raw ingredient to shelf, {m}": "fra råvare til hylde, {m}", "comparison: {v}": "sammenligning: {v}",
+    "Tier": "Led", "Unit": "Enhed", "Load, year 1<br>(a month)": "Belastning, år 1<br>(pr. måned)", "Capacity, year 1<br>(a month)": "Kapacitet, år 1<br>(pr. måned)", "Use, year 1": "Udnyttelse, år 1",
+    "Busiest month,<br>months 1–36": "Travleste måned,<br>måned 1–36", "Busiest month,<br>years 4–13": "Travleste måned,<br>år 4–13", "Load, year 13<br>(a month)": "Belastning, år 13<br>(pr. måned)", "First short": "Første mangel",
+    // ---- kort
+    "Map of the supply network by latitude": "Kort over forsyningsnetværket efter breddegrad", "Equator": "Ækvator", "Tropic of Cancer": "Krebsens vendekreds", "Tropic of Capricorn": "Stenbukkens vendekreds",
+    "Demand, month 1": "Efterspørgsel, måned 1", "Busiest month": "Travleste måned", "Above 90% at peak": "Over 90% på toppen", "Short at some point": "Mangel på et tidspunkt",
+    // ---- valgt sted
+    "southern hemisphere": "den sydlige halvkugle", "northern hemisphere": "den nordlige halvkugle", "Year 1": "År 1", "launches {m}": "lanceres {m}", "Year 13": "År 13", "Growth": "Vækst",
+    "a year, then {g}%": "om året, derefter {g}%", "Peak month": "Topmåned", "±{n}% swing": "udsving ±{n}%", "Capacity": "Kapacitet", "{u} a month": "{u} om måneden", ", month 1": ", måned 1", "month {n} of 156": "måned {n} af 156",
+    "Handling · cover": "Håndtering · dækning", "{h} d · {c} wk": "{h} d · {c} uger", "safety stock {n}": "sikkerhedslager {n}", "Lead · release": "Produktion · frigivelse", "{a} d · {b} d": "{a} d · {b} d", "yield {y}%": "udbytte {y}%",
+    "Supplied by": "Forsynes af", "{p}% · {d} d transit": "{p}% · {d} d transport", "Supplies": "Forsyner", "({p}% of its need)": "({p}% af behovet)",
+    "Capacity follows the milk season: ±{a}% at {lat}, highest in {m}.": "Kapaciteten følger mælkesæsonen: ±{a}% ved {lat}, højest i {m}.",
+    "Demand of {s}": "Efterspørgsel hos {s}", "Load and capacity of {s}": "Belastning og kapacitet hos {s}", "Demand (a month)": "Efterspørgsel (pr. måned)", "Load (a month)": "Belastning (pr. måned)", "Capacity (a month)": "Kapacitet (pr. måned)",
+    "Utilisation": "Udnyttelse", "load / capacity": "belastning / kapacitet", "utilisation": "udnyttelse", "Comparison": "Sammenligning", "Click to see what drives it": "Klik for at se, hvad der driver den",
+    "Demand, {u} a month (average in a yearly period)": "Efterspørgsel, {u} om måneden (gennemsnit i en årsperiode)", "Load, {u} a month (average)": "Belastning, {u} om måneden (gennemsnit)", "Load above capacity": "Belastning over kapaciteten",
+    "Busiest month's load": "Den travleste måneds belastning", "Comparison: {name}": "Sammenligning: {name}",
+    "What drives the load in {p}": "Hvad driver belastningen i {p}",
+    "Load {l} a month against capacity {c} ({u}). Click a bar of the chart above, or a cell of the heatmap, to look at another period.": "Belastning {l} om måneden mod en kapacitet på {c} ({u}). Klik på en søjle i grafen eller en celle i varmekortet for at se en anden periode.",
+    "By consumption point": "Efter forbrugssted", "By direct customer": "Efter direkte kunde",
+    "+{n} from {m}": "+{n} fra {m}", "then {k} more, {n} in all, to {m}": "derefter {k} mere, {n} i alt, til {m}", "Capacity to add": "Kapacitet, der skal tilføjes",
+    "None: {s} stays at or under {t} in every month of the 13 years.": "Ingen: {s} holder sig på eller under {t} i alle måneder i de 13 år.",
+    "To stay at or under <b>{t}</b> in every month, reviewed once a year: {list}. In total <b>{n}</b>, {x} of today's capacity.": "For at holde sig på eller under <b>{t}</b> i alle måneder, med én gennemgang om året: {list}. I alt <b>{n}</b>, {x} af den nuværende kapacitet.",
+    "Add these as expansions": "Tilføj som udvidelser",
+    // ---- varmekort
+    "Change in capacity utilisation against the comparison": "Ændring i kapacitetsudnyttelsen i forhold til sammenligningen", "Capacity utilisation of every site in every period": "Kapacitetsudnyttelse for hvert sted i hver periode",
+    "Monthly · 36 months": "Månedlig · 36 måneder", "Yearly · 10 years": "Årlig · 10 år", "Year average": "Årsgennemsnit", "Short by": "Mangler", "{n} in total": "{n} i alt", "not in it": "ikke med", "Change": "Ændring",
+    "Change in utilisation, points": "Ændring i udnyttelse, point", "not in the comparison": "ikke med i sammenligningen", "blue: less loaded than in <b>{name}</b>; red: more": "blå: mindre belastet end i <b>{name}</b>; rød: mere",
+    "Site": "Sted",
+    // ---- kapacitet, der skal tilføjes
+    "To keep every site at or under <b>{t}</b> in every month, reviewed once a year, {n} of {m} sites need more capacity. Additions are sized for the busiest month until the next review.": "For at holde hvert sted på eller under <b>{t}</b> i alle måneder, med én gennemgang om året, skal {n} af {m} steder have mere kapacitet. Hver udvidelse dimensioneres til den travleste måned frem til næste gennemgang.",
+    "No site needs more capacity at this target.": "Intet sted har brug for mere kapacitet med dette mål.", "First addition": "Første udvidelse", "Additions": "Udvidelser", "Total added": "Tilføjet i alt", "vs today": "mod i dag",
+    // ---- led, tidsstige, prognose
+    "Other ({n} sites)": "Øvrige ({n} steder)", "Load by site against capacity, {t}": "Belastning pr. sted mod kapacitet, {t}", "Tier load / capacity": "Leddets belastning / kapacitet", "Tier utilisation": "Leddets udnyttelse", "Tier capacity": "Leddets kapacitet", "Period": "Periode",
+    "Lead-time ladder for {m}": "Tidsstige for {m}", "on shelf": "på hylden", "transit": "transport", "handling": "håndtering", "release (QA)": "frigivelse (QA)", "production": "produktion",
+    "Step": "Trin", "Takes": "Varer", "Starts": "Begynder", "{n} days before the shelf": "{n} dage før hylden", "Ends": "Slutter", "{n} days before": "{n} dage før",
+    "Raw ingredient for a pack sold in {m} in {when} must be in production around <b>{start}</b>: {d} days ({mo} months) ahead.": "Råvaren til en pakke, der sælges i {m} i {when}, skal være i produktion omkring <b>{start}</b>: {d} dage ({mo} måneder) i forvejen.",
+    "Production (site colour)": "Produktion (stedets farve)", "Release or handling": "Frigivelse eller håndtering", "Transit": "Transport",
+    "Consumption forecast · {u} a month": "Forbrugsprognose · {u} om måneden", "peaks in {m}": "top i {m}", "+{g}%/yr": "+{g}%/år", "launch {m}": "lancering {m}", "Forecast for {m}": "Prognose for {m}", "Total": "I alt",
+    // ---- filer, links, sammenligning
+    "The spreadsheet library could not be loaded. Use CSV instead, which Excel opens too.": "Regnearksbiblioteket kunne ikke indlæses. Brug CSV i stedet; Excel åbner det også.",
+    "{f} could not be loaded:": "{f} kunne ikke indlæses:", "…and {n} more.": "…og {n} mere.", "Loaded <b>{f}</b>: {n} sites in {t} tiers.": "Indlæste <b>{f}</b>: {n} steder i {t} led.", "{f} could not be read.": "{f} kunne ikke læses.",
+    "The spreadsheet library could not be loaded. Save the sheet as CSV and load that.": "Regnearksbiblioteket kunne ikke indlæses. Gem arket som CSV og indlæs det.",
+    "The link is damaged.": "Linket er beskadiget.", "Link copied. It carries the whole network, so anyone who opens it sees this plan.": "Linket er kopieret. Det indeholder hele netværket, så alle, der åbner det, ser denne plan.",
+    "Copy the link from the box below.": "Kopiér linket fra feltet nedenfor.", "Nothing": "Intet", "Pinned plan ({t})": "Fastholdt plan ({t})", "Your network: {name}": "Dit netværk: {name}",
+    "Pinned. Change anything, and the heatmap shows the change against the pinned plan.": "Fastholdt. Ændr hvad som helst, og varmekortet viser ændringen i forhold til den fastholdte plan.",
+    "The shared link could not be opened:": "Det delte link kunne ikke åbnes:", "shared link": "delt link", "This plan was opened from a shared link.": "Denne plan blev åbnet fra et delt link.",
+    // ---- redigering
+    "Product, calendar and bill of materials": "Produkt, kalender og stykliste", "First year": "Første år", "First month": "Første måned", "Demand peaks (north)": "Efterspørgslens top (nord)", "Milk peaks (north)": "Mælkens top (nord)",
+    "Dosing units per pack": "Doseringsenheder pr. pakke", "kg of product per dosing unit": "kg produkt pr. doseringsenhed", "t raw ingredient per t product": "t råvare pr. t produkt",
+    "Tier names and units can be changed below, for a chain whose tiers are called something else.": "Leddenes navne og enheder kan ændres nedenfor, til en kæde, hvis led hedder noget andet.",
+    "Tier names and units": "Leddenes navne og enheder", "Name (plural)": "Navn (flertal)", "Name (one)": "Navn (ental)", "+ Add a site": "+ Tilføj et sted", "Country": "Land", "Lat": "Bredde", "Lon": "Længde",
+    "Sourcing: supplier · share · transit days (blank = estimated)": "Indkøb: leverandør · andel · transportdage (tom = anslået)", "Expansions (YYYY-MM:+amount)": "Udvidelser (ÅÅÅÅ-MM:+mængde)",
+    "Share": "Andel", "Transit days": "Transportdage", "Remove this supplier": "Fjern denne leverandør", "+ supplier": "+ leverandør", "Remove this site": "Fjern dette sted", "New site": "Nyt sted",
+    "Base, a month": "Basis pr. måned", "Growth % (yrs 1–3)": "Vækst % (år 1–3)", "Growth % (yrs 4–13)": "Vækst % (år 4–13)", "Season swing %": "Sæsonudsving %", "Launch (YYYY-MM)": "Lancering (ÅÅÅÅ-MM)", "Ramp months": "Indfasning, måneder",
+    "Throughput a month": "Gennemløb pr. måned", "Handling days": "Håndteringsdage", "Cover weeks": "Dækning, uger", "Capacity a month": "Kapacitet pr. måned", "Lead time, days": "Produktionstid, dage", "Release time, days": "Frigivelsestid, dage", "Yield %": "Udbytte %",
+    // ---- kontroller
+    "{n} weeks": "{n} uger", "{a}–{b} weeks by site": "{a}–{b} uger efter sted", "tutorial": "vejledning", "Show as table": "Vis som tabel", "Hide table": "Skjul tabel",
+    // ---- vejledning
+    "Tutorial levels": "Vejledningens niveauer", "Tutorial": "Vejledning", "done ✓": "færdig ✓", "step {k} of {n}": "trin {k} af {n}", "{n} steps · {m} min": "{n} trin · {m} min", "Leave the tutorial": "Forlad vejledningen",
+    "Back": "Tilbage", "Finish": "Afslut", "Next": "Næste", "Right.": "Rigtigt.", "Not quite.": "Ikke helt.", "{level} complete": "{level} gennemført", "Close": "Luk", "Well done": "Godt klaret",
+    "You finished the {level} level.": "Du har gennemført niveauet {level}.", "Ready for <b>{next}</b>?": "Klar til <b>{next}</b>?", "That is the whole tutorial.": "Det var hele vejledningen.", "Start {next}": "Start {next}",
+    // ---- scenarier og eksempelnetværket
+    "Base plan": "Basisplan", "Fast growth in Africa and Asia": "Hurtig vækst i Afrika og Asien", "Dry season in New Zealand (−35% milk in year 2)": "Tørke i New Zealand (−35% mælk i år 2)",
+    "Base plan with a programme of capacity expansions": "Basisplan med et program af kapacitetsudvidelser", "Dual-source every dosing CMO equally": "Køb lige meget hos hver doserings-CMO",
+    "Fortified milk powder · 20 × 25 g sachets per pack": "Beriget mælkepulver · 20 breve à 25 g pr. pakke",
+    "Mexico City": "Mexico City", "Mexico": "Mexico", "São Paulo": "São Paulo", "Brazil": "Brasilien", "Lagos": "Lagos", "Nigeria": "Nigeria", "Johannesburg": "Johannesburg", "South Africa": "Sydafrika",
+    "Cairo": "Kairo", "Egypt": "Egypten", "Dhaka": "Dhaka", "Bangladesh": "Bangladesh", "Jakarta": "Jakarta", "Indonesia": "Indonesien", "Manila": "Manila", "Philippines": "Filippinerne",
+    "Guadalajara DC": "Guadalajara DC", "Campinas DC": "Campinas DC", "Apapa DC": "Apapa DC", "Durban DC": "Durban DC", "Jebel Ali DC": "Jebel Ali DC", "United Arab Emirates": "De Forenede Arabiske Emirater", "Singapore DC": "Singapore DC", "Singapore": "Singapore",
+    "Querétaro Packaging": "Querétaro Pakkeri", "Cape Town Packaging": "Cape Town Pakkeri", "Johor Packaging": "Johor Pakkeri", "Malaysia": "Malaysia",
+    "Valencia Dosing": "Valencia Dosering", "Spain": "Spanien", "Penang Dosing": "Penang Dosering", "Rosario Dosing": "Rosario Dosering", "Argentina": "Argentina",
+    "Cork Nutrition": "Cork Nutrition", "Ireland": "Irland", "Hamilton Nutrition": "Hamilton Nutrition", "New Zealand": "New Zealand", "Madison Nutrition": "Madison Nutrition", "United States": "USA",
+    "Normandy Dairy Co-op": "Normandiets Andelsmejeri", "France": "Frankrig", "Waikato Dairy Co-op": "Waikato Andelsmejeri", "Gippsland Dairy Co-op": "Gippsland Andelsmejeri", "Australia": "Australien", "Wisconsin Dairy Co-op": "Wisconsin Andelsmejeri"
+  };
+  var H = {
+    "meta.title": "Tierwise — Kapacitetsplanlægning i flere led",
+    "nav.sub": "KAPACITETSPLANLÆGNING I FLERE LED · FØDEVAREKÆDE", "nav.tour": "Vejledning", "nav.about": "Om", "nav.projects": "← Projekter",
+    "c.aria": "Planens indstillinger", "c.scenario": "Scenarie", "c.scale": "Efterspørgsel mod prognose", "c.cover": "Sikkerhedslager på lagrene", "c.swing": "Mælkesæsonens udsving", "c.target": "Udnyttelsesmål",
+    "c.colorBy": "Farv årsceller efter", "c.peak": "Travleste måned", "c.avg": "Årsgennemsnit", "c.compare": "Sammenlign med", "c.pin": "Fasthold denne plan", "c.export": "Eksport", "c.csv": "Plan som CSV", "c.reset": "Fortryd ændringer",
+    "d.h": "Din forsyningskæde", "d.sub": "Indlæs dit eget netværk fra CSV, Excel eller JSON, eller slip en fil her. Begynd med en skabelon: den er netværket på skærmen.",
+    "d.load": "Indlæs en forsyningskæde…", "d.csv": "Skabelon · CSV", "d.xlsx": "Skabelon · Excel", "d.json": "Gem som JSON", "d.share": "Kopiér delingslink", "d.shareAria": "Delingslink", "d.fmtH": "Filformatet",
+    "d.fmt": "<p>Én række pr. sted med disse kolonner (overskrifter i vilkårlig rækkefølge; ukendte kolonner ignoreres; kolonnenavnene skrives på engelsk):</p><ul>" +
+      "<li><code>id</code>, <code>tier</code> (<code>market</code>, <code>warehouse</code>, <code>packaging</code>, <code>dosing</code>, <code>product</code> eller <code>raw</code>), <code>name</code>, <code>country</code>, <code>lat</code>, <code>lon</code> (decimalgrader; syd og vest negative).</li>" +
+      "<li>Forbrugssteder: <code>base</code> (efterspørgsel pr. måned), <code>growth</code> og <code>longGrowth</code> (% om året i år 1–3 og derefter), <code>season</code> (± %), <code>launch</code> (ÅÅÅÅ-MM) og <code>ramp</code> (måneder).</li>" +
+      "<li>Alle andre steder: <code>capacity</code> (pr. måned, i leddets enhed). Lagre: <code>handling</code> (dage) og <code>cover</code> (ugers sikkerhedslager). CMO'er: <code>lead</code> og <code>release</code> (dage) og <code>yield</code> (%).</li>" +
+      "<li><code>suppliers</code>: steder i leddet lige over, skrevet <code>id:andel</code> og adskilt af <code>|</code>; tilføj <code>:dage</code> for at sætte en rutes transporttid i stedet for at anslå den ud fra afstanden.</li>" +
+      "<li><code>expansions</code> som <code>ÅÅÅÅ-MM:+mængde</code> og <code>outages</code> som <code>ÅÅÅÅ-MM:måneder:tab%</code>, adskilt af <code>|</code>.</li></ul>" +
+      "<p>Efter stederne sætter en valgfri tabel med overskriften <code>setting,value</code> (eller et <b>Settings</b>-ark i Excel) produktet, <code>startYear</code>, <code>startMonth</code> (1–12), styklisten (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), sæsonerne (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>) og leddenes egne navne og enheder (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Adskilt af komma, semikolon eller tabulator; med semikolon læses decimalkommaer.</p>" +
+      "<p>Filen bliver i din browser: intet uploades.</p>",
+    "o.h": "Overblik pr. led", "o.note": "Hvert leds belastning mod dets kapacitet. År 1 er den gennemsnitlige måned; toppene er den travleste enkeltmåned på et hvilket som helst sted i leddet, i det treårige månedsvindue og i de 10 årsperioder derefter.",
+    "m.h": "Netværket efter breddegrad", "m.note": "Mælkesæsonen og efterspørgslen på den sydlige halvkugle ligger seks måneder efter den nordlige. En ring markerer et sted, der mangler kapacitet på et tidspunkt i de 13 år. Klik på et sted for at se dets plan.",
+    "s.h": "Valgt sted",
+    "h.h": "Kapacitetsbehov · hvert sted, 46 perioder", "h.note": "Udnyttelse = belastning ÷ kapacitet. De første 36 kolonner er måneder; de sidste 10 er år. En årscelle farves efter sin travleste måned (eller sit gennemsnit; skift ovenfor), så en sæsonbestemt overbelastning aldrig forsvinder i gennemsnittet. Hold markøren over en celle for at se tallene; klik for at se, hvad der driver den.",
+    "h.show": "Vis", "h.plan": "Denne plan", "h.diff": "Ændring mod sammenligning", "t.show": "Vis som tabel",
+    "n.h": "Kapacitet, der skal tilføjes", "n.apply": "Tilføj alle som udvidelser",
+    "ti.h": "Belastning pr. led", "ti.note": "Hvert steds belastning i et led, stablet, mod leddets samlede kapacitet. Leddet kan have ledig kapacitet i alt, mens ét sted mangler: indkøbsandelene ligger fast.",
+    "l.h": "Tidsstige", "l.note": "Hvor langt i forvejen hvert led skal handle, for at en pakke når hylden, langs den vigtigste forsyningsvej (den største andel ved hvert trin).", "l.mkt": "Forbrugssted",
+    "f.note": "Den endelige forbrugsprognose, der driver alle led ovenover. Én fælles skala, så markederne kan sammenlignes direkte. Efterspørgslen topper i den lokale kolde årstid: sydlige markeder topper seks måneder efter de nordlige.",
+    "e.h": "Redigér netværket: steder, kapaciteter, produktions- og frigivelsestider, udbytter, indkøb, prognosen",
+    "e.note": "Ændringer planlægges med det samme. Hvert sted køber hos et eller flere steder i leddet lige over; andelene normaliseres, og en tom transporttid anslås ud fra afstanden (ad vej op til 1.500 km, ad søvejen derudover). Udvidelser skrives <code>ÅÅÅÅ-MM:+mængde</code>, adskilt af <code>|</code>. Skift af scenarie kasserer ændringerne; gem dit netværk som fil eller link for at beholde det.",
+    "x.h": "Sådan planlægger Tierwise, og hvad den udelader",
+    "x.body": "<p><b>Metode.</b> Behovsplanlægning, led for led fra forbrugeren og op. Prognosen for hvert forbrugssted er det, der skal nå frem dertil hver måned. Et lager sender det videre og opbygger eller trækker på sit sikkerhedslager (en dækning i uger af den kommende efterspørgsel), og forsendelsen skal forlade lageret håndteringstiden før. En CMO's produktion til måned <i>m</i> skal laves frigivelsestiden før (kvalitetstest og tilbageholdelse) og øges efter udbyttet; dens input skal nå frem produktionstiden endnu tidligere. Et steds behov fordeles på dets leverandører efter deres andele, flyttes tidligere med hver rutes transporttid og omregnes gennem styklisten: i eksemplet er 1 pakke = 20 breve, 1 brev = 25 g pulver og 1 t pulver = 0,7 t mejeribase.</p>" +
+      "<p><b>Sporing.</b> Planen er lineær, så hvert steds belastning deler sig nøjagtigt i forbrugsstederne bag den og i dets direkte kunder: det er det, det valgte sted viser under \"Hvad driver belastningen\".</p>" +
+      "<p><b>Kapacitet, der skal tilføjes.</b> For hvert sted de udvidelser, der holder det på eller under målet i alle måneder, med én gennemgang om året: hver dimensioneres til den travleste måned frem til næste gennemgang (for et råvarested tæller den mælkefattigste måned) og rundes op til to betydende cifre.</p>" +
+      "<p><b>Tid.</b> Planlægningen kører måned for måned over 156 måneder, så hver tid flytter planen nøjagtigt, også med brøkdele af en måned. Visningen har 36 måneder og derefter 10 år, hvert år bygget af sine 12 måneder. Både årets gennemsnit og dets travleste måned bevares.</p>" +
+      "<p><b>Breddegrad.</b> Efterspørgslen topper i den lokale kolde årstid (sydlige markeder seks måneder forskudt). Mælkekapaciteten svinger med græssæsonen, mere jo længere fra ækvator. Transport anslås ud fra storcirkelafstanden: ad vej op til 1.500 km, ad søvejen derudover, medmindre en rute har sin egen.</p>" +
+      "<p><b>Begrænsninger.</b> Det er en behovsplan med ubegrænset kapacitet (lot-for-lot): den viser, hvor og hvornår der mangler kapacitet, og hvor meget der skal tilføjes, men den flytter ikke volumen og producerer ikke på forhånd for at klare en top. Der er kun lager på distributionslagrene, som sikkerhedslager. Der er ét produkt. Indkøbsandelene ligger fast over hele horisonten. Alle tal i eksemplet er illustrative.</p>",
+    "ft.consult": "Tilgængelig for konsulentopgaver", "ft.touch": "tag kontakt", "ft.by": "af Daniel Alberto Sepulveda Estay, PhD", "ft.about": "Om og citation", "ft.all": "Alle projekter",
+    // ---- siden Om
+    "a.title": "Om Tierwise", "a.sub": "OM APPEN", "a.open": "Åbn planlæggeren", "a.eyebrow": "Om appen",
+    "a.lede": "En pakke beriget mælkepulver på en hylde i Jakarta begynder som mælk på en gård i New Zealand næsten tre måneder før. Tierwise omsætter en endelig forbrugsprognose til den kapacitet, hvert sted i en fødevarekæde med seks led har brug for, og viser hvornår: 36 måneder i månedsperioder og derefter 10 år mere i årsperioder. Indlæs din egen forsyningskæde, spor hver mangel tilbage til markederne bag den, og dimensionér den kapacitet, der skal tilføjes.",
+    "a.cta": "Åbn planlæggeren →", "a.what": "Hvad den gør",
+    "a.li1": "<b>Seks led, flere leverandører pr. led</b>Forbrugssteder, distributionslagre, pakke-CMO'er, doserings-CMO'er, produktions-CMO'er og råvare-CMO'er. Hvert sted køber hos et eller flere steder i leddet ovenover, efter andel.",
+    "a.li2": "<b>Breddegrader og årstider</b>Stederne strækker sig fra 52°N til 38°S. Efterspørgslen topper i den lokale kolde årstid, seks måneder forskudt mellem halvkuglerne. Mælkekapaciteten følger græssæsonen, kraftigere jo længere fra ækvator.",
+    "a.li3": "<b>Produktions- og frigivelsestider</b>Produktionstid, kvalitetsfrigivelse (test og tilbageholdelse), håndtering på lageret og transport mellem steder flytter hvert behov tidligere. En tidsstige viser, hvor langt i forvejen hvert led skal handle.",
+    "a.li4": "<b>Fra mangel til beslutning</b>Et varmekort over hvert sted i 46 perioder, markederne og kunderne bag ethvert steds belastning, den kapacitet, hvert sted skal tilføje for at holde sig under et mål, og to vilkårlige planer sammenlignet side om side.",
+    "a.li5": "<b>Din egen forsyningskæde</b>Indlæs et netværk fra CSV, Excel eller JSON (skabelonen er ét klik væk), redigér hvert sted, hver rute og hver indstilling, omdøb leddene til en anden slags kæde, og del hele planen som et link. Filerne bliver i din browser.",
+    "a.li6": "<b>Lær den i tre niveauer</b>En guidet vejledning (begynder, øvet, avanceret) med spørgsmål, på engelsk, spansk og dansk.",
+    "a.how": "Sådan er den bygget",
+    "a.howp": "Motoren er en tidsfaset behovsplan, gennemregnet led for led fra forbrugeren og op over 156 måneder. Et lager sender det, dets markeder har brug for, og opbygger eller trækker på sikkerhedslager. En CMO laver sin produktion frigivelsestiden før, øget efter udbyttet. Dens input skal nå frem produktionstiden endnu tidligere. Behovene fordeles på leverandørerne efter andel, flyttes med hver rutes transporttid og omregnes gennem styklisten. Årsperioderne bygges af deres måneder, og hver bevarer sin travleste måned såvel som sit gennemsnit. Planen er lineær, så hvert steds belastning deler sig nøjagtigt i de markeder, det forsyner. Testene kontrollerer styklistens kæde, tidsforskydningerne, bevarelse af volumen, sikkerhedslager, indkøbsandele, årstiderne på begge halvkugler, udvidelser og udfald, den nøjagtige sporing, den kapacitet, der skal tilføjes, hvert filformat og hver oversættelse. Det er en plan med ubegrænset kapacitet: den viser, hvor der mangler kapacitet, og hvor meget der skal tilføjes, men den flytter ikke volumen og producerer ikke på forhånd. Alt kører i din browser.",
+    "a.author": "Forfatter",
+    "a.authorp": "Tierwise er designet og bygget af <b>Daniel Alberto Sepulveda Estay, PhD</b>, grundlægger af <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Han arbejder med systemdynamik og netværksoptimering for robuste forsyningskæder. Han har en ph.d. fra Danmarks Tekniske Universitet og en MSc fra Massachusetts Institute of Technology og er medlem af rådet i System Dynamics Society.",
+    "a.more": "Mere om Daniel →", "a.touch": "Tag kontakt",
+    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 1.1.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.consult": "Tilgængelig for konsulentopgaver", "a.foot": "Kapacitetsplanlægning i flere led for en fødevarekæde på tværs af breddegrader. Alle tal i eksempelnetværket er illustrative.", "a.built": "Bygget med"
+  };
+  var P = [
+    ["^Row (\\d+): unknown tier “(.*)” for (.*)\\.$", "Række $1: ukendt led »$2« for $3."],
+    ["^Row (\\d+): “(.*)” is not a number \\((.*)\\)\\.$", "Række $1: »$2« er ikke et tal ($3)."],
+    ["^Row (\\d+): (.*) needs a capacity\\.$", "Række $1: $2 skal have en kapacitet."],
+    ["^Row (\\d+): cannot read the supplier “(.*)”\\.$", "Række $1: kan ikke læse leverandøren »$2«."],
+    ["^Row (\\d+): cannot read the expansion “(.*)” \\(write YYYY-MM:\\+amount\\)\\.$", "Række $1: kan ikke læse udvidelsen »$2« (skriv ÅÅÅÅ-MM:+mængde)."],
+    ["^Row (\\d+): cannot read the outage “(.*)” \\(write YYYY-MM:months:loss %\\)\\.$", "Række $1: kan ikke læse udfaldet »$2« (skriv ÅÅÅÅ-MM:måneder:tab %)."],
+    ["^Row (\\d+): the site has no id\\.$", "Række $1: stedet har intet id."],
+    ["^Row (\\d+): cannot read the launch month “(.*)”\\.$", "Række $1: kan ikke læse lanceringsmåneden »$2«."],
+    ["^Setting “(.*)” must be a month from 1 to 12\\.$", "Indstillingen »$1« skal være en måned fra 1 til 12."],
+    ["^Setting “(.*)”: “(.*)” is not a number\\.$", "Indstilling »$1«: »$2« er ikke et tal."],
+    ["^Setting “(.*)” is not used\\.$", "Indstillingen »$1« bruges ikke."],
+    ["^(.*) has no supplier\\.$", "$1 har ingen leverandør."],
+    ["^(.*) must be supplied from the tier directly above it\\.$", "$1 skal forsynes fra leddet lige over."],
+    ["^(.*) is supplied by an unknown site\\.$", "$1 forsynes af et ukendt sted."],
+    ["^(.*) needs a capacity of zero or more\\.$", "$1 skal have en kapacitet på nul eller mere."],
+    ["^(.*) needs a yield between 0 and 100%\\.$", "$1 skal have et udbytte mellem 0 og 100%."],
+    ["^(.*) cannot have a negative lead time\\.$", "$1 kan ikke have en negativ produktionstid."],
+    ["^(.*) cannot have a negative release time\\.$", "$1 kan ikke have en negativ frigivelsestid."],
+    ["^Two sites share the id (.*)\\.$", "To steder har samme id: $1."],
+    ["^(.*) needs a latitude and longitude\\.$", "$1 skal have en bredde- og længdegrad."],
+    ["^The network needs at least one consumption point\\.$", "Netværket skal have mindst ét forbrugssted."],
+    ["^(.*) needs a base demand of zero or more\\.$", "$1 skal have en basisefterspørgsel på nul eller mere."],
+    ["^The bill of materials needs a positive (.*)\\.$", "Styklisten skal have en positiv $1."],
+    ["^Unknown tier for (.*)\\.$", "Ukendt led for $1."],
+    ["^(.*) has no id\\.$", "$1 har intet id."],
+    ["^The network has no sites\\.$", "Netværket har ingen steder."],
+    ["^No header row with the columns id and tier was found\\.$", "Der blev ikke fundet en overskriftsrække med kolonnerne id og tier."],
+    ["^Column “(.*)” is not used\\.$", "Kolonnen »$1« bruges ikke."],
+    ["^The file has no sites\\.$", "Filen har ingen steder."],
+    ["^The JSON file has no list of sites\\.$", "JSON-filen har ingen liste over steder."],
+    ["^The file is not valid JSON\\.$", "Filen er ikke gyldig JSON."],
+    ["^The spreadsheet reader is not available\\.$", "Regnearkslæseren er ikke tilgængelig."],
+    ["^The spreadsheet could not be read\\.$", "Regnearket kunne ikke læses."],
+    ["^The workbook has no sheets\\.$", "Projektmappen har ingen ark."]
+  ];
+  root.TW_DA = { T: T, H: H, P: P };
+})(typeof self !== "undefined" ? self : this);

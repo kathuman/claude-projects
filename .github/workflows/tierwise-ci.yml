@@ -1,7 +1,8 @@
 name: Tierwise tests
 
 # The planning engine: the calendar, seasons in both hemispheres, the bill of materials chain, yields, lead-time and
-# release-time phasing, conservation, safety stock, sourcing shares, expansions and outages, and the example scenarios.
+# release-time phasing, conservation, safety stock, sourcing shares, expansions and outages, the example scenarios,
+# tracing and the capacity to add; file loading; the Spanish and Danish translations; and the tutorial's claims.
 on:
   push:
     paths:
@@ -22,6 +23,9 @@ jobs:
         with:
           node-version: 22
       - run: node tierwise/tests/plan.test.js
+      - run: node tierwise/tests/io.test.js
+      - run: node tierwise/tests/i18n.test.js
+      - run: node tierwise/tests/tour.test.js
       - name: Syntax-check the page scripts
-        run: for f in tierwise/src/plan.js tierwise/src/network.js tierwise/app.js; do node --check "$f"; done
+        run: for f in tierwise/src/*.js tierwise/*.js; do node --check "$f"; done
         shell: bash

@@ -3,137 +3,205 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tierwise — Multi-Tier Capacity Planning</title>
-<meta name="description" content="Tierwise turns a consumption forecast into time-phased capacity requirements for every site of a six-tier food supply chain across latitudes: 36 months monthly plus 10 years yearly.">
+<title data-i18n="meta.title">Tierwise — Multi-Tier Capacity Planning</title>
+<meta name="description" content="Tierwise turns a consumption forecast into time-phased capacity requirements for every site of a six-tier food supply chain across latitudes: 36 months monthly plus 10 years yearly. Load your own supply chain from CSV, Excel or JSON.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="i18n-es.js"></script>
+<script src="i18n-da.js"></script>
+<script src="i18n.js"></script>
 </head>
 <body>
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v1.0.0</span>
-    <span class="sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
+    <span class="ver" id="ver">v1.1.0</span>
+    <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
-    <a class="back-link" href="about.html">About</a>
-    <a class="back-link" href="../">← Projects</a>
+    <select class="choice lang" id="langSel" aria-label="Language"></select>
+    <button class="back-link tour" type="button" id="tourBtn" data-i18n="nav.tour">Tutorial</button>
+    <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+    <a class="back-link" href="../" data-i18n="nav.projects">← Projects</a>
   </div>
 </header>
 
-<section class="controls" aria-label="Plan settings">
-  <label class="ctl"><span>Scenario</span>
+<section class="controls" aria-label="Plan settings" data-i18n-attr="aria-label=c.aria">
+  <label class="ctl"><span data-i18n="c.scenario">Scenario</span>
     <select class="choice" id="scenario"></select>
   </label>
-  <label class="ctl"><span>Demand vs forecast <output id="scaleOut">100%</output></span>
+  <label class="ctl"><span><span data-i18n="c.scale">Demand vs forecast</span> <output id="scaleOut">100%</output></span>
     <input type="range" id="scale" min="50" max="200" step="5" value="100">
   </label>
-  <label class="ctl"><span>Warehouse safety stock <output id="coverOut">6 weeks</output></span>
+  <label class="ctl"><span><span data-i18n="c.cover">Warehouse safety stock</span> <output id="coverOut">6 weeks</output></span>
     <input type="range" id="cover" min="0" max="16" step="1" value="6">
   </label>
-  <label class="ctl"><span>Milk season swing <output id="swingOut">±25%</output></span>
+  <label class="ctl"><span><span data-i18n="c.swing">Milk season swing</span> <output id="swingOut">±25%</output></span>
     <input type="range" id="swing" min="0" max="50" step="5" value="25">
   </label>
-  <div class="ctl"><span>Colour yearly cells by</span>
-    <div class="seg" id="colorBy" role="group" aria-label="Colour yearly cells by">
-      <button type="button" data-v="peak" class="active">Peak month</button>
-      <button type="button" data-v="avg">Year average</button>
+  <label class="ctl"><span data-i18n="c.target">Utilisation target</span>
+    <select class="choice" id="target">
+      <option value="80">80%</option><option value="85">85%</option><option value="90" selected>90%</option><option value="95">95%</option><option value="100">100%</option>
+    </select>
+  </label>
+  <div class="ctl"><span data-i18n="c.colorBy">Colour yearly cells by</span>
+    <div class="seg" id="colorBy" role="group">
+      <button type="button" data-v="peak" class="active" data-i18n="c.peak">Peak month</button>
+      <button type="button" data-v="avg" data-i18n="c.avg">Year average</button>
     </div>
   </div>
-  <div class="ctl"><span>Export</span>
-    <div class="row"><button class="btn small" id="csv" type="button">Plan as CSV</button><button class="btn small" id="reset" type="button">Reset edits</button></div>
+  <div class="ctl" id="compareCtl"><span data-i18n="c.compare">Compare with</span>
+    <div class="row"><select class="choice" id="compareSel"></select><button class="btn small" id="pin" type="button" data-i18n="c.pin">Pin this plan</button></div>
+  </div>
+  <div class="ctl"><span data-i18n="c.export">Export</span>
+    <div class="row"><button class="btn small" id="csv" type="button" data-i18n="c.csv">Plan as CSV</button><button class="btn small" id="reset" type="button" data-i18n="c.reset">Reset edits</button></div>
   </div>
 </section>
 
 <main class="main">
+  <section class="data-box" id="dataBox">
+    <div class="data-row">
+      <div class="data-h"><b data-i18n="d.h">Your supply chain</b><span data-i18n="d.sub">Load your own network from CSV, Excel or JSON, or drop a file here. Start from a template: it is the network on screen.</span></div>
+      <div class="data-btns">
+        <button class="btn" type="button" id="loadBtn" data-i18n="d.load">Load a supply chain…</button>
+        <input type="file" id="fileIn" accept=".csv,.tsv,.txt,.json,.xlsx,.xls,.xlsm,.ods" hidden>
+        <button class="btn small" type="button" id="tplCsv" data-i18n="d.csv">Template · CSV</button>
+        <button class="btn small" type="button" id="tplXlsx" data-i18n="d.xlsx">Template · Excel</button>
+        <button class="btn small" type="button" id="saveJson" data-i18n="d.json">Save as JSON</button>
+        <button class="btn small" type="button" id="shareBtn" data-i18n="d.share">Copy share link</button>
+      </div>
+    </div>
+    <div class="data-msg" id="dataMsg" hidden></div>
+    <div class="share-box" id="shareBox" hidden><input id="shareUrl" readonly aria-label="Share link" data-i18n-attr="aria-label=d.shareAria"></div>
+    <details class="fmt" id="fmt">
+      <summary data-i18n="d.fmtH">The file format</summary>
+      <div data-i18n="d.fmt">
+        <p>One row per site, with these columns (headers in any order; unknown columns are ignored):</p>
+        <ul>
+          <li><code>id</code>, <code>tier</code> (<code>market</code>, <code>warehouse</code>, <code>packaging</code>, <code>dosing</code>, <code>product</code> or <code>raw</code>), <code>name</code>, <code>country</code>, <code>lat</code>, <code>lon</code> (decimal degrees, south and west negative).</li>
+          <li>Consumption points: <code>base</code> (demand a month), <code>growth</code> and <code>longGrowth</code> (% a year in years 1–3 and after), <code>season</code> (± %), <code>launch</code> (YYYY-MM) and <code>ramp</code> (months).</li>
+          <li>Every other site: <code>capacity</code> (a month, in its tier's unit). Warehouses: <code>handling</code> (days) and <code>cover</code> (weeks of safety stock). CMOs: <code>lead</code> and <code>release</code> (days) and <code>yield</code> (%).</li>
+          <li><code>suppliers</code>: sites of the tier directly above, as <code>id:share</code>, separated by <code>|</code>; add <code>:days</code> to set a lane's transit time instead of estimating it from the distance.</li>
+          <li><code>expansions</code> as <code>YYYY-MM:+amount</code> and <code>outages</code> as <code>YYYY-MM:months:loss%</code>, separated by <code>|</code>.</li>
+        </ul>
+        <p>After the sites, an optional table headed <code>setting,value</code> (or a <b>Settings</b> sheet in Excel) sets the product, <code>startYear</code>, <code>startMonth</code> (1–12), the bill of materials (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), the seasons (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>) and the tiers' own names and units (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Comma, semicolon or tab separated; with semicolons, decimal commas are read.</p>
+        <p>The file stays in your browser: nothing is uploaded.</p>
+      </div>
+    </details>
+  </section>
+
   <div class="errors" id="errors" hidden></div>
   <p class="headline" id="headline"></p>
 
   <div class="kpis" id="kpis"></div>
 
-  <section class="panel">
-    <h2>Tier outlook</h2>
-    <p class="panel-note">Each tier's load against its capacity. Year 1 is the average month; the peaks are the busiest single month at any site of the tier, in the 3-year monthly window and in the 10 yearly periods after it.</p>
+  <section class="panel" id="outlookPanel">
+    <h2 data-i18n="o.h">Tier outlook</h2>
+    <p class="panel-note" data-i18n="o.note">Each tier's load against its capacity. Year 1 is the average month; the peaks are the busiest single month at any site of the tier, in the 3-year monthly window and in the 10 yearly periods after it.</p>
     <div class="table-scroll"><table class="outlook" id="outlook"></table></div>
   </section>
 
   <div class="grid2">
-    <section class="panel">
-      <h2>The network by latitude</h2>
-      <p class="panel-note">Sites from 52°N to 38°S. Southern milk seasons and southern demand run six months behind the north. A ring marks a site that runs out of capacity at some point in the 13 years. Click a site to see its plan.</p>
+    <section class="panel" id="mapPanel">
+      <h2 data-i18n="m.h">The network by latitude</h2>
+      <p class="panel-note" data-i18n="m.note">Southern milk seasons and southern demand run six months behind the north. A ring marks a site that runs out of capacity at some point in the 13 years. Click a site to see its plan.</p>
       <div class="map-wrap chart" id="mapWrap"></div>
       <div class="legend" id="mapLegend"></div>
     </section>
     <section class="panel" id="sitePanel">
-      <h2>Selected site</h2>
+      <h2 data-i18n="s.h">Selected site</h2>
       <div id="siteHead"></div>
       <div class="facts" id="siteFacts"></div>
       <div class="chart" id="siteChart"></div>
       <div id="siteLanes"></div>
+      <div class="sub-box" id="drivers"></div>
+      <div class="sub-box" id="required"></div>
     </section>
   </div>
 
-  <section class="panel">
-    <h2>Capacity requirements · every site, 46 periods</h2>
-    <p class="panel-note">Utilisation = load ÷ capacity. The first 36 columns are months; the last 10 are years. A yearly cell is coloured by its busiest month (or by its average; switch above), so a seasonal overload is never averaged away. Hover a cell for the numbers; click it to select the site.</p>
+  <section class="panel" id="heatPanel">
+    <h2 data-i18n="h.h">Capacity requirements · every site, 46 periods</h2>
+    <p class="panel-note" data-i18n="h.note">Utilisation = load ÷ capacity. The first 36 columns are months; the last 10 are years. A yearly cell is coloured by its busiest month (or by its average; switch above), so a seasonal overload is never averaged away. Hover a cell for the numbers; click it to see what drives it.</p>
+    <div class="ctl heat-mode" id="heatModeBox" hidden><span data-i18n="h.show">Show</span>
+      <div class="seg" id="heatMode" role="group">
+        <button type="button" data-v="plan" data-i18n="h.plan">This plan</button>
+        <button type="button" data-v="diff" data-i18n="h.diff">Change vs comparison</button>
+      </div>
+    </div>
     <div class="heat-wrap chart" id="heatWrap"></div>
     <div class="scale" id="heatScale"></div>
-    <button class="table-btn" type="button" data-table="heat">Show as table</button>
+    <button class="table-btn" type="button" data-table="heat" data-i18n="t.show">Show as table</button>
     <div class="data-table" id="table-heat" hidden></div>
   </section>
 
+  <section class="panel" id="needsPanel">
+    <h2 data-i18n="n.h">Capacity to add</h2>
+    <p class="panel-note" id="needsNote"></p>
+    <div class="table-scroll" id="needs"></div>
+    <button class="btn small" type="button" id="applyAll" data-i18n="n.apply" style="margin-top:10px">Add all as expansions</button>
+  </section>
+
   <div class="grid2">
-    <section class="panel">
-      <h2>Load by tier</h2>
-      <p class="panel-note">Every site's load in a tier, stacked, against the tier's combined capacity. The tier can have spare capacity in total while one site is short: sourcing shares are fixed.</p>
-      <div class="seg" id="tierSeg" role="group" aria-label="Tier"></div>
+    <section class="panel" id="tierPanel">
+      <h2 data-i18n="ti.h">Load by tier</h2>
+      <p class="panel-note" data-i18n="ti.note">Every site's load in a tier, stacked, against the tier's combined capacity. The tier can have spare capacity in total while one site is short: sourcing shares are fixed.</p>
+      <div class="seg" id="tierSeg" role="group"></div>
       <div class="chart" id="tierChart" style="margin-top:10px"></div>
       <div class="legend" id="tierLegend"></div>
-      <button class="table-btn" type="button" data-table="tier">Show as table</button>
+      <button class="table-btn" type="button" data-table="tier" data-i18n="t.show">Show as table</button>
       <div class="data-table" id="table-tier" hidden></div>
     </section>
-    <section class="panel">
-      <h2>Lead-time ladder</h2>
-      <p class="panel-note">How far ahead each tier must act for a pack to reach the shelf, along the main sourcing path (the largest share at each step).</p>
-      <label class="ctl" style="max-width:260px"><span>Consumption point</span><select class="choice" id="ladderMkt"></select></label>
+    <section class="panel" id="ladderPanel">
+      <h2 data-i18n="l.h">Lead-time ladder</h2>
+      <p class="panel-note" data-i18n="l.note">How far ahead each tier must act for a pack to reach the shelf, along the main sourcing path (the largest share at each step).</p>
+      <label class="ctl" style="max-width:280px"><span data-i18n="l.mkt">Consumption point</span><select class="choice" id="ladderMkt"></select></label>
       <p class="chart-sub" id="ladderNote"></p>
       <div class="chart ladder" id="ladder"></div>
       <div class="legend" id="ladderLegend"></div>
     </section>
   </div>
 
-  <section class="panel">
-    <h2>Consumption forecast · packs a month</h2>
-    <p class="panel-note">The final consumption forecast that drives every tier above. One shared scale, so the markets compare directly. Demand peaks in the local cold season: southern markets peak six months after northern ones.</p>
+  <section class="panel" id="fcPanel">
+    <h2 id="fcTitle">Consumption forecast · packs a month</h2>
+    <p class="panel-note" data-i18n="f.note">The final consumption forecast that drives every tier above. One shared scale, so the markets compare directly. Demand peaks in the local cold season: southern markets peak six months after northern ones.</p>
     <div class="multiples" id="multiples"></div>
-    <button class="table-btn" type="button" data-table="fc">Show as table</button>
+    <button class="table-btn" type="button" data-table="fc" data-i18n="t.show">Show as table</button>
     <div class="data-table" id="table-fc" hidden></div>
   </section>
 
   <details class="box" id="editor">
-    <summary>Edit the network: capacities, lead times, release times, yields, sourcing shares, the forecast</summary>
-    <p>Changes re-plan at once. Sourcing is written <code>site-id:share</code>, separated by commas (shares are normalised). Expansions are written <code>month:+amount</code>, where month 0 is the first month of the plan and 36 the first yearly period. Switching scenario discards edits.</p>
+    <summary data-i18n="e.h">Edit the network: sites, capacities, lead and release times, yields, sourcing, the forecast</summary>
+    <p data-i18n="e.note">Changes re-plan at once. Each site sources from one or more sites of the tier directly above; shares are normalised, and a transit time left blank is estimated from the distance (by road within 1,500 km, by sea beyond). Expansions are written <code>YYYY-MM:+amount</code>, separated by <code>|</code>. Switching scenario discards edits; save your network as a file or a link to keep it.</p>
     <div class="table-scroll" id="editTables"></div>
   </details>
 
-  <details class="box">
-    <summary>How Tierwise plans, and what it leaves out</summary>
-    <p><b>Method.</b> Requirements planning, tier by tier from the consumer upstream. The forecast at each consumption point is what must arrive there each month. A warehouse ships that and builds or draws its safety stock (a cover of weeks of coming demand), and the shipment has to leave it the handling time earlier. A CMO's output for month <i>m</i> must be made the release time earlier (quality testing and hold), grossed up for its yield; its inputs must arrive the production lead time earlier still. What a site needs is split across its suppliers by their sourcing shares, shifted earlier by each lane's transit time and converted through the bill of materials: 1 pack = 20 sachets, 1 sachet = 25 g of powder, 1 t of powder = 0.7 t of dairy base.</p>
-    <p><b>Time.</b> Planning runs month by month over 156 months, so every lead time shifts the plan exactly, including fractions of a month. The view shows 36 months, then 10 years, each year built from its own 12 months. A year's average and its busiest month are both kept.</p>
-    <p><b>Latitude.</b> Demand peaks in the local cold season (southern markets six months apart). Raw-milk capacity swings with the grass season, more strongly away from the equator. Transit is estimated from great-circle distance: by road within 1,500 km, by sea beyond (an override per lane can be added in the data).</p>
-    <p><b>Limits.</b> This is an infinite-capacity requirement plan (lot-for-lot): it shows where and when capacity is short, but it does not re-route volume or pre-build stock to absorb a peak. Inventory is held only at warehouses, as safety stock. There is one product. Sourcing shares are fixed over the horizon. All figures in the example are illustrative.</p>
+  <details class="box" id="method">
+    <summary data-i18n="x.h">How Tierwise plans, and what it leaves out</summary>
+    <div data-i18n="x.body">
+      <p><b>Method.</b> Requirements planning, tier by tier from the consumer upstream. The forecast at each consumption point is what must arrive there each month. A warehouse ships that and builds or draws its safety stock (a cover of weeks of coming demand), and the shipment has to leave it the handling time earlier. A CMO's output for month <i>m</i> must be made the release time earlier (quality testing and hold), grossed up for its yield; its inputs must arrive the production lead time earlier still. What a site needs is split across its suppliers by their sourcing shares, shifted earlier by each lane's transit time and converted through the bill of materials: in the example, 1 pack = 20 sachets, 1 sachet = 25 g of powder, 1 t of powder = 0.7 t of dairy base.</p>
+      <p><b>Tracing.</b> The plan is linear, so every site's load splits exactly into the consumption points behind it and into its direct customers: that is what the selected site shows under "What drives the load".</p>
+      <p><b>Capacity to add.</b> For each site, the additions that keep it at or under the target in every month, reviewed once a year: each is sized for the busiest month until the next review (for a raw-ingredient site, the leanest milk month counts) and rounded up to two significant digits.</p>
+      <p><b>Time.</b> Planning runs month by month over 156 months, so every lead time shifts the plan exactly, including fractions of a month. The view shows 36 months, then 10 years, each year built from its own 12 months. A year's average and its busiest month are both kept.</p>
+      <p><b>Latitude.</b> Demand peaks in the local cold season (southern markets six months apart). Raw-milk capacity swings with the grass season, more strongly away from the equator. Transit is estimated from great-circle distance: by road within 1,500 km, by sea beyond, unless a lane sets its own.</p>
+      <p><b>Limits.</b> This is an infinite-capacity requirement plan (lot-for-lot): it shows where and when capacity is short, and how much to add, but it does not re-route volume or pre-build stock to absorb a peak. Inventory is held only at warehouses, as safety stock. There is one product. Sourcing shares are fixed over the horizon. All figures in the example are illustrative.</p>
+    </div>
   </details>
 
   <footer class="foot">
-    <span class="consult">Available for consulting — <a href="https://github.com/kathuman" target="_blank" rel="noopener">get in touch</a></span>
-    Tierwise v<span id="ver2">1.0.0</span> · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html">About and citation</a> · <a href="../">All projects</a>
+    <span class="consult"><span data-i18n="ft.consult">Available for consulting</span> — <a href="https://github.com/kathuman" target="_blank" rel="noopener" data-i18n="ft.touch">get in touch</a></span>
+    Tierwise v<span id="ver2">1.1.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
 <script src="src/plan.js"></script>
 <script src="src/network.js"></script>
+<script src="src/io.js"></script>
 <script src="app.js"></script>
+<script src="tour-content.js"></script>
+<script src="tour-content-es.js"></script>
+<script src="tour-content-da.js"></script>
+<script src="tour.js"></script>
 </body>
 </html>

@@ -14,14 +14,25 @@
   var MONTHLY = 36, YEARLY = 10, MONTHS = MONTHLY + 12 * YEARLY, DAYS_PER_MONTH = 30.44;
   // tiers from the consumer upstream; each tier's unit and what one unit of it needs from the tier above
   var TIERS = [
-    { id: "market", name: "Consumption points", short: "Markets", unit: "packs" },
-    { id: "warehouse", name: "Warehouses", short: "Warehouses", unit: "packs" },
-    { id: "packaging", name: "Packaging CMOs", short: "Packaging", unit: "packs" },
-    { id: "dosing", name: "Final dosing CMOs", short: "Dosing", unit: "sachets" },
-    { id: "product", name: "Product manufacturing CMOs", short: "Product", unit: "t" },
-    { id: "raw", name: "Raw ingredient CMOs", short: "Raw ingredient", unit: "t" }
+    { id: "market", name: "Consumption points", one: "Consumption point", short: "Markets", unit: "packs" },
+    { id: "warehouse", name: "Warehouses", one: "Warehouse", short: "Warehouses", unit: "packs" },
+    { id: "packaging", name: "Packaging CMOs", one: "Packaging CMO", short: "Packaging", unit: "packs" },
+    { id: "dosing", name: "Final dosing CMOs", one: "Final dosing CMO", short: "Dosing", unit: "sachets" },
+    { id: "product", name: "Product manufacturing CMOs", one: "Product manufacturing CMO", short: "Product", unit: "t" },
+    { id: "raw", name: "Raw ingredient CMOs", one: "Raw ingredient CMO", short: "Raw ingredient", unit: "t" }
   ];
   var TIER_INDEX = {}; TIERS.forEach(function (t, i) { TIER_INDEX[t.id] = i; });
+  // a network can rename its tiers and their units (net.tiers = { dosing: { name, one, short, unit } }); custom marks a
+  // tier whose words came from the network, so the page shows them as written instead of translating them
+  function tiersFor(net) {
+    var o = (net && net.tiers) || {};
+    return TIERS.map(function (t) {
+      var x = o[t.id]; if (!x || !(x.name || x.unit || x.one || x.short)) return t;
+      var name = x.name || t.name;
+      return { id: t.id, name: name, one: x.one || (x.name ? name : t.one), short: x.short || (x.name ? name : t.short), unit: x.unit || t.unit,
+        custom: !!x.name, customUnit: !!x.unit };
+    });
+  }
 
   // ---- geography
   function distanceKm(a, b) {
@@ -97,7 +108,8 @@
   // ---- checks on a network before planning
   function validate(net) {
     var e = [], byId = {};
-    net.sites.forEach(function (s) { if (byId[s.id]) e.push("Two sites share the id " + s.id + "."); byId[s.id] = s; if (TIER_INDEX[s.tier] == null) e.push("Unknown tier for " + s.name + "."); });
+    if (!net || !net.sites || !net.sites.length) return ["The network has no sites."];
+    net.sites.forEach(function (s) { if (!s.id) e.push((s.name || "A site") + " has no id."); if (byId[s.id]) e.push("Two sites share the id " + s.id + "."); byId[s.id] = s; if (TIER_INDEX[s.tier] == null) e.push("Unknown tier for " + s.name + "."); });
     net.sites.forEach(function (s) {
       var t = TIER_INDEX[s.tier];
       if (s.tier !== "raw") {
@@ -109,7 +121,10 @@
       if (s.yield != null && !(s.yield > 0 && s.yield <= 100)) e.push(s.name + " needs a yield between 0 and 100%.");
       ["lead", "release"].forEach(function (k) { if (s[k] != null && !(s[k] >= 0)) e.push(s.name + " cannot have a negative " + (k === "lead" ? "lead time" : "release time") + "."); });
     });
-    ["packPerUnit", "kgPerSachet", "rawPerProduct"].forEach(function (k) { if (!(net.bom[k] > 0)) e.push("The bill of materials needs a positive " + k + "."); });
+    net.sites.forEach(function (s) { if (!(isFinite(s.lat) && isFinite(s.lon) && s.lat !== null && s.lon !== null && Math.abs(s.lat) <= 90 && Math.abs(s.lon) <= 180)) e.push(s.name + " needs a latitude and longitude."); });
+    if (!net.sites.some(function (s) { return s.tier === "market"; })) e.push("The network needs at least one consumption point.");
+    net.sites.forEach(function (s) { if (s.tier === "market" && !(s.base >= 0)) e.push(s.name + " needs a base demand of zero or more."); });
+    ["packPerUnit", "kgPerSachet", "rawPerProduct"].forEach(function (k) { if (!net.bom || !(net.bom[k] > 0)) e.push("The bill of materials needs a positive " + k + "."); });
     return e;
   }
 
@@ -125,39 +140,50 @@
       product: bom.kgPerSachet / 1000,                  // tonnes of product per sachet
       raw: bom.rawPerProduct                            // tonnes of raw ingredient per tonne of product
     };
-    var req = {}, load = {}, need = {}, cap = {}, trans = {}, demand = {};
-    sites.forEach(function (s) { req[s.id] = zeros(MONTHS); });
+    // every requirement is carried as a total and split by the consumption point it serves (the plan is linear, so the
+    // parts add up exactly to the total); a supplier also keeps what each direct customer asks of it
+    var mkts = sites.filter(function (s) { return s.tier === "market"; }).map(function (s) { return s.id; });
+    var req = {}, part = {}, byCust = {}, load = {}, loadPart = {}, loadCust = {}, need = {}, needPart = {}, cap = {}, trans = {}, demand = {}, ssOf = {};
+    sites.forEach(function (s) { req[s.id] = zeros(MONTHS); part[s.id] = {}; byCust[s.id] = {}; mkts.forEach(function (k) { part[s.id][k] = zeros(MONTHS); }); });
     // 1. consumption points: their forecast is what must arrive there each month
-    sites.filter(function (s) { return s.tier === "market"; }).forEach(function (s) { demand[s.id] = forecast(s, cfg); req[s.id] = demand[s.id]; });
+    sites.filter(function (s) { return s.tier === "market"; }).forEach(function (s) { demand[s.id] = forecast(s, cfg); req[s.id] = demand[s.id]; part[s.id][s.id] = demand[s.id]; });
+    // one site's transformation of a requirement r: what it must handle (load) and what it must receive (need)
+    function step(s, r) {
+      var y = (s.yield != null ? s.yield : 100) / 100, m;
+      if (s.tier === "market") return { load: null, need: r };
+      if (s.tier === "warehouse") {
+        // a warehouse ships what its markets need and builds or draws safety stock (cover in weeks of coming demand)
+        var cover = (s.cover != null ? s.cover : cfg.cover) / (DAYS_PER_MONTH / 7);
+        var ss = zeros(MONTHS); for (m = 0; m < MONTHS; m++) ss[m] = at(r, m + cover / 2) * cover;
+        var inbound = zeros(MONTHS); for (m = 0; m < MONTHS; m++) inbound[m] = r[m] + (m ? ss[m] - ss[m - 1] : 0);
+        return { load: r, need: lead(inbound, (s.handling || 0) / DAYS_PER_MONTH), ss: ss };
+      }
+      // a CMO: output released in month m was made release-time earlier, gross of yield; its inputs arrive lead-time earlier still
+      var made = lead(r, (s.release || 0) / DAYS_PER_MONTH); for (m = 0; m < MONTHS; m++) made[m] /= y;
+      return { load: made, need: lead(made, (s.lead || 0) / DAYS_PER_MONTH) };
+    }
     // 2. tier by tier upstream
     for (var t = 0; t < TIERS.length; t++) {
       var tier = TIERS[t].id;
       sites.filter(function (s) { return s.tier === tier; }).forEach(function (s) {
-        var r = req[s.id], y = (s.yield != null ? s.yield : 100) / 100;
-        if (tier === "market") {
-          need[s.id] = r;   // what has to arrive: the forecast itself
-        } else if (tier === "warehouse") {
-          // a warehouse ships what its markets need and builds or draws safety stock (cover in weeks of coming demand)
-          var cover = (s.cover != null ? s.cover : cfg.cover) / (DAYS_PER_MONTH / 7);
-          var ss = zeros(MONTHS); for (var m = 0; m < MONTHS; m++) ss[m] = at(r, m + cover / 2) * cover;
-          var inbound = zeros(MONTHS); for (m = 0; m < MONTHS; m++) inbound[m] = r[m] + (m ? ss[m] - ss[m - 1] : 0);
-          load[s.id] = r; cap[s.id] = capacity(s, cfg); s._ss = ss;
-          var hd = (s.handling || 0) / DAYS_PER_MONTH; need[s.id] = lead(inbound, hd);
-        } else {
-          // a CMO: output released in month m was made release-time earlier, gross of yield; its inputs arrive lead-time earlier still
-          var made = lead(r, (s.release || 0) / DAYS_PER_MONTH); for (m = 0; m < MONTHS; m++) made[m] /= y;
-          load[s.id] = made; cap[s.id] = capacity(s, cfg);
-          need[s.id] = lead(made, (s.lead || 0) / DAYS_PER_MONTH);
-        }
+        var st = step(s, req[s.id]);
+        need[s.id] = st.need; needPart[s.id] = {};
+        if (tier !== "market") {
+          load[s.id] = st.load; cap[s.id] = capacity(s, cfg); if (st.ss) ssOf[s.id] = st.ss;
+          loadPart[s.id] = {}; loadCust[s.id] = {};
+          mkts.forEach(function (k) { var sp = step(s, part[s.id][k]); loadPart[s.id][k] = sp.load; needPart[s.id][k] = sp.need; });
+          Object.keys(byCust[s.id]).forEach(function (c) { loadCust[s.id][c] = step(s, byCust[s.id][c]).load; });
+        } else mkts.forEach(function (k) { needPart[s.id][k] = part[s.id][k]; });
         if (tier === "raw") return;
         // what this site needs from each supplier, shifted earlier by the lane's transit and converted to the supplier's unit
         var sup = (s.suppliers || []).filter(function (l) { return l.share > 0; }), tot = sup.reduce(function (a, l) { return a + l.share; }, 0);
         var up = TIERS[t + 1].id, factor = per[up];
         sup.forEach(function (l) {
-          var u = byId[l.from], days = transitDays(u, s, l.days), share = l.share / tot;
+          var u = byId[l.from], days = transitDays(u, s, l.days), f = l.share / tot * factor, sh = days / DAYS_PER_MONTH, m2;
           trans[l.from + ">" + s.id] = days;
-          var need2 = lead(need[s.id], days / DAYS_PER_MONTH), add = req[l.from];
-          for (var m2 = 0; m2 < MONTHS; m2++) add[m2] += need2[m2] * share * factor;
+          var need2 = lead(need[s.id], sh), add = req[l.from], mine = byCust[l.from][s.id] = zeros(MONTHS);
+          for (m2 = 0; m2 < MONTHS; m2++) { add[m2] += need2[m2] * f; mine[m2] = need2[m2] * f; }
+          mkts.forEach(function (k) { var n2 = lead(needPart[s.id][k], sh), dst = part[l.from][k]; for (var m3 = 0; m3 < MONTHS; m3++) dst[m3] += n2[m3] * f; });
         });
       });
     }
@@ -169,7 +195,7 @@
       for (var m = 0; m < MONTHS; m++) util[m] = C[m] > 0 ? L[m] / C[m] : (L[m] > 0 ? Infinity : 0);
       var firstOver = -1; for (m = 0; m < MONTHS; m++) if (util[m] > 1 + 1e-9) { firstOver = m; break; }
       out[s.id] = {
-        site: s, load: L, capacity: C, util: util, firstOver: firstOver, ss: s._ss || null,
+        site: s, load: L, capacity: C, util: util, firstOver: firstOver, ss: ssOf[s.id] || null, byMarket: loadPart[s.id], byCustomer: loadCust[s.id],
         peakUtil: Math.max.apply(null, Array.prototype.slice.call(util)),
         periods: P.map(function (p) {
           var l = sum(L, p.from, p.to), c = sum(C, p.from, p.to), pk = 0, pkm = p.from;
@@ -177,9 +203,8 @@
           return { load: l / (p.to - p.from), capacity: c / (p.to - p.from), util: c > 0 ? l / c : (l > 0 ? Infinity : 0), peak: pk, peakMonth: pkm, gap: Math.max(0, l - c) };
         })
       };
-      delete s._ss;
     });
-    return { ok: true, months: MONTHS, periods: P, sites: out, transit: trans, per: per, tiers: TIERS, leadChain: leadChain(net, trans) };
+    return { ok: true, months: MONTHS, periods: P, sites: out, markets: mkts, transit: trans, per: per, tiers: tiersFor(net), leadChain: leadChain(net, trans) };
   }
   function sum(s, a, b) { var t = 0; for (var i = a; i < b; i++) t += s[i]; return t; }
 
@@ -218,7 +243,29 @@
     });
   }
 
+  // the capacity a site must add to stay at or under a utilisation target: reviewed once a year (or every `review`
+  // months), each addition sized for the busiest month until the next review and rounded up to two significant digits.
+  // Months in which an outage removes all capacity cannot be fixed by adding capacity and are left out.
+  function roundUp2(v) { if (!(v > 0)) return 0; var p = Math.pow(10, Math.floor(Math.log10(v)) - 1); return Math.ceil(v / p - 1e-9) * p; }
+  function requiredCapacity(net, result, id, target, review) {
+    target = target > 0 ? target : 1; review = review > 0 ? Math.round(review) : 12;
+    var s = null; net.sites.forEach(function (x) { if (x.id === id) s = x; });
+    var r = result.sites[id]; if (!s || !r || s.tier === "market") return null;
+    var f = capacity(Object.assign({}, s, { capacity: 1, expansions: [] }), net.config), base = zeros(MONTHS), m, k;
+    for (m = 0; m < MONTHS; m++) { var b = s.capacity; (s.expansions || []).forEach(function (e) { if (m >= e.from) b += e.add; }); base[m] = b; }
+    function gap(k2, added) { return f[k2] > 0 ? r.load[k2] / (target * f[k2]) - base[k2] - added : 0; }
+    var adds = [], added = 0;
+    for (m = 0; m < MONTHS;) {
+      if (gap(m, added) > 1e-9 * Math.max(1, base[m])) {
+        var mx = 0; for (k = m; k < Math.min(MONTHS, m + review); k++) mx = Math.max(mx, gap(k, added));
+        var add = roundUp2(mx); adds.push({ from: m, add: add }); added += add; m += review;
+      } else m++;
+    }
+    return { target: target, review: review, additions: adds, total: added, firstNeed: adds.length ? adds[0].from : -1, today: s.capacity };
+  }
+
   return { MONTHLY: MONTHLY, YEARLY: YEARLY, MONTHS: MONTHS, DAYS_PER_MONTH: DAYS_PER_MONTH, TIERS: TIERS, TIER_INDEX: TIER_INDEX,
     distanceKm: distanceKm, transitDays: transitDays, hemisphere: hemisphere, seasonal: seasonal, rawSeasonAmplitude: rawSeasonAmplitude,
-    at: at, lead: lead, periods: periods, forecast: forecast, capacity: capacity, validate: validate, plan: plan, tierSummary: tierSummary, leadChain: leadChain };
+    at: at, lead: lead, periods: periods, forecast: forecast, capacity: capacity, validate: validate, plan: plan, tierSummary: tierSummary, leadChain: leadChain,
+    tiersFor: tiersFor, requiredCapacity: requiredCapacity, roundUp2: roundUp2 };
 });

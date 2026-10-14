@@ -1,0 +1,90 @@
+// Tierwise — the tutorial: three levels of guided steps. Each step names the element it points at, how the page is set up
+// (a scenario, changed values, the site, period, market and tier to look at, a comparison) and optionally a question.
+// Every question's claim about the plan is checked by tests/tour.test.js. {{tokens}} are filled from the live plan
+// (see TOKENS and Tierwise.tokens in app.js).
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.TWTourContent = factory();
+})(typeof self !== "undefined" ? self : this, function () {
+  "use strict";
+  var TOKENS = ["first", "firstSite", "y1", "y13", "nShort", "chain", "chainMonths", "market", "site", "selPeak", "selFirst", "reqFirst", "reqTotal", "reqN", "target", "period", "topMarket", "topShare", "cmpFirst", "cmpName", "cmpShort"];
+  var LEVELS = [
+    { id: "beginner", title: "Beginner", minutes: 7, blurb: "Read the plan: the six tiers, the map by latitude, the capacity heatmap, one site's plan and the forecast that drives it all.", steps: [
+      { id: "b-welcome", title: "What Tierwise does", target: "#headline", setup: { scenario: "base" },
+        body: "Tierwise turns a forecast of what consumers will buy into the capacity every site of a supply chain must have, month by month. The example is a fortified milk powder: eight consumption points are supplied through warehouses and four tiers of contract manufacturers (CMOs). The sentence at the top sums up the plan: the first site to run short is <b>{{firstSite}}</b>, in <b>{{first}}</b>. Use <b>Next</b> to move on, or leave at any time with ×." },
+      { id: "b-outlook", title: "Six tiers", target: "#outlookPanel", setup: { scenario: "base" },
+        body: "Each row is a tier, from the consumer upstream: consumption points, warehouses, then the packaging, final dosing, product manufacturing and raw-ingredient CMOs. Each tier works in its own unit: packs, then sachets, then tonnes of powder and of dairy base. The columns compare load with capacity: the average month of year 1, and the busiest single month, first in the 3-year monthly window and then in the 10 years after it." },
+      { id: "b-map", title: "Sites across latitudes", target: "#mapPanel", setup: { scenario: "base" },
+        body: "The sites run from Ireland, at 52°N, to New Zealand, at 38°S. The latitude matters: consumers buy more milk powder in their cold season, and dairy herds give most milk in their spring, so the southern hemisphere runs six months apart from the north. A red ring marks a site that runs short at some point in the 13 years. Click any site to select it." },
+      { id: "b-heat", title: "The capacity heatmap", target: "#heatPanel", setup: { scenario: "base" },
+        body: "One row per site and one column per period: 36 months, then 10 years. Blue means the site has room; light blue is 90–100% of capacity; red means its load is above capacity. Read from left to right: growth turns the chain red one site after another. Point at a cell for its numbers." },
+      { id: "b-peak", title: "Why the busiest month?", target: "#colorBy", setup: { scenario: "base" },
+        body: "A yearly cell can be coloured by the year's average or by its busiest month. The default is the busiest month.",
+        quiz: { q: "Why colour a yearly cell by its busiest month?", options: ["A site can be fine on average over a year and still be short in its peak months", "Later years matter less, so one month is enough", "The yearly average cannot be computed"], answer: 0, claim: "peak-hidden",
+          explain: "Demand and milk supply are seasonal. In the base plan, dozens of site-years are under 100% on average but over capacity in their busiest month. Coloured by the average, those shortfalls would disappear." } },
+      { id: "b-site", title: "One site's plan", target: "#sitePanel", setup: { scenario: "base", select: "p-ham" },
+        body: "Hamilton Nutrition, in New Zealand, makes the milk powder. The bars are its load each month (and the average month of each later year), the green line is its capacity, and red marks load above capacity. Its busiest month reaches <b>{{selPeak}}</b>, and it first runs short in <b>{{selFirst}}</b>. Below the chart: who supplies it, whom it supplies, and how long the lanes take." },
+      { id: "b-forecast", title: "The forecast drives everything", target: "#fcPanel", setup: { scenario: "base", select: "m-jnb" },
+        body: "Everything upstream follows from these eight forecasts: consumption grows from <b>{{y1}}</b> packs in year 1 to <b>{{y13}}</b> in year 13. Each has its own growth and seasonal swing; Dhaka launches in its second year and ramps up.",
+        quiz: { q: "Johannesburg is at 26°S. When does its demand peak?", options: ["In May", "In November", "It has no season"], answer: 0, claim: "south-peak",
+          explain: "Northern markets peak in November, at the start of their cold season. In the south the seasons are six months apart, so Johannesburg peaks in May." } },
+      { id: "b-done", title: "You can read the plan", target: "#tourBtn", setup: { scenario: "base" },
+        body: "You know the tiers, the map, the heatmap, a site's plan and the forecast. The <b>intermediate</b> level shows how time moves through the chain: lead times, release times and transit, sourcing shares, seasons and scenarios." }
+    ] },
+    { id: "intermediate", title: "Intermediate", minutes: 10, blurb: "Time and tiers: lead times, quality release and transit, the bill of materials, sourcing shares, milk seasons and scenarios.", steps: [
+      { id: "i-ladder", title: "How far ahead each tier acts", target: "#ladderPanel", setup: { scenario: "base", market: "m-jkt" },
+        body: "The lead-time ladder follows one pack to a shelf in Jakarta back up the main sourcing path. Each CMO has a <b>production</b> lead time (its inputs must be there that long before it makes the product) and a <b>release</b> time (quality testing and hold before it may ship). Add transit and warehouse handling, and the raw ingredient must be in production <b>{{chain}}</b> days ahead: {{chainMonths}} months." },
+      { id: "i-release", title: "A longer release time", target: "#sitePanel", setup: { scenario: "base", select: "p-ham" },
+        body: "Every requirement is shifted earlier by these times, exactly, including fractions of a month.",
+        quiz: { q: "Hamilton's release time doubles from 14 to 28 days. What happens to Hamilton's own load?", options: ["The same load, needed 14 days earlier", "It grows by 14 days of output", "Nothing: release only matters to its customers"], answer: 0, claim: "release-shift",
+          explain: "Output released in a month must be made the release time before. Holding it 14 days longer moves the whole load curve 14 days earlier, and its suppliers' with it. The amount does not change." } },
+      { id: "i-bom", title: "Units through the tiers", target: "#outlookPanel", setup: { scenario: "base" },
+        body: "Each tier's need is converted by the bill of materials: one pack holds 20 sachets, a sachet holds 25 g of powder, and a tonne of powder takes 0.7 t of dairy base. Yields add to it: a CMO with a 97% yield must make 1 ÷ 0.97 of what it ships. That is why the tiers' loads are in different units." },
+      { id: "i-sourcing", title: "Several CMOs per tier", target: "#siteLanes", setup: { scenario: "base", select: "pk-qro" },
+        body: "Querétaro Packaging buys its sachets from two dosing CMOs, by share: 70% from Rosario and 30% from Valencia. It supplies two warehouses. Shares are fixed: a site's need is split by them, then shifted earlier by each lane's transit time. Click a name to follow a lane." },
+      { id: "i-tier", title: "A tier against its capacity", target: "#tierPanel", setup: { scenario: "base", tier: "dosing" },
+        body: "Here the dosing CMOs' loads are stacked against the tier's combined capacity.",
+        quiz: { q: "Look at 2030. What is true of the dosing tier?", options: ["It has spare capacity in total, yet one dosing CMO is short", "Every dosing CMO is short", "Every dosing CMO has room"], answer: 0, claim: "tier-spare",
+          explain: "In 2030 the tier as a whole is under 100%, but its busiest site is not. With fixed shares, spare capacity in one plant does not help another: the volume would have to be re-sourced." } },
+      { id: "i-season", title: "Milk seasons", target: "#sitePanel", setup: { scenario: "base", select: "r-wai" },
+        body: "Raw-ingredient capacity follows the grass season, and swings more the further a site is from the equator. The <b>milk season swing</b> control sets the swing at high latitudes.",
+        quiz: { q: "Waikato is at 38°S. In which month is its milk capacity highest?", options: ["November", "May", "It has no season"], answer: 0, claim: "raw-south-nov",
+          explain: "Northern herds peak in May. In New Zealand the spring comes six months later, so Waikato's capacity peaks in November and is lowest in May." } },
+      { id: "i-drought", title: "A scenario: a dry year", target: "#heatPanel", setup: { scenario: "drought", select: "r-wai" },
+        body: "The scenario <b>Dry season in New Zealand</b> takes 35% of the milk from Waikato and Gippsland in the second year. The co-ops turn red at once: the first shortfall moves to <b>{{first}}</b>, at {{firstSite}}. Look how far up the chain the cause sits from the shelves it threatens." },
+      { id: "i-scale", title: "More demand than forecast", target: "#kpis", setup: { scenario: "base", values: { demandScale: 1.3 } },
+        body: "The <b>demand vs forecast</b> control scales every forecast. At 130%, the first shortfall comes in <b>{{first}}</b> and {{nShort}} sites run short at some point. Planning capacity is about how wrong the forecast may be, as much as the forecast." },
+      { id: "i-done", title: "You know how time moves", target: "#tourBtn", setup: { scenario: "base" },
+        body: "Lead and release times, units, shares, seasons and scenarios. The <b>advanced</b> level turns the plan into decisions: what drives a shortfall, how much capacity to add and when, comparing plans, and loading your own supply chain." }
+    ] },
+    { id: "advanced", title: "Advanced", minutes: 12, blurb: "From plan to decision: trace a shortfall to its markets, size the capacity to add, compare plans, and load and share your own supply chain.", steps: [
+      { id: "a-trace", title: "What drives a site's load", target: "#drivers", setup: { scenario: "base", select: "w-ae", period: 41 },
+        body: "Jebel Ali DC serves Cairo and Dhaka. Under the chart, Tierwise splits its load exactly into the consumption points behind it and into its direct customers. In {{period}}, the largest driver is <b>{{topMarket}}</b>, at {{topShare}}. Click a bar of the chart or a heatmap cell to look at another period.",
+        quiz: { q: "Over the years, which market grows into Jebel Ali's main driver?", options: ["Dhaka", "Cairo", "They stay equal"], answer: 0, claim: "peg-dhaka",
+          explain: "Cairo is the larger market at the start, but Dhaka launches in year 2 and grows faster (10% a year, then 7%), so by the 2030s most of Jebel Ali's load is for Dhaka." } },
+      { id: "a-required", title: "The capacity to add", target: "#required", setup: { scenario: "base", select: "p-ham" },
+        body: "To keep Hamilton at or under <b>{{target}}</b> in every month, Tierwise sizes yearly additions for the busiest month until the next review: <b>{{reqN}}</b> additions, the first in <b>{{reqFirst}}</b>, <b>{{reqTotal}}</b> in total. A 90% target leaves room for a forecast error or a bad month." },
+      { id: "a-target", title: "A stricter target", target: "#target", setup: { scenario: "base", select: "p-ham", target: 0.8 },
+        body: "At an 80% target the first addition comes in <b>{{reqFirst}}</b>, and the total grows to <b>{{reqTotal}}</b>. The target is a choice between capacity cost and the risk of running short." },
+      { id: "a-needs", title: "Every site's additions", target: "#needsPanel", setup: { scenario: "base" },
+        body: "The <b>Capacity to add</b> table lists every site that needs more, earliest first: when, how much each time, and the total against today's capacity. It is the capacity plan the heatmap asks for." },
+      { id: "a-apply", title: "Apply them all", target: "#heatPanel", setup: { scenario: "base", applyAll: true },
+        body: "With <b>Add all as expansions</b>, every addition becomes an expansion of its site. The heatmap turns blue: no site exceeds the target in any month. The editor below lists the expansions, ready to adjust." },
+      { id: "a-compare", title: "Compare two plans", target: "#heatPanel", setup: { scenario: "expand", compare: "s:base", select: "p-ham" },
+        body: "<b>Compare with</b> sets a second plan beside this one; <b>Pin this plan</b> keeps the current one to compare against. Here the expansion programme is compared with the base plan: the heatmap now shows the change in utilisation, and the first shortfall moves from {{cmpFirst}} to <b>{{first}}</b>.",
+        quiz: { q: "Against the base plan, how do Hamilton's cells look after 2029?", options: ["Blue: less loaded", "Red: more loaded", "Grey: unchanged"], answer: 0, claim: "expand-ham",
+          explain: "The programme adds capacity at Hamilton in 2029 and 2033. Its load does not change, so its utilisation falls in every period after the first addition." } },
+      { id: "a-resource", title: "Re-sourcing has a price", target: "#tierPanel", setup: { scenario: "resource", compare: "s:base", tier: "dosing", select: "d-ros" },
+        body: "The scenario <b>Dual-source every dosing CMO equally</b> has every packer order a third from each dosing CMO.",
+        quiz: { q: "What does equal sourcing do?", options: ["The same total load, but Rosario, the smallest, runs short much sooner", "Every dosing CMO is less loaded", "The tier needs less capacity in total"], answer: 0, claim: "resource-dosing",
+          explain: "Total demand on the tier is the same, but an equal split ignores capacity: Rosario gets a third of the volume with the smallest plant. Sourcing shares are as much a capacity decision as the capacity itself." } },
+      { id: "a-import", title: "Your own supply chain", target: "#dataBox", setup: { scenario: "base", open: "#fmt" },
+        body: "Load your own network from a CSV, an Excel workbook or a JSON file: one row per site, with its tier, location, capacity, times, yield and suppliers. The easiest start is <b>Template · Excel</b> or <b>Template · CSV</b>: it is the network on screen, ready to edit. The file stays in your browser; nothing is uploaded. Tiers can be renamed, with their units, for a chain that is not milk powder." },
+      { id: "a-share", title: "Save and share", target: "#shareBtn", setup: { scenario: "base" },
+        body: "<b>Copy share link</b> puts the whole network, with your edits, into a link: anyone who opens it sees the same plan. <b>Save as JSON</b> keeps it as a file, and <b>Plan as CSV</b> exports every site's load and capacity in every period for your own analysis." },
+      { id: "a-done", title: "You are planning", target: "#tourBtn", setup: { scenario: "base" },
+        body: "You can trace a shortfall to its markets, size the capacity to add, compare plans, and load and share your own supply chain. That is the whole tutorial. The <b>How Tierwise plans</b> section at the foot of the page has the method and its limits." }
+    ] }
+  ];
+  return { TOKENS: TOKENS, LEVELS: LEVELS };
+});

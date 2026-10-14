@@ -1,0 +1,192 @@
+// Tierwise — español (Latinoamérica). T: textos de los scripts, por su texto en inglés ({nombres} se conservan);
+// H: textos de las páginas, por su clave data-i18n; P: patrones para los mensajes del motor y de la carga de archivos.
+(function (root) {
+  "use strict";
+  var T = {
+    // ---- unidades, calendario, niveles
+    "pts": "pts", "S": "S", "N": "N", "d": "d", "t": "t", "packs": "paquetes", "sachets": "sobres",
+    "Jan": "Ene", "Feb": "Feb", "Mar": "Mar", "Apr": "Abr", "May": "May", "Jun": "Jun", "Jul": "Jul", "Aug": "Ago", "Sep": "Sep", "Oct": "Oct", "Nov": "Nov", "Dec": "Dic",
+    "Year {n} ({a}–{b})": "Año {n} ({a}–{b})", "36 months": "36 meses", "10 years": "10 años",
+    "Consumption points": "Puntos de consumo", "Consumption point": "Punto de consumo", "Markets": "Mercados",
+    "Warehouses": "Centros de distribución", "Warehouse": "Centro de distribución",
+    "Packaging CMOs": "CMO de envasado", "Packaging CMO": "CMO de envasado", "Packaging": "Envasado",
+    "Final dosing CMOs": "CMO de dosificación final", "Final dosing CMO": "CMO de dosificación final", "Dosing": "Dosificación",
+    "Product manufacturing CMOs": "CMO de fabricación de producto", "Product manufacturing CMO": "CMO de fabricación de producto", "Product": "Producto",
+    "Raw ingredient CMOs": "CMO de materia prima", "Raw ingredient CMO": "CMO de materia prima", "Raw ingredient": "Materia prima",
+    // ---- encabezado y resultados
+    "The network cannot be planned:": "La red no se puede planificar:",
+    "Consumption grows from <b>{a}</b> in the first year to <b>{b}</b> in the last.": "El consumo crece de <b>{a}</b> el primer año a <b>{b}</b> el último.",
+    "Every site keeps up over all 13 years.": "Todos los sitios dan abasto durante los 13 años.",
+    "The first site to run short is <b>{site}</b> ({tier}) in <b>{when}</b>.": "El primer sitio en quedarse sin capacidad es <b>{site}</b> ({tier}), en <b>{when}</b>.",
+    "Nothing runs short within the 3-year monthly window.": "Nada se queda sin capacidad dentro de la ventana mensual de 3 años.",
+    "<b>1 site</b> runs short within the 3-year monthly window.": "<b>1 sitio</b> se queda sin capacidad dentro de la ventana mensual de 3 años.",
+    "<b>{n} sites</b> run short within the 3-year monthly window.": "<b>{n} sitios</b> se quedan sin capacidad dentro de la ventana mensual de 3 años.",
+    "the first shortfall is the same": "el primer déficit es el mismo", "the first shortfall comes later": "el primer déficit llega más tarde", "the first shortfall comes sooner": "el primer déficit llega antes",
+    "Against <b>{name}</b>: {what} ({a} vs {b}); {n} sites short at some point vs {m}.": "Frente a <b>{name}</b>: {what} ({a} frente a {b}); {n} sitios con déficit en algún momento frente a {m}.",
+    "never": "nunca", "Never": "Nunca", "None": "Ninguno",
+    "Consumption, year 1": "Consumo, año 1", "{n} a month on average": "{n} al mes en promedio", "Consumption, year 13": "Consumo, año 13", "×{x} on year 1": "×{x} sobre el año 1",
+    "First shortfall": "Primer déficit", "within 13 years": "en 13 años", "Sites short at some point": "Sitios con déficit en algún momento", "{n} of {m}": "{n} de {m}", "across the 13 years": "en los 13 años",
+    "Tightest tier, year 1": "Nivel más exigido, año 1", "Longest chain": "Cadena más larga", "{n} days": "{n} días", "raw ingredient to shelf, {m}": "de la materia prima al estante, {m}", "comparison: {v}": "comparación: {v}",
+    "Tier": "Nivel", "Unit": "Unidad", "Load, year 1<br>(a month)": "Carga, año 1<br>(al mes)", "Capacity, year 1<br>(a month)": "Capacidad, año 1<br>(al mes)", "Use, year 1": "Uso, año 1",
+    "Busiest month,<br>months 1–36": "Mes de mayor carga,<br>meses 1–36", "Busiest month,<br>years 4–13": "Mes de mayor carga,<br>años 4–13", "Load, year 13<br>(a month)": "Carga, año 13<br>(al mes)", "First short": "Primer déficit",
+    // ---- mapa
+    "Map of the supply network by latitude": "Mapa de la red de suministro por latitud", "Equator": "Ecuador", "Tropic of Cancer": "Trópico de Cáncer", "Tropic of Capricorn": "Trópico de Capricornio",
+    "Demand, month 1": "Demanda, mes 1", "Busiest month": "Mes de mayor carga", "Above 90% at peak": "Sobre 90% en el peak", "Short at some point": "Con déficit en algún momento",
+    // ---- sitio seleccionado
+    "southern hemisphere": "hemisferio sur", "northern hemisphere": "hemisferio norte", "Year 1": "Año 1", "launches {m}": "se lanza en {m}", "Year 13": "Año 13", "Growth": "Crecimiento",
+    "a year, then {g}%": "al año, luego {g}%", "Peak month": "Mes peak", "±{n}% swing": "variación ±{n}%", "Capacity": "Capacidad", "{u} a month": "{u} al mes", ", month 1": ", mes 1", "month {n} of 156": "mes {n} de 156",
+    "Handling · cover": "Manejo · cobertura", "{h} d · {c} wk": "{h} d · {c} sem", "safety stock {n}": "stock de seguridad {n}", "Lead · release": "Producción · liberación", "{a} d · {b} d": "{a} d · {b} d", "yield {y}%": "rendimiento {y}%",
+    "Supplied by": "Abastecido por", "{p}% · {d} d transit": "{p}% · {d} d de tránsito", "Supplies": "Abastece a", "({p}% of its need)": "({p}% de su necesidad)",
+    "Capacity follows the milk season: ±{a}% at {lat}, highest in {m}.": "La capacidad sigue la temporada de la leche: ±{a}% a {lat}, máxima en {m}.",
+    "Demand of {s}": "Demanda de {s}", "Load and capacity of {s}": "Carga y capacidad de {s}", "Demand (a month)": "Demanda (al mes)", "Load (a month)": "Carga (al mes)", "Capacity (a month)": "Capacidad (al mes)",
+    "Utilisation": "Utilización", "load / capacity": "carga / capacidad", "utilisation": "utilización", "Comparison": "Comparación", "Click to see what drives it": "Haga clic para ver qué la origina",
+    "Demand, {u} a month (average in a yearly period)": "Demanda, {u} al mes (promedio en un período anual)", "Load, {u} a month (average)": "Carga, {u} al mes (promedio)", "Load above capacity": "Carga sobre la capacidad",
+    "Busiest month's load": "Carga del mes de mayor carga", "Comparison: {name}": "Comparación: {name}",
+    "What drives the load in {p}": "Qué origina la carga en {p}",
+    "Load {l} a month against capacity {c} ({u}). Click a bar of the chart above, or a cell of the heatmap, to look at another period.": "Carga de {l} al mes frente a una capacidad de {c} ({u}). Haga clic en una barra del gráfico o en una celda del mapa de calor para ver otro período.",
+    "By consumption point": "Por punto de consumo", "By direct customer": "Por cliente directo",
+    "+{n} from {m}": "+{n} desde {m}", "then {k} more, {n} in all, to {m}": "luego {k} más, {n} en total, hasta {m}", "Capacity to add": "Capacidad por agregar",
+    "None: {s} stays at or under {t} in every month of the 13 years.": "Ninguna: {s} se mantiene en {t} o menos todos los meses de los 13 años.",
+    "To stay at or under <b>{t}</b> in every month, reviewed once a year: {list}. In total <b>{n}</b>, {x} of today's capacity.": "Para mantenerse en <b>{t}</b> o menos todos los meses, con una revisión al año: {list}. En total <b>{n}</b>, {x} de la capacidad actual.",
+    "Add these as expansions": "Agregar como ampliaciones",
+    // ---- mapa de calor
+    "Change in capacity utilisation against the comparison": "Cambio en la utilización de la capacidad frente a la comparación", "Capacity utilisation of every site in every period": "Utilización de la capacidad de cada sitio en cada período",
+    "Monthly · 36 months": "Mensual · 36 meses", "Yearly · 10 years": "Anual · 10 años", "Year average": "Promedio del año", "Short by": "Déficit de", "{n} in total": "{n} en total", "not in it": "no está", "Change": "Cambio",
+    "Change in utilisation, points": "Cambio en la utilización, puntos", "not in the comparison": "no está en la comparación", "blue: less loaded than in <b>{name}</b>; red: more": "azul: menos cargado que en <b>{name}</b>; rojo: más",
+    "Site": "Sitio",
+    // ---- capacidad por agregar
+    "To keep every site at or under <b>{t}</b> in every month, reviewed once a year, {n} of {m} sites need more capacity. Additions are sized for the busiest month until the next review.": "Para mantener cada sitio en <b>{t}</b> o menos todos los meses, con una revisión al año, {n} de {m} sitios necesitan más capacidad. Cada ampliación se dimensiona para el mes de mayor carga hasta la revisión siguiente.",
+    "No site needs more capacity at this target.": "Ningún sitio necesita más capacidad con esta meta.", "First addition": "Primera ampliación", "Additions": "Ampliaciones", "Total added": "Total agregado", "vs today": "frente a hoy",
+    // ---- nivel, escalera, pronóstico
+    "Other ({n} sites)": "Otros ({n} sitios)", "Load by site against capacity, {t}": "Carga por sitio frente a la capacidad, {t}", "Tier load / capacity": "Carga / capacidad del nivel", "Tier utilisation": "Utilización del nivel", "Tier capacity": "Capacidad del nivel", "Period": "Período",
+    "Lead-time ladder for {m}": "Escalera de tiempos para {m}", "on shelf": "en estante", "transit": "tránsito", "handling": "manejo", "release (QA)": "liberación (QA)", "production": "producción",
+    "Step": "Etapa", "Takes": "Dura", "Starts": "Empieza", "{n} days before the shelf": "{n} días antes del estante", "Ends": "Termina", "{n} days before": "{n} días antes",
+    "Raw ingredient for a pack sold in {m} in {when} must be in production around <b>{start}</b>: {d} days ({mo} months) ahead.": "La materia prima de un paquete vendido en {m} en {when} debe estar en producción alrededor de <b>{start}</b>: {d} días ({mo} meses) antes.",
+    "Production (site colour)": "Producción (color del sitio)", "Release or handling": "Liberación o manejo", "Transit": "Tránsito",
+    "Consumption forecast · {u} a month": "Pronóstico de consumo · {u} al mes", "peaks in {m}": "peak en {m}", "+{g}%/yr": "+{g}%/año", "launch {m}": "lanzamiento {m}", "Forecast for {m}": "Pronóstico para {m}", "Total": "Total",
+    // ---- archivos, enlaces, comparación
+    "The spreadsheet library could not be loaded. Use CSV instead, which Excel opens too.": "No se pudo cargar la biblioteca de planillas. Use CSV, que Excel también abre.",
+    "{f} could not be loaded:": "No se pudo cargar {f}:", "…and {n} more.": "…y {n} más.", "Loaded <b>{f}</b>: {n} sites in {t} tiers.": "Se cargó <b>{f}</b>: {n} sitios en {t} niveles.", "{f} could not be read.": "No se pudo leer {f}.",
+    "The spreadsheet library could not be loaded. Save the sheet as CSV and load that.": "No se pudo cargar la biblioteca de planillas. Guarde la hoja como CSV y cargue ese archivo.",
+    "The link is damaged.": "El enlace está dañado.", "Link copied. It carries the whole network, so anyone who opens it sees this plan.": "Enlace copiado. Lleva la red completa, así que quien lo abra verá este plan.",
+    "Copy the link from the box below.": "Copie el enlace del recuadro de abajo.", "Nothing": "Nada", "Pinned plan ({t})": "Plan fijado ({t})", "Your network: {name}": "Su red: {name}",
+    "Pinned. Change anything, and the heatmap shows the change against the pinned plan.": "Fijado. Cambie lo que quiera, y el mapa de calor mostrará el cambio frente al plan fijado.",
+    "The shared link could not be opened:": "No se pudo abrir el enlace compartido:", "shared link": "enlace compartido", "This plan was opened from a shared link.": "Este plan se abrió desde un enlace compartido.",
+    // ---- editor
+    "Product, calendar and bill of materials": "Producto, calendario y lista de materiales", "First year": "Primer año", "First month": "Primer mes", "Demand peaks (north)": "Peak de demanda (norte)", "Milk peaks (north)": "Peak de leche (norte)",
+    "Dosing units per pack": "Unidades dosificadas por paquete", "kg of product per dosing unit": "kg de producto por unidad dosificada", "t raw ingredient per t product": "t de materia prima por t de producto",
+    "Tier names and units can be changed below, for a chain whose tiers are called something else.": "Los nombres y unidades de los niveles se pueden cambiar abajo, para una cadena cuyos niveles se llaman de otra forma.",
+    "Tier names and units": "Nombres y unidades de los niveles", "Name (plural)": "Nombre (plural)", "Name (one)": "Nombre (singular)", "+ Add a site": "+ Agregar un sitio", "Country": "País", "Lat": "Lat", "Lon": "Lon",
+    "Sourcing: supplier · share · transit days (blank = estimated)": "Abastecimiento: proveedor · participación · días de tránsito (en blanco = estimado)", "Expansions (YYYY-MM:+amount)": "Ampliaciones (AAAA-MM:+cantidad)",
+    "Share": "Participación", "Transit days": "Días de tránsito", "Remove this supplier": "Quitar este proveedor", "+ supplier": "+ proveedor", "Remove this site": "Quitar este sitio", "New site": "Sitio nuevo",
+    "Base, a month": "Base, al mes", "Growth % (yrs 1–3)": "Crecimiento % (años 1–3)", "Growth % (yrs 4–13)": "Crecimiento % (años 4–13)", "Season swing %": "Variación estacional %", "Launch (YYYY-MM)": "Lanzamiento (AAAA-MM)", "Ramp months": "Meses de rampa",
+    "Throughput a month": "Despacho al mes", "Handling days": "Días de manejo", "Cover weeks": "Semanas de cobertura", "Capacity a month": "Capacidad al mes", "Lead time, days": "Tiempo de producción, días", "Release time, days": "Tiempo de liberación, días", "Yield %": "Rendimiento %",
+    // ---- controles
+    "{n} weeks": "{n} semanas", "{a}–{b} weeks by site": "{a}–{b} semanas según el sitio", "tutorial": "tutorial", "Show as table": "Ver como tabla", "Hide table": "Ocultar tabla",
+    // ---- tutorial
+    "Tutorial levels": "Niveles del tutorial", "Tutorial": "Tutorial", "done ✓": "completado ✓", "step {k} of {n}": "paso {k} de {n}", "{n} steps · {m} min": "{n} pasos · {m} min", "Leave the tutorial": "Salir del tutorial",
+    "Back": "Atrás", "Finish": "Terminar", "Next": "Siguiente", "Right.": "Correcto.", "Not quite.": "No exactamente.", "{level} complete": "{level} completado", "Close": "Cerrar", "Well done": "Bien hecho",
+    "You finished the {level} level.": "Terminó el nivel {level}.", "Ready for <b>{next}</b>?": "¿Listo para el nivel <b>{next}</b>?", "That is the whole tutorial.": "Ese es todo el tutorial.", "Start {next}": "Empezar {next}",
+    // ---- escenarios y la red de ejemplo
+    "Base plan": "Plan base", "Fast growth in Africa and Asia": "Crecimiento rápido en África y Asia", "Dry season in New Zealand (−35% milk in year 2)": "Temporada seca en Nueva Zelanda (−35% de leche en el año 2)",
+    "Base plan with a programme of capacity expansions": "Plan base con un programa de ampliaciones de capacidad", "Dual-source every dosing CMO equally": "Abastecer de cada CMO de dosificación por partes iguales",
+    "Fortified milk powder · 20 × 25 g sachets per pack": "Leche en polvo fortificada · 20 sobres de 25 g por paquete",
+    "Mexico City": "Ciudad de México", "Mexico": "México", "São Paulo": "São Paulo", "Brazil": "Brasil", "Lagos": "Lagos", "Nigeria": "Nigeria", "Johannesburg": "Johannesburgo", "South Africa": "Sudáfrica",
+    "Cairo": "El Cairo", "Egypt": "Egipto", "Dhaka": "Daca", "Bangladesh": "Bangladés", "Jakarta": "Yakarta", "Indonesia": "Indonesia", "Manila": "Manila", "Philippines": "Filipinas",
+    "Guadalajara DC": "CD Guadalajara", "Campinas DC": "CD Campinas", "Apapa DC": "CD Apapa", "Durban DC": "CD Durban", "Jebel Ali DC": "CD Jebel Ali", "United Arab Emirates": "Emiratos Árabes Unidos", "Singapore DC": "CD Singapur", "Singapore": "Singapur",
+    "Querétaro Packaging": "Envasado Querétaro", "Cape Town Packaging": "Envasado Ciudad del Cabo", "Johor Packaging": "Envasado Johor", "Malaysia": "Malasia",
+    "Valencia Dosing": "Dosificación Valencia", "Spain": "España", "Penang Dosing": "Dosificación Penang", "Rosario Dosing": "Dosificación Rosario", "Argentina": "Argentina",
+    "Cork Nutrition": "Cork Nutrition", "Ireland": "Irlanda", "Hamilton Nutrition": "Hamilton Nutrition", "New Zealand": "Nueva Zelanda", "Madison Nutrition": "Madison Nutrition", "United States": "Estados Unidos",
+    "Normandy Dairy Co-op": "Cooperativa Láctea Normandía", "France": "Francia", "Waikato Dairy Co-op": "Cooperativa Láctea Waikato", "Gippsland Dairy Co-op": "Cooperativa Láctea Gippsland", "Australia": "Australia", "Wisconsin Dairy Co-op": "Cooperativa Láctea Wisconsin"
+  };
+  var H = {
+    "meta.title": "Tierwise — Planificación de capacidad en varios niveles",
+    "nav.sub": "PLANIFICACIÓN DE CAPACIDAD EN VARIOS NIVELES · CADENA DE ALIMENTOS", "nav.tour": "Tutorial", "nav.about": "Acerca de", "nav.projects": "← Proyectos",
+    "c.aria": "Ajustes del plan", "c.scenario": "Escenario", "c.scale": "Demanda frente al pronóstico", "c.cover": "Stock de seguridad en CD", "c.swing": "Variación de la temporada de leche", "c.target": "Meta de utilización",
+    "c.colorBy": "Colorear celdas anuales por", "c.peak": "Mes de mayor carga", "c.avg": "Promedio del año", "c.compare": "Comparar con", "c.pin": "Fijar este plan", "c.export": "Exportar", "c.csv": "Plan en CSV", "c.reset": "Deshacer cambios",
+    "d.h": "Su cadena de suministro", "d.sub": "Cargue su propia red desde CSV, Excel o JSON, o suelte un archivo aquí. Empiece desde una plantilla: es la red que está en pantalla.",
+    "d.load": "Cargar una cadena…", "d.csv": "Plantilla · CSV", "d.xlsx": "Plantilla · Excel", "d.json": "Guardar como JSON", "d.share": "Copiar enlace", "d.shareAria": "Enlace para compartir", "d.fmtH": "El formato del archivo",
+    "d.fmt": "<p>Una fila por sitio, con estas columnas (encabezados en cualquier orden; las columnas desconocidas se ignoran; los nombres de columna van en inglés):</p><ul>" +
+      "<li><code>id</code>, <code>tier</code> (<code>market</code>, <code>warehouse</code>, <code>packaging</code>, <code>dosing</code>, <code>product</code> o <code>raw</code>), <code>name</code>, <code>country</code>, <code>lat</code>, <code>lon</code> (grados decimales; sur y oeste negativos).</li>" +
+      "<li>Puntos de consumo: <code>base</code> (demanda al mes), <code>growth</code> y <code>longGrowth</code> (% al año en los años 1–3 y después), <code>season</code> (± %), <code>launch</code> (AAAA-MM) y <code>ramp</code> (meses).</li>" +
+      "<li>Todos los demás sitios: <code>capacity</code> (al mes, en la unidad de su nivel). Centros de distribución: <code>handling</code> (días) y <code>cover</code> (semanas de stock de seguridad). CMO: <code>lead</code> y <code>release</code> (días) y <code>yield</code> (%).</li>" +
+      "<li><code>suppliers</code>: sitios del nivel inmediatamente superior, como <code>id:participación</code>, separados por <code>|</code>; agregue <code>:días</code> para fijar el tiempo de tránsito de una ruta en lugar de estimarlo por la distancia.</li>" +
+      "<li><code>expansions</code> como <code>AAAA-MM:+cantidad</code> y <code>outages</code> como <code>AAAA-MM:meses:pérdida%</code>, separados por <code>|</code>.</li></ul>" +
+      "<p>Después de los sitios, una tabla opcional con el encabezado <code>setting,value</code> (o una hoja <b>Settings</b> en Excel) fija el producto, <code>startYear</code>, <code>startMonth</code> (1–12), la lista de materiales (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), las temporadas (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>) y los nombres y unidades propios de los niveles (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Separado por comas, punto y coma o tabulaciones; con punto y coma se leen comas decimales.</p>" +
+      "<p>El archivo se queda en su navegador: no se sube nada.</p>",
+    "o.h": "Panorama por nivel", "o.note": "La carga de cada nivel frente a su capacidad. El año 1 es el mes promedio; los peaks son el mes de mayor carga en cualquier sitio del nivel, en la ventana mensual de 3 años y en los 10 períodos anuales siguientes.",
+    "m.h": "La red por latitud", "m.note": "La temporada de la leche y la demanda del sur van seis meses detrás de las del norte. Un anillo marca un sitio que se queda sin capacidad en algún momento de los 13 años. Haga clic en un sitio para ver su plan.",
+    "s.h": "Sitio seleccionado",
+    "h.h": "Requerimientos de capacidad · cada sitio, 46 períodos", "h.note": "Utilización = carga ÷ capacidad. Las primeras 36 columnas son meses; las últimas 10 son años. Una celda anual se colorea por su mes de mayor carga (o por su promedio; cámbielo arriba), así que una sobrecarga estacional nunca se pierde en el promedio. Pase el cursor sobre una celda para ver los números; haga clic para ver qué la origina.",
+    "h.show": "Mostrar", "h.plan": "Este plan", "h.diff": "Cambio frente a la comparación", "t.show": "Ver como tabla",
+    "n.h": "Capacidad por agregar", "n.apply": "Agregar todo como ampliaciones",
+    "ti.h": "Carga por nivel", "ti.note": "La carga de cada sitio de un nivel, apilada, frente a la capacidad conjunta del nivel. El nivel puede tener capacidad de sobra en total mientras un sitio se queda corto: las participaciones de abastecimiento son fijas.",
+    "l.h": "Escalera de tiempos", "l.note": "Con cuánta anticipación debe actuar cada nivel para que un paquete llegue al estante, por la ruta principal de abastecimiento (la mayor participación en cada paso).", "l.mkt": "Punto de consumo",
+    "f.note": "El pronóstico de consumo final que mueve a todos los niveles de arriba. Una sola escala, para comparar los mercados directamente. La demanda alcanza su peak en la temporada fría local: los mercados del sur llegan a su peak seis meses después que los del norte.",
+    "e.h": "Editar la red: sitios, capacidades, tiempos de producción y de liberación, rendimientos, abastecimiento, el pronóstico",
+    "e.note": "Los cambios se planifican de inmediato. Cada sitio se abastece de uno o más sitios del nivel inmediatamente superior; las participaciones se normalizan, y un tiempo de tránsito en blanco se estima por la distancia (por carretera hasta 1.500 km, por mar más allá). Las ampliaciones se escriben <code>AAAA-MM:+cantidad</code>, separadas por <code>|</code>. Cambiar de escenario descarta los cambios; guarde su red como archivo o enlace para conservarla.",
+    "x.h": "Cómo planifica Tierwise, y qué deja fuera",
+    "x.body": "<p><b>Método.</b> Planificación de requerimientos, nivel por nivel desde el consumidor hacia arriba. El pronóstico de cada punto de consumo es lo que debe llegar ahí cada mes. Un centro de distribución despacha eso y forma o consume su stock de seguridad (una cobertura en semanas de la demanda que viene), y el despacho debe salir el tiempo de manejo antes. La producción de un CMO para el mes <i>m</i> debe fabricarse el tiempo de liberación antes (análisis de calidad y retención), aumentada según su rendimiento; sus insumos deben llegar el tiempo de producción antes todavía. Lo que necesita un sitio se reparte entre sus proveedores según sus participaciones, se adelanta según el tiempo de tránsito de cada ruta y se convierte con la lista de materiales: en el ejemplo, 1 paquete = 20 sobres, 1 sobre = 25 g de polvo, 1 t de polvo = 0,7 t de base láctea.</p>" +
+      "<p><b>Trazabilidad.</b> El plan es lineal, así que la carga de cada sitio se divide exactamente en los puntos de consumo detrás de ella y en sus clientes directos: eso es lo que muestra el sitio seleccionado en \"Qué origina la carga\".</p>" +
+      "<p><b>Capacidad por agregar.</b> Para cada sitio, las ampliaciones que lo mantienen en la meta o bajo ella todos los meses, con una revisión al año: cada una se dimensiona para el mes de mayor carga hasta la revisión siguiente (en un sitio de materia prima cuenta el mes de menos leche) y se redondea hacia arriba a dos cifras significativas.</p>" +
+      "<p><b>Tiempo.</b> La planificación avanza mes a mes durante 156 meses, así que cada tiempo adelanta el plan con exactitud, incluso en fracciones de mes. La vista muestra 36 meses y luego 10 años, cada año construido con sus 12 meses. Se conservan el promedio del año y su mes de mayor carga.</p>" +
+      "<p><b>Latitud.</b> La demanda alcanza su peak en la temporada fría local (los mercados del sur, seis meses aparte). La capacidad de leche varía con la temporada de pasto, más lejos del ecuador. El tránsito se estima por la distancia de círculo máximo: por carretera hasta 1.500 km, por mar más allá, salvo que una ruta fije el suyo.</p>" +
+      "<p><b>Límites.</b> Es un plan de requerimientos a capacidad infinita (lote a lote): muestra dónde y cuándo falta capacidad, y cuánta agregar, pero no redirige volumen ni produce por adelantado para absorber un peak. Solo hay inventario en los centros de distribución, como stock de seguridad. Hay un solo producto. Las participaciones de abastecimiento son fijas en todo el horizonte. Todas las cifras del ejemplo son ilustrativas.</p>",
+    "ft.consult": "Disponible para consultoría", "ft.touch": "contácteme", "ft.by": "por Daniel Alberto Sepulveda Estay, PhD", "ft.about": "Acerca de y cita", "ft.all": "Todos los proyectos",
+    // ---- la página Acerca de
+    "a.title": "Acerca de Tierwise", "a.sub": "ACERCA DE LA APLICACIÓN", "a.open": "Abrir el planificador", "a.eyebrow": "Acerca de la aplicación",
+    "a.lede": "Un paquete de leche en polvo fortificada en un estante de Yakarta empieza como leche en un campo de Nueva Zelanda casi tres meses antes. Tierwise convierte un pronóstico de consumo final en la capacidad que necesita cada sitio de una cadena de alimentos de seis niveles, y muestra cuándo la necesita: 36 meses en períodos mensuales y luego 10 años más en períodos anuales. Cargue su propia cadena, rastree cada déficit hasta los mercados que lo causan y dimensione la capacidad por agregar.",
+    "a.cta": "Abrir el planificador →", "a.what": "Qué hace",
+    "a.li1": "<b>Seis niveles, varios proveedores por nivel</b>Puntos de consumo, centros de distribución, CMO de envasado, CMO de dosificación final, CMO de fabricación de producto y CMO de materia prima. Cada sitio se abastece de uno o más sitios del nivel superior, por participación.",
+    "a.li2": "<b>Latitudes y temporadas</b>Los sitios van de 52°N a 38°S. La demanda alcanza su peak en la temporada fría local, con seis meses de diferencia entre hemisferios. La capacidad de leche sigue la temporada de pasto, con más fuerza lejos del ecuador.",
+    "a.li3": "<b>Tiempos de producción y de liberación</b>El tiempo de producción, la liberación de calidad (análisis y retención), el manejo en el centro de distribución y el tránsito entre sitios adelantan cada requerimiento. Una escalera de tiempos muestra con cuánta anticipación debe actuar cada nivel.",
+    "a.li4": "<b>Del déficit a la decisión</b>Un mapa de calor de cada sitio en 46 períodos, los mercados y clientes detrás de la carga de cualquier sitio, la capacidad que cada sitio debe agregar para no pasar una meta, y dos planes cualesquiera comparados lado a lado.",
+    "a.li5": "<b>Su propia cadena de suministro</b>Cargue una red desde CSV, Excel o JSON (la plantilla está a un clic), edite cada sitio, ruta y ajuste, cambie el nombre de los niveles para otro tipo de cadena y comparta el plan completo como enlace. Los archivos se quedan en su navegador.",
+    "a.li6": "<b>Apréndalo en tres niveles</b>Un tutorial guiado (básico, intermedio, avanzado) con preguntas, en inglés, español y danés.",
+    "a.how": "Cómo está construido",
+    "a.howp": "El motor es un plan de requerimientos en el tiempo, nivel por nivel desde el consumidor hacia arriba durante 156 meses. Un centro de distribución despacha lo que necesitan sus mercados y forma o consume stock de seguridad. Un CMO fabrica su producción el tiempo de liberación antes, aumentada según su rendimiento. Sus insumos deben llegar el tiempo de producción antes todavía. Las necesidades se reparten entre los proveedores por participación, se adelantan según el tiempo de tránsito de cada ruta y se convierten con la lista de materiales. Los períodos anuales se construyen con sus meses, y cada uno conserva su mes de mayor carga además de su promedio. El plan es lineal, así que la carga de cada sitio se divide exactamente en los mercados que atiende. Las pruebas verifican la cadena de la lista de materiales, los desfases de tiempo, la conservación del volumen, el stock de seguridad, las participaciones, las temporadas de ambos hemisferios, las ampliaciones y las interrupciones, la trazabilidad exacta, la capacidad por agregar, cada formato de archivo y cada traducción. Es un plan a capacidad infinita: muestra dónde falta capacidad y cuánta agregar, pero no redirige volumen ni produce por adelantado. Todo corre en su navegador.",
+    "a.author": "Autor",
+    "a.authorp": "Tierwise fue diseñado y construido por <b>Daniel Alberto Sepulveda Estay, PhD</b>, fundador de <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Trabaja en dinámica de sistemas y optimización de redes para la resiliencia de las cadenas de suministro. Es doctor de la Universidad Técnica de Dinamarca y magíster del Instituto Tecnológico de Massachusetts, y miembro del consejo de la System Dynamics Society.",
+    "a.more": "Más sobre Daniel →", "a.touch": "Contacto",
+    "a.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (versión 1.1.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.consult": "Disponible para consultoría", "a.foot": "Planificación de capacidad en varios niveles para una cadena de alimentos a través de latitudes. Todas las cifras de la red de ejemplo son ilustrativas.", "a.built": "Construido con"
+  };
+  // mensajes del motor (los nombres de los sitios y los textos citados se conservan)
+  var P = [
+    ["^Row (\\d+): unknown tier “(.*)” for (.*)\\.$", "Fila $1: nivel desconocido «$2» para $3."],
+    ["^Row (\\d+): “(.*)” is not a number \\((.*)\\)\\.$", "Fila $1: «$2» no es un número ($3)."],
+    ["^Row (\\d+): (.*) needs a capacity\\.$", "Fila $1: $2 necesita una capacidad."],
+    ["^Row (\\d+): cannot read the supplier “(.*)”\\.$", "Fila $1: no se puede leer el proveedor «$2»."],
+    ["^Row (\\d+): cannot read the expansion “(.*)” \\(write YYYY-MM:\\+amount\\)\\.$", "Fila $1: no se puede leer la ampliación «$2» (escriba AAAA-MM:+cantidad)."],
+    ["^Row (\\d+): cannot read the outage “(.*)” \\(write YYYY-MM:months:loss %\\)\\.$", "Fila $1: no se puede leer la interrupción «$2» (escriba AAAA-MM:meses:pérdida %)."],
+    ["^Row (\\d+): the site has no id\\.$", "Fila $1: el sitio no tiene id."],
+    ["^Row (\\d+): cannot read the launch month “(.*)”\\.$", "Fila $1: no se puede leer el mes de lanzamiento «$2»."],
+    ["^Setting “(.*)” must be a month from 1 to 12\\.$", "El ajuste «$1» debe ser un mes de 1 a 12."],
+    ["^Setting “(.*)”: “(.*)” is not a number\\.$", "Ajuste «$1»: «$2» no es un número."],
+    ["^Setting “(.*)” is not used\\.$", "El ajuste «$1» no se usa."],
+    ["^(.*) has no supplier\\.$", "$1 no tiene proveedor."],
+    ["^(.*) must be supplied from the tier directly above it\\.$", "$1 debe abastecerse del nivel inmediatamente superior."],
+    ["^(.*) is supplied by an unknown site\\.$", "$1 se abastece de un sitio desconocido."],
+    ["^(.*) needs a capacity of zero or more\\.$", "$1 necesita una capacidad de cero o más."],
+    ["^(.*) needs a yield between 0 and 100%\\.$", "$1 necesita un rendimiento entre 0 y 100%."],
+    ["^(.*) cannot have a negative lead time\\.$", "$1 no puede tener un tiempo de producción negativo."],
+    ["^(.*) cannot have a negative release time\\.$", "$1 no puede tener un tiempo de liberación negativo."],
+    ["^Two sites share the id (.*)\\.$", "Dos sitios comparten el id $1."],
+    ["^(.*) needs a latitude and longitude\\.$", "$1 necesita latitud y longitud."],
+    ["^The network needs at least one consumption point\\.$", "La red necesita al menos un punto de consumo."],
+    ["^(.*) needs a base demand of zero or more\\.$", "$1 necesita una demanda base de cero o más."],
+    ["^The bill of materials needs a positive (.*)\\.$", "La lista de materiales necesita un $1 positivo."],
+    ["^Unknown tier for (.*)\\.$", "Nivel desconocido para $1."],
+    ["^(.*) has no id\\.$", "$1 no tiene id."],
+    ["^The network has no sites\\.$", "La red no tiene sitios."],
+    ["^No header row with the columns id and tier was found\\.$", "No se encontró una fila de encabezado con las columnas id y tier."],
+    ["^Column “(.*)” is not used\\.$", "La columna «$1» no se usa."],
+    ["^The file has no sites\\.$", "El archivo no tiene sitios."],
+    ["^The JSON file has no list of sites\\.$", "El archivo JSON no tiene una lista de sitios."],
+    ["^The file is not valid JSON\\.$", "El archivo no es un JSON válido."],
+    ["^The spreadsheet reader is not available\\.$", "El lector de planillas no está disponible."],
+    ["^The spreadsheet could not be read\\.$", "No se pudo leer la planilla."],
+    ["^The workbook has no sheets\\.$", "El libro no tiene hojas."]
+  ];
+  root.TW_ES = { T: T, H: H, P: P };
+})(typeof self !== "undefined" ? self : this);
