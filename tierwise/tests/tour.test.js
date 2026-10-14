@@ -12,7 +12,7 @@ const first = (r) => { let b = Infinity, id = null; Object.values(r.sites).forEa
 // ---- structure
 const ids = new Set(), steps = [];
 C.LEVELS.forEach((l) => l.steps.forEach((s) => { check("unique step id " + s.id, !ids.has(s.id)); ids.add(s.id); steps.push(s); }));
-check("three levels: beginner, intermediate, advanced", C.LEVELS.map((l) => l.id).join() === "beginner,intermediate,advanced");
+check("four levels: beginner, intermediate, advanced, expert", C.LEVELS.map((l) => l.id).join() === "beginner,intermediate,advanced,expert");
 check("each level has 8–12 steps", C.LEVELS.every((l) => l.steps.length >= 8 && l.steps.length <= 12));
 steps.forEach((s) => {
   const id = (s.target.match(/^#([\w-]+)$/) || [])[1];
@@ -59,7 +59,13 @@ const CLAIMS = {
     return Math.abs(tot(rs) / tot(rb) - 1) < 0.01 && ros >= 0 && ros < rb.sites["d-ros"].firstOver - 12 && others.every((o) => o < 0 || o > ros);
   }
 };
-steps.filter((s) => s.quiz).forEach((s) => check("claim " + s.quiz.claim + " (" + s.id + ") holds", CLAIMS[s.quiz.claim] && CLAIMS[s.quiz.claim]()));
+// claims about the plan within capacity (c-…) need the solver: tests/constrained.test.js checks them by name
+const ctest = fs.readFileSync(path.join(__dirname, "constrained.test.js"), "utf8");
+steps.filter((s) => s.quiz).forEach((s) => {
+  if (/^c-/.test(s.quiz.claim)) check("claim " + s.quiz.claim + " (" + s.id + ") is checked by the constrained tests", ctest.indexOf('check("' + s.quiz.claim + ":") >= 0);
+  else check("claim " + s.quiz.claim + " (" + s.id + ") holds", CLAIMS[s.quiz.claim] && CLAIMS[s.quiz.claim]());
+});
+steps.filter((s) => s.setup && s.setup.cap).forEach((s) => check("step " + s.id + " plans within capacity with a valid rule", ["fixed", "qualified", "any"].indexOf(s.setup.cap.mode) >= 0 && s.setup.cap.hold >= 0));
 // …and what the bodies say about the numbers they quote
 {
   const fd = first(P.plan(N.build("drought"))), fb = first(rb);

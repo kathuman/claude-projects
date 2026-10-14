@@ -1,10 +1,11 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 1.1.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.0.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
-You can load your own supply chain from CSV, Excel or JSON.
+You can load your own supply chain from CSV, Excel or JSON, and plan it within capacity: what actually reaches the
+shelves when no site may exceed what it can make.
 
 ## The example
 
@@ -28,7 +29,7 @@ illustrative.
 | Phase | Content | Version |
 |---|---|---|
 | 1 | Explain and share: tracing, capacity to add, comparison, links and files, your own supply chain, tutorial, Spanish and Danish | done, 1.1.0 |
-| 2 | Constrained plan: finite-capacity re-routing and pre-building (LP in the browser), unmet demand and fill rate | 2.0 |
+| 2 | Within capacity: a linear program (HiGHS in the browser) that builds stock ahead, re-sources and reports unmet demand, fill rates and bottlenecks | done, 2.0.0 |
 | 3 | Capacity investment: candidate expansions and new CMOs with build and qualification times, capex, an optimiser | 2.1 |
 | 4 | Uncertainty: forecast ranges, variable yields and lead times, milk-season variance, probability of shortfall | 3.0 |
 | 5 | Products and food rules: product families sharing lines, changeovers, registrations, shelf life, landed cost | 3.1 |
@@ -67,10 +68,84 @@ The yearly periods are built from their 12 months. Each keeps its average and it
 shortfall is never averaged away.
 
 **Limits.**
-- It is an infinite-capacity, lot-for-lot plan. It shows where and when capacity is short and how much to add, but it
-  does not re-route volume or pre-build stock. That is phase 2.
+- The requirement plan assumes unlimited capacity (lot-for-lot). It shows where and when capacity is short and how
+  much to add. The plan within capacity, below, shows what happens instead.
 - Inventory is held only at warehouses.
 - There is one product, and sourcing shares are fixed.
+
+## Within capacity (`src/constrained.js`, `src/solve-worker.js`)
+
+**Capacity · Within capacity** solves the whole 13-year horizon again as one linear program, month by month, with no
+site above its capacity.
+
+**What the program decides:**
+- what each site makes or ships;
+- which lane carries it;
+- how much stock is built ahead of a peak;
+- what demand cannot be supplied.
+
+**Units.** Every quantity is in pack-equivalents, so the bill of materials becomes a factor of 1 and only yields change
+quantities.
+
+**Stock:**
+- finished stock is held at every site;
+- input stock is held at every CMO that buys;
+- each consumption point has a small buffer;
+- stock may be held at most the chosen number of months (0–12; CMOs keep at least one month, warehouses at least two).
+
+The buffers mean fractional lead, release and transit times never force exact month-by-month matches, which would make
+shipments oscillate.
+
+**Sourcing** has three modes:
+- keep the planned shares;
+- re-source among the existing (qualified) lanes, at a cost per pack moved;
+- open every lane from the tier above.
+
+**Objective**, in pack-equivalents (×1,000 for unmet demand, scaled by the market's priority of 1–3):
+
+| Item | Cost |
+|---|---|
+| Unmet demand | 1,000 |
+| Safety stock below target | 1 a month |
+| Re-sourcing | 0.5 |
+| Holding stock | 0.02 a month |
+| Transport | 0.0005 a transit day |
+
+Safety stock is cheap enough that a long crunch draws on it rather than losing sales.
+
+**Horizon.** The model runs over a warm-up before the first month and a run-out after the last. The warm-up has the
+first month's demand and fills the slowest pipeline, step by step. The run-out has the last month's demand and weighs
+less. Together they keep the edges of the horizon from being distorted. In the warm-up, a site makes at most 110% of
+what the first month needs, so the plan does not start with stock built in advance.
+
+**Solving.**
+- HiGHS 1.15.3, compiled to WebAssembly, runs in a Web Worker and is loaded from jsDelivr on first use.
+- It uses the interior-point method without crossover. If that fails, it falls back to crossover, then the dual simplex.
+- The example (about 20,000 constraints) solves in 3–8 s.
+- Results are cached by network and options.
+
+**What the page shows within capacity:**
+- **Headline and KPIs:** fill rate, demand not supplied, first unmet month, markets short, the first bottleneck, and the
+  volume re-sourced.
+- **What reaches the shelves:** delivered against unmet demand per period, per-market fill rates, and the lanes off their
+  planned share.
+- **Heatmap:** bottlenecks in amber. No cell is ever over capacity.
+- **Each site:** its load, what unlimited capacity would need (dashed), its stock, and its lanes' actual shares against
+  the plan.
+- **Plan CSV:** the within-capacity columns.
+
+**Example results:**
+
+| Configuration | Fill rate | First unmet demand |
+|---|---|---|
+| Fixed shares, no stock ahead | 88.1% | |
+| Fixed shares, 6 months of stock ahead | 88.7% | |
+| Qualified lanes | 90.1% | December 2032 |
+| Any supplier | 90.5% | |
+| Expansion programme | 99.4% | |
+
+With qualified lanes, the first bottleneck (Valencia Dosing) comes in February 2030, but the first unmet demand only in
+December 2032. Within capacity, the New Zealand drought costs nothing: stock built ahead and re-sourcing absorb it.
 
 ## Your own supply chain (`src/io.js`)
 
@@ -130,13 +205,14 @@ Every chart has a hover tooltip, and most have a table view.
 
 ## Tutorial (`tour.js`, `tour-content*.js`)
 
-The **Tutorial** button opens three levels:
+The **Tutorial** button opens four levels:
 
 | Level | Steps | Topics |
 |---|---|---|
 | Beginner | 8 | read the plan |
 | Intermediate | 9 | time and tiers |
 | Advanced | 10 | from plan to decision |
+| Expert | 8 | planning within capacity |
 
 Each step sets up the page, highlights what it is about and quotes live numbers. Some steps ask a question.
 `?tour=advanced&step=3` opens a step directly.
@@ -160,10 +236,12 @@ Each step sets up the page, highlights what it is about and quotes live numbers.
 node tierwise/tests/plan.test.js   # 61: the engine, tracing, capacity to add, custom tiers
 node tierwise/tests/io.test.js     # 34: CSV / Excel / JSON round trips, decimal commas, errors with row numbers
 node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
-node tierwise/tests/tour.test.js   # 268: every step in three languages, and every claim the tutorial makes
+node tierwise/tests/tour.test.js   # 353: every step in three languages, and every claim the tutorial makes
+cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
+                                   # 41: the plan within capacity on chains with known answers, and the example
 ```
 
-CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 59 checks across
+CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 75 checks across
 the flows, file loading and links, and every tutorial step in three languages. It also scans the Spanish and Danish
 pages for leftover English.
 

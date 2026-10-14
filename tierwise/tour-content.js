@@ -7,7 +7,8 @@
   else root.TWTourContent = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var TOKENS = ["first", "firstSite", "y1", "y13", "nShort", "chain", "chainMonths", "market", "site", "selPeak", "selFirst", "reqFirst", "reqTotal", "reqN", "target", "period", "topMarket", "topShare", "cmpFirst", "cmpName", "cmpShort"];
+  var TOKENS = ["first", "firstSite", "y1", "y13", "nShort", "chain", "chainMonths", "market", "site", "selPeak", "selFirst", "reqFirst", "reqTotal", "reqN", "target", "period", "topMarket", "topShare", "cmpFirst", "cmpName", "cmpShort",
+    "fill", "unmetT", "firstUnmet", "firstUnmetMkt", "bottleneck", "bottleneckWhen", "rerouted", "mktFill"];
   var LEVELS = [
     { id: "beginner", title: "Beginner", minutes: 7, blurb: "Read the plan: the six tiers, the map by latitude, the capacity heatmap, one site's plan and the forecast that drives it all.", steps: [
       { id: "b-welcome", title: "What Tierwise does", target: "#headline", setup: { scenario: "base" },
@@ -83,7 +84,31 @@
       { id: "a-share", title: "Save and share", target: "#shareBtn", setup: { scenario: "base" },
         body: "<b>Copy share link</b> puts the whole network, with your edits, into a link: anyone who opens it sees the same plan. <b>Save as JSON</b> keeps it as a file, and <b>Plan as CSV</b> exports every site's load and capacity in every period for your own analysis." },
       { id: "a-done", title: "You are planning", target: "#tourBtn", setup: { scenario: "base" },
-        body: "You can trace a shortfall to its markets, size the capacity to add, compare plans, and load and share your own supply chain. That is the whole tutorial. The <b>How Tierwise plans</b> section at the foot of the page has the method and its limits." }
+        body: "You can trace a shortfall to its markets, size the capacity to add, compare plans, and load and share your own supply chain. The <b>expert</b> level plans within capacity: what actually reaches the shelves when no site can exceed what it can make." }
+    ] },
+    { id: "expert", title: "Expert", minutes: 10, blurb: "Planning within capacity: what reaches the shelves when no site may exceed its capacity, bottlenecks, building stock ahead, sourcing flexibility and buffers.", steps: [
+      { id: "x-cap", title: "Plan within capacity", target: "#capCtl", setup: { scenario: "base", cap: { mode: "qualified", hold: 6 } },
+        body: "So far every plan assumed unlimited capacity, and showed where it runs out. <b>Within capacity</b> solves the 13 years again, as one linear program, with no site above what it can make. The chain then serves <b>{{fill}}</b> of demand; <b>{{unmetT}}</b> cannot be supplied. The first demand left unmet is in <b>{{firstUnmet}}</b>, at {{firstUnmetMkt}}: years after the first shortfall of the unlimited plan ({{first}}), because stock and other suppliers absorb the first peaks." },
+      { id: "x-service", title: "What reaches the shelves", target: "#servicePanel", setup: { scenario: "base", cap: { mode: "qualified", hold: 6 } },
+        body: "Blue is what is delivered, red what cannot be supplied, period by period; the table gives each consumption point's fill rate and its first month short. When capacity is short, every market counts the same unless you give one a priority (1–3) in the editor." },
+      { id: "x-bottleneck", title: "Bottlenecks", target: "#heatPanel", setup: { scenario: "base", cap: { mode: "qualified", hold: 6 } },
+        body: "Within capacity, no cell can be red: a site that would be over capacity runs at it instead, and the heatmap marks it amber, <b>at capacity</b>. The first bottleneck is <b>{{bottleneck}}</b>, from {{bottleneckWhen}}. The chain's output is set by its bottlenecks; capacity added anywhere else serves nothing more." },
+      { id: "x-prebuild", title: "Building stock ahead", target: "#capOpts", setup: { scenario: "base", cap: { mode: "fixed", hold: 0 } },
+        body: "Here sourcing shares are fixed and no stock may be built ahead of a peak (only a month's working stock). The chain serves {{fill}}.",
+        quiz: { q: "Allow stock to be built up to 6 months ahead. What happens?", options: ["More demand is served, and the first unmet month comes later", "Nothing: capacity is capacity", "Less is served, because building stock uses capacity"], answer: 0, claim: "c-prebuild",
+          explain: "Spare capacity in the quiet months is made into stock that covers the peak months, so seasonal shortfalls shrink and come later. Food sets the limit: stock must stay within its shelf life, which is why the hold is capped." } },
+      { id: "x-flex", title: "Sourcing flexibility", target: "#capOpts", setup: { scenario: "base", cap: { mode: "any", hold: 6 } },
+        body: "Now any site of the tier above may supply any site below it, not only the qualified lanes. The chain serves <b>{{fill}}</b>, and the first unmet demand moves to <b>{{firstUnmet}}</b>; {{rerouted}} of the volume moves off its planned share.",
+        quiz: { q: "Which sourcing rule serves the most demand?", options: ["Any site of the tier above", "Re-sourcing among qualified lanes", "Fixed shares"], answer: 0, claim: "c-flex",
+          explain: "More lanes give the plan more ways around a bottleneck, so service never falls as freedom grows. But in food every new lane is a supplier to qualify: audits, trials and registrations take 12–18 months, so flexibility has to be built before it is needed." } },
+      { id: "x-drought", title: "Buffers against a dry year", target: "#servicePanel", setup: { scenario: "drought", cap: { mode: "qualified", hold: 6 }, select: "r-wai" },
+        body: "The dry season in New Zealand again, now within capacity. Waikato and Gippsland lose 35% of their milk for a year.",
+        quiz: { q: "Within capacity, how much demand does the dry year cost in years 1–3?", options: ["None: stock built ahead and re-sourcing absorb it", "About a third of Asia's demand", "All demand supplied from New Zealand"], answer: 0, claim: "c-drought",
+          explain: "The requirement plan showed the co-ops short at once, but the chain still has room elsewhere in those years: stock built before the dry months and milk from other suppliers cover it. The same drought in the 2030s, when the chain is already at capacity, would cost real sales." } },
+      { id: "x-expand", title: "Capacity where it binds", target: "#kpis", setup: { scenario: "expand", cap: { mode: "qualified", hold: 6 } },
+        body: "The expansion programme, within capacity: the fill rate rises to <b>{{fill}}</b>. Use <b>Capacity to add</b> to find what remains, and compare plans to see what each expansion buys in service." },
+      { id: "x-done", title: "You are planning within capacity", target: "#tourBtn", setup: { scenario: "base" },
+        body: "You can plan within capacity, read what reaches the shelves, find the bottlenecks and weigh stock ahead and sourcing flexibility. That is the whole tutorial. The <b>How Tierwise plans</b> section at the foot of the page has the method and its limits." }
     ] }
   ];
   return { TOKENS: TOKENS, LEVELS: LEVELS };

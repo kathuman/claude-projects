@@ -46,9 +46,12 @@
     var st = level.steps[k];
     var prog = load(); prog[level.id] = { step: k, done: (prog[level.id] || {}).done || false }; save(prog);
     idx = k;
-    APP.setup(st.setup || {});
-    show(st);
+    // a step that plans within capacity waits for the solve (a few seconds) before it quotes its numbers
+    var mine = ++seq, done = APP.setup(st.setup || {});
+    if (st.setup && st.setup.cap) show(Object.assign({}, st, { body: "<span class='spin'></span> " + T("Solving the plan within capacity…"), quiz: null }));
+    Promise.resolve(done).then(function () { if (mine === seq && level) show(st); });
   }
+  var seq = 0;
   function fill(text) {
     var V = APP.tokens();
     return String(text).replace(/\{\{(\w+)\}\}/g, function (m, t) { return V[t] != null ? V[t] : m; });

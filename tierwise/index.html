@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v1.1.0</span>
+    <span class="ver" id="ver">v2.0.0</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -51,6 +51,29 @@
       <button type="button" data-v="peak" class="active" data-i18n="c.peak">Peak month</button>
       <button type="button" data-v="avg" data-i18n="c.avg">Year average</button>
     </div>
+  </div>
+  <div class="ctl" id="capCtl"><span data-i18n="c.cap">Capacity</span>
+    <div class="seg" id="capMode" role="group">
+      <button type="button" data-v="plan" class="active" data-i18n="c.unl">Unlimited</button>
+      <button type="button" data-v="cap" data-i18n="c.within">Within capacity</button>
+    </div>
+  </div>
+  <div class="ctl cap-opts" id="capOpts" hidden><span data-i18n="c.capOpts">Planning within capacity</span>
+    <div class="row">
+      <select class="choice" id="csrc" aria-label="Sourcing" data-i18n-attr="aria-label=c.csrcAria">
+        <option value="fixed" data-i18n="c.fixed">Fixed sourcing shares</option>
+        <option value="qualified" selected data-i18n="c.qual">Re-source among qualified lanes</option>
+        <option value="any" data-i18n="c.any">Any site of the tier above</option>
+      </select>
+      <select class="choice" id="hold" aria-label="Stock ahead" data-i18n-attr="aria-label=c.holdAria">
+        <option value="0" data-i18n="c.h0">No stock built ahead</option>
+        <option value="1" data-i18n="c.h1">Stock up to 1 month ahead</option>
+        <option value="3" data-i18n="c.h3">Stock up to 3 months ahead</option>
+        <option value="6" selected data-i18n="c.h6">Stock up to 6 months ahead</option>
+        <option value="12" data-i18n="c.h12">Stock up to 12 months ahead</option>
+      </select>
+    </div>
+    <span class="solve-status" id="solveStatus" aria-live="polite"></span>
   </div>
   <div class="ctl" id="compareCtl"><span data-i18n="c.compare">Compare with</span>
     <div class="row"><select class="choice" id="compareSel"></select><button class="btn small" id="pin" type="button" data-i18n="c.pin">Pin this plan</button></div>
@@ -96,6 +119,17 @@
   <p class="headline" id="headline"></p>
 
   <div class="kpis" id="kpis"></div>
+
+  <section class="panel" id="servicePanel" hidden>
+    <h2 data-i18n="sv.h">What reaches the shelves · within capacity</h2>
+    <p class="panel-note" data-i18n="sv.note">The plan within capacity: no site makes or ships more than it can, so some demand may go unsupplied. Sites build stock ahead of a peak (up to the limit you set), re-source to suppliers with room, and draw safety stock in a crunch; what still cannot be made is lost. Every consumption point counts the same unless you give it a priority in the editor.</p>
+    <div class="chart" id="serviceChart"></div>
+    <div class="legend" id="serviceLegend"></div>
+    <div class="table-scroll" id="serviceTable" style="margin-top:10px"></div>
+    <div id="serviceLanes"></div>
+    <button class="table-btn" type="button" data-table="svc" data-i18n="t.showFill">Show fill rates as a table</button>
+    <div class="data-table" id="table-svc" hidden></div>
+  </section>
 
   <section class="panel" id="outlookPanel">
     <h2 data-i18n="o.h">Tier outlook</h2>
@@ -185,19 +219,23 @@
       <p><b>Capacity to add.</b> For each site, the additions that keep it at or under the target in every month, reviewed once a year: each is sized for the busiest month until the next review (for a raw-ingredient site, the leanest milk month counts) and rounded up to two significant digits.</p>
       <p><b>Time.</b> Planning runs month by month over 156 months, so every lead time shifts the plan exactly, including fractions of a month. The view shows 36 months, then 10 years, each year built from its own 12 months. A year's average and its busiest month are both kept.</p>
       <p><b>Latitude.</b> Demand peaks in the local cold season (southern markets six months apart). Raw-milk capacity swings with the grass season, more strongly away from the equator. Transit is estimated from great-circle distance: by road within 1,500 km, by sea beyond, unless a lane sets its own.</p>
-      <p><b>Limits.</b> This is an infinite-capacity requirement plan (lot-for-lot): it shows where and when capacity is short, and how much to add, but it does not re-route volume or pre-build stock to absorb a peak. Inventory is held only at warehouses, as safety stock. There is one product. Sourcing shares are fixed over the horizon. All figures in the example are illustrative.</p>
+      <p><b>Limits.</b> The requirement plan assumes unlimited capacity (lot-for-lot): it shows where and when capacity is short, and how much to add. Inventory is held only at warehouses, as safety stock. There is one product. Sourcing shares are fixed over the horizon. All figures in the example are illustrative.</p>
+    </div>
+    <div data-i18n="x.cap">
+      <p><b>Within capacity.</b> Switched on, a linear program solves the whole 13-year horizon at once, month by month, with no site above its capacity. It decides what each site makes or ships, which lane carries it, how much stock to build ahead of a peak (stock may be held up to the months you choose; warehouses keep at least two months for safety stock) and what demand cannot be supplied. Unmet demand costs far more than anything else; then safety stock below its target, re-sourcing away from the planned shares, holding stock and transport. Sourcing can keep the planned shares, re-source among the existing (qualified) lanes, or open every lane from the tier above. The model runs over a warm-up before the first month and a run-out after the last, so the edges of the horizon are not distorted. It is solved by <a href="https://highs.dev/" target="_blank" rel="noopener">HiGHS</a> in your browser, in a few seconds.</p>
     </div>
   </details>
 
   <footer class="foot">
     <span class="consult"><span data-i18n="ft.consult">Available for consulting</span> — <a href="https://github.com/kathuman" target="_blank" rel="noopener" data-i18n="ft.touch">get in touch</a></span>
-    Tierwise v<span id="ver2">1.1.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.0.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
 <script src="src/plan.js"></script>
 <script src="src/network.js"></script>
 <script src="src/io.js"></script>
+<script src="src/constrained.js"></script>
 <script src="app.js"></script>
 <script src="tour-content.js"></script>
 <script src="tour-content-es.js"></script>

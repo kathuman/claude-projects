@@ -277,3 +277,14 @@ details.fmt ul{padding-left:18px; margin:6px 0;}
 .ctl .row{flex-wrap:wrap;}
 #compareSel{max-width:100%; min-width:0;}
 @media (max-width:560px){ #compareCtl{min-width:0; max-width:100%;} #compareSel{width:100%;} }
+
+/* ---- 2.0: planning within capacity */
+.cap-opts{min-width:260px;}
+.cap-opts .row select{max-width:240px;}
+.solve-status{font-family:var(--mono); font-size:11px; color:var(--tele); min-height:14px; display:flex; align-items:center; gap:6px;}
+.solve-status .bad{color:#ff8a89;}
+.spin{display:inline-block; width:10px; height:10px; border:2px solid var(--line); border-top-color:var(--tele); border-radius:50%; animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion: reduce){ .spin{animation:none;} }
+body.cap-mode .brand .ver{border-color:var(--tele); color:var(--tele);}
+#servicePanel .outlook td.bad{color:#ff8a89;}

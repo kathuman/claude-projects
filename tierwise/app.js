@@ -1,10 +1,11 @@
 // Tierwise — the page: controls, loading and sharing supply chains, the latitude map, the capacity heatmap (or its
 // change against a comparison), the selected site with what drives its load and the capacity it must add, the tier,
-// lead-time and forecast views, and the network editor. Planning is in src/plan.js (TWPlan), files in src/io.js (TWIO),
+// lead-time and forecast views, the plan within capacity (solved by HiGHS in a worker: src/constrained.js,
+// src/solve-worker.js) and the network editor. Planning is in src/plan.js (TWPlan), files in src/io.js (TWIO),
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "1.1.0";
+  var VERSION = "2.0.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -23,9 +24,15 @@
     { max: 0.2, c: "#ec9a7c", l: "+5 … +20" }, { max: Infinity, c: "#d9483b", l: "≥ +20" }
   ];
   var NA = "#16324f";
+  // within capacity no site exceeds 100%: the last bin marks a site running at capacity (a bottleneck)
+  var CBINS = [
+    { max: 0.6, c: "#1d4a78", l: "< 60%" }, { max: 0.8, c: "#2f6aa8", l: "60–80%" }, { max: 0.9, c: "#5b93cc", l: "80–90%" },
+    { max: 0.995, c: "#a7c2de", l: "90–99%" }, { max: Infinity, c: "#d9a43a", l: "at capacity" }
+  ];
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(function (m) { return T(m); });
   var state = { scenario: "base", net: null, res: null, sel: "p-ham", market: "m-jkt", colorBy: "peak", tier: "product", land: null, pos: null, ext: null,
-    period: null, target: 0.9, compare: null, compareKey: "", heatMode: "plan", pinned: null, custom: null };
+    period: null, target: 0.9, compare: null, compareKey: "", heatMode: "plan", pinned: null, custom: null,
+    mode: "plan", csrc: "qualified", hold: 6, cres: null, ckey: "", solving: false, cache: [], solveErr: null };
 
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, parent) {
@@ -80,6 +87,10 @@
     return out;
   }
   function sumR(s, a, b) { var t = 0; for (var i = a; i < b; i++) t += s[i]; return t; }
+  // what the views show: the requirement plan, or the plan within capacity once it is solved
+  function CAP() { return state.mode === "cap" && !!state.cres; }
+  function VR() { return CAP() ? state.cres : state.res; }
+  function cbin(u) { for (var i = 0; i < CBINS.length; i++) if (u <= CBINS[i].max) return CBINS[i]; return CBINS[CBINS.length - 1]; }
 
   // ---- the shared time axis: 36 monthly columns of one unit, then 10 yearly columns of two units
   function timeline(x0, x1) {
@@ -138,7 +149,23 @@
     if (!sitesOf(state.tier).length) state.tier = (state.res.tiers.slice(1).filter(function (t) { return sitesOf(t.id).length; })[0] || { id: "warehouse" }).id;
     if (state.period != null && state.period >= state.res.periods.length) state.period = null;
     if (!state.pos) { state.ext = extent(); state.pos = layout(); }
-    renderHeadline(); renderKpis(); renderOutlook(); renderMap(); renderSite(); renderHeat(); renderNeeds(); renderTier(); renderLadder(); renderMultiples();
+    if (state.mode === "cap") {
+      var key = solveKey();
+      if (key !== state.ckey) {
+        var hit = cached(key);
+        if (hit) { state.cres = hit; state.ckey = key; state.solving = false; }
+        else {
+          // while it solves, the last plan stays on screen if it is of the same sites; otherwise the requirement plan
+          var same = state.cres && state.net.sites.every(function (x) { return !!state.cres.sites[x.id]; }) && Object.keys(state.cres.sites).length === state.net.sites.length;
+          if (!same) state.cres = null;
+          requestSolve(key);
+        }
+      }
+    }
+    renderViews();
+  }
+  function renderViews() {
+    renderHeadline(); renderKpis(); renderOutlook(); renderMap(); renderSite(); renderHeat(); renderNeeds(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
   }
   function renderSelection() { renderMap(); renderSite(); renderHeat(); }
 
@@ -165,8 +192,21 @@
       h += T("The first site to run short is <b>{site}</b> ({tier}) in <b>{when}</b>.", { site: esc(nm(f.site)), tier: tierOne(f.site.tier), when: monthLabel(f.m) }) + " ";
       h += over3 === 0 ? T("Nothing runs short within the 3-year monthly window.") : over3 === 1 ? T("<b>1 site</b> runs short within the 3-year monthly window.") : T("<b>{n} sites</b> run short within the 3-year monthly window.", { n: over3 });
     }
-    if (state.compare) h += " " + compareLine();
+    if (CAP()) {
+      var c = state.cres, fm = firstUnmetMarket();
+      h = T("Consumption grows from <b>{a}</b> in the first year to <b>{b}</b> in the last.", { a: fq(y1) + " " + unit, b: fq(y13) }) + " " +
+        T("Within capacity, the chain serves <b>{fill}</b> of demand over the 13 years; <b>{u}</b> cannot be supplied.", { fill: pctFine(c.fill), u: fu(c.unmet, unit) }) + " " +
+        (fm ? T("The first demand left unmet is in <b>{when}</b>, at {m}.", { when: monthLabel(fm.m), m: esc(nm(fm.site)) }) : "<b>" + T("Every pack is delivered.") + "</b>");
+      var bn = firstBinding(); if (bn) h += " " + T("The first site to run at capacity is <b>{s}</b>, in {when}.", { s: esc(nm(bn.site)), when: monthLabel(bn.m) });
+    } else if (state.compare) h += " " + compareLine();
     $("headline").innerHTML = h;
+  }
+  function pctFine(u) { return u >= 0.9995 && u < 1 ? fx(u * 100, 2) + "%" : fx(u * 100, 1) + "%"; }
+  function firstUnmetMarket() {
+    var best = null; state.net.sites.forEach(function (s) { if (s.tier !== "market") return; var o = state.cres.sites[s.id]; if (o && o.firstUnmet >= 0 && (!best || o.firstUnmet < best.m)) best = { m: o.firstUnmet, site: s }; }); return best;
+  }
+  function firstBinding() {
+    var best = null; state.net.sites.forEach(function (s) { if (s.tier === "market") return; var o = state.cres.sites[s.id]; if (o && o.firstBinding >= 0 && (!best || o.firstBinding < best.m)) best = { m: o.firstBinding, site: s }; }); return best;
   }
   function compareLine() {
     var c = state.compare, fa = firstOverall(), fb = firstOverall(c.res, c.net);
@@ -175,6 +215,7 @@
     return "<span class='cmp-note'>" + T("Against <b>{name}</b>: {what} ({a} vs {b}); {n} sites short at some point vs {m}.", {
       name: esc(c.label), what: w, a: fa ? monthLabel(fa.m) : T("never"), b: fb ? monthLabel(fb.m) : T("never"), n: overCount(state.res, state.net), m: overCount(c.res, c.net) }) + "</span>";
   }
+  function C_pe(tier) { return window.TWConstrained ? window.TWConstrained.packEq(state.net)[tier] : 1; }
   function renderKpis() {
     var f = firstOverall(), y1 = demandTotal(0, 12), y13 = demandTotal(P.MONTHS - 12, P.MONTHS), unit = tierUnit("market");
     var nonM = state.net.sites.filter(function (s) { return s.tier !== "market"; }).length, over = overCount(state.res, state.net);
@@ -186,7 +227,7 @@
     });
     var longest = null;
     Object.keys(state.res.leadChain).forEach(function (id) { var c = state.res.leadChain[id]; if (!longest || c.total > longest.total) longest = { id: id, total: c.total }; });
-    var tiles = [
+    var tiles; tiles = [
       { l: T("Consumption, year 1"), v: fq(y1) + " " + unit, s: T("{n} a month on average", { n: fq(y1 / 12) }) },
       { l: T("Consumption, year 13"), v: fq(y13) + " " + unit, s: T("×{x} on year 1", { x: y1 > 0 ? fx(y13 / y1, 2) : "–" }) },
       { l: T("First shortfall"), v: f ? monthLabel(f.m) : T("None"), s: f ? nm(f.site) : T("within 13 years"), st: f ? (f.m < P.MONTHLY ? "critical" : "warning") : "good" },
@@ -194,7 +235,18 @@
       { l: T("Tightest tier, year 1"), v: tight ? pct(tight.u) : "–", s: tight ? tierName(tight.t.id) : "", st: tight && tight.u > 1 ? "critical" : tight && tight.u >= 0.9 ? "warning" : "" },
       { l: T("Longest chain"), v: longest ? T("{n} days", { n: Math.round(longest.total) }) : "–", s: longest ? T("raw ingredient to shelf, {m}", { m: nm(byId(longest.id)) }) : "" }
     ];
-    if (state.compare) {
+    if (CAP()) {
+      var cr = state.cres, fm = firstUnmetMarket(), bn = firstBinding(), mk = sitesOf("market"), shortM = mk.filter(function (s) { return cr.sites[s.id].fill < 0.999; }).length, peakStock = 0, unitM = tierUnit("market");
+      state.net.sites.forEach(function (s) { if (s.tier === "market" || s.tier === "warehouse") return; var o = cr.sites[s.id]; for (var m = 0; m < P.MONTHS; m++) peakStock = Math.max(peakStock, o.stock[m] * C_pe(s.tier)); });
+      tiles = [
+        { l: T("Fill rate, 13 years"), v: pctFine(cr.fill), s: T("of demand delivered within capacity"), st: cr.fill >= 0.995 ? "good" : cr.fill >= 0.95 ? "warning" : "critical" },
+        { l: T("Demand not supplied"), v: fq(cr.unmet) + " " + unitM, s: T("{p} of the 13 years' demand", { p: pctFine(1 - cr.fill) }), st: cr.unmet > 0.5 ? "warning" : "good" },
+        { l: T("First unmet demand"), v: fm ? monthLabel(fm.m) : T("None"), s: fm ? nm(fm.site) : T("within 13 years"), st: fm ? (fm.m < P.MONTHLY ? "critical" : "warning") : "good" },
+        { l: T("Markets short at some point"), v: T("{n} of {m}", { n: shortM, m: mk.length }), s: T("below 99.9% served"), st: shortM ? "warning" : "good" },
+        { l: T("First bottleneck"), v: bn ? monthLabel(bn.m) : T("None"), s: bn ? nm(bn.site) : T("no site at capacity") },
+        { l: T("Volume re-sourced"), v: pctFine(cr.rerouted), s: T("of lane volume off its planned share") + " · " + T("stock ahead up to {n}", { n: fq(peakStock) + " " + unitM }) }
+      ];
+    } else if (state.compare) {
       var c = state.compare, fb = firstOverall(c.res, c.net), cy13 = demandTotal(P.MONTHS - 12, P.MONTHS, c.res, c.net);
       tiles[1].c = T("comparison: {v}", { v: fq(cy13) });
       tiles[2].c = T("comparison: {v}", { v: fb ? monthLabel(fb.m) : T("None") });
@@ -206,7 +258,7 @@
   }
   function renderOutlook() {
     var h = "<thead><tr><th style='text-align:left'>" + T("Tier") + "</th><th>" + T("Unit") + "</th><th>" + T("Load, year 1<br>(a month)") + "</th><th>" + T("Capacity, year 1<br>(a month)") + "</th><th>" + T("Use, year 1") +
-      "</th><th>" + T("Busiest month,<br>months 1–36") + "</th><th>" + T("Busiest month,<br>years 4–13") + "</th><th>" + T("Load, year 13<br>(a month)") + "</th><th style='text-align:left'>" + T("First short") + "</th></tr></thead><tbody>";
+      "</th><th>" + T("Busiest month,<br>months 1–36") + "</th><th>" + T("Busiest month,<br>years 4–13") + "</th><th>" + T("Load, year 13<br>(a month)") + "</th><th style='text-align:left'>" + (CAP() ? T("First at capacity") : T("First short")) + "</th></tr></thead><tbody>";
     state.res.tiers.forEach(function (t) {
       var sites = sitesOf(t.id), head = "<tr><th><i class='swatch' style='background:" + TCOL[t.id] + "'></i>" + esc(tierName(t.id)) + " (" + sites.length + ")</th><td>" + esc(tierUnit(t.id)) + "</td>";
       if (t.id === "market") {
@@ -216,14 +268,15 @@
       }
       var L1 = 0, C1 = 0, L13 = 0, pk1 = { u: 0 }, pk2 = { u: 0 }, first = null;
       sites.forEach(function (s) {
-        var r = state.res.sites[s.id];
+        var r = VR().sites[s.id];
         for (var m = 0; m < P.MONTHS; m++) {
           if (m < 12) { L1 += r.load[m] / 12; C1 += r.capacity[m] / 12; }
           if (m >= P.MONTHS - 12) L13 += r.load[m] / 12;
           var u = r.util[m], tgt = m < P.MONTHLY ? pk1 : pk2;
           if (u > tgt.u) { tgt.u = u; tgt.m = m; tgt.s = s; }
         }
-        if (r.firstOver >= 0 && (!first || r.firstOver < first.m)) first = { m: r.firstOver, s: s };
+        var fo = CAP() ? r.firstBinding : r.firstOver;
+        if (fo >= 0 && (!first || fo < first.m)) first = { m: fo, s: s };
       });
       var u1 = C1 > 0 ? L1 / C1 : 0;
       h += head + "<td>" + fq(L1) + "</td><td>" + fq(C1) + "</td><td class='" + cls(u1) + "'>" + pct(u1) + "</td>" +
@@ -295,9 +348,11 @@
     var maxD = 0; sitesOf("market").forEach(function (s) { maxD = Math.max(maxD, state.res.sites[s.id].periods[0].value); });
     var order = state.net.sites.slice().sort(function (a, b) { return (a.id === sel) - (b.id === sel); });
     order.forEach(function (s) {
-      var p = state.pos[s.id], r = state.res.sites[s.id], g = el("g", { "class": "node" + (s.id === sel ? " sel" : ""), tabindex: 0, role: "button", "aria-label": nm(s) }, svg);
+      var p = state.pos[s.id], r = VR().sites[s.id], g = el("g", { "class": "node" + (s.id === sel ? " sel" : ""), tabindex: 0, role: "button", "aria-label": nm(s) }, svg);
       var rad = s.tier === "market" ? 5 + 5 * Math.sqrt(maxD > 0 ? r.periods[0].value / maxD : 0) : 6;
-      if (s.tier !== "market" && r.peakUtil > 0.9) el("circle", { cx: p.x, cy: p.y, r: rad + 4, "class": "halo", stroke: r.peakUtil > 1 + 1e-9 ? "var(--bad)" : "var(--warn)" }, g);
+      if (CAP()) {
+        if (s.tier === "market" ? r.fill < 0.999 : r.firstBinding >= 0) el("circle", { cx: p.x, cy: p.y, r: rad + 4, "class": "halo", stroke: s.tier === "market" ? "var(--bad)" : "var(--warn)" }, g);
+      } else if (s.tier !== "market" && r.peakUtil > 0.9) el("circle", { cx: p.x, cy: p.y, r: rad + 4, "class": "halo", stroke: r.peakUtil > 1 + 1e-9 ? "var(--bad)" : "var(--warn)" }, g);
       el("circle", { cx: p.x, cy: p.y, r: rad, "class": "core", fill: TCOL[s.tier] }, g);
       el("circle", { cx: p.x, cy: p.y, r: rad + 8, fill: "transparent" }, g);
       if (related[s.id]) {
@@ -307,7 +362,8 @@
       }
       g.addEventListener("mousemove", function (ev) {
         var h = "<b>" + esc(nm(s)) + "</b>" + row(esc(tierOne(s.tier)), "") + row(esc(country(s)), latLabel(s.lat));
-        if (s.tier === "market") h += row(T("Demand, month 1"), fu(r.periods[0].value, unitOf(s)));
+        if (s.tier === "market") { h += row(T("Demand, month 1"), fu(r.periods[0].value, unitOf(s))); if (CAP()) h += row(T("Fill rate"), pctFine(r.fill)); }
+        else if (CAP()) h += row(T("Busiest month"), pct(r.peakUtil)) + row(T("First at capacity"), r.firstBinding >= 0 ? monthLabel(r.firstBinding) : T("never"));
         else h += row(T("Busiest month"), pct(r.peakUtil)) + row(T("First short"), r.firstOver >= 0 ? monthLabel(r.firstOver) : T("never"));
         tip.show(ev, h);
       });
@@ -317,7 +373,8 @@
     });
     put(wrap, svg);
     $("mapLegend").innerHTML = state.res.tiers.map(function (t) { return "<span><i style='background:" + TCOL[t.id] + "'></i>" + esc(tierName(t.id)) + "</span>"; }).join("") +
-      "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("Above 90% at peak") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Short at some point") + "</span>";
+      (CAP() ? "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("At capacity at some point") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Demand not fully met") + "</span>"
+        : "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("Above 90% at peak") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Short at some point") + "</span>");
   }
   function select(id, period) {
     state.sel = id; state.period = period != null ? period : null;
@@ -333,7 +390,7 @@
     var best = 0; r.periods.forEach(function (q, i) { if (q.peak > r.periods[best].peak) best = i; }); return best;
   }
   function renderSite() {
-    var s = byId(state.sel), r = state.res.sites[s.id], unit = unitOf(s), hemi = s.lat < 0 ? T("southern hemisphere") : T("northern hemisphere");
+    var s = byId(state.sel), r = VR().sites[s.id], unit = unitOf(s), hemi = s.lat < 0 ? T("southern hemisphere") : T("northern hemisphere");
     $("siteHead").innerHTML = "<span class='chip'><i style='background:" + TCOL[s.tier] + "'></i>" + esc(tierName(s.tier)) + "</span>" +
       "<p class='site-title'>" + esc(nm(s)) + "</p><p class='site-meta'>" + esc([country(s), latLabel(s.lat), hemi].filter(Boolean).join(" · ")) + "</p>";
     var facts, m;
@@ -345,6 +402,16 @@
         { l: T("Year 13"), v: fq(y13), s: unit },
         { l: T("Growth"), v: fx(s.growth || 0, 1).replace(/[.,]0$/, "") + "%", s: T("a year, then {g}%", { g: fx(s.longGrowth != null ? s.longGrowth : s.growth || 0, 1).replace(/[.,]0$/, "") }) },
         { l: T("Peak month"), v: MONTHS[pk], s: T("±{n}% swing", { n: s.season || 0 }) }
+      ];
+      if (CAP()) facts.splice(1, 2, { l: T("Fill rate"), v: pctFine(r.fill), s: T("{n} not supplied", { n: fu(sumR(r.unmet, 0, P.MONTHS), unit) }), c: r.fill >= 0.999 ? "ok" : r.fill >= 0.95 ? "warn" : "bad" },
+        { l: T("First unmet"), v: r.firstUnmet >= 0 ? monthLabel(r.firstUnmet) : T("Never"), s: r.firstUnmet >= 0 ? T("month {n} of 156", { n: r.firstUnmet + 1 }) : T("within 13 years"), c: r.firstUnmet >= 0 ? "warn" : "ok" });
+    } else if (CAP()) {
+      var pkc = 0, ps = 0, psm = 0; for (m = 0; m < P.MONTHS; m++) { if (r.util[m] > r.util[pkc]) pkc = m; if (r.stock[m] > ps) { ps = r.stock[m]; psm = m; } }
+      facts = [
+        { l: T("Capacity"), v: fq(r.capacity[0]), s: T("{u} a month", { u: unit }) + (s.tier === "raw" ? T(", month 1") : "") },
+        { l: T("Busiest month"), v: pct(r.peakUtil), s: monthLabel(pkc), c: r.peakUtil > 0.995 ? "warn" : "ok" },
+        { l: T("First at capacity"), v: r.firstBinding >= 0 ? monthLabel(r.firstBinding) : T("Never"), s: r.firstBinding >= 0 ? T("a bottleneck from then on") : T("never a bottleneck"), c: r.firstBinding >= 0 ? "warn" : "ok" },
+        { l: T("Stock, peak"), v: fq(ps), s: ps > 0 ? T("{u}, in {m}", { u: unit, m: monthLabel(psm) }) : unit }
       ];
     } else {
       var pkm = 0; for (m = 0; m < P.MONTHS; m++) if (r.util[m] > r.util[pkm]) pkm = m;
@@ -365,6 +432,12 @@
     if (sup.length && s.tier !== "raw") h += "<p class='lanes'><b>" + T("Supplied by") + "</b> " + sup.map(function (l) {
       var u = byId(l.from); return "<button class='linkish' data-sel='" + esc(u.id) + "'>" + esc(nm(u)) + "</button> " + T("{p}% · {d} d transit", { p: Math.round(l.share / tot * 100), d: Math.round(state.res.transit[l.from + ">" + s.id]) });
     }).join("; ") + "</p>";
+    if (CAP() && s.tier !== "raw") {
+      var mine = state.cres.lanes.filter(function (l) { return l.to === s.id && l.total > 1e-6; });
+      if (mine.length) h += "<p class='lanes'><b>" + T("Within capacity") + "</b> " + mine.map(function (l) {
+        return "<button class='linkish' data-sel='" + esc(l.from) + "'>" + esc(nm(byId(l.from))) + "</button> " + T("{a}% (planned {p}%)", { a: Math.round(l.actual * 100), p: Math.round(l.share * 100) });
+      }).join("; ") + "</p>";
+    }
     var cus = customersOf(s.id);
     if (cus.length) h += "<p class='lanes'><b>" + T("Supplies") + "</b> " + cus.map(function (c) {
       return "<button class='linkish' data-sel='" + esc(c.site.id) + "'>" + esc(nm(c.site)) + "</button> " + T("({p}% of its need)", { p: Math.round(c.share * 100) });
@@ -380,7 +453,10 @@
     var capA = isM ? null : per.map(function (p, i) { return r.periods[i].capacity; });
     var peakL = isM ? null : per.map(function (p, i) { return p.kind === "year" ? r.load[r.periods[i].peakMonth] : null; });
     var peakC = isM ? null : per.map(function (p, i) { return p.kind === "year" ? r.capacity[r.periods[i].peakMonth] : null; });
-    var cr = state.compare && state.compare.res.sites[s.id], cmp = cr ? per.map(function (p, i) { return isM ? cr.periods[i].value : cr.periods[i].load; }) : null;
+    var cr = !CAP() && state.compare && state.compare.res.sites[s.id], cmp = cr ? per.map(function (p, i) { return isM ? cr.periods[i].value : cr.periods[i].load; }) : null;
+    // within capacity: what unlimited capacity would need (dashed), and the demand left unmet (red, on top)
+    if (CAP() && !isM) cmp = per.map(function (p, i) { return r.periods[i].required; });
+    var unmetA = CAP() && isM ? per.map(function (p, i) { return r.periods[i].unmet; }) : null;
     var mx = 0; load.forEach(function (v, i) { mx = Math.max(mx, v, capA ? capA[i] : 0, peakL && peakL[i] ? peakL[i] : 0, cmp ? cmp[i] : 0); });
     mx = niceMax(mx * 1.05);
     var y = function (v) { return T0 + (H - T0 - B) * (1 - v / mx); };
@@ -390,9 +466,10 @@
     var selP = state.period != null ? state.period : (isM ? null : defaultPeriod(r));
     if (selP != null && !isM) el("rect", { x: tl.x(selP), y: T0 - 2, width: tl.w(selP), height: H - T0 - B + 2, fill: "rgba(125,211,252,.10)" }, svg);
     load.forEach(function (v, i) {
-      var x = tl.x(i) + 1, w = Math.max(1, tl.w(i) - 2), over = capA && v > capA[i] + 1e-9;
+      var x = tl.x(i) + 1, w = Math.max(1, tl.w(i) - 2), over = capA && v > capA[i] * (1 + 1e-6) + 1e-9;
       el("rect", { x: x, y: y(v), width: w, height: Math.max(0, y(0) - y(v)), rx: Math.min(2, w / 3), fill: TCOL[s.tier] }, svg);
       if (over) el("rect", { x: x, y: y(v), width: w, height: Math.max(0, y(capA[i]) - y(v)), fill: "var(--bad)" }, svg);
+      if (unmetA && unmetA[i] > 0) el("rect", { x: x, y: y(v), width: w, height: Math.max(0, y(v - unmetA[i]) - y(v)), fill: "var(--bad)" }, svg);
       if (peakL && peakL[i] != null) el("line", { x1: x, x2: x + w, y1: y(peakL[i]), y2: y(peakL[i]), stroke: "var(--ink)", "stroke-width": 2 }, svg);
     });
     if (capA) { var d = ""; capA.forEach(function (c, i) { d += (i ? "L" : "M") + tl.x(i) + "," + y(c) + "H" + (tl.x(i) + tl.w(i)); }); el("path", { d: d, fill: "none", stroke: "var(--tele)", "stroke-width": 2 }, svg); }
@@ -405,7 +482,8 @@
           h += row(T("Capacity (a month)"), fu(capA[i], unit)) + row(T("Utilisation"), pct(r.periods[i].util));
           if (p.kind === "year") h += row(T("Busiest month"), monthLabel(r.periods[i].peakMonth)) + row("&nbsp;&nbsp;" + T("load / capacity"), fq(peakL[i]) + " / " + fq(peakC[i])) + row("&nbsp;&nbsp;" + T("utilisation"), pct(r.periods[i].peak));
         }
-        if (cmp) h += row(T("Comparison"), fu(cmp[i], unit));
+        if (cmp) h += CAP() ? row(T("Needed with unlimited capacity"), fu(cmp[i], unit)) + row(T("Stock (a month)"), fu(r.periods[i].stock, unit)) : row(T("Comparison"), fu(cmp[i], unit));
+        if (unmetA) h += row(T("Delivered (a month)"), fu(load[i] - unmetA[i], unit)) + row(T("Not supplied (a month)"), fu(unmetA[i], unit));
         if (!isM) h += "<span class='tip-hint'>" + T("Click to see what drives it") + "</span>";
         tip.show(e, h);
       });
@@ -417,7 +495,8 @@
     leg.innerHTML = (isM ? "<span><i class='sq' style='background:" + TCOL.market + "'></i>" + T("Demand, {u} a month (average in a yearly period)", { u: unit }) + "</span>"
       : "<span><i class='sq' style='background:" + TCOL[s.tier] + "'></i>" + T("Load, {u} a month (average)", { u: unit }) + "</span><span><i class='sq' style='background:var(--bad)'></i>" + T("Load above capacity") +
         "</span><span><i class='sq' style='background:var(--ink);height:2px'></i>" + T("Busiest month's load") + "</span><span><i class='sq' style='background:var(--tele);height:2px'></i>" + T("Capacity") + "</span>") +
-      (cmp ? "<span><i class='sq dash'></i>" + T("Comparison: {name}", { name: esc(state.compare.label) }) + "</span>" : "");
+      (unmetA ? "<span><i class='sq' style='background:var(--bad)'></i>" + T("Not supplied") + "</span>" : "") +
+      (cmp ? "<span><i class='sq dash'></i>" + (CAP() ? T("Needed with unlimited capacity") : T("Comparison: {name}", { name: esc(state.compare.label) })) + "</span>" : "");
   }
   // what drives the selected site's load in one period: the consumption points behind it, and its direct customers
   function renderDrivers(s, r, unit) {
@@ -434,7 +513,7 @@
     var mk = Object.keys(r.byMarket || {}).map(function (id) { return { id: id, name: nm(byId(id)), v: sumR(r.byMarket[id], p.from, p.to) }; }).sort(function (a, b) { return b.v - a.v; });
     var cu = Object.keys(r.byCustomer || {}).map(function (id) { var c = byId(id); return { id: id, name: nm(c), v: sumR(r.byCustomer[id], p.from, p.to), col: TCOL[c.tier] }; }).sort(function (a, b) { return b.v - a.v; });
     var q = r.periods[i];
-    box.innerHTML = "<h3 class='sub-h'>" + T("What drives the load in {p}", { p: pLong(p) }) + "</h3><p class='chart-sub'>" +
+    box.innerHTML = "<h3 class='sub-h'>" + T("What drives the load in {p}", { p: pLong(p) }) + "</h3>" + (CAP() ? "<p class='chart-sub'>" + T("From the requirement plan: what the markets would ask of this site with unlimited capacity.") + "</p>" : "") + "<p class='chart-sub'>" +
       T("Load {l} a month against capacity {c} ({u}). Click a bar of the chart above, or a cell of the heatmap, to look at another period.", { l: fu(q.load, unit), c: fq(q.capacity), u: pct(q.util) }) + "</p>" +
       "<div class='drivers'><div><p class='mini-h'>" + T("By consumption point") + "</p>" + bars(mk, TCOL.market) + "</div>" +
       (cu.length ? "<div><p class='mini-h'>" + T("By direct customer") + "</p>" + bars(cu) + "</div>" : "") + "</div>";
@@ -468,7 +547,7 @@
   function heatValue(r, i) { var p = state.res.periods[i]; return p.kind === "year" && state.colorBy === "avg" ? r.periods[i].util : r.periods[i].peak; }
   function heatValueOf(r, i, periods) { var p = periods[i]; return p.kind === "year" && state.colorBy === "avg" ? r.periods[i].util : r.periods[i].peak; }
   function renderHeat() {
-    var wrap = $("heatWrap"), tip = tipFor(wrap), per = state.res.periods, diff = state.heatMode === "diff" && state.compare;
+    var wrap = $("heatWrap"), tip = tipFor(wrap), per = state.res.periods, diff = state.heatMode === "diff" && state.compare && !CAP();
     var LBL = 236, W = 1240, RH = 17, TH = 19, top = 50;
     var groups = state.res.tiers.slice(1).map(function (t) { return { t: t, sites: sitesOf(t.id) }; }).filter(function (g) { return g.sites.length; });
     var H = top + groups.reduce(function (a, g) { return a + TH + g.sites.length * RH; }, 0) + 6;
@@ -487,19 +566,20 @@
       txt("text", { x: 15, y: y + TH / 2 + 5, "class": "tierlab" }, tierName(g.t.id) + " · " + tierUnit(g.t.id), svg);
       y += TH;
       g.sites.forEach(function (s) {
-        var r = state.res.sites[s.id], yy = y, cr = cmpRes ? cmpRes.sites[s.id] : null;
+        var r = VR().sites[s.id], yy = y, cr = cmpRes ? cmpRes.sites[s.id] : null;
         if (s.id === state.sel) el("rect", { x: 0, y: yy, width: W, height: RH, "class": "rowsel" }, svg);
         var lab = txt("text", { x: 15, y: yy + RH - 5, "class": "rowlab" + (s.id === state.sel ? " sel" : "") }, nm(s), svg);
         lab.addEventListener("click", function () { select(s.id); });
         per.forEach(function (p, i) {
           var u = heatValue(r, i), cu = cr && cr.periods ? heatValueOf(cr, i, cmpRes.periods) : null;
-          var fill = diff ? (cu == null ? NA : dbin(u - cu).c) : bin(u).c;
+          var fill = diff ? (cu == null ? NA : dbin(u - cu).c) : CAP() ? cbin(u).c : bin(u).c;
           var c = el("rect", { x: tl.x(i), y: yy, width: tl.w(i), height: RH, fill: fill, "class": "cell" + (i === state.period && s.id === state.sel ? " cur" : "") }, svg);
           c.addEventListener("mousemove", function (e) {
             var q = r.periods[i], unit = unitOf(s);
             var h = "<b>" + esc(nm(s)) + " · " + pLong(p) + "</b>" + row(T("Load (a month)"), fu(q.load, unit)) + row(T("Capacity (a month)"), fu(q.capacity, unit)) + row(p.kind === "year" ? T("Year average") : T("Utilisation"), pct(q.util));
             if (p.kind === "year") h += row(T("Busiest month"), pct(q.peak) + ", " + MONTHS[(state.net.config.startMonth + q.peakMonth) % 12]);
             if (q.gap > 0) h += row(T("Short by"), T("{n} in total", { n: fu(q.gap, unit) }));
+            if (CAP()) h += row(T("Needed with unlimited capacity"), fu(q.required, unit)) + row(T("Stock (a month)"), fu(q.stock, unit));
             if (diff) h += cu == null ? row(T("Comparison"), T("not in it")) : row(T("Comparison"), pct(cu)) + row(T("Change"), pts(u - cu));
             tip.show(e, h);
           });
@@ -513,17 +593,18 @@
     put(wrap, svg);
     var sw = function (c, l) { return "<span class='sw'><i style='background:" + c + "'></i>" + l + "</span>"; };
     $("heatScale").innerHTML = diff ? T("Change in utilisation, points") + DBINS.map(function (b) { return sw(b.c, b.l); }).join("") + sw(NA, T("not in the comparison")) + "<span class='cmp-note'>" + T("blue: less loaded than in <b>{name}</b>; red: more", { name: esc(state.compare.label) }) + "</span>"
+      : CAP() ? T("Utilisation within capacity") + CBINS.map(function (b) { return sw(b.c, b.l === "at capacity" ? T("at capacity (bottleneck)") : b.l); }).join("")
       : T("Utilisation") + BINS.map(function (b) { return sw(b.c, b.l); }).join("");
-    $("heatModeBox").hidden = !state.compare;
+    $("heatModeBox").hidden = !state.compare || CAP();
     each($("heatMode").querySelectorAll("button"), function (b) { b.classList.toggle("active", b.getAttribute("data-v") === (diff ? "diff" : "plan")); });
     if (!$("table-heat").hidden) tableHeat();
   }
   function tableHeat() {
-    var per = state.res.periods, diff = state.heatMode === "diff" && state.compare;
+    var per = state.res.periods, diff = state.heatMode === "diff" && state.compare && !CAP();
     var h = "<table><thead><tr><th>" + T("Site") + "</th>" + per.map(function (p) { return "<th>" + pLabel(p) + "</th>"; }).join("") + "</tr></thead><tbody>";
     state.net.sites.forEach(function (s) {
       if (s.tier === "market") return;
-      var r = state.res.sites[s.id], cr = diff ? state.compare.res.sites[s.id] : null;
+      var r = VR().sites[s.id], cr = diff ? state.compare.res.sites[s.id] : null;
       h += "<tr><th>" + esc(nm(s)) + "</th>" + per.map(function (p, i) { var u = heatValue(r, i); return "<td>" + (diff ? (cr && cr.periods ? pts(u - heatValueOf(cr, i, state.compare.res.periods)) : "–") : pct(u)) + "</td>"; }).join("") + "</tr>";
     });
     $("table-heat").innerHTML = h + "</tbody></table>";
@@ -555,14 +636,14 @@
     out.push({ name: T("Other ({n} sites)", { n: sites.length - 5 }), col: OTHER, ids: sites.slice(5).map(function (x) { return x.s.id; }) });
     return out;
   }
-  function seriesLoad(ser, i) { return ser.ids.reduce(function (a, id) { return a + state.res.sites[id].periods[i].load; }, 0); }
+  function seriesLoad(ser, i) { return ser.ids.reduce(function (a, id) { return a + VR().sites[id].periods[i].load; }, 0); }
   function renderTier() {
     var seg = $("tierSeg");
     seg.innerHTML = state.res.tiers.slice(1).filter(function (t) { return sitesOf(t.id).length; }).map(function (t) { return "<button type='button' data-t='" + t.id + "'" + (t.id === state.tier ? " class='active'" : "") + ">" + esc(tierShort(t.id)) + "</button>"; }).join("");
     each(seg.querySelectorAll("button"), function (b) { b.addEventListener("click", function () { state.tier = b.getAttribute("data-t"); renderTier(); }); });
     var wrap = $("tierChart"), tip = tipFor(wrap), W = 640, H = 240, L = 52, R = 8, T0 = 30, B = 22;
     var tl = timeline(L, W - R), per = state.res.periods, ser = tierSeries(), unit = tierUnit(state.tier);
-    var ts = P.tierSummary(state.res, state.net, state.tier);
+    var ts = P.tierSummary(VR(), state.net, state.tier);
     var mx = 0; ts.forEach(function (q) { mx = Math.max(mx, q.load, q.capacity); }); mx = niceMax(mx * 1.05);
     var y = function (v) { return T0 + (H - T0 - B) * (1 - v / mx); };
     var svg = svgRoot(W, H, "", T("Load by site against capacity, {t}", { t: tierName(state.tier) }));
@@ -594,7 +675,7 @@
     if (!$("table-tier").hidden) tableTier();
   }
   function tableTier() {
-    var per = state.res.periods, ser = tierSeries(), ts = P.tierSummary(state.res, state.net, state.tier);
+    var per = state.res.periods, ser = tierSeries(), ts = P.tierSummary(VR(), state.net, state.tier);
     var h = "<table><thead><tr><th>" + T("Period") + "</th>" + ser.map(function (s) { return "<th>" + esc(s.name) + "</th>"; }).join("") + "<th>" + T("Tier capacity") + "</th><th>" + T("Utilisation") + "</th></tr></thead><tbody>";
     per.forEach(function (p, i) { h += "<tr><th>" + pLabel(p) + "</th>" + ser.map(function (s) { return "<td>" + fq(seriesLoad(s, i)) + "</td>"; }).join("") + "<td>" + fq(ts[i].capacity) + "</td><td>" + pct(ts[i].util) + "</td></tr>"; });
     $("table-tier").innerHTML = h + "</tbody></table>";
@@ -651,10 +732,11 @@
       txt("text", { x: tl.div + 2, y: H - 2, "class": "tick" }, String(per[P.MONTHLY].year), svg);
       txt("text", { x: W - R, y: H - 2, "text-anchor": "end", "class": "tick" }, String(per[per.length - 1].year), svg);
       per.forEach(function (p, i) {
-        var v = r.periods[i].value, x = tl.x(i) + 0.5, w = Math.max(0.8, tl.w(i) - 1);
+        var v = r.periods[i].value, x = tl.x(i) + 0.5, w = Math.max(0.8, tl.w(i) - 1), un = CAP() ? state.cres.sites[s.id].periods[i].unmet : 0;
         el("rect", { x: x, y: y(v), width: w, height: Math.max(0, y(0) - y(v)), fill: TCOL.market }, svg);
+        if (un > 0) el("rect", { x: x, y: y(v), width: w, height: Math.max(0, y(v - un) - y(v)), fill: "var(--bad)" }, svg);
         var hit = el("rect", { x: tl.x(i), y: T0, width: tl.w(i), height: H - T0 - B, "class": "hit" }, svg);
-        hit.addEventListener("mousemove", function (e) { tip.show(e, "<b>" + esc(nm(s)) + " · " + pLong(p) + "</b>" + row(T("Demand (a month)"), fu(v, unit))); });
+        hit.addEventListener("mousemove", function (e) { tip.show(e, "<b>" + esc(nm(s)) + " · " + pLong(p) + "</b>" + row(T("Demand (a month)"), fu(v, unit)) + (CAP() ? row(T("Not supplied (a month)"), fu(un, unit)) : "")); });
         hit.addEventListener("mouseleave", tip.hide);
         hit.addEventListener("click", function () { select(s.id); });
       });
@@ -669,6 +751,85 @@
     $("table-fc").innerHTML = h + "</tbody></table>";
   }
 
+  // ---- the plan within capacity: solved in a worker (HiGHS), cached by network and options
+  var worker = null, wid = 0, wkey = "", waiters = [], solveTimer = null;
+  function solveKey() { return JSON.stringify([IO.toJSON(state.net), state.csrc, state.hold]); }
+  function cached(key) { for (var i = 0; i < state.cache.length; i++) if (state.cache[i].key === key) return state.cache[i].res; return null; }
+  function remember(key, res) { state.cache = state.cache.filter(function (c) { return c.key !== key; }); state.cache.unshift({ key: key, res: res }); if (state.cache.length > 8) state.cache.length = 8; }
+  function settle() { var w = waiters; waiters = []; w.forEach(function (f) { f(); }); }
+  // ask for a solve of the current network; a newer request replaces one still running
+  function requestSolve(key) {
+    state.solving = true; state.solveErr = null; renderSolveStatus();
+    clearTimeout(solveTimer);
+    solveTimer = setTimeout(function () {
+      if (worker && wkey && wkey !== key) { worker.terminate(); worker = null; }
+      if (wkey === key && worker) return;
+      if (!worker) { worker = new Worker("src/solve-worker.js"); worker.onmessage = onSolved; worker.onerror = function () { worker = null; wkey = ""; state.solving = false; state.solveErr = T("The solver could not be loaded."); renderSolveStatus(); settle(); }; }
+      wkey = key; wid++;
+      worker.postMessage({ id: wid, key: key, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, hold: state.hold } });
+      state.t0 = Date.now();
+    }, 350);
+  }
+  function onSolved(e) {
+    var key = wkey, r = e.data.result; wkey = "";
+    if (!r || !r.ok) { state.solving = false; state.solveErr = (r && r.errors || []).map(function (x) { return I.tw(x); }).join(" "); renderSolveStatus(); settle(); return; }
+    remember(key, r);
+    if (state.mode === "cap" && key === solveKey()) { state.cres = r; state.ckey = key; state.solving = false; renderViews(); }
+    settle();
+  }
+  // resolves once the plan within capacity for the current network is on screen
+  function whenSolved() { return new Promise(function (ok) { if (state.mode !== "cap" || (state.cres && state.ckey === solveKey())) ok(); else waiters.push(ok); }); }
+  function renderSolveStatus() {
+    var st = $("solveStatus"); if (!st) return;
+    $("capOpts").hidden = state.mode !== "cap";
+    each($("capMode").querySelectorAll("button"), function (b) { b.classList.toggle("active", b.getAttribute("data-v") === state.mode); });
+    document.body.classList.toggle("cap-mode", CAP());
+    if (state.mode !== "cap") { st.textContent = ""; return; }
+    if (state.solveErr) { st.innerHTML = "<span class='bad'>" + esc(state.solveErr) + "</span>"; return; }
+    if (state.solving) { st.innerHTML = "<span class='spin'></span>" + T("Solving the plan within capacity…") + (state.cres ? " " + T("(showing the last plan)") : ""); return; }
+    if (state.cres) st.textContent = T("Solved in {s} s · {r} constraints", { s: fx(state.cres.seconds || 0, 1), r: (state.cres.size ? state.cres.size.rows : 0).toLocaleString(I.locale) });
+  }
+  // what reaches the shelves: delivered and unmet demand per period, and per market
+  function renderService() {
+    var box = $("servicePanel"); box.hidden = !CAP(); if (!CAP()) return;
+    var cr = state.cres, per = state.res.periods, mk = sitesOf("market"), unit = tierUnit("market");
+    var del = per.map(function (p, i) { return mk.reduce(function (a, s) { return a + cr.sites[s.id].periods[i].delivered; }, 0); });
+    var un = per.map(function (p, i) { return mk.reduce(function (a, s) { return a + cr.sites[s.id].periods[i].unmet; }, 0); });
+    var wrap = $("serviceChart"), tip = tipFor(wrap), W = 1240, H = 220, L = 60, R = 8, T0 = 30, B = 22, tl = timeline(L, W - R);
+    var mx = niceMax(Math.max.apply(null, del.map(function (d, i) { return d + un[i]; })) * 1.05), y = function (v) { return T0 + (H - T0 - B) * (1 - v / mx); };
+    var svg = svgRoot(W, H, "", T("Demand delivered and not supplied, every period"));
+    for (var k = 0; k <= 4; k++) { var v = mx * k / 4; el("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), "class": k ? "grid" : "axis" }, svg); txt("text", { x: L - 6, y: y(v) + 3, "text-anchor": "end", "class": "tick" }, fq(v), svg); }
+    timeFrame(svg, tl, T0, H - B); timeTicks(svg, tl, H - 6);
+    per.forEach(function (p, i) {
+      var x = tl.x(i) + 1, w = Math.max(1, tl.w(i) - 2);
+      el("rect", { x: x, y: y(del[i]), width: w, height: Math.max(0, y(0) - y(del[i]) - (un[i] > 0 ? 1 : 0)), fill: TCOL.market }, svg);
+      if (un[i] > 0) el("rect", { x: x, y: y(del[i] + un[i]), width: w, height: Math.max(0, y(del[i]) - y(del[i] + un[i])), fill: "var(--bad)" }, svg);
+      var hit = el("rect", { x: tl.x(i), y: T0, width: tl.w(i), height: H - T0 - B, "class": "hit" }, svg);
+      hit.addEventListener("mousemove", function (e) { var d = del[i] + un[i]; tip.show(e, "<b>" + pLong(p) + "</b>" + row(T("Demand (a month)"), fu(d, unit)) + row(T("Delivered (a month)"), fu(del[i], unit)) + row(T("Not supplied (a month)"), fu(un[i], unit)) + row(T("Fill rate"), pctFine(d > 0 ? del[i] / d : 1))); });
+      hit.addEventListener("mouseleave", tip.hide);
+    });
+    put(wrap, svg);
+    $("serviceLegend").innerHTML = "<span><i class='sq' style='background:" + TCOL.market + "'></i>" + T("Delivered") + "</span><span><i class='sq' style='background:var(--bad)'></i>" + T("Not supplied") + "</span><span style='color:var(--ink-faint)'>" + T("{u} a month", { u: unit }) + "</span>";
+    var rows = mk.map(function (s) { var o = cr.sites[s.id], d = sumR(o.demand, 0, P.MONTHS), u = sumR(o.unmet, 0, P.MONTHS); return { s: s, d: d, u: u, f: o.fill, first: o.firstUnmet }; });
+    $("serviceTable").innerHTML = "<table class='outlook'><thead><tr><th style='text-align:left'>" + T("Consumption point") + "</th><th>" + T("Demand, 13 years") + "</th><th>" + T("Delivered") + "</th><th>" + T("Not supplied") + "</th><th>" + T("Fill rate") + "</th><th style='text-align:left'>" + T("First unmet") + "</th></tr></thead><tbody>" +
+      rows.map(function (x) { return "<tr><th><button class='linkish' data-sel='" + esc(x.s.id) + "'>" + esc(nm(x.s)) + "</button></th><td>" + fq(x.d) + "</td><td>" + fq(x.d - x.u) + "</td><td class='" + (x.u > 0.5 ? "bad" : "ok") + "'>" + fq(x.u) + "</td><td class='" + (x.f >= 0.999 ? "ok" : x.f >= 0.95 ? "warn" : "bad") + "'>" + pctFine(x.f) + "</td><td style='text-align:left'>" + (x.first >= 0 ? monthLabel(x.first) : T("Never")) + "</td></tr>"; }).join("") +
+      "<tr><th>" + T("Total") + "</th><td>" + fq(cr.demand) + "</td><td>" + fq(cr.demand - cr.unmet) + "</td><td>" + fq(cr.unmet) + "</td><td>" + pctFine(cr.fill) + "</td><td style='text-align:left'>" + (cr.firstUnmet >= 0 ? monthLabel(cr.firstUnmet) : T("Never")) + "</td></tr></tbody></table>";
+    each($("serviceTable").querySelectorAll("[data-sel]"), function (b) { b.addEventListener("click", function () { select(b.getAttribute("data-sel")); }); });
+    // lanes carrying something other than their planned share
+    var moved = cr.lanes.filter(function (l) { return Math.abs(l.actual - l.share) > 0.02 && (l.total > 1e-6 || l.share > 0); }).sort(function (a, b) { return Math.abs(b.actual - b.share) - Math.abs(a.actual - a.share); });
+    $("serviceLanes").innerHTML = moved.length ? "<p class='mini-h'>" + T("Lanes off their planned share") + "</p><p class='lanes'>" + moved.slice(0, 12).map(function (l) {
+      return esc(nm(byId(l.from))) + " → " + esc(nm(byId(l.to))) + ": " + T("{a}% (planned {p}%)", { a: Math.round(l.actual * 100), p: Math.round(l.share * 100) }) + (l.qualified ? "" : " · " + T("new lane"));
+    }).join("<br>") + "</p>" : "<p class='lanes'>" + T("Every lane carries its planned share.") + "</p>";
+    if (!$("table-svc").hidden) tableSvc();
+  }
+  function tableSvc() {
+    var per = state.res.periods, mk = sitesOf("market"), cr = state.cres;
+    var h = "<table><thead><tr><th>" + T("Period") + "</th>" + mk.map(function (s) { return "<th>" + esc(nm(s)) + "</th>"; }).join("") + "<th>" + T("Total") + "</th></tr></thead><tbody>";
+    per.forEach(function (p, i) { var d = 0, u = 0; h += "<tr><th>" + pLabel(p) + "</th>" + mk.map(function (s) { var q = cr.sites[s.id].periods[i]; d += q.value; u += q.unmet; return "<td>" + pctFine(q.fill) + "</td>"; }).join("") + "<td>" + pctFine(d > 0 ? 1 - u / d : 1) + "</td></tr>"; });
+    $("table-svc").innerHTML = h + "</tbody></table>";
+  }
+  function setMode(m) { state.mode = m === "cap" ? "cap" : "plan"; if (state.mode !== "cap") { state.cres = null; state.ckey = ""; state.solving = false; } render(); }
+
   // ---- files: the plan as CSV; the network as CSV, Excel or JSON; loading one
   function download(name, data, type) {
     var a = document.createElement("a");
@@ -678,17 +839,17 @@
   }
   function fileBase() { return "tierwise-" + (state.scenario === "custom" ? "network" : state.scenario); }
   function csvPlan() {
-    var per = state.res.periods, cfg = state.net.config, lines = ["site_id,site,tier,unit,period,kind,load_per_month,capacity_per_month,utilisation,busiest_month_utilisation,busiest_month"];
+    var per = state.res.periods, cfg = state.net.config, cap = CAP(), lines = ["site_id,site,tier,unit,period,kind,load_per_month,capacity_per_month,utilisation,busiest_month_utilisation,busiest_month" + (cap ? ",needed_unlimited_per_month,stock_per_month,delivered_per_month,unmet_per_month" : "")];
     var q = function (s) { return '"' + String(s).replace(/"/g, '""') + '"'; };
     state.net.sites.forEach(function (s) {
-      var r = state.res.sites[s.id], unit = state.res.tiers[P.TIER_INDEX[s.tier]].unit;
+      var r = VR().sites[s.id], unit = state.res.tiers[P.TIER_INDEX[s.tier]].unit;
       per.forEach(function (p, i) {
         var o = r.periods[i], pid = p.kind === "month" ? IO.monthText(p.from, cfg) : String(p.year);
-        if (s.tier === "market") lines.push([q(s.id), q(s.name), s.tier, q(unit), pid, p.kind, o.value.toFixed(2), "", "", "", ""].join(","));
-        else lines.push([q(s.id), q(s.name), s.tier, q(unit), pid, p.kind, o.load.toFixed(4), o.capacity.toFixed(4), o.util.toFixed(4), o.peak.toFixed(4), IO.monthText(o.peakMonth, cfg)].join(","));
+        if (s.tier === "market") lines.push([q(s.id), q(s.name), s.tier, q(unit), pid, p.kind, o.value.toFixed(2), "", "", "", ""].concat(cap ? ["", "", o.delivered.toFixed(2), o.unmet.toFixed(2)] : []).join(","));
+        else lines.push([q(s.id), q(s.name), s.tier, q(unit), pid, p.kind, o.load.toFixed(4), o.capacity.toFixed(4), o.util.toFixed(4), o.peak.toFixed(4), IO.monthText(o.peakMonth, cfg)].concat(cap ? [o.required.toFixed(4), o.stock.toFixed(4), "", ""] : []).join(","));
       });
     });
-    download(fileBase() + "-plan.csv", lines.join("\r\n") + "\r\n", "text/csv");
+    download(fileBase() + (cap ? "-within-capacity" : "") + "-plan.csv", lines.join("\r\n") + "\r\n", "text/csv");
   }
   var xlsxReady = null;
   function needXLSX() {
@@ -788,7 +949,7 @@
 
   // ---- the editor
   var EDIT = {
-    market: [["base", "Base, a month"], ["growth", "Growth % (yrs 1–3)"], ["longGrowth", "Growth % (yrs 4–13)"], ["season", "Season swing %"], ["launch", "Launch (YYYY-MM)"], ["ramp", "Ramp months"]],
+    market: [["base", "Base, a month"], ["growth", "Growth % (yrs 1–3)"], ["longGrowth", "Growth % (yrs 4–13)"], ["season", "Season swing %"], ["launch", "Launch (YYYY-MM)"], ["ramp", "Ramp months"], ["priority", "Priority (1–3)"]],
     warehouse: [["capacity", "Throughput a month"], ["handling", "Handling days"], ["cover", "Cover weeks"]],
     cmo: [["capacity", "Capacity a month"], ["lead", "Lead time, days"], ["release", "Release time, days"], ["yield", "Yield %"]]
   };
@@ -855,7 +1016,7 @@
     else if (k === "expansions") {
       s.expansions = v ? v.split(/[|;,]/).map(function (p) { var a2 = p.split(":"); return { from: Math.max(0, IO.monthIndex(a2[0].trim(), state.net.config)), add: IO.number((a2[1] || "").trim(), false) }; }).filter(function (x) { return isFinite(x.from) && isFinite(x.add); }) : [];
     } else if (k === "launch") { if (!v) delete s.launch; else { var li = IO.monthIndex(v, state.net.config); if (isFinite(li)) s.launch = li; } }
-    else if (v === "" && (k === "ramp" || k === "longGrowth" || k === "cover" || k === "handling")) delete s[k];
+    else if (v === "" && (k === "ramp" || k === "longGrowth" || k === "cover" || k === "handling" || k === "priority")) delete s[k];
     else s[k] = num(v);
     if (k === "cover") syncControls();
     changed(k === "lat" || k === "lon");
@@ -911,6 +1072,9 @@
   // the tutorial (and tests) set the page up through this: a scenario, then values, then what to look at
   function setup(o) {
     o = o || {};
+    state.mode = o.cap ? "cap" : "plan"; state.csrc = o.cap && o.cap.mode || "qualified"; state.hold = o.cap && o.cap.hold != null ? o.cap.hold : 6;
+    $("csrc").value = state.csrc; $("hold").value = String(state.hold);
+    if (state.mode !== "cap") { state.cres = null; state.ckey = ""; }
     load(o.scenario || "base");
     var v = o.values || {};
     if (v.demandScale != null) state.net.config.demandScale = v.demandScale;
@@ -932,6 +1096,7 @@
     render();
     if (o.select) select(o.select, o.period);
     if (o.open) { var d = document.querySelector(o.open); if (d && d.tagName === "DETAILS") d.open = true; }
+    return whenSolved().then(function () { if (o.select && CAP()) select(o.select, o.period); });
   }
   // the numbers the tutorial quotes, from the live plan
   function tokens() {
@@ -946,6 +1111,12 @@
       V.period = pLong(p); V.topMarket = top ? nm(byId(top.k)) : "–"; V.topShare = top && tot > 0 ? pct(top.v / tot) : "–";
     }
     if (state.compare) { var fb = firstOverall(state.compare.res, state.compare.net); V.cmpFirst = fb ? monthLabel(fb.m) : T("never"); V.cmpName = state.compare.label; V.cmpShort = String(overCount(state.compare.res, state.compare.net)); }
+    if (CAP()) {
+      var cr = state.cres, fm = firstUnmetMarket(), bn = firstBinding();
+      V.fill = pctFine(cr.fill); V.unmetT = fu(cr.unmet, tierUnit("market")); V.firstUnmet = fm ? monthLabel(fm.m) : T("never"); V.firstUnmetMkt = fm ? nm(fm.site) : "–";
+      V.bottleneck = bn ? nm(bn.site) : "–"; V.bottleneckWhen = bn ? monthLabel(bn.m) : T("never"); V.rerouted = pctFine(cr.rerouted);
+      if (s && s.tier === "market") V.mktFill = pctFine(cr.sites[s.id].fill);
+    }
     return V;
   }
 
@@ -961,6 +1132,9 @@
       b.addEventListener("click", function () { state.colorBy = b.getAttribute("data-v"); each($("colorBy").querySelectorAll("button"), function (x) { x.classList.toggle("active", x === b); }); renderHeat(); });
     });
     $("compareSel").addEventListener("change", function () { setCompare(this.value); render(); });
+    each($("capMode").querySelectorAll("button"), function (b) { b.addEventListener("click", function () { setMode(b.getAttribute("data-v")); }); });
+    $("csrc").addEventListener("change", function () { state.csrc = this.value; render(); });
+    $("hold").addEventListener("change", function () { state.hold = +this.value; render(); });
     $("pin").addEventListener("click", pin);
     each($("heatMode").querySelectorAll("button"), function (b) { b.addEventListener("click", function () { state.heatMode = b.getAttribute("data-v"); renderHeat(); }); });
     $("csv").addEventListener("click", csvPlan);
@@ -983,7 +1157,7 @@
       b.addEventListener("click", function () {
         var k = b.getAttribute("data-table"), t = $("table-" + k); t.hidden = !t.hidden;
         b.textContent = t.hidden ? T("Show as table") : T("Hide table");
-        if (!t.hidden) ({ heat: tableHeat, tier: tableTier, fc: tableFc })[k]();
+        if (!t.hidden) ({ heat: tableHeat, tier: tableTier, fc: tableFc, svc: tableSvc })[k]();
       });
     });
     load("base");
@@ -996,6 +1170,6 @@
     });
     fetch("assets/land.json").then(function (r) { return r.json(); }).then(function (j) { state.land = j; renderMap(); }).catch(function () {});
   }
-  window.Tierwise = { state: state, load: load, setup: setup, select: select, render: render, tokens: tokens, requiredFor: requiredFor, VERSION: VERSION, useCustom: useCustom, shareLink: shareLink, readLink: readLink, setCompare: setCompare };
+  window.Tierwise = { state: state, setMode: setMode, whenSolved: whenSolved, load: load, setup: setup, select: select, render: render, tokens: tokens, requiredFor: requiredFor, VERSION: VERSION, useCustom: useCustom, shareLink: shareLink, readLink: readLink, setCompare: setCompare };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();
