@@ -1,6 +1,6 @@
 // Tierwise — loading and saving supply chains: CSV (comma and semicolon, decimal commas, quotes), spreadsheets, JSON,
 // the exact round trip of the example, readable errors with row numbers, and small custom chains that plan.
-const P = require("../src/plan.js"), N = require("../src/network.js"), IO = require("../src/io.js");
+const P = require("../src/plan.js"), N = require("../src/network.js"), IO = require("../src/io.js"), G = require("../src/graph.js");
 let pass = 0, fail = 0;
 function check(name, cond, detail) { if (cond) pass++; else { fail++; console.log("FAIL " + name + (detail !== undefined ? "  → " + JSON.stringify(detail) : "")); } }
 function samePlan(a, b) {
@@ -19,13 +19,13 @@ for (const id of Object.keys(N.SCENARIOS)) {
   check("the template writes dates as YYYY-MM", /p-ham,.*2029-07:\+90 \| 2033-01:\+120/.test(csv), csv.split("\n").find((l) => l.startsWith("p-ham")));
   check("the template has a settings table after the sites", /\r\nsetting,value\r\nproduct,/.test(csv) && /tier\.dosing\.name,/.test(csv));
   // a fake SheetJS: the same rows in two sheets
-  const r = IO.toRows(net), sheets = { Sites: r.sites, Settings: r.settings };
+  const r = IO.toRows(net), sheets = { Sites: r.sites, Routes: r.routes, Settings: r.settings };
   const XLSX = { utils: { sheet_to_json: (ws) => ws } };
-  const wb = { SheetNames: ["Sites", "Settings"], Sheets: sheets };
+  const wb = { SheetNames: ["Sites", "Routes", "Settings"], Sheets: sheets };
   const w = IO.fromWorkbook(wb, XLSX);
-  check("spreadsheet (Sites + Settings sheets) round trip", w.ok && samePlan(net, w.net), w.errors);
-  const one = IO.fromWorkbook({ SheetNames: ["Data"], Sheets: { Data: r.sites.concat([[]], r.settings) } }, XLSX);
-  check("spreadsheet with both tables on one sheet", one.ok && samePlan(net, one.net), one.errors);
+  check("spreadsheet (Sites, Routes and Settings sheets) round trip", w.ok && samePlan(net, w.net), w.errors);
+  const one = IO.fromWorkbook({ SheetNames: ["Data"], Sheets: { Data: r.sites.concat([[]], r.routes, [[]], r.settings) } }, XLSX);
+  check("spreadsheet with all three tables on one sheet", one.ok && samePlan(net, one.net), one.errors);
 }
 // ---- reading numbers and cells
 check("numbers: point decimals and comma thousands", IO.number("1,250.5", false) === 1250.5 && IO.number("0.025", false) === 0.025 && IO.number("-3", false) === -3 && IO.number("+90", false) === 90);
@@ -82,8 +82,54 @@ check("refused: the plan's own checks (supplier from the wrong tier)", errs(HEAD
 check("refused: a settings month out of range", errs(HEAD + "m,market,M,0,0,1,,\n\nsetting,value\nstartMonth,13\n").some((e) => e === "Setting “startMonth” must be a month from 1 to 12."));
 check("refused: JSON that is not a network", !IO.fromJSON("{\"a\":1}").ok && !IO.fromJSON("not json").ok);
 {
-  const r = IO.fromCSV(HEAD.replace("suppliers", "suppliers,colour") + "m,market,M,0,0,1,,,red\n");
-  check("an unused column is a warning, not an error", r.warnings.some((w) => w === "Column “colour” is not used."));
+  const r = IO.fromCSV("id,tier,name,lat,lon,base,capacity,suppliers,colour\nm,market,M,0,0,1,,w,red\nw,warehouse,W,0,1,,5,pk,\npk,packaging,P,0,2,,5,d,\nd,dosing,D,0,3,,5,p,\np,product,P,0,4,,5,r,\nr,raw,R,0,5,,5,,\n");
+  check("an unknown column becomes a custom parameter, with a note", r.ok && r.warnings.some((w) => w === "Column “colour” is kept as a custom parameter.") && r.net.params[0].key === "colour" && r.net.sites[0].custom.colour === "red");
+}
+
+// ---- 2.1: routes as their own table, custom parameters, the diagram's order, priorities
+{
+  const net = N.build("base");
+  G.addParam(net, { label: "CO₂ per tonne", type: "number", unit: "kg" });
+  G.addParam(net, { label: "Incoterm", type: "choice", options: "FOB|CIF|DAP", applies: "routes", default: "FOB" });
+  G.setCustom(net.sites.find((s) => s.id === "p-cork"), net.params[1], 140);
+  G.lane(net, "pk-cpt", "w-br").mode = "sea"; G.lane(net, "pk-cpt", "w-br").days = 21; G.setCustom(G.lane(net, "pk-cpt", "w-br"), net.params[2], "CIF");
+  net.sites.find((s) => s.id === "m-cai").priority = 3;
+  G.place(net, "w-sg", 0);
+  const csv = IO.toCSV(net);
+  check("the routes are written as their own table, with mode, days and route parameters", /\r\nfrom,to,share,days,mode,incoterm\r\n/.test(csv) && /\r\npk-cpt,w-br,40,21,sea,CIF\r\n/.test(csv));
+  check("the site table has no suppliers column, but priority, order and the custom parameters", /^id,tier,name,.*priority.*order,halal,co2_per_tonne\r\n/.test(csv) && !/^[^\n]*suppliers/.test(csv));
+  check("parameter definitions are written in the settings", /param\.halal\.type,bool/.test(csv) && /param\.incoterm\.options,FOB \| CIF \| DAP/.test(csv) && /param\.co2_per_tonne\.unit,kg/.test(csv));
+  const back = IO.fromCSV(csv);
+  check("CSV round trip keeps the plan", back.ok && samePlan(net, back.net), back.errors);
+  const b = back.net;
+  check("CSV round trip keeps parameters, values, modes, days, priorities and order", b.params.length === 3 && b.params[2].options.join() === "FOB,CIF,DAP" && b.sites.find((s) => s.id === "p-cork").custom.co2_per_tonne === 140 &&
+    b.sites.find((s) => s.id === "p-cork").custom.halal === true && b.sites.find((s) => s.id === "pk-qro").custom.halal === false && G.lane(b, "pk-cpt", "w-br").mode === "sea" && G.lane(b, "pk-cpt", "w-br").days === 21 &&
+    G.lane(b, "pk-cpt", "w-br").custom.incoterm === "CIF" && G.lane(b, "pk-qro", "w-mx").custom.incoterm === "FOB" && b.sites.find((s) => s.id === "m-cai").priority === 3 && G.columns(b).warehouse[0] === "w-sg");
+  const j = IO.fromJSON(IO.toJSON(net));
+  check("JSON round trip keeps parameters and values", j.ok && j.net.params.length === 3 && j.net.sites.find((s) => s.id === "p-cork").custom.co2_per_tonne === 140 && G.lane(j.net, "pk-cpt", "w-br").custom.incoterm === "CIF");
+}
+{
+  // a hand-written file: sites, then a routes table instead of a suppliers column, semicolons
+  const text = ["id;tier;name;lat;lon;base;capacity;Cold chain;Owner",
+    "m;market;M;10;0;100;;;", "w;warehouse;W;10;1;;500;yes;Acme", "pk;packaging;Pk;10;2;;500;;Acme", "d;dosing;D;10;3;;1e5;;", "p;product;P;10;4;;10;;", "p2;product;P2;10;5;;10;;", "r;raw;R;10;6;;10;;",
+    "", "from;to;share;days;mode;Cost per pack", "w;m;100;;;0,12", "pk;w;100;2;road;", "d;pk;100;;;", "p;d;70;;sea;", "p2;d;30;;rail;", "r;p;;;;", "r;p2;;;;",
+    "", "setting;value", "param.cold_chain.type;bool"].join("\n");
+  const r = IO.fromCSV(text);
+  check("a routes table supplies every site", r.ok && r.net.sites.find((s) => s.id === "d").suppliers.length === 2, r.errors);
+  if (r.ok) {
+    check("defined and new parameters: types from the settings or guessed from the values", r.net.params.find((d) => d.key === "cold_chain").type === "bool" && r.net.params.find((d) => d.key === "owner").type === "text" &&
+      r.net.params.find((d) => d.key === "cost_per_pack").type === "number" && r.net.params.find((d) => d.key === "cost_per_pack").applies === "routes");
+    check("values read with decimal commas and yes/no", r.net.sites.find((s) => s.id === "w").custom.cold_chain === true && r.net.sites.find((s) => s.id === "w").custom.owner === "Acme" && G.lane(r.net, "w", "m").custom.cost_per_pack === 0.12);
+    check("modes and an empty share read as a full share", G.lane(r.net, "p", "d").mode === "sea" && G.lane(r.net, "p2", "d").mode === "rail" && G.lane(r.net, "r", "p").share === 100 && G.lane(r.net, "pk", "w").days === 2);
+    check("it plans", P.plan(r.net).ok);
+  }
+  const both = IO.fromCSV("id,tier,name,lat,lon,base,capacity,suppliers\nm,market,M,0,0,1,,w\nw,warehouse,W,0,1,,5,pk\npk,packaging,P,0,2,,5,d\nd,dosing,D,0,3,,5,p\np,product,P,0,4,,5,r\nr,raw,R,0,5,,5,\n\nfrom,to,share\nw,m,100\n");
+  check("a routes table replaces the suppliers column, with a note", both.ok && both.warnings.indexOf("The routes table replaces the suppliers column.") >= 0, both.errors);
+  const bad = IO.fromCSV("id,tier,name,lat,lon,base\nm,market,M,0,0,1\n\nfrom,to,share,mode\nx,m,100,\nm,m,abc,\nm,m,10,boat\n");
+  check("route errors name their row", bad.errors.indexOf("Route row 5: the site “x” is not in the site table.") >= 0 && bad.errors.indexOf("Route row 6: cannot read the share “abc”.") >= 0 && bad.errors.indexOf("Route row 7: unknown mode “boat” (road, sea, rail or air).") >= 0, bad.errors);
+  const bv = IO.fromCSV("id,tier,name,lat,lon,base,size\nm,market,M,0,0,1,big\n\nsetting,value\nparam.size.type,number\n");
+  check("a value that does not fit its parameter is an error with its row", bv.errors.indexOf("Row 2: “big” is not a valid value for size.") >= 0, bv.errors);
+  check("an older file (suppliers column, no routes table) still loads", IO.fromCSV(SMALL).ok);
 }
 check("load picks the reader by file name and content", IO.load("n.json", IO.toJSON(N.build("base"))).ok && IO.load("n.csv", IO.toCSV(N.build("base"))).ok && IO.load("n.txt", IO.toJSON(N.build("base"))).ok && !IO.load("n.xlsx", new ArrayBuffer(4)).ok);
 

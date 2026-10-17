@@ -1,11 +1,11 @@
 // Tierwise — the page: controls, loading and sharing supply chains, the latitude map, the capacity heatmap (or its
 // change against a comparison), the selected site with what drives its load and the capacity it must add, the tier,
 // lead-time and forecast views, the plan within capacity (solved by HiGHS in a worker: src/constrained.js,
-// src/solve-worker.js) and the network editor. Planning is in src/plan.js (TWPlan), files in src/io.js (TWIO),
+// src/solve-worker.js), the Network Studio (studio.js, on src/graph.js) and the table editor. Planning is in src/plan.js (TWPlan), files in src/io.js (TWIO),
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.0.0";
+  var VERSION = "2.1.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -32,7 +32,9 @@
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(function (m) { return T(m); });
   var state = { scenario: "base", net: null, res: null, sel: "p-ham", market: "m-jkt", colorBy: "peak", tier: "product", land: null, pos: null, ext: null,
     period: null, target: 0.9, compare: null, compareKey: "", heatMode: "plan", pinned: null, custom: null,
-    mode: "plan", csrc: "qualified", hold: 6, cres: null, ckey: "", solving: false, cache: [], solveErr: null };
+    mode: "plan", csrc: "qualified", hold: 6, cres: null, ckey: "", solving: false, cache: [], solveErr: null,
+    studio: { view: "diagram", mode: "select", highlight: "all", colorBy: "tier", showDays: false, route: null }, pick: null };
+  var G = window.TWGraph, hist = G.history();
 
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, parent) {
@@ -143,7 +145,7 @@
     err.hidden = true; return true;
   }
   function render() {
-    if (!replan()) return;
+    if (!replan()) { if (window.TWStudio) window.TWStudio.render(); return; }
     if (!byId(state.sel)) { var c = state.net.sites.filter(function (s) { return s.tier !== "market"; }); state.sel = (c.filter(function (s) { return s.tier === "product"; })[0] || c[0] || state.net.sites[0]).id; }
     if (!byId(state.market) || byId(state.market).tier !== "market") state.market = sitesOf("market")[0].id;
     if (!sitesOf(state.tier).length) state.tier = (state.res.tiers.slice(1).filter(function (t) { return sitesOf(t.id).length; })[0] || { id: "warehouse" }).id;
@@ -166,8 +168,9 @@
   }
   function renderViews() {
     renderHeadline(); renderKpis(); renderOutlook(); renderMap(); renderSite(); renderHeat(); renderNeeds(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
+    if (window.TWStudio) window.TWStudio.render();
   }
-  function renderSelection() { renderMap(); renderSite(); renderHeat(); }
+  function renderSelection() { if (state.res && state.res.ok) { renderMap(); renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
 
   // ---- headline and KPIs
   function firstOverall(res, net) {
@@ -320,7 +323,15 @@
   function renderMap() {
     var wrap = $("mapWrap"), tip = tipFor(wrap), e = state.ext;
     var svg = svgRoot(MAP.W, MAP.H, "map", T("Map of the supply network by latitude"));
-    el("rect", { x: 0, y: 0, width: MAP.W, height: MAP.H, fill: "#08223f" }, svg);
+    var bg = el("rect", { x: 0, y: 0, width: MAP.W, height: MAP.H, fill: "#08223f", "class": state.pick ? "pickable" : null }, svg);
+    // placing a site: a click on the map sets its latitude and longitude
+    svg.addEventListener("click", function (ev) {
+      if (!state.pick || ev.target.closest(".node")) return;
+      var pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; var q = pt.matrixTransform(svg.getScreenCTM().inverse());
+      var lon = e.lon0 + q.x / MAP.W * (e.lon1 - e.lon0), lat = e.lat0 - q.y / MAP.H * (e.lat0 - e.lat1), id = state.pick;
+      state.pick = null;
+      edit(function (n) { var s2 = G.byId(n, id); if (s2) { s2.lat = Math.round(lat * 100) / 100; s2.lon = Math.round(lon * 100) / 100; } }, true);
+    });
     var step = e.lat0 - e.lat1 > 60 ? 15 : 10, lat;
     for (lat = Math.ceil(e.lat1 / step) * step; lat <= e.lat0; lat += step) el("line", { x1: 0, x2: MAP.W, y1: proj(0, lat)[1], y2: proj(0, lat)[1], "class": "grat" + (lat === 0 ? " eq" : "") }, svg);
     var lstep = e.lon1 - e.lon0 > 150 ? 30 : 15;
@@ -372,15 +383,18 @@
       g.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(s.id); } });
     });
     put(wrap, svg);
+    var ph = $("pickHint"); if (ph) { ph.hidden = !state.pick; if (state.pick && byId(state.pick)) ph.textContent = T("Click the map to place {s}.", { s: nm(byId(state.pick)) }); }
     $("mapLegend").innerHTML = state.res.tiers.map(function (t) { return "<span><i style='background:" + TCOL[t.id] + "'></i>" + esc(tierName(t.id)) + "</span>"; }).join("") +
       (CAP() ? "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("At capacity at some point") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Demand not fully met") + "</span>"
         : "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("Above 90% at peak") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Short at some point") + "</span>");
   }
   function select(id, period) {
-    state.sel = id; state.period = period != null ? period : null;
+    state.sel = id; state.period = period != null ? period : null; state.studio.route = null;
     var s = byId(id);
-    if (s.tier === "market") { state.market = id; $("ladderMkt").value = id; renderLadder(); }
-    else if (state.tier !== s.tier) { state.tier = s.tier; renderTier(); }
+    if (!s) return;
+    var ok = state.res && state.res.ok;
+    if (s.tier === "market") { state.market = id; $("ladderMkt").value = id; if (ok) renderLadder(); }
+    else if (state.tier !== s.tier) { state.tier = s.tier; if (ok) renderTier(); }
     renderSelection();
   }
 
@@ -538,6 +552,7 @@
     $("applyOne").addEventListener("click", function () { applyAdds([s.id]); });
   }
   function applyAdds(ids) {
+    hist.record(state.net);
     var qs = ids.map(function (id) { return { id: id, q: requiredFor(id) }; });
     qs.forEach(function (x) { var s = byId(x.id); if (!x.q || !x.q.additions.length) return; s.expansions = (s.expansions || []).concat(x.q.additions).sort(function (a, b) { return a.from - b.from; }); });
     renderEditor(); render();
@@ -882,7 +897,7 @@
   }
   function useCustom(net, name) {
     state.custom = { name: name, net: clone(net) };
-    state.scenario = "custom"; state.net = clone(net); state.pos = null; state.period = null;
+    state.scenario = "custom"; state.net = clone(net); state.pos = null; state.period = null; state.studio.route = null; hist.clear();
     if (state.net.config.demandScale == null) state.net.config.demandScale = 1;
     fillScenarios(); $("scenario").value = "custom";
     if (state.compareKey === "custom") setCompare("custom"); else fillCompare();
@@ -956,6 +971,7 @@
   function expText(s) { return (s.expansions || []).map(function (e) { return IO.monthText(e.from, state.net.config) + ":+" + e.add; }).join(" | "); }
   function monthOptions(v) { return MONTHS.map(function (m, i) { return "<option value='" + i + "'" + (i === v ? " selected" : "") + ">" + m + "</option>"; }).join(""); }
   function inp(attrs, v, cls2) { return "<input" + (cls2 ? " class='" + cls2 + "'" : "") + " " + attrs + " value='" + esc(v == null ? "" : v) + "'>"; }
+  function cps(tier) { return G.params(state.net, "sites").filter(function (d) { return !d.tiers || !d.tiers.length || d.tiers.indexOf(tier) >= 0; }); }
   function renderEditor() {
     var n = state.net, c = n.config, tiers = P.tiersFor(n);
     var h = "<table class='edit'><tbody><tr><td class='tier-h' colspan='8'>" + T("Product, calendar and bill of materials") + "</td></tr>" +
@@ -969,7 +985,8 @@
     tiers.forEach(function (t, ti) {
       var cols = t.id === "market" ? EDIT.market : t.id === "warehouse" ? EDIT.warehouse : EDIT.cmo, up = ti < tiers.length - 1 ? sitesOf(tiers[ti + 1].id) : [];
       h += "<table class='edit'><thead><tr><td class='tier-h' colspan='" + (cols.length + 6) + "'><i class='swatch' style='background:" + TCOL[t.id] + "'></i>" + esc(tierName(t.id)) + " · " + esc(tierUnit(t.id)) + " <button type='button' class='btn small' data-add='" + t.id + "'>" + T("+ Add a site") + "</button></td></tr><tr><th>" + T("Site") + "</th><th>" + T("Country") + "</th><th>" + T("Lat") + "</th><th>" + T("Lon") + "</th>" +
-        cols.map(function (c2) { return "<th>" + T(c2[1]) + "</th>"; }).join("") + (t.id !== "raw" ? "<th>" + T("Sourcing: supplier · share · transit days (blank = estimated)") + "</th>" : "") + (t.id !== "market" ? "<th>" + T("Expansions (YYYY-MM:+amount)") + "</th>" : "") + "<th></th></tr></thead><tbody>";
+        cols.map(function (c2) { return "<th>" + T(c2[1]) + "</th>"; }).join("") + (t.id !== "raw" ? "<th>" + T("Sourcing: supplier · share · transit days (blank = estimated)") + "</th>" : "") + (t.id !== "market" ? "<th>" + T("Expansions (YYYY-MM:+amount)") + "</th>" : "") +
+        cps(t.id).map(function (d) { return "<th>" + esc(T(d.label)) + (d.unit ? " (" + esc(d.unit) + ")" : "") + "</th>"; }).join("") + "<th></th></tr></thead><tbody>";
       sitesOf(t.id).forEach(function (s) {
         var a = "data-id='" + esc(s.id) + "'";
         h += "<tr><td class='name'>" + inp(a + " data-k='name'", nm(s), "mid") + "<span class='sid'>" + esc(s.id) + "</span></td><td>" + inp(a + " data-k='country'", country(s), "short") + "</td><td>" + inp(a + " data-k='lat' inputmode='decimal'", s.lat, "short") + "</td><td>" + inp(a + " data-k='lon' inputmode='decimal'", s.lon, "short") + "</td>" +
@@ -982,6 +999,9 @@
           }).join("") + (up.length ? "<button type='button' class='btn small' " + a + " data-addlane='1'>" + T("+ supplier") + "</button>" : "") + "</td>";
         }
         if (t.id !== "market") h += "<td>" + inp(a + " data-k='expansions'", expText(s), "wide") + "</td>";
+        cps(t.id).forEach(function (d) { var v = s.custom ? s.custom[d.key] : null; h += "<td>" + (d.type === "bool" ? "<select " + a + " data-cp='" + esc(d.key) + "'><option value=''>–</option><option value='yes'" + (v === true ? " selected" : "") + ">" + T("yes") + "</option><option value='no'" + (v === false ? " selected" : "") + ">" + T("no") + "</option></select>"
+          : d.type === "choice" ? "<select " + a + " data-cp='" + esc(d.key) + "'><option value=''>–</option>" + d.options.map(function (o) { return "<option" + (o === v ? " selected" : "") + ">" + esc(o) + "</option>"; }).join("") + "</select>"
+          : inp(a + " data-cp='" + esc(d.key) + "'", v, d.type === "number" ? "short" : "mid")) + "</td>"; });
         h += "<td><button type='button' class='x' " + a + " data-del='1' aria-label='" + esc(T("Remove this site")) + "'>×</button></td></tr>";
       });
       h += "</tbody></table>";
@@ -994,6 +1014,7 @@
   function num(v) { var n = IO.number(v, /,/.test(v) && !/\./.test(v)); return n == null ? NaN : n; }
   function onEdit(e) {
     var t = e.target, v = t.value != null ? String(t.value).trim() : "";
+    if (/INPUT|SELECT/.test(t.tagName)) hist.record(state.net);
     var ck = t.getAttribute("data-cfg"), bk = t.getAttribute("data-bom"), tk = t.getAttribute("data-tier");
     if (ck) {
       if (ck === "product") state.net.product = v;
@@ -1004,6 +1025,8 @@
     if (bk) { var b = num(v); if (isFinite(b) && b != null) state.net.bom[bk] = b; else state.net.bom[bk] = NaN; changed(); return; }
     if (tk) { var o = (state.net.tiers = state.net.tiers || {})[tk] = state.net.tiers[tk] || {}; if (v) o[t.getAttribute("data-tk")] = v; else delete o[t.getAttribute("data-tk")]; renderEditor(); changed(); return; }
     var s = byId(t.getAttribute("data-id")); if (!s) return;
+    var cp = t.getAttribute("data-cp");
+    if (cp) { var def = G.params(state.net, "sites").filter(function (d) { return d.key === cp; })[0]; if (def) G.setCustom(s, def, def.type === "number" && v !== "" ? num(v) : v); changed(false); return; }
     var lane = t.getAttribute("data-lane");
     if (lane != null) {
       var l = s.suppliers[+lane], lk = t.getAttribute("data-lk");
@@ -1024,6 +1047,7 @@
   function uid(tier) { var p = { market: "m", warehouse: "w", packaging: "pk", dosing: "d", product: "p", raw: "r" }[tier], i = 1; while (byId(p + "-new" + i)) i++; return p + "-new" + i; }
   function onEditClick(e) {
     var t = e.target.closest("button"); if (!t) return;
+    if (t.hasAttribute("data-add") || t.hasAttribute("data-del") || t.hasAttribute("data-addlane") || t.hasAttribute("data-dellane")) hist.record(state.net);
     var id = t.getAttribute("data-id"), s = id ? byId(id) : null;
     if (t.hasAttribute("data-add")) {
       var tier = t.getAttribute("data-add"), ti = P.TIER_INDEX[tier], like = sitesOf(tier)[0], up = ti < 5 ? sitesOf(P.TIERS[ti + 1].id) : [];
@@ -1066,7 +1090,7 @@
     if (id === "custom" && state.custom) { state.scenario = "custom"; state.net = clone(state.custom.net); }
     else { state.scenario = N.SCENARIOS[id] ? id : "base"; state.net = N.build(state.scenario); }
     if (state.net.config.demandScale == null) state.net.config.demandScale = 1;
-    state.pos = null; state.period = null;
+    state.pos = null; state.period = null; state.studio.route = null; state.pick = null; hist.clear();
     fillScenarios(); syncControls(); renderEditor(); render();
   }
   // the tutorial (and tests) set the page up through this: a scenario, then values, then what to look at
@@ -1081,6 +1105,7 @@
     if (v.rawSeasonMax != null) state.net.config.rawSeasonMax = v.rawSeasonMax;
     if (v.cover != null) { state.net.config.cover = v.cover; sitesOf("warehouse").forEach(function (s) { s.cover = v.cover; }); }
     (o.edits || []).forEach(function (e) { var s = byId(e.id); if (s) s[e.k] = e.v; });
+    (o.remove || []).forEach(function (id) { G.removeSite(state.net, id); });
     state.target = o.target != null ? o.target : 0.9;
     state.colorBy = o.colorBy || "peak";
     each($("colorBy").querySelectorAll("button"), function (x) { x.classList.toggle("active", x.getAttribute("data-v") === state.colorBy); });
@@ -1096,10 +1121,14 @@
     render();
     if (o.select) select(o.select, o.period);
     if (o.open) { var d = document.querySelector(o.open); if (d && d.tagName === "DETAILS") d.open = true; }
+    var sv = o.studio || {};
+    state.studio = { view: sv.view || "diagram", mode: sv.mode || "select", highlight: sv.highlight || "all", colorBy: sv.colorBy || "tier", showDays: !!sv.showDays, route: sv.route || null };
+    if (o.studio) render();
     return whenSolved().then(function () { if (o.select && CAP()) select(o.select, o.period); });
   }
   // the numbers the tutorial quotes, from the live plan
   function tokens() {
+    if (!state.res || !state.res.ok) return {};
     var f = firstOverall(), s = byId(state.sel), r = state.res.sites[state.sel], unit = s ? unitOf(s) : "";
     var V = { first: f ? monthLabel(f.m) : T("never"), firstSite: f ? nm(f.site) : "–", y1: fq(demandTotal(0, 12)), y13: fq(demandTotal(P.MONTHS - 12, P.MONTHS)), nShort: String(overCount(state.res, state.net)),
       chain: String(Math.round(state.res.leadChain[state.market].total)), chainMonths: fx(state.res.leadChain[state.market].total / P.DAYS_PER_MONTH, 1), market: nm(byId(state.market)), site: s ? nm(s) : "" };
@@ -1170,6 +1199,24 @@
     });
     fetch("assets/land.json").then(function (r) { return r.json(); }).then(function (j) { state.land = j; renderMap(); }).catch(function () {});
   }
-  window.Tierwise = { state: state, setMode: setMode, whenSolved: whenSolved, load: load, setup: setup, select: select, render: render, tokens: tokens, requiredFor: requiredFor, VERSION: VERSION, useCustom: useCustom, shareLink: shareLink, readLink: readLink, setCompare: setCompare };
+  // ---- one path for every change made in the Network Studio: record for undo, change, re-plan, redraw
+  function edit(fn, structural) {
+    hist.record(state.net);
+    fn(state.net);
+    if (state.scenario !== "custom") markEdited();
+    if (structural) state.pos = null;
+    syncControls(); renderEditor(); render();
+  }
+  function restore(n) { if (!n) return; state.net = n; state.pos = null; if (!byId(state.sel)) state.sel = null; state.studio.route = null; syncControls(); renderEditor(); render(); }
+  function parseExpansions(v) {
+    return v ? v.split(/[|;,]/).map(function (p) { var a2 = p.split(":"); return { from: Math.max(0, IO.monthIndex(a2[0].trim(), state.net.config)), add: IO.number((a2[1] || "").trim(), false) }; }).filter(function (x) { return isFinite(x.from) && isFinite(x.add); }) : [];
+  }
+  var api = {
+    h: { esc: esc, nm: nm, country: country, tierName: tierName, tierShort: tierShort, tierOne: tierOne, tierUnit: tierUnit, unitOf: unitOf, fq: fq, pct: pct, latLabel: latLabel, row: row, TCOL: TCOL },
+    view: VR, cap: CAP, edit: edit, num: num, renderAll: render, download: download, fileBase: fileBase, parseExpansions: parseExpansions,
+    monthText: function (i) { return IO.monthText(i, state.net.config); }, monthIndex: function (v) { return IO.monthIndex(v, state.net.config); },
+    undo: function () { restore(hist.undo(state.net)); }, redo: function () { restore(hist.redo(state.net)); }, canUndo: function () { return hist.canUndo(); }, canRedo: function () { return hist.canRedo(); }
+  };
+  window.Tierwise = { api: api, state: state, setMode: setMode, whenSolved: whenSolved, load: load, setup: setup, select: select, render: render, tokens: tokens, requiredFor: requiredFor, VERSION: VERSION, useCustom: useCustom, shareLink: shareLink, readLink: readLink, setCompare: setCompare };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.0.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.1.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -30,7 +30,8 @@ illustrative.
 |---|---|---|
 | 1 | Explain and share: tracing, capacity to add, comparison, links and files, your own supply chain, tutorial, Spanish and Danish | done, 1.1.0 |
 | 2 | Within capacity: a linear program (HiGHS in the browser) that builds stock ahead, re-sources and reports unmet demand, fill rates and bottlenecks | done, 2.0.0 |
-| 3 | Capacity investment: candidate expansions and new CMOs with build and qualification times, capex, an optimiser | 2.1 |
+| – | Network Studio: the network drawn and edited by tier, custom parameters, routes tables | done, 2.1.0 |
+| 3 | Capacity investment: candidate expansions and new CMOs with build and qualification times, capex, an optimiser | 2.2 |
 | 4 | Uncertainty: forecast ranges, variable yields and lead times, milk-season variance, probability of shortfall | 3.0 |
 | 5 | Products and food rules: product families sharing lines, changeovers, registrations, shelf life, landed cost | 3.1 |
 | 6 | Finish: planning report, accessibility, a background solver, a published benchmark | 4.0 |
@@ -147,12 +148,73 @@ what the first month needs, so the plan does not start with stock built in advan
 With qualified lanes, the first bottleneck (Valencia Dosing) comes in February 2030, but the first unmet demand only in
 December 2032. Within capacity, the New Zealand drought costs nothing: stock built ahead and re-sourcing absorb it.
 
+## Network Studio (`studio.js`, `src/graph.js`)
+
+The Studio draws the chain by tier, in columns from raw ingredients on the left to consumption points on the right.
+Shapes tell the roles apart:
+
+| Role | Shape |
+|---|---|
+| Production sites (the four CMO tiers) | Squares |
+| Warehouses | Hexagons |
+| Consumption points | Pills |
+
+**Transport routes** are arrows from a supplier to its customer:
+- width shows their share of what the customer buys, or the actual share within capacity;
+- the dash pattern shows the mode (road, sea, rail or air), estimated when not set.
+
+**Viewing options:**
+- **Highlight** brings forward production sites, warehouses, consumption points or routes.
+- **Colour by** uses the tier, the status in the plan, or any custom parameter.
+- **Tiers / Map:** the same network can be viewed on the map instead.
+
+**Editing modes:**
+- **Select & move:** drag a site up or down its column, and the order is saved with the network.
+- **+ Add site:** click where it goes. It starts from a neighbour's parameters.
+- **Connect:** drag between sites in neighbouring tiers, in either direction. Only valid targets light up, and a route
+  that skips a tier is refused.
+- **Delete:** click a site or a route. The Delete key works too.
+
+**The inspector** edits the selected site:
+- name, id (routes follow), country, location (or *pick the place on the map*);
+- capacity, times and yield, or the forecast and priority;
+- expansions and custom parameters.
+
+For a selected route it edits share, transit days, mode and route parameters.
+
+**Checking and undo:**
+- Problems show as red badges with an issues list that links to each site. Sites no one buys from get an amber badge.
+- **Undo / Redo** (Ctrl+Z, Ctrl+Y) covers every change, from the Studio or the tables.
+- The diagram saves as **SVG** or **PNG**.
+
+**Custom parameters** are your own fields for sites or routes:
+- types: number, text, yes/no or a choice, with a unit, a default and the tiers they apply to;
+- shown in the inspector and the tables, used to colour the diagram, and carried by every file;
+- they describe the network, and the plan does not use them;
+- the example has *Halal certified* on its CMOs.
+
+`src/graph.js` holds the pure parts, tested on their own:
+- adding and removing sites and routes, renaming ids;
+- the six-tier connection rule;
+- the column order, chosen to cross fewer routes, with saved orders kept;
+- the problems per site;
+- parameter definitions and values;
+- the undo history.
+
 ## Your own supply chain (`src/io.js`)
 
 The **Your supply chain** box loads a network from a file. You can also drop the file onto it. **Template · CSV** and
 **Template · Excel** export the network on screen, ready to edit.
 
 ### File format
+
+Since 2.1, routes and parameters have their own place in the file:
+- **Routes:** a separate table (or **Routes** sheet), `from,to,share,days,mode,…`, with one column per route parameter.
+  When present, it replaces the `suppliers` column.
+- **Custom parameters:** columns of the site table. Their definitions go in the settings as
+  `param.<key>.label / type / unit / applies / tiers / options / default`.
+- **Unknown columns:** become new parameters, with the type guessed from the values.
+- **Diagram order:** the `order` column. Markets have a `priority` column.
 
 - **One row per site:**
   - `id`, `tier` (`market`, `warehouse`, `packaging`, `dosing`, `product`, `raw`), `name`, `country`, `lat`, `lon`.
@@ -205,12 +267,13 @@ Every chart has a hover tooltip, and most have a table view.
 
 ## Tutorial (`tour.js`, `tour-content*.js`)
 
-The **Tutorial** button opens four levels:
+The **Tutorial** button opens five levels:
 
 | Level | Steps | Topics |
 |---|---|---|
 | Beginner | 8 | read the plan |
 | Intermediate | 9 | time and tiers |
+| Build a network | 9 | the Network Studio |
 | Advanced | 10 | from plan to decision |
 | Expert | 8 | planning within capacity |
 
@@ -234,14 +297,15 @@ Each step sets up the page, highlights what it is about and quotes live numbers.
 
 ```
 node tierwise/tests/plan.test.js   # 61: the engine, tracing, capacity to add, custom tiers
-node tierwise/tests/io.test.js     # 34: CSV / Excel / JSON round trips, decimal commas, errors with row numbers
+node tierwise/tests/graph.test.js  # 41: sites and routes, the tier rule, column order, problems, parameters, undo
+node tierwise/tests/io.test.js     # 49: CSV / Excel / JSON round trips, routes tables, custom parameters, errors by row
 node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
-node tierwise/tests/tour.test.js   # 353: every step in three languages, and every claim the tutorial makes
+node tierwise/tests/tour.test.js   # 435: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
                                    # 41: the plan within capacity on chains with known answers, and the example
 ```
 
-CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 75 checks across
+CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 99 checks across
 the flows, file loading and links, and every tutorial step in three languages. It also scans the Spanish and Danish
 pages for leftover English.
 

@@ -1,7 +1,7 @@
 // Tierwise — the tutorial: every level and step is complete in English, Spanish and Danish, points at an element that
 // exists, quotes only known numbers, and every answer it calls right is true of the plan.
 const fs = require("fs"), path = require("path");
-const P = require("../src/plan.js"), N = require("../src/network.js");
+const P = require("../src/plan.js"), N = require("../src/network.js"), G = require("../src/graph.js");
 const C = require("../tour-content.js"), ES = require("../tour-content-es.js"), DA = require("../tour-content-da.js");
 const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 let pass = 0, fail = 0;
@@ -12,7 +12,7 @@ const first = (r) => { let b = Infinity, id = null; Object.values(r.sites).forEa
 // ---- structure
 const ids = new Set(), steps = [];
 C.LEVELS.forEach((l) => l.steps.forEach((s) => { check("unique step id " + s.id, !ids.has(s.id)); ids.add(s.id); steps.push(s); }));
-check("four levels: beginner, intermediate, advanced, expert", C.LEVELS.map((l) => l.id).join() === "beginner,intermediate,advanced,expert");
+check("five levels: beginner, intermediate, builder, advanced, expert", C.LEVELS.map((l) => l.id).join() === "beginner,intermediate,builder,advanced,expert");
 check("each level has 8–12 steps", C.LEVELS.every((l) => l.steps.length >= 8 && l.steps.length <= 12));
 steps.forEach((s) => {
   const id = (s.target.match(/^#([\w-]+)$/) || [])[1];
@@ -40,6 +40,8 @@ for (const [lang, TR] of [["es", ES], ["da", DA]]) {
 // ---- the claims behind the right answers
 const base = N.build("base"), rb = P.plan(base);
 const CLAIMS = {
+  "g-tier": () => G.canConnect(N.build("base"), "p-cork", "pk-qro").reason === "tier" && G.canConnect(N.build("base"), "d-ros", "pk-qro").reason === "exists",
+  "g-delete": () => { const n = N.build("base"); G.removeSite(n, "pk-jhb"); const i = G.issues(n); return ["w-ae", "w-sg"].every((id) => i.some((x) => x.id === id && x.code === "nosupplier")) && !P.plan(n).ok; },
   "peak-hidden": () => base.sites.some((s) => s.tier !== "market" && rb.sites[s.id].periods.some((q, i) => i >= 36 && q.util <= 1 && q.peak > 1)),
   "south-peak": () => { const d = Array.from(rb.sites["m-jnb"].demand).slice(0, 12); return d.indexOf(Math.max(...d)) === 4; },
   "release-shift": () => {

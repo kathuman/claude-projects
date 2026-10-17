@@ -12,7 +12,7 @@ function check(name, cond, detail) { if (cond) pass++; else { fail++; console.lo
 
 // ---- what must be translated
 const keys = new Set();
-for (const f of ["app.js", "tour.js"]) {
+for (const f of ["app.js", "tour.js", "studio.js"]) {
   const s = fs.readFileSync(R + f, "utf8");
   for (const m of s.matchAll(/\bT\(\s*"((?:[^"\\]|\\.)*)"/g)) keys.add(JSON.parse('"' + m[1] + '"'));
 }
@@ -23,6 +23,7 @@ P.TIERS.forEach((t) => { keys.add(t.name); keys.add(t.one); keys.add(t.short); k
 Object.values(N.SCENARIOS).forEach((s) => keys.add(s.label));
 const net = N.base(); keys.add(net.product);
 net.sites.forEach((s) => { keys.add(s.name); keys.add(s.country); });
+(net.params || []).forEach((d) => keys.add(d.label));
 const html = new Set();
 for (const f of ["index.html", "about.html"]) {
   const s = fs.readFileSync(R + f, "utf8");
@@ -44,6 +45,13 @@ IO.load("x.xlsx", new ArrayBuffer(2)).errors.forEach((e) => msgs.add(e));
 IO.load("x.xlsx", new ArrayBuffer(2), { read: () => { throw new Error("x"); } }).errors.forEach((e) => msgs.add(e));
 IO.fromWorkbook({ SheetNames: [] }, {}).errors.forEach((e) => msgs.add(e));
 msgs.add("The constrained plan could not be solved (Infeasible)."); msgs.add("The solver could not be loaded.");
+// 2.1: routes tables and custom parameters
+["id,tier,name,lat,lon,base,colour\nm,market,M,0,0,1,red\n\nfrom,to,share,days,mode\nx,m,1,,\nm,m,abc,,\nm,m,1,-3,\nm,m,1,,boat\n",
+  "id,tier,name,lat,lon,base,capacity,suppliers\nm,market,M,0,0,1,,w\nw,warehouse,W,0,1,,5,\n\nfrom,to,share\n",
+  "id,tier,name,lat,lon,base,size\nm,market,M,0,0,1,big\n\nsetting,value\nparam.size.type,number\nparam.capacity.type,number\n"]
+  .forEach((t) => { const r = IO.fromCSV(t); (r.errors || []).concat(r.warnings || []).forEach((e) => msgs.add(e)); });
+{ const r = IO.fromCSV("id,tier,name,lat,lon,base,suppliers\nm,market,M,0,0,1,w\n\nfrom,to\nm,m\n"); (r.warnings || []).concat(r.errors || []).forEach((e) => msgs.add(e)); }
+{ const r = IO.fromRows([["id", "tier", "name", "lat", "lon", "base"], ["m", "market", "M", 0, 0, 1]], [], false, [["from", "share"]], 0); (r.errors || []).forEach((e) => msgs.add(e)); }
 
 const arg = process.argv.indexOf("--missing");
 if (arg > 0) {

@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.0.0</span>
+    <span class="ver" id="ver">v2.1.0</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -137,13 +137,73 @@
     <div class="table-scroll"><table class="outlook" id="outlook"></table></div>
   </section>
 
+  <section class="panel studio-panel" id="studioPanel">
+    <div class="studio-head">
+      <div>
+        <h2 data-i18n="st.h">Network Studio</h2>
+        <p class="panel-note" data-i18n="st.note">The chain by tier, from raw ingredients on the left to the shelves on the right. Squares are production sites, hexagons warehouses, pills consumption points; arrows are transport routes, as wide as their share. Add sites, draw routes, drag a site up or down its column, and edit anything in the inspector. Ctrl+Z undoes.</p>
+      </div>
+      <div class="seg" id="studioView" role="group">
+        <button type="button" data-v="diagram" class="active" data-i18n="st.diagram">Tiers</button>
+        <button type="button" data-v="map" data-i18n="st.map">Map</button>
+      </div>
+    </div>
+    <div class="studio-bar">
+      <div class="seg" id="studioMode" role="group" aria-label="Editing mode" data-i18n-attr="aria-label=st.modeAria">
+        <button type="button" data-v="select" class="active" data-i18n="st.select">Select &amp; move</button>
+        <button type="button" data-v="add" data-i18n="st.add">+ Add site</button>
+        <button type="button" data-v="connect" data-i18n="st.connect">Connect</button>
+        <button type="button" data-v="delete" data-i18n="st.delete">Delete</button>
+      </div>
+      <button type="button" class="btn small" id="undoBtn" data-i18n="st.undo">Undo</button>
+      <button type="button" class="btn small" id="redoBtn" data-i18n="st.redo">Redo</button>
+      <label class="ctl inline"><span data-i18n="st.highlight">Highlight</span>
+        <select class="choice" id="studioHighlight">
+          <option value="all" data-i18n="st.hAll">Everything</option>
+          <option value="production" data-i18n="st.hProd">Production sites</option>
+          <option value="warehouse" data-i18n="st.hWh">Warehouses</option>
+          <option value="consumption" data-i18n="st.hMkt">Consumption points</option>
+          <option value="routes" data-i18n="st.hRoutes">Transport routes</option>
+        </select>
+      </label>
+      <label class="ctl inline"><span data-i18n="st.colour">Colour by</span><select class="choice" id="studioColor"></select></label>
+      <label class="chk"><input type="checkbox" id="studioDays"><span data-i18n="st.days">Transit days on the selected site's routes</span></label>
+      <span class="studio-export"><button type="button" class="btn small" id="svgBtn" data-i18n="st.svg">Diagram · SVG</button><button type="button" class="btn small" id="pngBtn" data-i18n="st.png">Diagram · PNG</button></span>
+    </div>
+    <p class="studio-hint" data-i18n="st.hint">Connect: drag from a site to one in the next tier (from a supplier to its customer, or back). Add: click where the new site should go. Delete: click a site or a route.</p>
+    <div class="studio-body">
+      <div class="studio-main">
+        <div class="studio-canvas chart" id="studioCanvas"></div>
+        <div class="map-box" id="mapBox" hidden>
+          <p class="pick-hint" id="pickHint" hidden></p>
+          <div class="map-wrap chart" id="mapWrap"></div>
+          <div class="legend" id="mapLegend"></div>
+          <p class="panel-note" data-i18n="m.note">Southern milk seasons and southern demand run six months behind the north. A ring marks a site that runs out of capacity at some point in the 13 years. Click a site to see its plan.</p>
+        </div>
+        <div class="legend" id="studioLegend"></div>
+        <div class="studio-issues" id="studioIssues" aria-live="polite"></div>
+      </div>
+      <aside class="inspector" id="inspector" aria-label="Inspector" data-i18n-attr="aria-label=st.inspAria"></aside>
+    </div>
+    <details class="pm" id="paramsBox">
+      <summary data-i18n="st.params">Custom parameters: define your own fields for sites and routes</summary>
+      <p class="panel-note" data-i18n="st.paramsNote">Your own fields, such as a certificate, an owner, CO₂ per tonne or a cost: shown in the inspector and the tables, used to colour the diagram, and carried by every file. They describe the network; the plan does not use them.</p>
+      <div id="paramList"></div>
+      <div class="pm-form">
+        <label class="fi"><span data-i18n="st.pName">Name</span><input id="pmLabel" placeholder="Halal certified"></label>
+        <label class="fi"><span data-i18n="st.pType">Type</span><select id="pmType"><option value="number" data-i18n="st.tNum">Number</option><option value="text" data-i18n="st.tText">Text</option><option value="bool" data-i18n="st.tBool">Yes / no</option><option value="choice" data-i18n="st.tChoice">Choice</option></select></label>
+        <label class="fi"><span data-i18n="st.pFor">For</span><select id="pmApplies"><option value="sites" data-i18n="st.fSites">Sites</option><option value="routes" data-i18n="st.fRoutes">Routes</option></select></label>
+        <label class="fi"><span data-i18n="st.pUnit">Unit (optional)</span><input id="pmUnit"></label>
+        <label class="fi" id="pmOptionsRow" hidden><span data-i18n="st.pOptions">Options, separated by |</span><input id="pmOptions" placeholder="A | B | C"></label>
+        <label class="fi"><span data-i18n="st.pDefault">Default (optional)</span><input id="pmDefault"></label>
+        <div class="fi" id="pmTiersRow"><span data-i18n="st.pTiers">Tiers (none ticked = every site)</span><div id="pmTiers" class="chk-row"></div></div>
+        <button type="button" class="btn" id="pmAdd" data-i18n="st.pAdd">Add parameter</button>
+        <p class="pm-msg" id="pmMsg" aria-live="polite"></p>
+      </div>
+    </details>
+  </section>
+
   <div class="grid2">
-    <section class="panel" id="mapPanel">
-      <h2 data-i18n="m.h">The network by latitude</h2>
-      <p class="panel-note" data-i18n="m.note">Southern milk seasons and southern demand run six months behind the north. A ring marks a site that runs out of capacity at some point in the 13 years. Click a site to see its plan.</p>
-      <div class="map-wrap chart" id="mapWrap"></div>
-      <div class="legend" id="mapLegend"></div>
-    </section>
     <section class="panel" id="sitePanel">
       <h2 data-i18n="s.h">Selected site</h2>
       <div id="siteHead"></div>
@@ -152,6 +212,15 @@
       <div id="siteLanes"></div>
       <div class="sub-box" id="drivers"></div>
       <div class="sub-box" id="required"></div>
+    </section>
+    <section class="panel" id="tierPanel">
+      <h2 data-i18n="ti.h">Load by tier</h2>
+      <p class="panel-note" data-i18n="ti.note">Every site's load in a tier, stacked, against the tier's combined capacity. The tier can have spare capacity in total while one site is short: sourcing shares are fixed.</p>
+      <div class="seg" id="tierSeg" role="group"></div>
+      <div class="chart" id="tierChart" style="margin-top:10px"></div>
+      <div class="legend" id="tierLegend"></div>
+      <button class="table-btn" type="button" data-table="tier" data-i18n="t.show">Show as table</button>
+      <div class="data-table" id="table-tier" hidden></div>
     </section>
   </div>
 
@@ -177,25 +246,14 @@
     <button class="btn small" type="button" id="applyAll" data-i18n="n.apply" style="margin-top:10px">Add all as expansions</button>
   </section>
 
-  <div class="grid2">
-    <section class="panel" id="tierPanel">
-      <h2 data-i18n="ti.h">Load by tier</h2>
-      <p class="panel-note" data-i18n="ti.note">Every site's load in a tier, stacked, against the tier's combined capacity. The tier can have spare capacity in total while one site is short: sourcing shares are fixed.</p>
-      <div class="seg" id="tierSeg" role="group"></div>
-      <div class="chart" id="tierChart" style="margin-top:10px"></div>
-      <div class="legend" id="tierLegend"></div>
-      <button class="table-btn" type="button" data-table="tier" data-i18n="t.show">Show as table</button>
-      <div class="data-table" id="table-tier" hidden></div>
-    </section>
-    <section class="panel" id="ladderPanel">
-      <h2 data-i18n="l.h">Lead-time ladder</h2>
-      <p class="panel-note" data-i18n="l.note">How far ahead each tier must act for a pack to reach the shelf, along the main sourcing path (the largest share at each step).</p>
-      <label class="ctl" style="max-width:280px"><span data-i18n="l.mkt">Consumption point</span><select class="choice" id="ladderMkt"></select></label>
-      <p class="chart-sub" id="ladderNote"></p>
-      <div class="chart ladder" id="ladder"></div>
-      <div class="legend" id="ladderLegend"></div>
-    </section>
-  </div>
+  <section class="panel" id="ladderPanel">
+    <h2 data-i18n="l.h">Lead-time ladder</h2>
+    <p class="panel-note" data-i18n="l.note">How far ahead each tier must act for a pack to reach the shelf, along the main sourcing path (the largest share at each step).</p>
+    <label class="ctl" style="max-width:280px"><span data-i18n="l.mkt">Consumption point</span><select class="choice" id="ladderMkt"></select></label>
+    <p class="chart-sub" id="ladderNote"></p>
+    <div class="chart ladder" id="ladder"></div>
+    <div class="legend" id="ladderLegend"></div>
+  </section>
 
   <section class="panel" id="fcPanel">
     <h2 id="fcTitle">Consumption forecast · packs a month</h2>
@@ -206,7 +264,7 @@
   </section>
 
   <details class="box" id="editor">
-    <summary data-i18n="e.h">Edit the network: sites, capacities, lead and release times, yields, sourcing, the forecast</summary>
+    <summary data-i18n="e.h">The network as tables: every site and route</summary>
     <p data-i18n="e.note">Changes re-plan at once. Each site sources from one or more sites of the tier directly above; shares are normalised, and a transit time left blank is estimated from the distance (by road within 1,500 km, by sea beyond). Expansions are written <code>YYYY-MM:+amount</code>, separated by <code>|</code>. Switching scenario discards edits; save your network as a file or a link to keep it.</p>
     <div class="table-scroll" id="editTables"></div>
   </details>
@@ -228,15 +286,17 @@
 
   <footer class="foot">
     <span class="consult"><span data-i18n="ft.consult">Available for consulting</span> — <a href="https://github.com/kathuman" target="_blank" rel="noopener" data-i18n="ft.touch">get in touch</a></span>
-    Tierwise v<span id="ver2">2.0.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.1.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
 <script src="src/plan.js"></script>
 <script src="src/network.js"></script>
+<script src="src/graph.js"></script>
 <script src="src/io.js"></script>
 <script src="src/constrained.js"></script>
 <script src="app.js"></script>
+<script src="studio.js"></script>
 <script src="tour-content.js"></script>
 <script src="tour-content-es.js"></script>
 <script src="tour-content-da.js"></script>
