@@ -315,7 +315,7 @@ cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test
                                    # 41: the plan within capacity on chains with known answers, and the example
 ```
 
-CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 104 checks across
+CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 103 checks across
 the flows, file loading and links, and every tutorial step in three languages. It also scans the Spanish and Danish
 pages for leftover English.
 
