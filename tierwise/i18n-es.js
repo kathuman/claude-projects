@@ -30,8 +30,8 @@
     "Tier": "Nivel", "Unit": "Unidad", "Load, year 1<br>(a month)": "Carga, año 1<br>(al mes)", "Capacity, year 1<br>(a month)": "Capacidad, año 1<br>(al mes)", "Use, year 1": "Uso, año 1",
     "Busiest month,<br>months 1–36": "Mes de mayor carga,<br>meses 1–36", "Busiest month,<br>years 4–13": "Mes de mayor carga,<br>años 4–13", "Load, year 13<br>(a month)": "Carga, año 13<br>(al mes)", "First short": "Primer déficit",
     // ---- mapa
-    "Map of the supply network by latitude": "Mapa de la red de suministro por latitud", "Equator": "Ecuador", "Tropic of Cancer": "Trópico de Cáncer", "Tropic of Capricorn": "Trópico de Capricornio",
-    "Demand, month 1": "Demanda, mes 1", "Busiest month": "Mes de mayor carga", "Above 90% at peak": "Sobre 90% en el peak", "Short at some point": "Con déficit en algún momento",
+    "Equator": "Ecuador", 
+    "Busiest month": "Mes de mayor carga", "Above 90% at peak": "Sobre 90% en el peak", "Short at some point": "Con déficit en algún momento",
     // ---- sitio seleccionado
     "southern hemisphere": "hemisferio sur", "northern hemisphere": "hemisferio norte", "Year 1": "Año 1", "launches {m}": "se lanza en {m}", "Year 13": "Año 13", "Growth": "Crecimiento",
     "a year, then {g}%": "al año, luego {g}%", "Peak month": "Mes peak", "±{n}% swing": "variación ±{n}%", "Capacity": "Capacidad", "{u} a month": "{u} al mes", ", month 1": ", mes 1", "month {n} of 156": "mes {n} de 156",
@@ -222,7 +222,14 @@
     "A choice needs its options, separated by |.": "Una opción necesita sus alternativas, separadas por |.",
     "Added {p}. Set its values in the inspector, or colour the diagram by it.": "Se agregó {p}. Fije sus valores en el inspector, o coloree el diagrama según él.",
     "Status in the plan": "Estado en el plan",
-    "Halal certified": "Certificación halal"
+    "Halal certified": "Certificación halal",
+    // ---- 2.2: world map
+    "World map of the supply network": "Mapa mundial de la red de suministro",
+    "Distance": "Distancia",
+    "Click the map where the new site should go.": "Haga clic en el mapa donde debe ir el sitio nuevo.",
+    "Routes follow the great circle, the shortest way over the globe.": "Las rutas siguen el círculo máximo, el camino más corto sobre el globo.",
+    "W": "O",
+    "E": "E"
   };
   var H = {
     "meta.title": "Tierwise — Planificación de capacidad en varios niveles",
@@ -273,7 +280,7 @@
     "a.author": "Autor",
     "a.authorp": "Tierwise fue diseñado y construido por <b>Daniel Alberto Sepulveda Estay, PhD</b>, fundador de <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Trabaja en dinámica de sistemas y optimización de redes para la resiliencia de las cadenas de suministro. Es doctor de la Universidad Técnica de Dinamarca y magíster del Instituto Tecnológico de Massachusetts, y miembro del consejo de la System Dynamics Society.",
     "a.more": "Más sobre Daniel →", "a.touch": "Contacto",
-    "a.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (versión 2.1.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (versión 2.2.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
     "a.consult": "Disponible para consultoría", "a.foot": "Planificación de capacidad en varios niveles para una cadena de alimentos a través de latitudes. Todas las cifras de la red de ejemplo son ilustrativas.", "a.built": "Construido con",
     "c.cap": "Capacidad",
     "c.unl": "Ilimitada",
@@ -298,7 +305,7 @@
     "st.h": "Estudio de red",
     "st.note": "La cadena por nivel, desde las materias primas a la izquierda hasta los estantes a la derecha. Los cuadrados son sitios de producción, los hexágonos centros de distribución y las píldoras puntos de consumo; las flechas son rutas de transporte, tan anchas como su participación. Agregue sitios, dibuje rutas, arrastre un sitio arriba o abajo en su columna y edite lo que quiera en el inspector. Ctrl+Z deshace.",
     "st.diagram": "Niveles",
-    "st.map": "Mapa",
+    "st.map": "Mapa mundial",
     "st.select": "Seleccionar y mover",
     "st.add": "+ Agregar sitio",
     "st.connect": "Conectar",
@@ -313,8 +320,8 @@
     "st.hRoutes": "Rutas de transporte",
     "st.colour": "Colorear por",
     "st.days": "Días de tránsito en las rutas del sitio seleccionado",
-    "st.svg": "Diagrama · SVG",
-    "st.png": "Diagrama · PNG",
+    "st.svg": "Imagen · SVG",
+    "st.png": "Imagen · PNG",
     "st.hint": "Conectar: arrastre desde un sitio hasta uno del nivel siguiente (de un proveedor a su cliente, o al revés). Agregar: haga clic donde debe ir el sitio nuevo. Eliminar: haga clic en un sitio o una ruta.",
     "st.params": "Parámetros propios: defina sus propios campos para sitios y rutas",
     "st.paramsNote": "Sus propios campos, como una certificación, un dueño, el CO₂ por tonelada o un costo: se muestran en el inspector y en las tablas, sirven para colorear el diagrama y viajan en cada archivo. Describen la red; el plan no los usa.",
@@ -334,8 +341,15 @@
     "st.pAdd": "Agregar parámetro",
     "st.modeAria": "Modo de edición",
     "st.inspAria": "Inspector",
-    "a.li8": "<b>Una red que se dibuja</b>El Estudio de red muestra la cadena por nivel, distinguiendo sitios de producción, centros de distribución, puntos de consumo y rutas de transporte. Agregue sitios, dibuje rutas entre niveles vecinos, ordene los sitios arrastrándolos, edítelos en un inspector, defina sus propios parámetros y guarde el diagrama como SVG o PNG; cada cambio se vuelve a planificar de inmediato y se puede deshacer.",
-    "a.li6": "<b>Apréndalo en cinco niveles</b>Un tutorial guiado (básico, intermedio, construir una red, avanzado, experto) con preguntas, en inglés, español y danés."
+    "a.li8": "<b>Una red que se dibuja</b>El Estudio de red muestra la cadena por nivel, distinguiendo sitios de producción, centros de distribución, puntos de consumo y rutas de transporte. Agregue sitios, dibuje rutas entre niveles vecinos, ordene los sitios arrastrándolos, edítelos en un inspector, defina sus propios parámetros y guarde el diagrama como SVG o PNG; o trabaje sobre un mapa mundial, con las rutas por su círculo máximo. Cada cambio se vuelve a planificar de inmediato y se puede deshacer.",
+    "a.li6": "<b>Apréndalo en cinco niveles</b>Un tutorial guiado (básico, intermedio, construir una red, avanzado, experto) con preguntas, en inglés, español y danés.",
+    "mp.fit": "Ajustar a la red",
+    "mp.world": "Todo el mundo",
+    "mp.names": "Todos los nombres",
+    "mp.tier": "Sitios nuevos en",
+    "mp.help": "Arrastre el mapa para desplazarlo; Ctrl + rueda o los botones acercan y alejan. Arrastre un sitio para moverlo.",
+    "mp.inAria": "Acercar",
+    "mp.outAria": "Alejar"
   };
   // mensajes del motor (los nombres de los sitios y los textos citados se conservan)
   var P = [

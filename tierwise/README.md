@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.1.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.2.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -31,7 +31,8 @@ illustrative.
 | 1 | Explain and share: tracing, capacity to add, comparison, links and files, your own supply chain, tutorial, Spanish and Danish | done, 1.1.0 |
 | 2 | Within capacity: a linear program (HiGHS in the browser) that builds stock ahead, re-sources and reports unmet demand, fill rates and bottlenecks | done, 2.0.0 |
 | – | Network Studio: the network drawn and edited by tier, custom parameters, routes tables | done, 2.1.0 |
-| 3 | Capacity investment: candidate expansions and new CMOs with build and qualification times, capex, an optimiser | 2.2 |
+| – | World map: the network on the globe, zoom and pan, great-circle routes, edited in place | done, 2.2.0 |
+| 3 | Capacity investment: candidate expansions and new CMOs with build and qualification times, capex, an optimiser | 2.3 |
 | 4 | Uncertainty: forecast ranges, variable yields and lead times, milk-season variance, probability of shortfall | 3.0 |
 | 5 | Products and food rules: product families sharing lines, changeovers, registrations, shelf life, landed cost | 3.1 |
 | 6 | Finish: planning report, accessibility, a background solver, a published benchmark | 4.0 |
@@ -163,10 +164,18 @@ Shapes tell the roles apart:
 - width shows their share of what the customer buys, or the actual share within capacity;
 - the dash pattern shows the mode (road, sea, rail or air), estimated when not set.
 
+**World map** (`src/geo.js` for the geometry): the same network on the globe.
+- **Same look:** the diagram's symbols, colours, highlighting, selection and problem badges.
+- **Zoom and pan:** buttons, Ctrl + wheel, or drag the map; plus **Fit the network** and **Whole world** views.
+- **Routes** follow the great circle and are drawn from both edges where they cross the date line.
+- **Editing:** a site is moved by dragging it to its new place, and **+ Add site** puts a new one where you click, in a
+  chosen tier.
+- **Overlap:** sites at the same place are spread apart on screen only.
+
 **Viewing options:**
 - **Highlight** brings forward production sites, warehouses, consumption points or routes.
 - **Colour by** uses the tier, the status in the plan, or any custom parameter.
-- **Tiers / Map:** the same network can be viewed on the map instead.
+- **Tiers / World map:** switch between the tier diagram and the world map.
 
 **Editing modes:**
 - **Select & move:** drag a site up or down its column, and the order is saved with the network.
@@ -273,7 +282,7 @@ The **Tutorial** button opens five levels:
 |---|---|---|
 | Beginner | 8 | read the plan |
 | Intermediate | 9 | time and tiers |
-| Build a network | 9 | the Network Studio |
+| Build a network | 10 | the Network Studio and the world map |
 | Advanced | 10 | from plan to decision |
 | Expert | 8 | planning within capacity |
 
@@ -298,14 +307,15 @@ Each step sets up the page, highlights what it is about and quotes live numbers.
 ```
 node tierwise/tests/plan.test.js   # 61: the engine, tracing, capacity to add, custom tiers
 node tierwise/tests/graph.test.js  # 41: sites and routes, the tier rule, column order, problems, parameters, undo
+node tierwise/tests/geo.test.js    # 16: the world projection, great-circle routes over the date line, map views
 node tierwise/tests/io.test.js     # 49: CSV / Excel / JSON round trips, routes tables, custom parameters, errors by row
 node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
-node tierwise/tests/tour.test.js   # 435: every step in three languages, and every claim the tutorial makes
+node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
                                    # 41: the plan within capacity on chains with known answers, and the example
 ```
 
-CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 99 checks across
+CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 104 checks across
 the flows, file loading and links, and every tutorial step in three languages. It also scans the Spanish and Danish
 pages for leftover English.
 

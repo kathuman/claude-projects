@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.1.0";
+  var VERSION = "2.2.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -150,7 +150,6 @@
     if (!byId(state.market) || byId(state.market).tier !== "market") state.market = sitesOf("market")[0].id;
     if (!sitesOf(state.tier).length) state.tier = (state.res.tiers.slice(1).filter(function (t) { return sitesOf(t.id).length; })[0] || { id: "warehouse" }).id;
     if (state.period != null && state.period >= state.res.periods.length) state.period = null;
-    if (!state.pos) { state.ext = extent(); state.pos = layout(); }
     if (state.mode === "cap") {
       var key = solveKey();
       if (key !== state.ckey) {
@@ -167,10 +166,10 @@
     renderViews();
   }
   function renderViews() {
-    renderHeadline(); renderKpis(); renderOutlook(); renderMap(); renderSite(); renderHeat(); renderNeeds(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
+    renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
     if (window.TWStudio) window.TWStudio.render();
   }
-  function renderSelection() { if (state.res && state.res.ok) { renderMap(); renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
+  function renderSelection() { if (state.res && state.res.ok) { renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
 
   // ---- headline and KPIs
   function firstOverall(res, net) {
@@ -290,104 +289,8 @@
     $("outlook").innerHTML = h + "</tbody>";
   }
 
-  // ---- the latitude map: its frame fits the network, with a margin, at a fixed shape
-  var MAP = { W: 1000, H: 400 };
-  function extent() {
-    var la = state.net.sites.map(function (s) { return s.lat; }), lo = state.net.sites.map(function (s) { return s.lon; });
-    var lat0 = Math.max.apply(null, la) + 10, lat1 = Math.min.apply(null, la) - 10, lon0 = Math.min.apply(null, lo) - 18, lon1 = Math.max.apply(null, lo) + 18;
-    var want = MAP.W / MAP.H, spanLon = lon1 - lon0, spanLat = lat0 - lat1;
-    if (spanLon / spanLat < want) { var d = (spanLat * want - spanLon) / 2; lon0 -= d; lon1 += d; } else { var e = (spanLon / want - spanLat) / 2; lat0 += e; lat1 -= e; }
-    if (lat0 > 85) { lat1 -= lat0 - 85; lat0 = 85; } if (lat1 < -85) { lat0 += -85 - lat1; lat1 = -85; }
-    return { lat0: Math.min(85, lat0), lat1: Math.max(-85, lat1), lon0: lon0, lon1: lon1 };
-  }
-  function proj(lon, lat) { var e = state.ext; return [(lon - e.lon0) / (e.lon1 - e.lon0) * MAP.W, (e.lat0 - lat) / (e.lat0 - e.lat1) * MAP.H]; }
-  // spread sites that sit on top of each other (a DC beside its city, a dosing plant beside a packer) so each stays clickable
-  function layout() {
-    var pts = state.net.sites.map(function (s) { var p = proj(s.lon, s.lat); return { id: s.id, x0: p[0], y0: p[1], x: p[0], y: p[1] }; });
-    for (var it = 0; it < 120; it++) {
-      for (var i = 0; i < pts.length; i++) for (var j = i + 1; j < pts.length; j++) {
-        var a = pts[i], b = pts[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy), min = 17;
-        if (d < 0.01) { dx = 0.7 * ((i + j) % 2 ? 1 : -1); dy = 0.7; d = 1; }
-        if (d < min) { var f = (min - d) / 2 / d; dx *= f; dy *= f; a.x -= dx; a.y -= dy; b.x += dx; b.y += dy; }
-      }
-      pts.forEach(function (p) { p.x += (p.x0 - p.x) * 0.02; p.y += (p.y0 - p.y) * 0.02; });
-    }
-    var out = {}; pts.forEach(function (p) { out[p.id] = p; }); return out;
-  }
-  function landPath() {
-    if (!state.land) return "";
-    return state.land.rings.map(function (r) {
-      return "M" + r.map(function (c) { var p = proj(c[0], c[1]); return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join("L") + "Z";
-    }).join("");
-  }
-  function renderMap() {
-    var wrap = $("mapWrap"), tip = tipFor(wrap), e = state.ext;
-    var svg = svgRoot(MAP.W, MAP.H, "map", T("Map of the supply network by latitude"));
-    var bg = el("rect", { x: 0, y: 0, width: MAP.W, height: MAP.H, fill: "#08223f", "class": state.pick ? "pickable" : null }, svg);
-    // placing a site: a click on the map sets its latitude and longitude
-    svg.addEventListener("click", function (ev) {
-      if (!state.pick || ev.target.closest(".node")) return;
-      var pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; var q = pt.matrixTransform(svg.getScreenCTM().inverse());
-      var lon = e.lon0 + q.x / MAP.W * (e.lon1 - e.lon0), lat = e.lat0 - q.y / MAP.H * (e.lat0 - e.lat1), id = state.pick;
-      state.pick = null;
-      edit(function (n) { var s2 = G.byId(n, id); if (s2) { s2.lat = Math.round(lat * 100) / 100; s2.lon = Math.round(lon * 100) / 100; } }, true);
-    });
-    var step = e.lat0 - e.lat1 > 60 ? 15 : 10, lat;
-    for (lat = Math.ceil(e.lat1 / step) * step; lat <= e.lat0; lat += step) el("line", { x1: 0, x2: MAP.W, y1: proj(0, lat)[1], y2: proj(0, lat)[1], "class": "grat" + (lat === 0 ? " eq" : "") }, svg);
-    var lstep = e.lon1 - e.lon0 > 150 ? 30 : 15;
-    for (var lon = Math.ceil(e.lon0 / lstep) * lstep; lon <= e.lon1; lon += lstep) { var x = proj(lon, 0)[0]; el("line", { x1: x, x2: x, y1: 0, y2: MAP.H, "class": "grat" }, svg); }
-    el("path", { d: landPath(), "class": "land" }, svg);
-    [23.44, -23.44].forEach(function (lt) { if (lt < e.lat0 && lt > e.lat1) { var yy = proj(0, lt)[1]; el("line", { x1: 0, x2: MAP.W, y1: yy, y2: yy, "class": "grat trop" }, svg); } });
-    for (lat = Math.ceil(e.lat1 / step) * step; lat <= e.lat0; lat += step) if (proj(0, lat)[1] > 12) txt("text", { x: 4, y: proj(0, lat)[1] - 3, "class": "lat-label" }, lat === 0 ? T("Equator") : Math.abs(lat) + "°" + (lat < 0 ? T("S") : T("N")), svg);
-    if (23.44 < e.lat0 && 23.44 > e.lat1) txt("text", { x: 4, y: proj(0, 23.44)[1] - 3, "class": "lat-label" }, T("Tropic of Cancer"), svg);
-    if (-23.44 < e.lat0 && -23.44 > e.lat1) txt("text", { x: 4, y: proj(0, -23.44)[1] - 3, "class": "lat-label" }, T("Tropic of Capricorn"), svg);
-
-    var sel = state.sel, related = {}; related[sel] = 1;
-    var selSite = byId(sel);
-    (selSite.suppliers || []).forEach(function (l) { related[l.from] = 1; });
-    customersOf(sel).forEach(function (c) { related[c.site.id] = 1; });
-    var lanes = el("g", {}, svg);
-    state.net.sites.forEach(function (s) {
-      (s.suppliers || []).forEach(function (l) {
-        if (!(l.share > 0)) return;
-        var u = byId(l.from); if (!u) return;
-        var a = state.pos[u.id], b = state.pos[s.id], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y;
-        var cx = mx - dy * 0.15, cy = my + dx * 0.15, hl = s.id === sel || u.id === sel;
-        el("path", { d: "M" + a.x + "," + a.y + "Q" + cx + "," + cy + " " + b.x + "," + b.y, "class": "lane" + (hl ? " hl" : ""), stroke: TCOL[u.tier], "stroke-width": hl ? 2.2 : 0.6 + Math.min(100, l.share) / 100 * 1.4, style: hl ? null : "opacity:.32" }, lanes);
-      });
-    });
-    var maxD = 0; sitesOf("market").forEach(function (s) { maxD = Math.max(maxD, state.res.sites[s.id].periods[0].value); });
-    var order = state.net.sites.slice().sort(function (a, b) { return (a.id === sel) - (b.id === sel); });
-    order.forEach(function (s) {
-      var p = state.pos[s.id], r = VR().sites[s.id], g = el("g", { "class": "node" + (s.id === sel ? " sel" : ""), tabindex: 0, role: "button", "aria-label": nm(s) }, svg);
-      var rad = s.tier === "market" ? 5 + 5 * Math.sqrt(maxD > 0 ? r.periods[0].value / maxD : 0) : 6;
-      if (CAP()) {
-        if (s.tier === "market" ? r.fill < 0.999 : r.firstBinding >= 0) el("circle", { cx: p.x, cy: p.y, r: rad + 4, "class": "halo", stroke: s.tier === "market" ? "var(--bad)" : "var(--warn)" }, g);
-      } else if (s.tier !== "market" && r.peakUtil > 0.9) el("circle", { cx: p.x, cy: p.y, r: rad + 4, "class": "halo", stroke: r.peakUtil > 1 + 1e-9 ? "var(--bad)" : "var(--warn)" }, g);
-      el("circle", { cx: p.x, cy: p.y, r: rad, "class": "core", fill: TCOL[s.tier] }, g);
-      el("circle", { cx: p.x, cy: p.y, r: rad + 8, fill: "transparent" }, g);
-      if (related[s.id]) {
-        var lab = txt("text", { x: p.x + rad + 5, y: p.y + 4, "paint-order": "stroke", stroke: "#08223f", "stroke-width": 3 }, nm(s), g);
-        if (p.x > MAP.W - 150) { lab.setAttribute("x", p.x - rad - 5); lab.setAttribute("text-anchor", "end"); }
-        if (s.id === sel) lab.style.fill = "var(--ink)";
-      }
-      g.addEventListener("mousemove", function (ev) {
-        var h = "<b>" + esc(nm(s)) + "</b>" + row(esc(tierOne(s.tier)), "") + row(esc(country(s)), latLabel(s.lat));
-        if (s.tier === "market") { h += row(T("Demand, month 1"), fu(r.periods[0].value, unitOf(s))); if (CAP()) h += row(T("Fill rate"), pctFine(r.fill)); }
-        else if (CAP()) h += row(T("Busiest month"), pct(r.peakUtil)) + row(T("First at capacity"), r.firstBinding >= 0 ? monthLabel(r.firstBinding) : T("never"));
-        else h += row(T("Busiest month"), pct(r.peakUtil)) + row(T("First short"), r.firstOver >= 0 ? monthLabel(r.firstOver) : T("never"));
-        tip.show(ev, h);
-      });
-      g.addEventListener("mouseleave", tip.hide);
-      g.addEventListener("click", function () { select(s.id); });
-      g.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(s.id); } });
-    });
-    put(wrap, svg);
-    var ph = $("pickHint"); if (ph) { ph.hidden = !state.pick; if (state.pick && byId(state.pick)) ph.textContent = T("Click the map to place {s}.", { s: nm(byId(state.pick)) }); }
-    $("mapLegend").innerHTML = state.res.tiers.map(function (t) { return "<span><i style='background:" + TCOL[t.id] + "'></i>" + esc(tierName(t.id)) + "</span>"; }).join("") +
-      (CAP() ? "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("At capacity at some point") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Demand not fully met") + "</span>"
-        : "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("Above 90% at peak") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Short at some point") + "</span>");
-  }
+  // ---- the map is drawn by the Network Studio (studio.js): a world map with the same symbols and editing modes
+  function renderMap() { if (window.TWStudio) window.TWStudio.render(); }
   function select(id, period) {
     state.sel = id; state.period = period != null ? period : null; state.studio.route = null;
     var s = byId(id);
@@ -897,7 +800,7 @@
   }
   function useCustom(net, name) {
     state.custom = { name: name, net: clone(net) };
-    state.scenario = "custom"; state.net = clone(net); state.pos = null; state.period = null; state.studio.route = null; hist.clear();
+    state.scenario = "custom"; state.net = clone(net); state.pos = null; state.period = null; state.studio.route = null; state.studio.mapView = null; hist.clear();
     if (state.net.config.demandScale == null) state.net.config.demandScale = 1;
     fillScenarios(); $("scenario").value = "custom";
     if (state.compareKey === "custom") setCompare("custom"); else fillCompare();
@@ -1090,7 +993,7 @@
     if (id === "custom" && state.custom) { state.scenario = "custom"; state.net = clone(state.custom.net); }
     else { state.scenario = N.SCENARIOS[id] ? id : "base"; state.net = N.build(state.scenario); }
     if (state.net.config.demandScale == null) state.net.config.demandScale = 1;
-    state.pos = null; state.period = null; state.studio.route = null; state.pick = null; hist.clear();
+    state.pos = null; state.period = null; state.studio.route = null; state.studio.mapView = null; state.pick = null; hist.clear();
     fillScenarios(); syncControls(); renderEditor(); render();
   }
   // the tutorial (and tests) set the page up through this: a scenario, then values, then what to look at
@@ -1122,7 +1025,7 @@
     if (o.select) select(o.select, o.period);
     if (o.open) { var d = document.querySelector(o.open); if (d && d.tagName === "DETAILS") d.open = true; }
     var sv = o.studio || {};
-    state.studio = { view: sv.view || "diagram", mode: sv.mode || "select", highlight: sv.highlight || "all", colorBy: sv.colorBy || "tier", showDays: !!sv.showDays, route: sv.route || null };
+    state.studio = { view: sv.view || "diagram", mode: sv.mode || "select", highlight: sv.highlight || "all", colorBy: sv.colorBy || "tier", showDays: !!sv.showDays, route: sv.route || null, mapView: null, mapNames: !!sv.mapNames };
     if (o.studio) render();
     return whenSolved().then(function () { if (o.select && CAP()) select(o.select, o.period); });
   }

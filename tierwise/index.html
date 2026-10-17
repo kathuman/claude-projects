@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.1.0</span>
+    <span class="ver" id="ver">v2.2.0</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -145,7 +145,7 @@
       </div>
       <div class="seg" id="studioView" role="group">
         <button type="button" data-v="diagram" class="active" data-i18n="st.diagram">Tiers</button>
-        <button type="button" data-v="map" data-i18n="st.map">Map</button>
+        <button type="button" data-v="map" data-i18n="st.map">World map</button>
       </div>
     </div>
     <div class="studio-bar">
@@ -168,13 +168,22 @@
       </label>
       <label class="ctl inline"><span data-i18n="st.colour">Colour by</span><select class="choice" id="studioColor"></select></label>
       <label class="chk"><input type="checkbox" id="studioDays"><span data-i18n="st.days">Transit days on the selected site's routes</span></label>
-      <span class="studio-export"><button type="button" class="btn small" id="svgBtn" data-i18n="st.svg">Diagram · SVG</button><button type="button" class="btn small" id="pngBtn" data-i18n="st.png">Diagram · PNG</button></span>
+      <span class="studio-export"><button type="button" class="btn small" id="svgBtn" data-i18n="st.svg">Image · SVG</button><button type="button" class="btn small" id="pngBtn" data-i18n="st.png">Image · PNG</button></span>
     </div>
     <p class="studio-hint" data-i18n="st.hint">Connect: drag from a site to one in the next tier (from a supplier to its customer, or back). Add: click where the new site should go. Delete: click a site or a route.</p>
     <div class="studio-body">
       <div class="studio-main">
         <div class="studio-canvas chart" id="studioCanvas"></div>
         <div class="map-box" id="mapBox" hidden>
+          <div class="map-bar">
+            <button type="button" class="btn small" id="mapZoomIn" aria-label="Zoom in" data-i18n-attr="aria-label=mp.inAria">+</button>
+            <button type="button" class="btn small" id="mapZoomOut" aria-label="Zoom out" data-i18n-attr="aria-label=mp.outAria">−</button>
+            <button type="button" class="btn small" id="mapFit" data-i18n="mp.fit">Fit the network</button>
+            <button type="button" class="btn small" id="mapWorld" data-i18n="mp.world">Whole world</button>
+            <label class="chk"><input type="checkbox" id="mapNames"><span data-i18n="mp.names">All names</span></label>
+            <label class="ctl inline" id="mapTierBox" hidden><span data-i18n="mp.tier">New sites in</span><select class="choice" id="mapTier"></select></label>
+            <span class="map-help" data-i18n="mp.help">Drag the map to pan; Ctrl + wheel or the buttons zoom. Drag a site to move it.</span>
+          </div>
           <p class="pick-hint" id="pickHint" hidden></p>
           <div class="map-wrap chart" id="mapWrap"></div>
           <div class="legend" id="mapLegend"></div>
@@ -286,13 +295,14 @@
 
   <footer class="foot">
     <span class="consult"><span data-i18n="ft.consult">Available for consulting</span> — <a href="https://github.com/kathuman" target="_blank" rel="noopener" data-i18n="ft.touch">get in touch</a></span>
-    Tierwise v<span id="ver2">2.1.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.2.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
 <script src="src/plan.js"></script>
 <script src="src/network.js"></script>
 <script src="src/graph.js"></script>
+<script src="src/geo.js"></script>
 <script src="src/io.js"></script>
 <script src="src/constrained.js"></script>
 <script src="app.js"></script>

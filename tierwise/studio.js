@@ -2,10 +2,12 @@
 // ingredient on the left to the consumption points on the right; shapes tell production sites (squares), warehouses
 // (hexagons) and consumption points (pills) apart, and arrows are the transport routes. Modes: select and move, add a
 // site, connect two sites, delete. An inspector edits the selected site or route, including custom parameters; a
-// parameters manager defines them. Every change goes through Tierwise.api.edit (undo, re-plan, redraw).
+// parameters manager defines them. The same network can be shown on a world map instead (zoom, pan, great-circle
+// routes), edited with the same modes: there a site is moved by dragging it to its new place. Every change goes through
+// Tierwise.api.edit (undo, re-plan, redraw).
 (function () {
   "use strict";
-  var APP = window.Tierwise, G = window.TWGraph, P = window.TWPlan, I = window.TWi18n, T = I.T;
+  var APP = window.Tierwise, G = window.TWGraph, P = window.TWPlan, GEO = window.TWGeo, I = window.TWi18n, T = I.T;
   if (!APP || !G) return;
   var A = APP.api, H = A.h, SVGNS = "http://www.w3.org/2000/svg";
   var ORDER = P.TIERS.slice().reverse().map(function (t) { return t.id; });   // raw … market, left to right
@@ -73,6 +75,7 @@
     ["select", "add", "connect", "delete"].forEach(function (m) { $("studioPanel").classList.toggle("mode-" + m, S.mode === m); });
     fillSelects(); renderIssues(); renderInspector(); renderParams();
     $("undoBtn").disabled = !A.canUndo(); $("redoBtn").disabled = !A.canRedo();
+    if (S.view === "map") { renderMap(); legend(); return; }
     if (S.view !== "diagram") return;
     var L = layout(), n = net(), def = paramDef(), all = def ? n.sites.map(function (s) { return s.custom ? s.custom[def.key] : null; }).filter(function (v) { return v != null; }) : [];
     var svg = el("svg", { viewBox: "0 0 " + W + " " + L.H, "class": "studio", role: "img", "aria-label": T("Network diagram by tier") });
@@ -375,35 +378,242 @@
 
   // ---- the diagram as a picture
   function svgText() {
-    var svg = $("studioCanvas").querySelector("svg"); if (!svg) return null;
+    var svg = st().view === "map" ? $("mapWrap").querySelector("svg") : $("studioCanvas").querySelector("svg"); if (!svg) return null;
     var c = svg.cloneNode(true), cs = getComputedStyle(document.documentElement), v = function (n) { return cs.getPropertyValue(n).trim(); };
-    c.setAttribute("xmlns", SVGNS); c.setAttribute("width", W); c.setAttribute("height", svg.viewBox.baseVal.height);
+    var vb = svg.viewBox.baseVal, ow = st().view === "map" ? 1600 : W, oh = ow * vb.height / vb.width;
+    c.setAttribute("xmlns", SVGNS); c.setAttribute("width", ow); c.setAttribute("height", oh);
     var style = document.createElementNS(SVGNS, "style");
     style.textContent = ".col{fill:rgba(13,58,99,.35);stroke:" + v("--line-soft") + "}.col-h{font:700 12px Rajdhani,Arial,sans-serif;fill:" + v("--ink-dim") + ";letter-spacing:.08em}.col-u,.col-arrow{font:10px 'IBM Plex Mono',monospace;fill:" + v("--ink-faint") + "}" +
-      ".r-line{fill:none;stroke:#6f9fd0;opacity:.8}.r-hit{fill:none;stroke:transparent}.r-arrow{fill:#6f9fd0}.r-lab{font:10px 'IBM Plex Mono',monospace;fill:" + v("--ink") + ";stroke:#08223f;stroke-width:3}" +
+      ".land{fill:#123f6b;stroke:#2a5580}.grat{stroke:#1d4470;fill:none}.bg{fill:#08223f}.lat-label,.m-lab{font-family:'IBM Plex Mono',monospace;fill:" + v("--ink-dim") + "}.m-lab{fill:" + v("--ink") + ";stroke:#08223f}.halo{fill:none;stroke-width:2}.n-hit{fill:transparent}.r-line{fill:none;stroke:#6f9fd0;opacity:.8}.r-hit{fill:none;stroke:transparent}.r-arrow{fill:#6f9fd0}.r-lab{font:10px 'IBM Plex Mono',monospace;fill:" + v("--ink") + ";stroke:#08223f;stroke-width:3}" +
       ".n-name{font:600 12px Barlow,Arial,sans-serif;fill:" + v("--ink") + "}.n-sub,.n-val{font:9.5px 'IBM Plex Mono',monospace;fill:" + v("--ink-dim") + "}.badge.err{fill:#e34948}.badge.warn{fill:#eda100}.badge-t{font:700 10px Arial;fill:#04202b}.dim{opacity:.22}.ghost{display:none}";
     c.insertBefore(style, c.firstChild);
     return new XMLSerializer().serializeToString(c);
   }
-  function exportSVG() { var t = svgText(); if (t) A.download(A.fileBase() + "-diagram.svg", t, "image/svg+xml"); }
+  function exportSVG() { var t = svgText(); if (t) A.download(A.fileBase() + (st().view === "map" ? "-map" : "-diagram") + ".svg", t, "image/svg+xml"); }
   function exportPNG() {
     var t = svgText(); if (!t) return;
-    var img = new Image(), h = $("studioCanvas").querySelector("svg").viewBox.baseVal.height;
-    img.onload = function () { var cv = document.createElement("canvas"); cv.width = W * 2; cv.height = h * 2; var cx = cv.getContext("2d"); cx.scale(2, 2); cx.drawImage(img, 0, 0); cv.toBlob(function (b) { A.download(A.fileBase() + "-diagram.png", b); }); };
+    var img = new Image(), m = t.match(/width="([\d.]+)" height="([\d.]+)"/), ow = m ? +m[1] : W, oh = m ? +m[2] : 600;
+    img.onload = function () { var cv = document.createElement("canvas"); cv.width = ow * 2; cv.height = oh * 2; var cx = cv.getContext("2d"); cx.scale(2, 2); cx.drawImage(img, 0, 0, ow, oh); cv.toBlob(function (b) { A.download(A.fileBase() + (st().view === "map" ? "-map" : "-diagram") + ".png", b); }); };
     img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(t);
   }
+
+  // ---- the world map: an equirectangular world, zoomed and panned through the SVG's view box; symbols and lines keep
+  // their size on screen at any zoom
+  var MAP_AR = 2.2, landD = null;
+  function mapView() { var S = st(); if (!S.mapView) S.mapView = GEO.fit(net().sites, MAP_AR); return S.mapView; }
+  function landPath() {
+    var land = APP.state.land; if (!land) return "";
+    if (!landD) landD = land.rings.map(function (r) { return "M" + r.map(function (c) { var q = GEO.project(c[0], c[1]); return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join("L") + "Z"; }).join("");
+    return landD;
+  }
+  function brightFill(s, def, all) {
+    var mode = colourMode(), vw = A.view(), r = vw && vw.sites ? vw.sites[s.id] : null;
+    if (mode === "status" && r) {
+      if (s.tier === "market") return A.cap() ? (r.fill < 0.999 ? "#e34948" : "#1baf7a") : H.TCOL.market;
+      return A.cap() ? (r.firstBinding >= 0 ? "#eda100" : "#1baf7a") : r.peakUtil > 1 + 1e-9 ? "#e34948" : r.peakUtil >= 0.9 ? "#eda100" : "#1baf7a";
+    }
+    if (def) return valueColour(def, s.custom ? s.custom[def.key] : null, all) || "#33475e";
+    return H.TCOL[s.tier];
+  }
+  function renderMap() {
+    var wrap = $("mapWrap"); if (!wrap || !APP.state.net) return;
+    var S = st(), n = net(), v = mapView(), cw = wrap.clientWidth || 900, px = v.w / cw;
+    var def = paramDef(), all = def ? n.sites.map(function (x) { return x.custom ? x.custom[def.key] : null; }).filter(function (x) { return x != null; }) : [];
+    var svg = el("svg", { viewBox: [v.x, v.y, v.w, v.h].join(" "), "class": "map world" + (APP.state.pick ? " picking" : ""), role: "img", "aria-label": T("World map of the supply network") });
+    el("rect", { x: -GEO.W, y: -GEO.H, width: 3 * GEO.W, height: 3 * GEO.H, "class": "bg" }, svg);
+    var grat = el("g", { "class": "grat-g" }, svg), lat, lon;
+    for (lat = -60; lat <= 80; lat += 20) { var gy = GEO.project(0, lat)[1]; el("line", { x1: -GEO.W, x2: 2 * GEO.W, y1: gy, y2: gy, "class": "grat" + (lat === 0 ? " eq" : ""), "vector-effect": "non-scaling-stroke" }, grat); }
+    [23.44, -23.44].forEach(function (lt) { var ty = GEO.project(0, lt)[1]; el("line", { x1: -GEO.W, x2: 2 * GEO.W, y1: ty, y2: ty, "class": "grat trop", "vector-effect": "non-scaling-stroke" }, grat); });
+    for (lon = -540; lon <= 540; lon += 30) { var gx = GEO.project(lon, 0)[0]; el("line", { x1: gx, x2: gx, y1: -GEO.H, y2: 2 * GEO.H, "class": "grat", "vector-effect": "non-scaling-stroke" }, grat); }
+    var d = landPath();
+    [-GEO.W, 0, GEO.W].forEach(function (off) { el("path", { d: d, "class": "land", transform: off ? "translate(" + off + ",0)" : null, "vector-effect": "non-scaling-stroke" }, svg); });
+    // latitude labels along the left edge of the view
+    var fs = 10 * px;
+    for (lat = -60; lat <= 80; lat += 20) { var ly = GEO.project(0, lat)[1]; if (ly > v.y + 2 * fs && ly < v.y + v.h - 2) { var lt2 = el("text", { x: v.x + 4 * px, y: ly - 3 * px, "class": "lat-label", "font-size": fs }, svg); lt2.textContent = lat === 0 ? T("Equator") : Math.abs(lat) + "°" + (lat < 0 ? T("S") : T("N")); } }
+    var defs = el("defs", {}, svg), mk = el("marker", { id: "marrow", viewBox: "0 0 10 10", refX: 10, refY: 5, markerWidth: 9 * px, markerHeight: 9 * px, markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0,0 L10,5 L0,10 z", "class": "r-arrow" }, mk);
+    // routes along their great circles
+    var routesG = el("g", { "class": "routes" + (dims("route") ? " dim" : "") }, svg), selR = S.route;
+    var actual = {}; if (A.cap()) A.view().lanes.forEach(function (l) { actual[l.from + ">" + l.to] = l.actual; });
+    var trans = APP.state.res && APP.state.res.transit ? APP.state.res.transit : {};
+    n.sites.forEach(function (s2) {
+      var sup = (s2.suppliers || []).filter(function (l) { return G.byId(n, l.from); }), tot = sup.reduce(function (a, l) { return a + (l.share > 0 ? l.share : 0); }, 0);
+      sup.forEach(function (l) {
+        var u = G.byId(n, l.from), pts = GEO.routePoints(u, s2, 28), mode = G.modeOf(n, l.from, s2.id);
+        var share = A.cap() && actual[l.from + ">" + s2.id] != null ? actual[l.from + ">" + s2.id] : tot > 0 ? l.share / tot : 0;
+        var isSel = selR && selR.from === l.from && selR.to === s2.id, near = APP.state.sel === s2.id || APP.state.sel === l.from;
+        var g = el("g", { "class": "route" + (isSel ? " sel" : near ? " near" : ""), "data-from": l.from, "data-to": s2.id }, routesG);
+        var dash = DASH[mode] ? DASH[mode].split(" ").map(function (x) { return (+x * px).toFixed(3); }).join(" ") : null;
+        GEO.copies(pts).forEach(function (off) {
+          var dd = "M" + pts.map(function (q) { return (q[0] + off).toFixed(2) + "," + q[1].toFixed(2); }).join("L");
+          el("path", { d: dd, "class": "r-line", "stroke-width": (1 + 3.5 * Math.min(1, share)).toFixed(2), "stroke-dasharray": dash, "marker-end": "url(#marrow)", "vector-effect": "non-scaling-stroke" }, g);
+          el("path", { d: dd, "class": "r-hit", "vector-effect": "non-scaling-stroke" }, g);
+        });
+        g.addEventListener("click", function (e) { e.stopPropagation(); routeClick(l.from, s2.id); });
+        g.addEventListener("mousemove", function (e) { mtip(e, "<b>" + esc(H.nm(u)) + " → " + esc(H.nm(s2)) + "</b>" + H.row(T("Distance"), T("{d} km", { d: Math.round(P.distanceKm(u, s2)).toLocaleString(I.locale) })) + H.row(T("Share"), Math.round(share * 100) + "%") + H.row(T("Transit"), (trans[l.from + ">" + s2.id] != null ? Math.round(trans[l.from + ">" + s2.id]) + " " + T("d") : "–")) + H.row(T("Mode"), modeName(mode) + (l.mode ? "" : " " + T("(estimated)")))); });
+        g.addEventListener("mouseleave", munTip);
+      });
+    });
+    // sites, sized on screen
+    var iss = G.issues(n), byIssue = {}; iss.forEach(function (x) { if (x.id) (byIssue[x.id] = byIssue[x.id] || []).push(x); });
+    var selS = G.byId(n, APP.state.sel), related = {};
+    if (selS && !S.route) { related[selS.id] = 1; (selS.suppliers || []).forEach(function (l) { related[l.from] = 1; }); n.sites.forEach(function (x) { if ((x.suppliers || []).some(function (l) { return l.from === selS.id; })) related[x.id] = 1; }); }
+    if (S.route) { related[S.route.from] = 1; related[S.route.to] = 1; }
+    var maxD = 0; n.sites.forEach(function (x) { if (x.tier === "market") maxD = Math.max(maxD, x.base || 0); });
+    var order = n.sites.slice().sort(function (a, b) { return (a.id === APP.state.sel) - (b.id === APP.state.sel); });
+    var vw = A.view(), shown = spread(n.sites, 16 * px);
+    order.forEach(function (s2) {
+      var q = shown[s2.id], role = roleOf(s2.tier), sel = APP.state.sel === s2.id && !S.route;
+      var g = el("g", { "class": "node r-" + role + (sel ? " sel" : "") + (dims(role) ? " dim" : ""), "data-id": s2.id, transform: "translate(" + q[0].toFixed(2) + "," + q[1].toFixed(2) + ")", tabindex: 0, role: "button", "aria-label": H.nm(s2) + ", " + H.tierOne(s2.tier) }, svg);
+      var fill = brightFill(s2, def, all), stroke = sel ? "var(--ink)" : "#04192f", sw = sel ? 2.5 : 1.4, a = 6 * px;
+      var r = vw && vw.sites ? vw.sites[s2.id] : null;
+      if (colourMode() !== "status" && r) {
+        var ring = A.cap() ? (s2.tier === "market" ? (r.fill < 0.999 ? "var(--bad)" : null) : (r.firstBinding >= 0 ? "var(--warn)" : null))
+          : (s2.tier !== "market" && r.peakUtil > 0.9 ? (r.peakUtil > 1 + 1e-9 ? "var(--bad)" : "var(--warn)") : null);
+        if (ring) el("circle", { r: 11 * px, "class": "halo", stroke: ring, "vector-effect": "non-scaling-stroke" }, g);
+      }
+      if (role === "warehouse") el("path", { d: "M" + (-a) + ",0 L" + (-a / 2) + "," + (-a * 0.87) + " L" + (a / 2) + "," + (-a * 0.87) + " L" + a + ",0 L" + (a / 2) + "," + (a * 0.87) + " L" + (-a / 2) + "," + (a * 0.87) + " Z", fill: fill, stroke: stroke, "stroke-width": sw, "vector-effect": "non-scaling-stroke", "class": "n-shape" }, g);
+      else if (role === "consumption") { var rr = (5 + 4 * Math.sqrt(maxD > 0 ? (s2.base || 0) / maxD : 0)) * px; el("rect", { x: -rr * 1.4, y: -rr, width: rr * 2.8, height: rr * 2, rx: rr, fill: fill, stroke: stroke, "stroke-width": sw, "vector-effect": "non-scaling-stroke", "class": "n-shape" }, g); }
+      else el("rect", { x: -a * 0.9, y: -a * 0.9, width: a * 1.8, height: a * 1.8, rx: 1.5 * px, fill: fill, stroke: stroke, "stroke-width": sw, "vector-effect": "non-scaling-stroke", "class": "n-shape" }, g);
+      el("circle", { r: 13 * px, fill: "transparent", "class": "n-hit" }, g);
+      var mine = byIssue[s2.id];
+      if (mine) { var bad = mine.some(function (x) { return x.level === "error"; }); el("circle", { cx: 8 * px, cy: -8 * px, r: 4.5 * px, "class": "badge " + (bad ? "err" : "warn") }, g); }
+      if (S.mapNames || related[s2.id] || sel) {
+        var lb = el("text", { x: 11 * px, y: 4 * px, "font-size": 11 * px, "class": "m-lab" + (sel ? " sel" : ""), "paint-order": "stroke", "stroke-width": 3 * px }, g); lb.textContent = H.nm(s2);
+      }
+      g.addEventListener("pointerdown", function (e) { mapNodeDown(e, s2, g, svg); });
+      g.addEventListener("click", function (e) { e.stopPropagation(); });
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectSite(s2.id); } });
+      g.addEventListener("mousemove", function (e) { if (drag) return; mtip(e, "<b>" + esc(H.nm(s2)) + "</b>" + H.row(esc(H.tierOne(s2.tier)), "") + H.row(esc(H.country(s2)), H.latLabel(s2.lat) + ", " + lonLabel(s2.lon)) + H.row(s2.tier === "market" ? T("Demand") : T("Capacity"), metric(s2)) + (mine ? mine.map(function (x) { return "<span class='tip-" + x.level + "'>" + esc(issueText(x)) + "</span>"; }).join("") : "")); });
+      g.addEventListener("mouseleave", munTip);
+    });
+    svg.addEventListener("pointerdown", function (e) { mapBgDown(e, svg); });
+    svg.addEventListener("wheel", function (e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      var q = svgPoint(svg, e); S.mapView = GEO.zoom(mapView(), e.deltaY < 0 ? 1.25 : 0.8, q.x, q.y); renderMap();
+    }, { passive: false });
+    var old = wrap.querySelector("svg"); if (old) wrap.replaceChild(svg, old); else wrap.insertBefore(svg, wrap.firstChild);
+    var ph = $("pickHint"); if (ph) { var pk = APP.state.pick && G.byId(n, APP.state.pick); ph.hidden = !(pk || (S.mode === "add")); ph.textContent = pk ? T("Click the map to place {s}.", { s: H.nm(pk) }) : T("Click the map where the new site should go."); }
+    $("mapTierBox").hidden = S.mode !== "add";
+    $("mapNames").checked = !!S.mapNames;
+    $("mapLegend").innerHTML = (A.cap() ? "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("At capacity at some point") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Demand not fully met") + "</span>"
+      : "<span><i class='ring' style='border-color:var(--warn)'></i>" + T("Above 90% at peak") + "</span><span><i class='ring' style='border-color:var(--bad)'></i>" + T("Short at some point") + "</span>") +
+      "<span class='lg-note'>" + T("Routes follow the great circle, the shortest way over the globe.") + "</span>";
+  }
+  // sites at (almost) the same place are drawn a little apart, so each can be seen and clicked; only on screen
+  function spread(sites, minD) {
+    var pts = sites.map(function (x) { var q = GEO.project(x.lon, x.lat); return { id: x.id, x0: q[0], y0: q[1], x: q[0], y: q[1] }; });
+    for (var it = 0; it < 60; it++) {
+      for (var i = 0; i < pts.length; i++) for (var j = i + 1; j < pts.length; j++) {
+        var a = pts[i], b = pts[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 1e-9) { dx = (i % 2 ? 1 : -1) * 0.01 * minD; dy = 0.01 * minD; d = Math.sqrt(dx * dx + dy * dy); }
+        if (d < minD) { var f = (minD - d) / 2 / d; a.x -= dx * f; a.y -= dy * f; b.x += dx * f; b.y += dy * f; }
+      }
+      pts.forEach(function (q) { q.x += (q.x0 - q.x) * 0.05; q.y += (q.y0 - q.y) * 0.05; });
+    }
+    var out = {}; pts.forEach(function (q) { out[q.id] = [q.x, q.y]; }); return out;
+  }
+  function lonLabel(lon) { return I.fx(Math.abs(lon), 1) + "°" + (lon < 0 ? T("W") : T("E")); }
+  function mtip(e, html) {
+    var box = $("mapWrap"), t = box.querySelector(".tip");
+    if (!t) { t = document.createElement("div"); t.className = "tip"; box.appendChild(t); }
+    t.innerHTML = html; t.hidden = false;
+    var r = box.getBoundingClientRect(), x = e.clientX - r.left + 14, y = e.clientY - r.top + 12;
+    if (x + t.offsetWidth > r.width) x = e.clientX - r.left - t.offsetWidth - 14;
+    if (y + t.offsetHeight > r.height) y = e.clientY - r.top - t.offsetHeight - 10;
+    t.style.left = x + "px"; t.style.top = y + "px";
+  }
+  function munTip() { var t = $("mapWrap").querySelector(".tip"); if (t) t.hidden = true; }
+  // a press on the map itself: place a site (when placing), add one, or pan
+  function mapBgDown(e, svg) {
+    if (e.button !== 0 || e.target.closest(".node") || e.target.closest(".route")) return;
+    var S = st(), q = svgPoint(svg, e), ll = GEO.unproject(q.x, q.y);
+    if (APP.state.pick) {
+      var id = APP.state.pick; APP.state.pick = null;
+      A.edit(function (n) { var x = G.byId(n, id); if (x) { x.lat = Math.round(ll[1] * 100) / 100; x.lon = Math.round(ll[0] * 100) / 100; } }, true);
+      return;
+    }
+    if (S.mode === "add") {
+      var tier = $("mapTier").value || "warehouse", made = null;
+      A.edit(function (n) { made = G.addSite(n, tier, { name: T("New site") + " " + (G.sitesOf(n, tier).length + 1), lat: Math.round(ll[1] * 100) / 100, lon: Math.round(ll[0] * 100) / 100 }); }, true);
+      if (made) { S.route = null; APP.select(made.id); setTimeout(function () { var f = document.querySelector("#inspector input[data-f='name']"); if (f) { f.focus(); f.select(); } }, 30); }
+      return;
+    }
+    // pan: drag the map; a click without moving clears a selected route
+    var v0 = mapView(), sx = e.clientX, sy = e.clientY, moved = false, scale = v0.w / (svg.clientWidth || 900);
+    try { svg.setPointerCapture(e.pointerId); } catch (x) { /* older browsers */ }
+    function mv(ev) {
+      var dx = ev.clientX - sx, dy = ev.clientY - sy; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (!moved) return;
+      var v = GEO.clamp({ x: v0.x - dx * scale, y: v0.y - dy * scale, w: v0.w, h: v0.h }); S.mapView = v;
+      svg.setAttribute("viewBox", [v.x, v.y, v.w, v.h].join(" ")); svg.classList.add("panning");
+    }
+    function up() { svg.removeEventListener("pointermove", mv); svg.removeEventListener("pointerup", up); svg.classList.remove("panning"); if (moved) renderMap(); else if (S.route) { S.route = null; render(); } }
+    svg.addEventListener("pointermove", mv); svg.addEventListener("pointerup", up);
+  }
+  // a press on a site: delete it, start a route from it, or move it (a click without moving selects it)
+  function mapNodeDown(e, s2, g, svg) {
+    var S = st(); if (e.button !== 0) return;
+    e.stopPropagation();
+    if (APP.state.pick) return;
+    if (S.mode === "delete") { A.edit(function (n) { G.removeSite(n, s2.id); }, true); return; }
+    if (S.mode === "add") { selectSite(s2.id); return; }
+    var q0 = GEO.project(s2.lon, s2.lat);
+    if (S.mode === "connect") {
+      drag = { kind: "link", from: s2, line: el("path", { "class": "link-temp", d: "M" + q0[0] + "," + q0[1], "vector-effect": "non-scaling-stroke" }, svg), p: { x: q0[0], y: q0[1] }, svg: svg, valid: {} };
+      net().sites.forEach(function (x) { if (G.canConnect(net(), s2.id, x.id).ok || G.canConnect(net(), x.id, s2.id).ok) drag.valid[x.id] = 1; });
+      svg.querySelectorAll(".node").forEach(function (nd) { nd.classList.toggle("target", !!drag.valid[nd.getAttribute("data-id")]); nd.classList.toggle("source", nd.getAttribute("data-id") === s2.id); });
+    } else drag = { kind: "place", s: s2, g: g, svg: svg, moved: false, x0: e.clientX, y0: e.clientY, q0: q0 };
+    try { svg.setPointerCapture(e.pointerId); } catch (x) { /* older browsers */ }
+    svg.addEventListener("pointermove", mapDrag); svg.addEventListener("pointerup", mapUp); svg.addEventListener("pointercancel", mapUp);
+  }
+  function mapDrag(e) {
+    if (!drag) return;
+    var q = svgPoint(drag.svg, e);
+    if (drag.kind === "link") {
+      drag.line.setAttribute("d", "M" + drag.p.x + "," + drag.p.y + " L" + q.x + "," + q.y);
+      var over = targetAt(e); drag.svg.querySelectorAll(".node").forEach(function (nd) { nd.classList.toggle("hover", nd === over && !!drag.valid[nd.getAttribute("data-id")]); });
+      return;
+    }
+    if (Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) > 4) drag.moved = true;
+    if (drag.moved) { drag.g.setAttribute("transform", "translate(" + q.x.toFixed(2) + "," + q.y.toFixed(2) + ")"); drag.g.classList.add("dragging"); munTip(); }
+  }
+  function mapUp(e) {
+    var d = drag; if (!d) return;
+    d.svg.removeEventListener("pointermove", mapDrag); d.svg.removeEventListener("pointerup", mapUp); d.svg.removeEventListener("pointercancel", mapUp);
+    drag = null;
+    if (d.kind === "link") {
+      var over = targetAt(e), to = over && over.getAttribute("data-id"); d.line.remove();
+      if (to && d.valid[to]) { var from = d.from.id, ab = G.canConnect(net(), from, to).ok ? [from, to] : [to, from]; A.edit(function (n) { G.connect(n, ab[0], ab[1]); }, false); st().route = { from: ab[0], to: ab[1] }; render(); }
+      else if (to === d.from.id) selectSite(to); else render();
+      return;
+    }
+    if (!d.moved) { selectSite(d.s.id); return; }
+    var q = svgPoint(d.svg, e), ll = GEO.unproject(q.x, q.y), id = d.s.id;
+    A.edit(function (n) { var x = G.byId(n, id); if (x) { x.lat = Math.round(ll[1] * 100) / 100; x.lon = Math.round(ll[0] * 100) / 100; } }, true);
+    APP.select(id);
+  }
+  function mapZoom(k) { st().mapView = GEO.zoom(mapView(), k); renderMap(); }
 
   // ---- controls
   function init() {
     if (!$("studioPanel")) return;
     $("studioView").querySelectorAll("button").forEach(function (b) { b.addEventListener("click", function () { st().view = b.getAttribute("data-v"); APP.state.pick = null; A.renderAll(); }); });
-    $("studioMode").querySelectorAll("button").forEach(function (b) { b.addEventListener("click", function () { st().mode = b.getAttribute("data-v"); if (st().view !== "diagram") st().view = "diagram"; render(); }); });
+    $("studioMode").querySelectorAll("button").forEach(function (b) { b.addEventListener("click", function () { st().mode = b.getAttribute("data-v"); render(); }); });
     $("studioColor").addEventListener("change", function () { st().colorBy = this.value; render(); });
     $("studioHighlight").addEventListener("change", function () { st().highlight = this.value; render(); });
     $("studioDays").addEventListener("change", function () { st().showDays = this.checked; render(); });
     $("undoBtn").addEventListener("click", A.undo); $("redoBtn").addEventListener("click", A.redo);
     $("svgBtn").addEventListener("click", exportSVG); $("pngBtn").addEventListener("click", exportPNG);
     $("pmAdd").addEventListener("click", addParamFromForm);
+    $("mapZoomIn").addEventListener("click", function () { mapZoom(1.6); });
+    $("mapZoomOut").addEventListener("click", function () { mapZoom(1 / 1.6); });
+    $("mapFit").addEventListener("click", function () { st().mapView = GEO.fit(net().sites, MAP_AR); renderMap(); });
+    $("mapWorld").addEventListener("click", function () { st().mapView = GEO.world(MAP_AR); renderMap(); });
+    $("mapNames").addEventListener("change", function () { st().mapNames = this.checked; renderMap(); });
+    $("mapTier").innerHTML = P.TIERS.slice().reverse().map(function (t) { return "<option value='" + t.id + "'" + (t.id === "warehouse" ? " selected" : "") + ">" + esc(H.tierOne(t.id)) + "</option>"; }).join("");
+    var rz = null; window.addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(function () { if (st().view === "map") renderMap(); }, 150); });
     $("pmType").addEventListener("change", fillSelects); $("pmApplies").addEventListener("change", fillSelects);
     // keys act on the Studio when it was the last thing pressed (redraws take the keyboard focus away from a site)
     document.addEventListener("pointerdown", function (e) { active = !!(e.target.closest && e.target.closest("#studioPanel")); }, true);
@@ -422,6 +632,6 @@
       }
     });
   }
-  window.TWStudio = { render: render, init: init, issueText: issueText, exportSVG: exportSVG, layout: layout };
+  window.TWStudio = { render: render, renderMap: renderMap, init: init, issueText: issueText, exportSVG: exportSVG, layout: layout, mapView: mapView };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

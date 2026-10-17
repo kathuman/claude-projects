@@ -26,6 +26,7 @@ jobs:
           node-version: 22
       - run: node tierwise/tests/plan.test.js
       - run: node tierwise/tests/graph.test.js
+      - run: node tierwise/tests/geo.test.js
       - run: node tierwise/tests/io.test.js
       - run: node tierwise/tests/i18n.test.js
       - run: node tierwise/tests/tour.test.js

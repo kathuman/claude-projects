@@ -30,8 +30,8 @@
     "Tier": "Led", "Unit": "Enhed", "Load, year 1<br>(a month)": "Belastning, år 1<br>(pr. måned)", "Capacity, year 1<br>(a month)": "Kapacitet, år 1<br>(pr. måned)", "Use, year 1": "Udnyttelse, år 1",
     "Busiest month,<br>months 1–36": "Travleste måned,<br>måned 1–36", "Busiest month,<br>years 4–13": "Travleste måned,<br>år 4–13", "Load, year 13<br>(a month)": "Belastning, år 13<br>(pr. måned)", "First short": "Første mangel",
     // ---- kort
-    "Map of the supply network by latitude": "Kort over forsyningsnetværket efter breddegrad", "Equator": "Ækvator", "Tropic of Cancer": "Krebsens vendekreds", "Tropic of Capricorn": "Stenbukkens vendekreds",
-    "Demand, month 1": "Efterspørgsel, måned 1", "Busiest month": "Travleste måned", "Above 90% at peak": "Over 90% på toppen", "Short at some point": "Mangel på et tidspunkt",
+    "Equator": "Ækvator", 
+    "Busiest month": "Travleste måned", "Above 90% at peak": "Over 90% på toppen", "Short at some point": "Mangel på et tidspunkt",
     // ---- valgt sted
     "southern hemisphere": "den sydlige halvkugle", "northern hemisphere": "den nordlige halvkugle", "Year 1": "År 1", "launches {m}": "lanceres {m}", "Year 13": "År 13", "Growth": "Vækst",
     "a year, then {g}%": "om året, derefter {g}%", "Peak month": "Topmåned", "±{n}% swing": "udsving ±{n}%", "Capacity": "Kapacitet", "{u} a month": "{u} om måneden", ", month 1": ", måned 1", "month {n} of 156": "måned {n} af 156",
@@ -222,7 +222,14 @@
     "A choice needs its options, separated by |.": "Et valg skal have sine muligheder, adskilt af |.",
     "Added {p}. Set its values in the inspector, or colour the diagram by it.": "{p} er tilføjet. Sæt værdierne i inspektøren, eller farv diagrammet efter den.",
     "Status in the plan": "Status i planen",
-    "Halal certified": "Halal-certificeret"
+    "Halal certified": "Halal-certificeret",
+    // ---- 2.2: world map
+    "World map of the supply network": "Verdenskort over forsyningsnetværket",
+    "Distance": "Afstand",
+    "Click the map where the new site should go.": "Klik på kortet, hvor det nye sted skal være.",
+    "Routes follow the great circle, the shortest way over the globe.": "Ruterne følger storcirklen, den korteste vej over kloden.",
+    "W": "V",
+    "E": "Ø"
   };
   var H = {
     "meta.title": "Tierwise — Kapacitetsplanlægning i flere led",
@@ -273,7 +280,7 @@
     "a.author": "Forfatter",
     "a.authorp": "Tierwise er designet og bygget af <b>Daniel Alberto Sepulveda Estay, PhD</b>, grundlægger af <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Han arbejder med systemdynamik og netværksoptimering for robuste forsyningskæder. Han har en ph.d. fra Danmarks Tekniske Universitet og en MSc fra Massachusetts Institute of Technology og er medlem af rådet i System Dynamics Society.",
     "a.more": "Mere om Daniel →", "a.touch": "Tag kontakt",
-    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 2.1.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 2.2.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
     "a.consult": "Tilgængelig for konsulentopgaver", "a.foot": "Kapacitetsplanlægning i flere led for en fødevarekæde på tværs af breddegrader. Alle tal i eksempelnetværket er illustrative.", "a.built": "Bygget med",
     "c.cap": "Kapacitet",
     "c.unl": "Ubegrænset",
@@ -298,7 +305,7 @@
     "st.h": "Netværksstudie",
     "st.note": "Kæden efter led, fra råvarerne til venstre til hylderne til højre. Firkanter er produktionssteder, sekskanter distributionslagre og piller forbrugssteder; pilene er transportruter, så brede som deres andel. Tilføj steder, tegn ruter, træk et sted op eller ned i dets kolonne, og redigér hvad som helst i inspektøren. Ctrl+Z fortryder.",
     "st.diagram": "Led",
-    "st.map": "Kort",
+    "st.map": "Verdenskort",
     "st.select": "Vælg og flyt",
     "st.add": "+ Tilføj sted",
     "st.connect": "Forbind",
@@ -313,8 +320,8 @@
     "st.hRoutes": "Transportruter",
     "st.colour": "Farv efter",
     "st.days": "Transportdage på det valgte steds ruter",
-    "st.svg": "Diagram · SVG",
-    "st.png": "Diagram · PNG",
+    "st.svg": "Billede · SVG",
+    "st.png": "Billede · PNG",
     "st.hint": "Forbind: træk fra et sted til et i det næste led (fra en leverandør til dens kunde, eller omvendt). Tilføj: klik, hvor det nye sted skal være. Slet: klik på et sted eller en rute.",
     "st.params": "Egne parametre: definér dine egne felter for steder og ruter",
     "st.paramsNote": "Dine egne felter, som et certifikat, en ejer, CO₂ pr. ton eller en omkostning: vist i inspektøren og tabellerne, brugt til at farve diagrammet og med i hver fil. De beskriver netværket; planen bruger dem ikke.",
@@ -334,8 +341,15 @@
     "st.pAdd": "Tilføj parameter",
     "st.modeAria": "Redigeringstilstand",
     "st.inspAria": "Inspektør",
-    "a.li8": "<b>Et netværk, du tegner</b>Netværksstudiet viser kæden efter led og skelner mellem produktionssteder, distributionslagre, forbrugssteder og transportruter. Tilføj steder, tegn ruter mellem nabo-led, træk steder på plads, redigér dem i en inspektør, definér dine egne parametre og gem diagrammet som SVG eller PNG; hver ændring planlægges straks igen og kan fortrydes.",
-    "a.li6": "<b>Lær den i fem niveauer</b>En guidet vejledning (begynder, øvet, byg et netværk, avanceret, ekspert) med spørgsmål, på engelsk, spansk og dansk."
+    "a.li8": "<b>Et netværk, du tegner</b>Netværksstudiet viser kæden efter led og skelner mellem produktionssteder, distributionslagre, forbrugssteder og transportruter. Tilføj steder, tegn ruter mellem nabo-led, træk steder på plads, redigér dem i en inspektør, definér dine egne parametre og gem diagrammet som SVG eller PNG; eller arbejd på et verdenskort med ruterne langs storcirklen. Hver ændring planlægges straks igen og kan fortrydes.",
+    "a.li6": "<b>Lær den i fem niveauer</b>En guidet vejledning (begynder, øvet, byg et netværk, avanceret, ekspert) med spørgsmål, på engelsk, spansk og dansk.",
+    "mp.fit": "Tilpas til netværket",
+    "mp.world": "Hele verden",
+    "mp.names": "Alle navne",
+    "mp.tier": "Nye steder i",
+    "mp.help": "Træk kortet for at panorere; Ctrl + hjul eller knapperne zoomer. Træk et sted for at flytte det.",
+    "mp.inAria": "Zoom ind",
+    "mp.outAria": "Zoom ud"
   };
   var P = [
     ["^Column “(.*)” is kept as a custom parameter\\.$", "Kolonnen »$1« beholdes som egen parameter."],
