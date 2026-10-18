@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.2.0";
+  var VERSION = "2.3.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -33,7 +33,8 @@
   var state = { scenario: "base", net: null, res: null, sel: "p-ham", market: "m-jkt", colorBy: "peak", tier: "product", land: null, pos: null, ext: null,
     period: null, target: 0.9, compare: null, compareKey: "", heatMode: "plan", pinned: null, custom: null,
     mode: "plan", csrc: "qualified", hold: 6, cres: null, ckey: "", solving: false, cache: [], solveErr: null,
-    studio: { view: "diagram", mode: "select", highlight: "all", colorBy: "tier", showDays: false, route: null }, pick: null };
+    studio: { view: "diagram", mode: "select", highlight: "all", colorBy: "tier", showDays: false, route: null }, pick: null,
+    iv: { res: null, solving: false, err: null } };
   var G = window.TWGraph, hist = G.history();
 
   function $(id) { return document.getElementById(id); }
@@ -61,6 +62,8 @@
     return fx(v, a >= 10 ? 0 : 1);
   }
   function fu(v, unit) { return fq(v) + " " + unit; }
+  function fc(v) { return (state.net.config.currency || "$") + fq(v); }
+  function hasCandidates() { return state.net.sites.some(function (s) { return s.candidates && s.candidates.length; }); }
   function pct(u) { return u == null || isNaN(u) ? "–" : isFinite(u) ? Math.round(u * 100) + "%" : "∞"; }
   function pts(d) { var r = Math.round(d * 100); return (r > 0 ? "+" : r < 0 ? "−" : "±") + Math.abs(r) + " " + T("pts"); }
   function cls(u) { return u > 1 + 1e-9 ? "bad" : u >= 0.9 ? "warn" : "ok"; }
@@ -166,7 +169,7 @@
     renderViews();
   }
   function renderViews() {
-    renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
+    renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
     if (window.TWStudio) window.TWStudio.render();
   }
   function renderSelection() { if (state.res && state.res.ok) { renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
@@ -458,6 +461,59 @@
     hist.record(state.net);
     var qs = ids.map(function (id) { return { id: id, q: requiredFor(id) }; });
     qs.forEach(function (x) { var s = byId(x.id); if (!x.q || !x.q.additions.length) return; s.expansions = (s.expansions || []).concat(x.q.additions).sort(function (a, b) { return a.from - b.from; }); });
+    renderEditor(); render();
+  }
+
+  // ---- the capacity investment optimiser: a one-shot solve in a worker (not re-run automatically on every edit)
+  var ivWorker = null, ivId = 0;
+  function renderInvest() {
+    $("ivPackValue").value = state.net.config.packValue || "";
+    $("ivDiscount").value = state.net.config.discountRate != null ? state.net.config.discountRate : "";
+    var has = hasCandidates();
+    $("ivRun").disabled = !has;
+    $("ivEmpty").hidden = has;
+    renderIvStatus();
+  }
+  function renderIvStatus() {
+    var st = $("ivStatus"), iv = state.iv;
+    if (iv.err) { st.innerHTML = "<span class='bad'>" + esc(iv.err) + "</span>"; }
+    else if (iv.solving) { st.innerHTML = "<span class='spin'></span>" + T("Solving (this can take up to a couple of minutes)…"); }
+    else if (iv.res) { st.textContent = T("Solved in {s} s", { s: fx(iv.res.seconds || 0, 1) }) + (iv.res.timedOut ? " · " + T("best found in the time available, not proven optimal") : ""); }
+    else st.textContent = "";
+    $("ivResults").hidden = !iv.res;
+    if (iv.res) renderIvResults(iv.res);
+  }
+  function renderIvResults(r) {
+    $("ivKpis").innerHTML = [
+      [T("Estimated fill"), pct(r.fill)],
+      [T("Investments chosen"), String(r.investments.length)],
+      [T("Total capex"), fc(r.capexTotal)],
+      [T("Present value"), fc(r.capexPV)]
+    ].map(function (k) { return "<div class='kpi-tile'><div class='kpi-label'>" + k[0] + "</div><div class='kpi-value'>" + esc(k[1]) + "</div></div>"; }).join("");
+    if (!r.investments.length) { $("ivTable").innerHTML = "<p class='lanes'>" + T("No candidate is worth building at the pack value and discount rate set above.") + "</p>"; return; }
+    $("ivTable").innerHTML = "<table class='outlook needs'><thead><tr><th style='text-align:left'>" + T("Site") + "</th><th style='text-align:left'>" + T("Candidate") +
+      "</th><th>" + T("Review year") + "</th><th>" + T("Available") + "</th><th>" + T("Capacity added") + "</th><th>" + T("Capex") + "</th></tr></thead><tbody>" +
+      r.investments.map(function (x) { var s = byId(x.site); return "<tr><th><button class='linkish' data-sel='" + esc(x.site) + "'>" + esc(s ? nm(s) : x.site) + "</button></th><td style='text-align:left'>" + esc(T(x.label)) +
+        "</td><td>" + T("Year {n}", { n: x.reviewYear + 1 }) + "</td><td>" + T("Year {n}", { n: x.availYear + 1 }) + "</td><td>" + fu(x.add, s ? unitOf(s) : "") + "</td><td>" + fc(x.capex) + "</td></tr>"; }).join("") + "</tbody></table>";
+    each($("ivTable").querySelectorAll("[data-sel]"), function (b) { b.addEventListener("click", function () { select(b.getAttribute("data-sel")); $("sitePanel").scrollIntoView({ block: "start", behavior: "smooth" }); }); });
+  }
+  function runInvest() {
+    state.iv.solving = true; state.iv.err = null; state.iv.res = null; renderIvStatus();
+    var budget = num($("ivBudget").value); if (!isFinite(budget) || !(budget > 0)) budget = undefined;
+    if (!ivWorker) { ivWorker = new Worker("src/invest-worker.js"); ivWorker.onmessage = onInvestSolved; ivWorker.onerror = function () { ivWorker = null; state.iv.solving = false; state.iv.err = T("The solver could not be loaded."); renderIvStatus(); }; }
+    ivId++;
+    ivWorker.postMessage({ id: ivId, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, budget: budget } });
+  }
+  function onInvestSolved(e) {
+    var r = e.data.result;
+    state.iv.solving = false;
+    if (!r || !r.ok) { state.iv.err = (r && r.errors || []).map(function (x) { return I.tw(x); }).join(" "); renderIvStatus(); return; }
+    state.iv.res = r; renderIvStatus();
+  }
+  function applyInvestments() {
+    if (!state.iv.res || !state.iv.res.investments.length) return;
+    hist.record(state.net);
+    state.iv.res.investments.forEach(function (x) { var s = byId(x.site); if (!s) return; s.expansions = (s.expansions || []).concat([{ from: x.availYear * 12, add: x.add }]).sort(function (a, b) { return a.from - b.from; }); });
     renderEditor(); render();
   }
 
@@ -1078,6 +1134,10 @@
     $("saveJson").addEventListener("click", function () { download(fileBase() + ".json", IO.toJSON(state.net), "application/json"); });
     $("shareBtn").addEventListener("click", copyLink);
     $("applyAll").addEventListener("click", function () { applyAdds(state.net.sites.filter(function (s) { return s.tier !== "market"; }).map(function (s) { return s.id; })); });
+    $("ivPackValue").addEventListener("change", function () { var v = num(this.value); state.net.config.packValue = isFinite(v) ? v : 0; });
+    $("ivDiscount").addEventListener("change", function () { var v = num(this.value); state.net.config.discountRate = isFinite(v) ? v : 0; });
+    $("ivRun").addEventListener("click", runInvest);
+    $("ivApply").addEventListener("click", applyInvestments);
     var drop = $("dataBox");
     ["dragover", "dragenter"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("drag"); }); });
     ["dragleave", "drop"].forEach(function (ev) { drop.addEventListener(ev, function () { drop.classList.remove("drag"); }); });
@@ -1114,9 +1174,17 @@
   function parseExpansions(v) {
     return v ? v.split(/[|;,]/).map(function (p) { var a2 = p.split(":"); return { from: Math.max(0, IO.monthIndex(a2[0].trim(), state.net.config)), add: IO.number((a2[1] || "").trim(), false) }; }).filter(function (x) { return isFinite(x.from) && isFinite(x.add); }) : [];
   }
+  function candidatesText(s) { return (s.candidates || []).map(function (c) { return [c.label, c.add, c.capex, c.build || 0, c.qualify || 0].join(":"); }).join(" | "); }
+  function parseCandidates(v) {
+    if (!v) return [];
+    return v.split("|").map(function (p, i) {
+      var a2 = p.split(":").map(function (x) { return x.trim(); });
+      return { id: "c" + (i + 1), label: a2[0] || T("Candidate {n}", { n: i + 1 }), add: IO.number(a2[1] || "", false), capex: IO.number(a2[2] || "", false), build: IO.number(a2[3] || "0", false) || 0, qualify: IO.number(a2[4] || "0", false) || 0 };
+    }).filter(function (x) { return x.label && isFinite(x.add) && x.add > 0 && isFinite(x.capex) && x.capex >= 0; });
+  }
   var api = {
     h: { esc: esc, nm: nm, country: country, tierName: tierName, tierShort: tierShort, tierOne: tierOne, tierUnit: tierUnit, unitOf: unitOf, fq: fq, pct: pct, latLabel: latLabel, row: row, TCOL: TCOL },
-    view: VR, cap: CAP, edit: edit, num: num, renderAll: render, download: download, fileBase: fileBase, parseExpansions: parseExpansions,
+    view: VR, cap: CAP, edit: edit, num: num, renderAll: render, download: download, fileBase: fileBase, parseExpansions: parseExpansions, candidatesText: candidatesText, parseCandidates: parseCandidates,
     monthText: function (i) { return IO.monthText(i, state.net.config); }, monthIndex: function (v) { return IO.monthIndex(v, state.net.config); },
     undo: function () { restore(hist.undo(state.net)); }, redo: function () { restore(hist.redo(state.net)); }, canUndo: function () { return hist.canUndo(); }, canRedo: function () { return hist.canRedo(); }
   };

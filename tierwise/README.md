@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.2.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.3.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -32,7 +32,7 @@ illustrative.
 | 2 | Within capacity: a linear program (HiGHS in the browser) that builds stock ahead, re-sources and reports unmet demand, fill rates and bottlenecks | done, 2.0.0 |
 | – | Network Studio: the network drawn and edited by tier, custom parameters, routes tables | done, 2.1.0 |
 | – | World map: the network on the globe, zoom and pan, great-circle routes, edited in place | done, 2.2.0 |
-| 3 | Capacity investment: candidate expansions and new CMOs with build and qualification times, capex, an optimiser | 2.3 |
+| 3 | Capacity investment: candidate expansions with build and qualification times, capex, an optimiser | done, 2.3.0 |
 | 4 | Uncertainty: forecast ranges, variable yields and lead times, milk-season variance, probability of shortfall | 3.0 |
 | 5 | Products and food rules: product families sharing lines, changeovers, registrations, shelf life, landed cost | 3.1 |
 | 6 | Finish: planning report, accessibility, a background solver, a published benchmark | 4.0 |
@@ -149,6 +149,51 @@ what the first month needs, so the plan does not start with stock built in advan
 With qualified lanes, the first bottleneck (Valencia Dosing) comes in February 2030, but the first unmet demand only in
 December 2032. Within capacity, the New Zealand drought costs nothing: stock built ahead and re-sourcing absorb it.
 
+## Capacity investment (`src/invest.js`, `src/invest-worker.js`)
+
+**Capacity investment**, below the "Capacity to add" panel, answers which candidate expansions are worth building,
+and about when — not what ships in a given month. A site can list `candidates`: capacity expansions with a capex, a
+build time and a qualification time before they are usable.
+
+**A separate, year-resolution model.** The month-by-month "within capacity" plan above is already a large linear
+program (around 20,000 rows for the example network), and wrapping it in a mixed-integer search for build decisions
+does not converge interactively: even a handful of binary choices needs minutes to find a better answer than "build
+nothing", because every branch re-solves the whole relaxation. At year resolution — one decision point per year,
+matching the yearly cadence `requiredCapacity` already uses — the same problem is two orders of magnitude smaller and
+solves in a few seconds, with a genuine joint search across candidates.
+
+**How a year is represented.** Both a market's demand and a site's capacity are annual totals (the sum of their 12
+months), not monthly rates — using each site's own worst month independently was tried and discarded: a network's
+peaks do not line up (raw-milk troughs, dosing peaks and market peaks fall in different months at different sites by
+design), so overlaying every site's bad month onto one simulated instant made the whole network look saturated
+everywhere at once. Lead, release and transit times are not modelled within a year (days to a few weeks against a
+one-year resolution); what a site ships in year *y* is matched by what it receives in year *y*, converted by yield.
+This is a screening model: cross-check a chosen investment's seasonal adequacy against the month-by-month plan before
+committing.
+
+**The decision.** A binary per candidate per review year (0–12) decides whether and when to start it; its capacity
+becomes available `ceil((build + qualify) / 12)` years later, added straight into that year's capacity — no big-M
+needed, since the addition is a bound increase, not a toggle. At most one review year per candidate.
+
+**The objective**, in real currency: capex (discounted to its review year by `net.config.discountRate`) plus the
+margin lost on unmet demand (`net.config.packValue` per pack, so capex and lost margin are directly comparable). An
+optional budget caps total nominal capex.
+
+**Solving.** One HiGHS simplex solve (which warm-starts far better across a mixed-integer search than the interior-
+point method used above), with a 110-second budget and a 0.2% gap — generous because this is a considered,
+infrequent decision, not a plan re-solved on every slider change. A run that hits the time limit is still reported
+(`timedOut`), with its best incumbent found rather than failing outright.
+
+**Example result:** with the example network's four candidates (qualified lanes, no budget cap), the optimiser
+chooses three — Jebel Ali's extra bay, Valencia's fourth dosing line and Cape Town's second packaging line, at review
+years 5–6 — for $8.5M of capex ($6.1M present value), raising the annual screening model's estimated fill from 86.3%
+to 89.8%. Solved in 2–7 seconds.
+
+**Limits.** Candidates are expansions of existing sites only; a greenfield site (a new CMO) is not yet a candidate,
+since it would need its own candidate supply lanes defined — left for a later phase. The screening model assumes a
+single demand and capacity figure per year, so it will not catch a shortfall that is real within a year but averages
+out over it; check the month-by-month plan for that.
+
 ## Network Studio (`studio.js`, `src/graph.js`)
 
 The Studio draws the chain by tier, in columns from raw ingredients on the left to consumption points on the right.
@@ -187,7 +232,7 @@ Shapes tell the roles apart:
 **The inspector** edits the selected site:
 - name, id (routes follow), country, location (or *pick the place on the map*);
 - capacity, times and yield, or the forecast and priority;
-- expansions and custom parameters.
+- expansions, candidate expansions for the investment optimiser, and custom parameters.
 
 For a selected route it edits share, transit days, mode and route parameters.
 
@@ -232,11 +277,13 @@ Since 2.1, routes and parameters have their own place in the file:
   - `suppliers`, written `id:share[:transit days] | …`.
   - `expansions`, written `YYYY-MM:+amount | …`.
   - `outages`, written `YYYY-MM:months:loss% | …`.
+  - `candidates` for the investment optimiser, written `label:add:capex:build:qualify | …` (build and qualify in months).
 - **Settings (optional).** A `setting,value` table, or an Excel **Settings** sheet, covers:
   - the product;
   - the calendar (`startYear`, `startMonth` 1–12);
   - the bill of materials (`packPerUnit`, `kgPerSachet`, `rawPerProduct`);
   - the seasons;
+  - the investment optimiser's `packValue`, `discountRate` and `currency`;
   - the tiers' own names and units (`tier.dosing.name`, `tier.dosing.unit`, …), for a chain that isn't milk powder.
 - **Separators.** Files can be comma, semicolon or tab separated. In a semicolon file, decimal commas and point
   thousands are read (1.000,5).
@@ -266,6 +313,8 @@ Since 2.1, routes and parameters have their own place in the file:
   - suppliers and customers with shares and transit days.
 - **Capacity heatmap:** every site against every period, or the change against the comparison in points.
 - **Capacity to add:** every site's additions, earliest first, with **Add all as expansions**.
+- **Capacity investment:** pack value and discount rate, a budget cap, and **Run the investment optimiser** —
+  the candidates chosen, their timing, capex and present value, with **Add the chosen investments as expansions**.
 - **Load by tier, lead-time ladder and forecast small multiples.**
 - **Editor:**
   - sites (add, remove, rename, move), capacities, times, yields and expansions;
@@ -313,6 +362,7 @@ node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message
 node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
                                    # 41: the plan within capacity on chains with known answers, and the example
+node tierwise/tests/invest.test.js # 23: the investment optimiser on chains with known answers, and the example
 ```
 
 CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 103 checks across

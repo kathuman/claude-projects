@@ -16,7 +16,7 @@ for (const f of ["app.js", "tour.js", "studio.js"]) {
   const s = fs.readFileSync(R + f, "utf8");
   for (const m of s.matchAll(/\bT\(\s*"((?:[^"\\]|\\.)*)"/g)) keys.add(JSON.parse('"' + m[1] + '"'));
 }
-const EDIT_LABELS = ["Base, a month", "Growth % (yrs 1–3)", "Growth % (yrs 4–13)", "Season swing %", "Launch (YYYY-MM)", "Ramp months", "Throughput a month", "Handling days", "Cover weeks", "Capacity a month", "Lead time, days", "Release time, days", "Yield %", "Priority (1–3)"];
+const EDIT_LABELS = ["Base, a month", "Growth % (yrs 1–3)", "Growth % (yrs 4–13)", "Season swing %", "Launch (YYYY-MM)", "Ramp months", "Throughput a month", "Handling days", "Cover weeks", "Capacity a month", "Lead time, days", "Release time, days", "Yield %", "Priority (1–3)", "Candidate expansions (label:add:capex:build:qualify)"];
 EDIT_LABELS.forEach((k) => keys.add(k));
 P.TIERS.forEach((t) => { keys.add(t.name); keys.add(t.one); keys.add(t.short); keys.add(t.unit); });
 ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].forEach((m) => keys.add(m));

@@ -120,6 +120,18 @@
       if (s.tier !== "market" && !(s.capacity >= 0)) e.push(s.name + " needs a capacity of zero or more.");
       if (s.yield != null && !(s.yield > 0 && s.yield <= 100)) e.push(s.name + " needs a yield between 0 and 100%.");
       ["lead", "release"].forEach(function (k) { if (s[k] != null && !(s[k] >= 0)) e.push(s.name + " cannot have a negative " + (k === "lead" ? "lead time" : "release time") + "."); });
+      if (s.candidates && s.candidates.length) {
+        var cids = {};
+        s.candidates.forEach(function (c) {
+          if (!c.id) e.push(s.name + " has a candidate expansion with no id.");
+          if (cids[c.id]) e.push(s.name + " has two candidate expansions with the id " + c.id + ".");
+          cids[c.id] = 1;
+          if (!(c.add > 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs capacity added greater than zero.");
+          if (!(c.capex >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs a capex of zero or more.");
+          if (!(c.build >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs a build time of zero or more.");
+          if (!(c.qualify >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs a qualification time of zero or more.");
+        });
+      }
     });
     net.sites.forEach(function (s) { if (!(isFinite(s.lat) && isFinite(s.lon) && s.lat !== null && s.lon !== null && Math.abs(s.lat) <= 90 && Math.abs(s.lon) <= 180)) e.push(s.name + " needs a latitude and longitude."); });
     if (!net.sites.some(function (s) { return s.tier === "market"; })) e.push("The network needs at least one consumption point.");

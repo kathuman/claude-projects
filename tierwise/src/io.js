@@ -17,7 +17,7 @@
   "use strict";
   // the columns written for a site (the suppliers column is read, but routes are written as their own table)
   var COLS = ["id", "tier", "name", "country", "lat", "lon", "base", "growth", "longGrowth", "season", "launch", "ramp", "priority",
-    "capacity", "handling", "cover", "lead", "release", "yield", "expansions", "outages", "order"];
+    "capacity", "handling", "cover", "lead", "release", "yield", "expansions", "outages", "candidates", "order"];
   var RCOLS = ["from", "to", "share", "days", "mode"];
   var NUM = { lat: 1, lon: 1, base: 1, growth: 1, longGrowth: 1, season: 1, ramp: 1, priority: 1, capacity: 1, handling: 1, cover: 1, lead: 1, release: 1, yield: 1 };
   var ALIAS = {
@@ -28,6 +28,7 @@
     capacity: "capacity", cap: "capacity", handling: "handling", handlingdays: "handling", cover: "cover", coverweeks: "cover", safetystock: "cover",
     lead: "lead", leadtime: "lead", leaddays: "lead", release: "release", releasetime: "release", releasedays: "release", yield: "yield",
     suppliers: "suppliers", sourcing: "suppliers", sources: "suppliers", supplier: "suppliers", expansions: "expansions", expansion: "expansions", outages: "outages", outage: "outages",
+    candidates: "candidates", candidate: "candidates", candidateexpansions: "candidates",
     priority: "priority", order: "order", position: "order"
   };
   var RALIAS = { from: "from", supplier: "from", source: "from", origin: "from", to: "to", customer: "to", destination: "to", site: "to", share: "share", percent: "share",
@@ -41,7 +42,7 @@
     product: "product", manufacturing: "product", productmanufacturing: "product", productcmo: "product",
     raw: "raw", rawingredient: "raw", rawingredients: "raw", ingredient: "raw", ingredients: "raw", rawcmo: "raw"
   };
-  var SETTINGS = ["product", "startYear", "startMonth", "cover", "demandPeak", "rawPeak", "rawSeasonMax", "demandScale", "packPerUnit", "kgPerSachet", "rawPerProduct"];
+  var SETTINGS = ["product", "startYear", "startMonth", "cover", "demandPeak", "rawPeak", "rawSeasonMax", "demandScale", "packPerUnit", "kgPerSachet", "rawPerProduct", "packValue", "discountRate", "currency"];
   var TIER_KEYS = ["name", "one", "unit"];
   function key(s) { return String(s == null ? "" : s).toLowerCase().replace(/[\s_\-.()%]/g, ""); }
 
@@ -126,6 +127,7 @@
       var sk = null; SETTINGS.forEach(function (x) { if (key(x) === key(k)) sk = x; });
       if (!sk) { warnings.push("Setting “" + k + "” is not used."); return; }
       if (sk === "product") { net.product = String(v == null ? "" : v).trim(); return; }
+      if (sk === "currency") { net.config.currency = String(v == null ? "" : v).trim() || "$"; return; }
       var n = number(v, euro);
       if (n == null) return;
       if (!isFinite(n)) { errors.push("Setting “" + k + "”: “" + v + "” is not a number."); return; }
@@ -205,6 +207,16 @@
           var a = part.split(":"), from = monthIndex(a[0].trim(), cfg), months = number((a[1] || "").trim(), false), loss = number((a[2] || "").trim(), false);
           if (!isFinite(from) || !isFinite(months) || !isFinite(loss)) { errors.push("Row " + rowNo + ": cannot read the outage “" + part + "” (write YYYY-MM:months:loss %)."); return; }
           s.outages.push({ from: Math.max(0, from), months: months, loss: loss });
+        });
+      }
+      if (o.candidates != null && String(o.candidates).trim() !== "") {
+        s.candidates = [];
+        String(o.candidates).split("|").forEach(function (part, ci) {
+          part = part.trim(); if (!part) return;
+          var a = part.split(":").map(function (x) { return x.trim(); });
+          var label = a[0], add = number(a[1] || "", euro), capex = number(a[2] || "", euro), build = a.length > 3 ? number(a[3], euro) : 0, qualify = a.length > 4 ? number(a[4], euro) : 0;
+          if (!label || !isFinite(add) || !isFinite(capex)) { errors.push("Row " + rowNo + ": cannot read the candidate expansion “" + part + "” (write label:add:capex:build:qualify)."); return; }
+          s.candidates.push({ id: "c" + (ci + 1), label: label, add: add, capex: capex, build: isFinite(build) ? build : 0, qualify: isFinite(qualify) ? qualify : 0 });
         });
       }
       if (tier === "market") { if (s.growth == null) s.growth = 0; if (s.season == null) s.season = 0; }
@@ -315,6 +327,7 @@
       sites.push(COLS.map(function (k) {
         if (k === "expansions") return (s.expansions || []).map(function (e) { return monthText(e.from, cfg) + ":+" + clean(e.add); }).join(" | ");
         if (k === "outages") return (s.outages || []).map(function (e) { return monthText(e.from, cfg) + ":" + clean(e.months) + ":" + clean(e.loss); }).join(" | ");
+        if (k === "candidates") return (s.candidates || []).map(function (c) { return [c.label, clean(c.add), clean(c.capex), clean(c.build || 0), clean(c.qualify || 0)].join(":"); }).join(" | ");
         if (k === "launch") return s.launch != null ? monthText(s.launch, cfg) : "";
         if (k === "order") return s.ui && isFinite(s.ui.order) ? clean(s.ui.order) : "";
         var v = s[k]; return v == null ? "" : clean(v);
@@ -326,7 +339,8 @@
     });
     var settings = [["setting", "value"], ["product", net.product || ""], ["startYear", cfg.startYear], ["startMonth", cfg.startMonth + 1], ["cover", clean(cfg.cover)],
       ["demandPeak", cfg.demandPeak + 1], ["rawPeak", cfg.rawPeak + 1], ["rawSeasonMax", clean(cfg.rawSeasonMax)], ["demandScale", clean(cfg.demandScale != null ? cfg.demandScale : 1)],
-      ["packPerUnit", clean(net.bom.packPerUnit)], ["kgPerSachet", clean(net.bom.kgPerSachet)], ["rawPerProduct", clean(net.bom.rawPerProduct)]];
+      ["packPerUnit", clean(net.bom.packPerUnit)], ["kgPerSachet", clean(net.bom.kgPerSachet)], ["rawPerProduct", clean(net.bom.rawPerProduct)],
+      ["packValue", clean(cfg.packValue || 0)], ["discountRate", clean(cfg.discountRate || 0)], ["currency", cfg.currency || "$"]];
     P.TIERS.forEach(function (t) { var o = (net.tiers || {})[t.id] || {}; TIER_KEYS.forEach(function (k) { settings.push(["tier." + t.id + "." + k, o[k] || ""]); }); });
     (net.params || []).forEach(function (d) {
       settings.push(["param." + d.key + ".label", d.label], ["param." + d.key + ".type", d.type], ["param." + d.key + ".applies", d.applies]);

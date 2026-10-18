@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.2.0</span>
+    <span class="ver" id="ver">v2.3.0</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -108,8 +108,9 @@
           <li>Every other site: <code>capacity</code> (a month, in its tier's unit). Warehouses: <code>handling</code> (days) and <code>cover</code> (weeks of safety stock). CMOs: <code>lead</code> and <code>release</code> (days) and <code>yield</code> (%).</li>
           <li><code>suppliers</code>: sites of the tier directly above, as <code>id:share</code>, separated by <code>|</code>; add <code>:days</code> to set a lane's transit time instead of estimating it from the distance.</li>
           <li><code>expansions</code> as <code>YYYY-MM:+amount</code> and <code>outages</code> as <code>YYYY-MM:months:loss%</code>, separated by <code>|</code>.</li>
+          <li><code>candidates</code> for the investment optimiser, as <code>label:add:capex:build:qualify</code>, separated by <code>|</code> (build and qualify in months).</li>
         </ul>
-        <p>After the sites, an optional table headed <code>setting,value</code> (or a <b>Settings</b> sheet in Excel) sets the product, <code>startYear</code>, <code>startMonth</code> (1–12), the bill of materials (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), the seasons (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>) and the tiers' own names and units (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Comma, semicolon or tab separated; with semicolons, decimal commas are read.</p>
+        <p>After the sites, an optional table headed <code>setting,value</code> (or a <b>Settings</b> sheet in Excel) sets the product, <code>startYear</code>, <code>startMonth</code> (1–12), the bill of materials (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), the seasons (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>), the investment optimiser's <code>packValue</code>, <code>discountRate</code> and <code>currency</code>, and the tiers' own names and units (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Comma, semicolon or tab separated; with semicolons, decimal commas are read.</p>
         <p>The file stays in your browser: nothing is uploaded.</p>
       </div>
     </details>
@@ -255,6 +256,24 @@
     <button class="btn small" type="button" id="applyAll" data-i18n="n.apply" style="margin-top:10px">Add all as expansions</button>
   </section>
 
+  <section class="panel" id="investPanel">
+    <h2 data-i18n="iv.h">Capacity investment</h2>
+    <p class="panel-note" data-i18n="iv.note">Which candidate expansions are worth building, and about when. A year-resolution screening model, separate from the month-by-month plan above: it answers whether an expansion pays for itself, not what ships in a given month — check a chosen investment's seasonal adequacy against the plan before committing. Define candidates (capacity added, capex, build and qualification time) on a site in the Network Studio inspector.</p>
+    <div class="iv-ctl">
+      <label class="ctl inline"><span data-i18n="iv.packValue">Pack value (margin per pack)</span><input id="ivPackValue" class="num" inputmode="decimal" style="width:90px"></label>
+      <label class="ctl inline"><span data-i18n="iv.discount">Discount rate (% a year)</span><input id="ivDiscount" class="num" inputmode="decimal" style="width:70px"></label>
+      <label class="ctl inline"><span data-i18n="iv.budget">Budget cap (optional)</span><input id="ivBudget" class="num" inputmode="decimal" style="width:110px" placeholder="—"></label>
+      <button class="btn" type="button" id="ivRun" data-i18n="iv.run">Run the investment optimiser</button>
+      <span class="solve-status" id="ivStatus" aria-live="polite"></span>
+    </div>
+    <div id="ivResults" hidden>
+      <div class="kpis" id="ivKpis"></div>
+      <div class="table-scroll" id="ivTable"></div>
+      <button class="btn small" type="button" id="ivApply" data-i18n="iv.apply" style="margin-top:10px">Add the chosen investments as expansions</button>
+    </div>
+    <p class="panel-note" id="ivEmpty" hidden data-i18n="iv.none">No site has a candidate expansion defined yet. Add one to a site in the Network Studio inspector.</p>
+  </section>
+
   <section class="panel" id="ladderPanel">
     <h2 data-i18n="l.h">Lead-time ladder</h2>
     <p class="panel-note" data-i18n="l.note">How far ahead each tier must act for a pack to reach the shelf, along the main sourcing path (the largest share at each step).</p>
@@ -295,7 +314,7 @@
 
   <footer class="foot">
     <span class="consult"><span data-i18n="ft.consult">Available for consulting</span> — <a href="https://github.com/kathuman" target="_blank" rel="noopener" data-i18n="ft.touch">get in touch</a></span>
-    Tierwise v<span id="ver2">2.2.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.3.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 

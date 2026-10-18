@@ -57,6 +57,12 @@
     // ---- capacidad por agregar
     "To keep every site at or under <b>{t}</b> in every month, reviewed once a year, {n} of {m} sites need more capacity. Additions are sized for the busiest month until the next review.": "Para mantener cada sitio en <b>{t}</b> o menos todos los meses, con una revisión al año, {n} de {m} sitios necesitan más capacidad. Cada ampliación se dimensiona para el mes de mayor carga hasta la revisión siguiente.",
     "No site needs more capacity at this target.": "Ningún sitio necesita más capacidad con esta meta.", "First addition": "Primera ampliación", "Additions": "Ampliaciones", "Total added": "Total agregado", "vs today": "frente a hoy",
+    "Solving (this can take up to a couple of minutes)…": "Resolviendo (esto puede tardar hasta un par de minutos)…",
+    "Solved in {s} s": "Resuelto en {s} s", "best found in the time available, not proven optimal": "lo mejor hallado en el tiempo disponible, no se demostró óptimo",
+    "Estimated fill": "Cobertura estimada", "Investments chosen": "Inversiones elegidas", "Total capex": "Capex total", "Present value": "Valor presente",
+    "No candidate is worth building at the pack value and discount rate set above.": "Ninguna candidata vale la pena construir con el valor del paquete y la tasa de descuento fijados arriba.",
+    "Candidate": "Candidata", "Review year": "Año de revisión", "Available": "Disponible", "Capacity added": "Capacidad agregada", "Capex": "Capex", "Year {n}": "Año {n}",
+    "Candidate {n}": "Candidata {n}",
     // ---- nivel, escalera, pronóstico
     "Other ({n} sites)": "Otros ({n} sitios)", "Load by site against capacity, {t}": "Carga por sitio frente a la capacidad, {t}", "Tier load / capacity": "Carga / capacidad del nivel", "Tier utilisation": "Utilización del nivel", "Tier capacity": "Capacidad del nivel", "Period": "Período",
     "Lead-time ladder for {m}": "Escalera de tiempos para {m}", "on shelf": "en estante", "transit": "tránsito", "handling": "manejo", "release (QA)": "liberación (QA)", "production": "producción",
@@ -78,6 +84,7 @@
     "Tier names and units can be changed below, for a chain whose tiers are called something else.": "Los nombres y unidades de los niveles se pueden cambiar abajo, para una cadena cuyos niveles se llaman de otra forma.",
     "Tier names and units": "Nombres y unidades de los niveles", "Name (plural)": "Nombre (plural)", "Name (one)": "Nombre (singular)", "+ Add a site": "+ Agregar un sitio", "Country": "País", "Lat": "Lat", "Lon": "Lon",
     "Sourcing: supplier · share · transit days (blank = estimated)": "Abastecimiento: proveedor · participación · días de tránsito (en blanco = estimado)", "Expansions (YYYY-MM:+amount)": "Ampliaciones (AAAA-MM:+cantidad)",
+    "Candidate expansions (label:add:capex:build:qualify)": "Ampliaciones candidatas (etiqueta:cantidad:capex:construcción:calificación)",
     "Share": "Participación", "Transit days": "Días de tránsito", "Remove this supplier": "Quitar este proveedor", "+ supplier": "+ proveedor", "Remove this site": "Quitar este sitio", "New site": "Sitio nuevo",
     "Base, a month": "Base, al mes", "Growth % (yrs 1–3)": "Crecimiento % (años 1–3)", "Growth % (yrs 4–13)": "Crecimiento % (años 4–13)", "Season swing %": "Variación estacional %", "Launch (YYYY-MM)": "Lanzamiento (AAAA-MM)", "Ramp months": "Meses de rampa",
     "Throughput a month": "Despacho al mes", "Handling days": "Días de manejo", "Cover weeks": "Semanas de cobertura", "Capacity a month": "Capacidad al mes", "Lead time, days": "Tiempo de producción, días", "Release time, days": "Tiempo de liberación, días", "Yield %": "Rendimiento %",
@@ -243,8 +250,9 @@
       "<li>Puntos de consumo: <code>base</code> (demanda al mes), <code>growth</code> y <code>longGrowth</code> (% al año en los años 1–3 y después), <code>season</code> (± %), <code>launch</code> (AAAA-MM) y <code>ramp</code> (meses).</li>" +
       "<li>Todos los demás sitios: <code>capacity</code> (al mes, en la unidad de su nivel). Centros de distribución: <code>handling</code> (días) y <code>cover</code> (semanas de stock de seguridad). CMO: <code>lead</code> y <code>release</code> (días) y <code>yield</code> (%).</li>" +
       "<li><code>suppliers</code>: sitios del nivel inmediatamente superior, como <code>id:participación</code>, separados por <code>|</code>; agregue <code>:días</code> para fijar el tiempo de tránsito de una ruta en lugar de estimarlo por la distancia.</li>" +
-      "<li><code>expansions</code> como <code>AAAA-MM:+cantidad</code> y <code>outages</code> como <code>AAAA-MM:meses:pérdida%</code>, separados por <code>|</code>.</li></ul>" +
-      "<p>Después de los sitios, una tabla opcional con el encabezado <code>setting,value</code> (o una hoja <b>Settings</b> en Excel) fija el producto, <code>startYear</code>, <code>startMonth</code> (1–12), la lista de materiales (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), las temporadas (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>) y los nombres y unidades propios de los niveles (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Separado por comas, punto y coma o tabulaciones; con punto y coma se leen comas decimales.</p>" +
+      "<li><code>expansions</code> como <code>AAAA-MM:+cantidad</code> y <code>outages</code> como <code>AAAA-MM:meses:pérdida%</code>, separados por <code>|</code>.</li>" +
+      "<li><code>candidates</code> para el optimizador de inversión, como <code>etiqueta:cantidad:capex:construcción:calificación</code>, separados por <code>|</code> (construcción y calificación en meses).</li></ul>" +
+      "<p>Después de los sitios, una tabla opcional con el encabezado <code>setting,value</code> (o una hoja <b>Settings</b> en Excel) fija el producto, <code>startYear</code>, <code>startMonth</code> (1–12), la lista de materiales (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), las temporadas (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>), <code>packValue</code>, <code>discountRate</code> y <code>currency</code> del optimizador de inversión, y los nombres y unidades propios de los niveles (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Separado por comas, punto y coma o tabulaciones; con punto y coma se leen comas decimales.</p>" +
       "<p>El archivo se queda en su navegador: no se sube nada.</p>",
     "o.h": "Panorama por nivel", "o.note": "La carga de cada nivel frente a su capacidad. El año 1 es el mes promedio; los peaks son el mes de mayor carga en cualquier sitio del nivel, en la ventana mensual de 3 años y en los 10 períodos anuales siguientes.",
  "m.note": "La temporada de la leche y la demanda del sur van seis meses detrás de las del norte. Un anillo marca un sitio que se queda sin capacidad en algún momento de los 13 años. Haga clic en un sitio para ver su plan.",
@@ -252,6 +260,11 @@
     "h.h": "Requerimientos de capacidad · cada sitio, 46 períodos", "h.note": "Utilización = carga ÷ capacidad. Las primeras 36 columnas son meses; las últimas 10 son años. Una celda anual se colorea por su mes de mayor carga (o por su promedio; cámbielo arriba), así que una sobrecarga estacional nunca se pierde en el promedio. Pase el cursor sobre una celda para ver los números; haga clic para ver qué la origina.",
     "h.show": "Mostrar", "h.plan": "Este plan", "h.diff": "Cambio frente a la comparación", "t.show": "Ver como tabla",
     "n.h": "Capacidad por agregar", "n.apply": "Agregar todo como ampliaciones",
+    "iv.h": "Inversión en capacidad",
+    "iv.note": "Qué ampliaciones candidatas vale la pena construir, y más o menos cuándo. Un modelo de evaluación a resolución anual, separado del plan mes a mes de arriba: responde si una ampliación se paga sola, no qué se despacha en un mes dado; antes de decidir, verifique la adecuación estacional de una inversión elegida contra el plan. Defina candidatas (capacidad agregada, capex, tiempo de construcción y calificación) en un sitio del inspector del Estudio de Red.",
+    "iv.packValue": "Valor del paquete (margen por paquete)", "iv.discount": "Tasa de descuento (% al año)", "iv.budget": "Tope de presupuesto (opcional)",
+    "iv.run": "Ejecutar el optimizador de inversión", "iv.apply": "Agregar las inversiones elegidas como ampliaciones",
+    "iv.none": "Ningún sitio tiene todavía una ampliación candidata definida. Agregue una a un sitio en el inspector del Estudio de Red.",
     "ti.h": "Carga por nivel", "ti.note": "La carga de cada sitio de un nivel, apilada, frente a la capacidad conjunta del nivel. El nivel puede tener capacidad de sobra en total mientras un sitio se queda corto: las participaciones de abastecimiento son fijas.",
     "l.h": "Escalera de tiempos", "l.note": "Con cuánta anticipación debe actuar cada nivel para que un paquete llegue al estante, por la ruta principal de abastecimiento (la mayor participación en cada paso).", "l.mkt": "Punto de consumo",
     "f.note": "El pronóstico de consumo final que mueve a todos los niveles de arriba. Una sola escala, para comparar los mercados directamente. La demanda alcanza su peak en la temporada fría local: los mercados del sur llegan a su peak seis meses después que los del norte.",
@@ -280,7 +293,7 @@
     "a.author": "Autor",
     "a.authorp": "Tierwise fue diseñado y construido por <b>Daniel Alberto Sepulveda Estay, PhD</b>, fundador de <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Trabaja en dinámica de sistemas y optimización de redes para la resiliencia de las cadenas de suministro. Es doctor de la Universidad Técnica de Dinamarca y magíster del Instituto Tecnológico de Massachusetts, y miembro del consejo de la System Dynamics Society.",
     "a.more": "Más sobre Daniel →", "a.touch": "Contacto",
-    "a.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (versión 2.2.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (versión 2.3.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
     "a.consult": "Disponible para consultoría", "a.foot": "Planificación de capacidad en varios niveles para una cadena de alimentos a través de latitudes. Todas las cifras de la red de ejemplo son ilustrativas.", "a.built": "Construido con",
     "c.cap": "Capacidad",
     "c.unl": "Ilimitada",

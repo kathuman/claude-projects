@@ -57,6 +57,12 @@
     // ---- kapacitet, der skal tilføjes
     "To keep every site at or under <b>{t}</b> in every month, reviewed once a year, {n} of {m} sites need more capacity. Additions are sized for the busiest month until the next review.": "For at holde hvert sted på eller under <b>{t}</b> i alle måneder, med én gennemgang om året, skal {n} af {m} steder have mere kapacitet. Hver udvidelse dimensioneres til den travleste måned frem til næste gennemgang.",
     "No site needs more capacity at this target.": "Intet sted har brug for mere kapacitet med dette mål.", "First addition": "Første udvidelse", "Additions": "Udvidelser", "Total added": "Tilføjet i alt", "vs today": "mod i dag",
+    "Solving (this can take up to a couple of minutes)…": "Beregner (dette kan tage op til et par minutter)…",
+    "Solved in {s} s": "Løst på {s} s", "best found in the time available, not proven optimal": "det bedste fundet på den tilgængelige tid, ikke bevist optimalt",
+    "Estimated fill": "Anslået dækning", "Investments chosen": "Valgte investeringer", "Total capex": "Capex i alt", "Present value": "Nutidsværdi",
+    "No candidate is worth building at the pack value and discount rate set above.": "Ingen kandidat er værd at bygge med den pakkeværdi og diskonteringsrente, der er sat ovenfor.",
+    "Candidate": "Kandidat", "Review year": "Revisionsår", "Available": "Tilgængelig", "Capacity added": "Tilføjet kapacitet", "Capex": "Capex", "Year {n}": "År {n}",
+    "Candidate {n}": "Kandidat {n}",
     // ---- led, tidsstige, prognose
     "Other ({n} sites)": "Øvrige ({n} steder)", "Load by site against capacity, {t}": "Belastning pr. sted mod kapacitet, {t}", "Tier load / capacity": "Leddets belastning / kapacitet", "Tier utilisation": "Leddets udnyttelse", "Tier capacity": "Leddets kapacitet", "Period": "Periode",
     "Lead-time ladder for {m}": "Tidsstige for {m}", "on shelf": "på hylden", "transit": "transport", "handling": "håndtering", "release (QA)": "frigivelse (QA)", "production": "produktion",
@@ -78,6 +84,7 @@
     "Tier names and units can be changed below, for a chain whose tiers are called something else.": "Leddenes navne og enheder kan ændres nedenfor, til en kæde, hvis led hedder noget andet.",
     "Tier names and units": "Leddenes navne og enheder", "Name (plural)": "Navn (flertal)", "Name (one)": "Navn (ental)", "+ Add a site": "+ Tilføj et sted", "Country": "Land", "Lat": "Bredde", "Lon": "Længde",
     "Sourcing: supplier · share · transit days (blank = estimated)": "Indkøb: leverandør · andel · transportdage (tom = anslået)", "Expansions (YYYY-MM:+amount)": "Udvidelser (ÅÅÅÅ-MM:+mængde)",
+    "Candidate expansions (label:add:capex:build:qualify)": "Kandidatudvidelser (label:mængde:capex:opførsel:kvalificering)",
     "Share": "Andel", "Transit days": "Transportdage", "Remove this supplier": "Fjern denne leverandør", "+ supplier": "+ leverandør", "Remove this site": "Fjern dette sted", "New site": "Nyt sted",
     "Base, a month": "Basis pr. måned", "Growth % (yrs 1–3)": "Vækst % (år 1–3)", "Growth % (yrs 4–13)": "Vækst % (år 4–13)", "Season swing %": "Sæsonudsving %", "Launch (YYYY-MM)": "Lancering (ÅÅÅÅ-MM)", "Ramp months": "Indfasning, måneder",
     "Throughput a month": "Gennemløb pr. måned", "Handling days": "Håndteringsdage", "Cover weeks": "Dækning, uger", "Capacity a month": "Kapacitet pr. måned", "Lead time, days": "Produktionstid, dage", "Release time, days": "Frigivelsestid, dage", "Yield %": "Udbytte %",
@@ -243,8 +250,9 @@
       "<li>Forbrugssteder: <code>base</code> (efterspørgsel pr. måned), <code>growth</code> og <code>longGrowth</code> (% om året i år 1–3 og derefter), <code>season</code> (± %), <code>launch</code> (ÅÅÅÅ-MM) og <code>ramp</code> (måneder).</li>" +
       "<li>Alle andre steder: <code>capacity</code> (pr. måned, i leddets enhed). Lagre: <code>handling</code> (dage) og <code>cover</code> (ugers sikkerhedslager). CMO'er: <code>lead</code> og <code>release</code> (dage) og <code>yield</code> (%).</li>" +
       "<li><code>suppliers</code>: steder i leddet lige over, skrevet <code>id:andel</code> og adskilt af <code>|</code>; tilføj <code>:dage</code> for at sætte en rutes transporttid i stedet for at anslå den ud fra afstanden.</li>" +
-      "<li><code>expansions</code> som <code>ÅÅÅÅ-MM:+mængde</code> og <code>outages</code> som <code>ÅÅÅÅ-MM:måneder:tab%</code>, adskilt af <code>|</code>.</li></ul>" +
-      "<p>Efter stederne sætter en valgfri tabel med overskriften <code>setting,value</code> (eller et <b>Settings</b>-ark i Excel) produktet, <code>startYear</code>, <code>startMonth</code> (1–12), styklisten (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), sæsonerne (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>) og leddenes egne navne og enheder (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Adskilt af komma, semikolon eller tabulator; med semikolon læses decimalkommaer.</p>" +
+      "<li><code>expansions</code> som <code>ÅÅÅÅ-MM:+mængde</code> og <code>outages</code> som <code>ÅÅÅÅ-MM:måneder:tab%</code>, adskilt af <code>|</code>.</li>" +
+      "<li><code>candidates</code> til investeringsoptimeringen, skrevet <code>label:mængde:capex:opførsel:kvalificering</code>, adskilt af <code>|</code> (opførsel og kvalificering i måneder).</li></ul>" +
+      "<p>Efter stederne sætter en valgfri tabel med overskriften <code>setting,value</code> (eller et <b>Settings</b>-ark i Excel) produktet, <code>startYear</code>, <code>startMonth</code> (1–12), styklisten (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), sæsonerne (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>), investeringsoptimeringens <code>packValue</code>, <code>discountRate</code> og <code>currency</code>, og leddenes egne navne og enheder (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Adskilt af komma, semikolon eller tabulator; med semikolon læses decimalkommaer.</p>" +
       "<p>Filen bliver i din browser: intet uploades.</p>",
     "o.h": "Overblik pr. led", "o.note": "Hvert leds belastning mod dets kapacitet. År 1 er den gennemsnitlige måned; toppene er den travleste enkeltmåned på et hvilket som helst sted i leddet, i det treårige månedsvindue og i de 10 årsperioder derefter.",
  "m.note": "Mælkesæsonen og efterspørgslen på den sydlige halvkugle ligger seks måneder efter den nordlige. En ring markerer et sted, der mangler kapacitet på et tidspunkt i de 13 år. Klik på et sted for at se dets plan.",
@@ -252,6 +260,11 @@
     "h.h": "Kapacitetsbehov · hvert sted, 46 perioder", "h.note": "Udnyttelse = belastning ÷ kapacitet. De første 36 kolonner er måneder; de sidste 10 er år. En årscelle farves efter sin travleste måned (eller sit gennemsnit; skift ovenfor), så en sæsonbestemt overbelastning aldrig forsvinder i gennemsnittet. Hold markøren over en celle for at se tallene; klik for at se, hvad der driver den.",
     "h.show": "Vis", "h.plan": "Denne plan", "h.diff": "Ændring mod sammenligning", "t.show": "Vis som tabel",
     "n.h": "Kapacitet, der skal tilføjes", "n.apply": "Tilføj alle som udvidelser",
+    "iv.h": "Kapacitetsinvestering",
+    "iv.note": "Hvilke kandidatudvidelser er værd at bygge, og cirka hvornår. En screeningmodel på årsopløsning, adskilt fra måned-for-måned-planen ovenfor: den svarer på, om en udvidelse betaler sig selv, ikke hvad der afsendes i en given måned — tjek en valgt investerings sæsonmæssige tilstrækkelighed mod planen, før den besluttes. Definér kandidater (tilføjet kapacitet, capex, opførsels- og kvalificeringstid) på et sted i Netværksstudiets inspektør.",
+    "iv.packValue": "Pakkeværdi (margin pr. pakke)", "iv.discount": "Diskonteringsrente (% om året)", "iv.budget": "Budgetloft (valgfrit)",
+    "iv.run": "Kør investeringsoptimeringen", "iv.apply": "Tilføj de valgte investeringer som udvidelser",
+    "iv.none": "Intet sted har endnu en kandidatudvidelse defineret. Tilføj en til et sted i Netværksstudiets inspektør.",
     "ti.h": "Belastning pr. led", "ti.note": "Hvert steds belastning i et led, stablet, mod leddets samlede kapacitet. Leddet kan have ledig kapacitet i alt, mens ét sted mangler: indkøbsandelene ligger fast.",
     "l.h": "Tidsstige", "l.note": "Hvor langt i forvejen hvert led skal handle, for at en pakke når hylden, langs den vigtigste forsyningsvej (den største andel ved hvert trin).", "l.mkt": "Forbrugssted",
     "f.note": "Den endelige forbrugsprognose, der driver alle led ovenover. Én fælles skala, så markederne kan sammenlignes direkte. Efterspørgslen topper i den lokale kolde årstid: sydlige markeder topper seks måneder efter de nordlige.",
@@ -280,7 +293,7 @@
     "a.author": "Forfatter",
     "a.authorp": "Tierwise er designet og bygget af <b>Daniel Alberto Sepulveda Estay, PhD</b>, grundlægger af <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Han arbejder med systemdynamik og netværksoptimering for robuste forsyningskæder. Han har en ph.d. fra Danmarks Tekniske Universitet og en MSc fra Massachusetts Institute of Technology og er medlem af rådet i System Dynamics Society.",
     "a.more": "Mere om Daniel →", "a.touch": "Tag kontakt",
-    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 2.2.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 2.3.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
     "a.consult": "Tilgængelig for konsulentopgaver", "a.foot": "Kapacitetsplanlægning i flere led for en fødevarekæde på tværs af breddegrader. Alle tal i eksempelnetværket er illustrative.", "a.built": "Bygget med",
     "c.cap": "Kapacitet",
     "c.unl": "Ubegrænset",

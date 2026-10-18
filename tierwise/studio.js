@@ -267,8 +267,8 @@
   // ---- inspector
   var FIELDS = {
     market: [["base", "Base demand, a month", "num"], ["growth", "Growth % (yrs 1–3)", "num"], ["longGrowth", "Growth % (yrs 4–13)", "num"], ["season", "Season swing %", "num"], ["launch", "Launch (YYYY-MM)", "month"], ["ramp", "Ramp months", "num"], ["priority", "Priority (1–3)", "num"]],
-    warehouse: [["capacity", "Throughput a month", "num"], ["handling", "Handling days", "num"], ["cover", "Cover weeks", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"]],
-    cmo: [["capacity", "Capacity a month", "num"], ["lead", "Lead time, days", "num"], ["release", "Release time, days", "num"], ["yield", "Yield %", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"]]
+    warehouse: [["capacity", "Throughput a month", "num"], ["handling", "Handling days", "num"], ["cover", "Cover weeks", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify)", "cand"]],
+    cmo: [["capacity", "Capacity a month", "num"], ["lead", "Lead time, days", "num"], ["release", "Release time, days", "num"], ["yield", "Yield %", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify)", "cand"]]
   };
   function input(f, label, v, type, extra) {
     return "<label class='fi'><span>" + label + "</span><input data-f='" + f + "' value='" + esc(v == null ? "" : v) + "'" + (type === "num" ? " inputmode='decimal'" : "") + (extra || "") + "></label>";
@@ -308,7 +308,7 @@
     if (!s) { box.innerHTML = "<p class='insp-empty'>" + T("Select a site or a route to edit it.") + "</p>"; return; }
     var role = roleOf(s.tier), fl = s.tier === "market" ? FIELDS.market : s.tier === "warehouse" ? FIELDS.warehouse : FIELDS.cmo;
     var roleName = { production: T("Production site"), warehouse: T("Warehouse"), consumption: T("Consumption point") }[role];
-    var val = function (k) { if (k === "launch") return s.launch != null ? A.monthText(s.launch) : ""; if (k === "expansions") return (s.expansions || []).map(function (e) { return A.monthText(e.from) + ":+" + e.add; }).join(" | "); return s[k]; };
+    var val = function (k) { if (k === "launch") return s.launch != null ? A.monthText(s.launch) : ""; if (k === "expansions") return (s.expansions || []).map(function (e) { return A.monthText(e.from) + ":+" + e.add; }).join(" | "); if (k === "candidates") return A.candidatesText(s); return s[k]; };
     var cps = G.params(n, "sites").filter(function (d) { return G.applies(d, s); });
     box.innerHTML = "<p class='insp-kind'><i class='swatch' style='background:" + H.TCOL[s.tier] + "'></i>" + esc(roleName) + " · " + esc(H.tierOne(s.tier)) + "</p>" +
       input("name", T("Name"), H.nm(s), "text") + input("id", T("Id"), s.id, "text") + input("country", T("Country"), H.country(s), "text") +
@@ -328,6 +328,7 @@
         else if (f === "country") t.country = v;
         else if (f === "launch") { if (!v) delete t.launch; else { var li = A.monthIndex(v); if (isFinite(li)) t.launch = li; } }
         else if (f === "expansions") t.expansions = A.parseExpansions(v);
+        else if (f === "candidates") t.candidates = A.parseCandidates(v);
         else if (v === "" && ["ramp", "longGrowth", "cover", "handling", "priority"].indexOf(f) >= 0) delete t[f];
         else { var x = A.num(v); if (isFinite(x)) t[f] = x; }
       }, structural);

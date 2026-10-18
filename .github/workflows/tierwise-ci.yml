@@ -3,8 +3,9 @@ name: Tierwise tests
 # The planning engine: the calendar, seasons in both hemispheres, the bill of materials chain, yields, lead-time and
 # release-time phasing, conservation, safety stock, sourcing shares, expansions and outages, the example scenarios,
 # the graph edits behind the Network Studio,
-# tracing and the capacity to add; file loading; the Spanish and Danish translations; the tutorial's claims; and the
-# plan within capacity, solved with HiGHS (known answers on small chains, the rules every solution keeps, the example).
+# tracing and the capacity to add; file loading; the Spanish and Danish translations; the tutorial's claims; the
+# plan within capacity, solved with HiGHS (known answers on small chains, the rules every solution keeps, the example);
+# and the capacity investment optimiser (known answers on small chains, and the example).
 on:
   push:
     paths:
@@ -30,8 +31,8 @@ jobs:
       - run: node tierwise/tests/io.test.js
       - run: node tierwise/tests/i18n.test.js
       - run: node tierwise/tests/tour.test.js
-      - name: The plan within capacity (HiGHS)
-        run: npm install --no-save --no-package-lock highs@1.15.3 && node tests/constrained.test.js
+      - name: The plan within capacity and the investment optimiser (HiGHS)
+        run: npm install --no-save --no-package-lock highs@1.15.3 && node tests/constrained.test.js && node tests/invest.test.js
         working-directory: tierwise
       - name: Syntax-check the page scripts
         run: for f in tierwise/src/*.js tierwise/*.js; do node --check "$f"; done
