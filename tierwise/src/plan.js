@@ -130,6 +130,7 @@
           if (!(c.capex >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs a capex of zero or more.");
           if (!(c.build >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs a build time of zero or more.");
           if (!(c.qualify >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs a qualification time of zero or more.");
+          if (c.opex != null && !(c.opex >= 0)) e.push(s.name + "'s candidate " + (c.label || c.id) + " needs an opex of zero or more.");
         });
       }
     });

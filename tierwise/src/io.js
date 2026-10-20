@@ -42,7 +42,7 @@
     product: "product", manufacturing: "product", productmanufacturing: "product", productcmo: "product",
     raw: "raw", rawingredient: "raw", rawingredients: "raw", ingredient: "raw", ingredients: "raw", rawcmo: "raw"
   };
-  var SETTINGS = ["product", "startYear", "startMonth", "cover", "demandPeak", "rawPeak", "rawSeasonMax", "demandScale", "packPerUnit", "kgPerSachet", "rawPerProduct", "packValue", "discountRate", "currency"];
+  var SETTINGS = ["product", "startYear", "startMonth", "cover", "demandPeak", "rawPeak", "rawSeasonMax", "demandScale", "packPerUnit", "kgPerSachet", "rawPerProduct", "packValue", "discountRate", "terminalYears", "currency"];
   var TIER_KEYS = ["name", "one", "unit"];
   function key(s) { return String(s == null ? "" : s).toLowerCase().replace(/[\s_\-.()%]/g, ""); }
 
@@ -214,9 +214,12 @@
         String(o.candidates).split("|").forEach(function (part, ci) {
           part = part.trim(); if (!part) return;
           var a = part.split(":").map(function (x) { return x.trim(); });
-          var label = a[0], add = number(a[1] || "", euro), capex = number(a[2] || "", euro), build = a.length > 3 ? number(a[3], euro) : 0, qualify = a.length > 4 ? number(a[4], euro) : 0;
-          if (!label || !isFinite(add) || !isFinite(capex)) { errors.push("Row " + rowNo + ": cannot read the candidate expansion “" + part + "” (write label:add:capex:build:qualify)."); return; }
-          s.candidates.push({ id: "c" + (ci + 1), label: label, add: add, capex: capex, build: isFinite(build) ? build : 0, qualify: isFinite(qualify) ? qualify : 0 });
+          // an optional sixth field, opex (currency a year), since 2.3.1; files written before it have five
+          var label = a[0], add = number(a[1] || "", euro), capex = number(a[2] || "", euro), build = a.length > 3 ? number(a[3], euro) : 0, qualify = a.length > 4 ? number(a[4], euro) : 0, opex = a.length > 5 && a[5] !== "" ? number(a[5], euro) : 0;
+          if (!label || !isFinite(add) || !isFinite(capex) || !isFinite(opex)) { errors.push("Row " + rowNo + ": cannot read the candidate expansion “" + part + "” (write label:add:capex:build:qualify[:opex])."); return; }
+          var cand = { id: "c" + (ci + 1), label: label, add: add, capex: capex, build: isFinite(build) ? build : 0, qualify: isFinite(qualify) ? qualify : 0 };
+          if (opex) cand.opex = opex;
+          s.candidates.push(cand);
         });
       }
       if (tier === "market") { if (s.growth == null) s.growth = 0; if (s.season == null) s.season = 0; }
@@ -327,7 +330,8 @@
       sites.push(COLS.map(function (k) {
         if (k === "expansions") return (s.expansions || []).map(function (e) { return monthText(e.from, cfg) + ":+" + clean(e.add); }).join(" | ");
         if (k === "outages") return (s.outages || []).map(function (e) { return monthText(e.from, cfg) + ":" + clean(e.months) + ":" + clean(e.loss); }).join(" | ");
-        if (k === "candidates") return (s.candidates || []).map(function (c) { return [c.label, clean(c.add), clean(c.capex), clean(c.build || 0), clean(c.qualify || 0)].join(":"); }).join(" | ");
+        // opex is written only when there is one, so a file without it reads the same in 2.3.0
+        if (k === "candidates") return (s.candidates || []).map(function (c) { return [c.label, clean(c.add), clean(c.capex), clean(c.build || 0), clean(c.qualify || 0)].concat(c.opex ? [clean(c.opex)] : []).join(":"); }).join(" | ");
         if (k === "launch") return s.launch != null ? monthText(s.launch, cfg) : "";
         if (k === "order") return s.ui && isFinite(s.ui.order) ? clean(s.ui.order) : "";
         var v = s[k]; return v == null ? "" : clean(v);
@@ -340,7 +344,8 @@
     var settings = [["setting", "value"], ["product", net.product || ""], ["startYear", cfg.startYear], ["startMonth", cfg.startMonth + 1], ["cover", clean(cfg.cover)],
       ["demandPeak", cfg.demandPeak + 1], ["rawPeak", cfg.rawPeak + 1], ["rawSeasonMax", clean(cfg.rawSeasonMax)], ["demandScale", clean(cfg.demandScale != null ? cfg.demandScale : 1)],
       ["packPerUnit", clean(net.bom.packPerUnit)], ["kgPerSachet", clean(net.bom.kgPerSachet)], ["rawPerProduct", clean(net.bom.rawPerProduct)],
-      ["packValue", clean(cfg.packValue || 0)], ["discountRate", clean(cfg.discountRate || 0)], ["currency", cfg.currency || "$"]];
+      ["packValue", clean(cfg.packValue || 0)], ["discountRate", clean(cfg.discountRate || 0)],
+      ["terminalYears", clean(cfg.terminalYears != null ? cfg.terminalYears : 5)], ["currency", cfg.currency || "$"]];
     P.TIERS.forEach(function (t) { var o = (net.tiers || {})[t.id] || {}; TIER_KEYS.forEach(function (k) { settings.push(["tier." + t.id + "." + k, o[k] || ""]); }); });
     (net.params || []).forEach(function (d) {
       settings.push(["param." + d.key + ".label", d.label], ["param." + d.key + ".type", d.type], ["param." + d.key + ".applies", d.applies]);

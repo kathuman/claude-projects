@@ -131,6 +131,33 @@ check("refused: JSON that is not a network", !IO.fromJSON("{\"a\":1}").ok && !IO
   check("a value that does not fit its parameter is an error with its row", bv.errors.indexOf("Row 2: “big” is not a valid value for size.") >= 0, bv.errors);
   check("an older file (suppliers column, no routes table) still loads", IO.fromCSV(SMALL).ok);
 }
+// ---- 2.3.1: a candidate's optional sixth field, opex, and the terminalYears setting, in every format; files without
+// them read as before
+{
+  const net = N.build("base"), ae = net.sites.find((s) => s.id === "w-ae");
+  ae.candidates[0].opex = 120000; net.config.terminalYears = 8;
+  const csv = IO.toCSV(net), back = IO.fromCSV(csv);
+  const cand = (n) => n.sites.find((s) => s.id === "w-ae").candidates[0];
+  check("opex: written as the sixth field", /Extra bay:150000:1800000:6:1:120000/.test(csv), csv.split("\n").find((l) => l.startsWith("w-ae")));
+  check("opex: only where there is one (Valencia keeps five fields)", /Fourth dosing line:5500000:3600000:8:3(,|\r)/.test(csv), csv.split("\n").find((l) => l.startsWith("d-vlc")));
+  check("opex and terminalYears: CSV round trip", back.ok && cand(back.net).opex === 120000 && back.net.config.terminalYears === 8 && !("opex" in back.net.sites.find((s) => s.id === "d-vlc").candidates[0]), back.errors);
+  const r = IO.toRows(net), w = IO.fromWorkbook({ SheetNames: ["Sites", "Routes", "Settings"], Sheets: { Sites: r.sites, Routes: r.routes, Settings: r.settings } }, { utils: { sheet_to_json: (ws) => ws } });
+  check("opex and terminalYears: spreadsheet round trip", w.ok && cand(w.net).opex === 120000 && w.net.config.terminalYears === 8, w.errors);
+  const j = IO.fromJSON(IO.toJSON(net));
+  check("opex and terminalYears: JSON round trip", j.ok && cand(j.net).opex === 120000 && j.net.config.terminalYears === 8, j.errors);
+  // the example's own file, with Jebel Ali's candidate rewritten
+  const base = IO.toCSV(N.build("base")), withCand = (c) => IO.fromCSV(base.replace("Extra bay:150000:1800000:6:1", c));
+  const old = withCand("Extra bay:150000:1800000:6:1");
+  check("opex: a five-field candidate (a 2.3.0 file) reads with no opex", old.ok && cand(old.net).capex === 1800000 && !("opex" in cand(old.net)), old.errors);
+  const six = withCand("Extra bay:150000:1800000:6:1:25");
+  check("opex: read from a six-field candidate", six.ok && cand(six.net).opex === 25 && cand(six.net).qualify === 1, six.errors);
+  const bad = withCand("Extra bay:150000:1800000:6:1:lots"), row = base.split("\r\n").findIndex((l) => l.startsWith("w-ae")) + 1;
+  check("opex: an unreadable opex names its row", !bad.ok && bad.errors.some((e) => e.indexOf("Row " + row + ": cannot read the candidate expansion “Extra bay:150000:1800000:6:1:lots”") === 0), bad.errors);
+  const noTail = IO.fromCSV(base.replace("\r\nterminalYears,5", ""));
+  check("terminalYears: a file without the setting (a 2.3.0 file) gets the default of 5", base.indexOf("\r\nterminalYears,5\r\n") > 0 && noTail.ok && noTail.net.config.terminalYears === 5, noTail.errors);
+  const neg = N.build("base"); neg.sites.find((s) => s.id === "w-ae").candidates[0].opex = -5;
+  check("opex: a negative opex is refused", P.validate(neg).some((e) => /needs an opex of zero or more/.test(e)), P.validate(neg));
+}
 check("load picks the reader by file name and content", IO.load("n.json", IO.toJSON(N.build("base"))).ok && IO.load("n.csv", IO.toCSV(N.build("base"))).ok && IO.load("n.txt", IO.toJSON(N.build("base"))).ok && !IO.load("n.xlsx", new ArrayBuffer(4)).ok);
 
 console.log(pass + "/" + (pass + fail) + " checks passed");

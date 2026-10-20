@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.3.0";
+  var VERSION = "2.3.1";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -469,6 +469,7 @@
   function renderInvest() {
     $("ivPackValue").value = state.net.config.packValue || "";
     $("ivDiscount").value = state.net.config.discountRate != null ? state.net.config.discountRate : "";
+    $("ivTerminal").value = state.net.config.terminalYears != null ? state.net.config.terminalYears : 5;
     var has = hasCandidates();
     $("ivRun").disabled = !has;
     $("ivEmpty").hidden = has;
@@ -483,18 +484,25 @@
     $("ivResults").hidden = !iv.res;
     if (iv.res) renderIvResults(iv.res);
   }
+  // every figure is a present value in currency, from the year-resolution screening model; the fill rate is that
+  // model's estimate, with nothing built and with the package
   function renderIvResults(r) {
+    var opex = r.investments.some(function (x) { return x.opex > 0; });
     $("ivKpis").innerHTML = [
-      [T("Estimated fill"), pct(r.fill)],
-      [T("Investments chosen"), String(r.investments.length)],
+      [T("Net present value"), r.npv != null ? fc(r.npv) : "–"],
+      [T("Margin recovered (PV)"), r.recoveredPV != null ? fc(r.recoveredPV) : "–"],
+      [T("Capex (PV)"), fc(r.capexPV)],
+      opex ? [T("Opex (PV)"), fc(r.opexPV)] : null,
       [T("Total capex"), fc(r.capexTotal)],
-      [T("Present value"), fc(r.capexPV)]
-    ].map(function (k) { return "<div class='kpi-tile'><div class='kpi-label'>" + k[0] + "</div><div class='kpi-value'>" + esc(k[1]) + "</div></div>"; }).join("");
-    if (!r.investments.length) { $("ivTable").innerHTML = "<p class='lanes'>" + T("No candidate is worth building at the pack value and discount rate set above.") + "</p>"; return; }
-    $("ivTable").innerHTML = "<table class='outlook needs'><thead><tr><th style='text-align:left'>" + T("Site") + "</th><th style='text-align:left'>" + T("Candidate") +
-      "</th><th>" + T("Review year") + "</th><th>" + T("Available") + "</th><th>" + T("Capacity added") + "</th><th>" + T("Capex") + "</th></tr></thead><tbody>" +
+      [T("Investments chosen"), String(r.investments.length)],
+      [T("Screening fill"), (r.baseline ? pctFine(r.baseline.fill) + " → " : "") + pctFine(r.fill)]
+    ].filter(Boolean).map(function (k) { return "<div class='kpi-tile'><div class='kpi-label'>" + k[0] + "</div><div class='kpi-value'>" + esc(k[1]) + "</div></div>"; }).join("");
+    var note = "<p class='panel-note'>" + T("A year-resolution screening estimate. Present values at {r} a year; capacity is credited for {n} years after the horizon.", { r: fx(r.discountRate, r.discountRate % 1 ? 1 : 0) + "%", n: r.terminalYears }) + "</p>";
+    if (!r.investments.length) { $("ivTable").innerHTML = note + "<p class='lanes'>" + T("No candidate is worth building at the pack value and discount rate set above.") + "</p>"; return; }
+    $("ivTable").innerHTML = note + "<table class='outlook needs'><thead><tr><th style='text-align:left'>" + T("Site") + "</th><th style='text-align:left'>" + T("Candidate") +
+      "</th><th>" + T("Review year") + "</th><th>" + T("Ready") + "</th><th>" + T("Capacity added") + "</th><th>" + T("Capex") + "</th>" + (opex ? "<th>" + T("Opex a year") + "</th>" : "") + "</tr></thead><tbody>" +
       r.investments.map(function (x) { var s = byId(x.site); return "<tr><th><button class='linkish' data-sel='" + esc(x.site) + "'>" + esc(s ? nm(s) : x.site) + "</button></th><td style='text-align:left'>" + esc(T(x.label)) +
-        "</td><td>" + T("Year {n}", { n: x.reviewYear + 1 }) + "</td><td>" + T("Year {n}", { n: x.availYear + 1 }) + "</td><td>" + fu(x.add, s ? unitOf(s) : "") + "</td><td>" + fc(x.capex) + "</td></tr>"; }).join("") + "</tbody></table>";
+        "</td><td>" + T("Year {n}", { n: x.reviewYear + 1 }) + "</td><td>" + esc(IO.monthText(x.readyMonth, state.net.config)) + "</td><td>" + fu(x.add, s ? unitOf(s) : "") + "</td><td>" + fc(x.capex) + "</td>" + (opex ? "<td>" + fc(x.opex) + "</td>" : "") + "</tr>"; }).join("") + "</tbody></table>";
     each($("ivTable").querySelectorAll("[data-sel]"), function (b) { b.addEventListener("click", function () { select(b.getAttribute("data-sel")); $("sitePanel").scrollIntoView({ block: "start", behavior: "smooth" }); }); });
   }
   function runInvest() {
@@ -513,7 +521,8 @@
   function applyInvestments() {
     if (!state.iv.res || !state.iv.res.investments.length) return;
     hist.record(state.net);
-    state.iv.res.investments.forEach(function (x) { var s = byId(x.site); if (!s) return; s.expansions = (s.expansions || []).concat([{ from: x.availYear * 12, add: x.add }]).sort(function (a, b) { return a.from - b.from; }); });
+    // from the month each one is ready, as the optimiser counted it
+    state.iv.res.investments.forEach(function (x) { var s = byId(x.site); if (!s) return; s.expansions = (s.expansions || []).concat([{ from: x.readyMonth, add: x.add }]).sort(function (a, b) { return a.from - b.from; }); });
     renderEditor(); render();
   }
 
@@ -1136,6 +1145,7 @@
     $("applyAll").addEventListener("click", function () { applyAdds(state.net.sites.filter(function (s) { return s.tier !== "market"; }).map(function (s) { return s.id; })); });
     $("ivPackValue").addEventListener("change", function () { var v = num(this.value); state.net.config.packValue = isFinite(v) ? v : 0; });
     $("ivDiscount").addEventListener("change", function () { var v = num(this.value); state.net.config.discountRate = isFinite(v) ? v : 0; });
+    $("ivTerminal").addEventListener("change", function () { var v = num(this.value); state.net.config.terminalYears = isFinite(v) && v >= 0 ? Math.round(v) : 5; this.value = state.net.config.terminalYears; });
     $("ivRun").addEventListener("click", runInvest);
     $("ivApply").addEventListener("click", applyInvestments);
     var drop = $("dataBox");
@@ -1174,12 +1184,15 @@
   function parseExpansions(v) {
     return v ? v.split(/[|;,]/).map(function (p) { var a2 = p.split(":"); return { from: Math.max(0, IO.monthIndex(a2[0].trim(), state.net.config)), add: IO.number((a2[1] || "").trim(), false) }; }).filter(function (x) { return isFinite(x.from) && isFinite(x.add); }) : [];
   }
-  function candidatesText(s) { return (s.candidates || []).map(function (c) { return [c.label, c.add, c.capex, c.build || 0, c.qualify || 0].join(":"); }).join(" | "); }
+  // label:add:capex:build:qualify[:opex], the same as the files (opex only when there is one)
+  function candidatesText(s) { return (s.candidates || []).map(function (c) { return [c.label, c.add, c.capex, c.build || 0, c.qualify || 0].concat(c.opex ? [c.opex] : []).join(":"); }).join(" | "); }
   function parseCandidates(v) {
     if (!v) return [];
     return v.split("|").map(function (p, i) {
       var a2 = p.split(":").map(function (x) { return x.trim(); });
-      return { id: "c" + (i + 1), label: a2[0] || T("Candidate {n}", { n: i + 1 }), add: IO.number(a2[1] || "", false), capex: IO.number(a2[2] || "", false), build: IO.number(a2[3] || "0", false) || 0, qualify: IO.number(a2[4] || "0", false) || 0 };
+      var c = { id: "c" + (i + 1), label: a2[0] || T("Candidate {n}", { n: i + 1 }), add: IO.number(a2[1] || "", false), capex: IO.number(a2[2] || "", false), build: IO.number(a2[3] || "0", false) || 0, qualify: IO.number(a2[4] || "0", false) || 0 };
+      var opex = IO.number(a2[5] || "0", false); if (opex > 0) c.opex = opex;
+      return c;
     }).filter(function (x) { return x.label && isFinite(x.add) && x.add > 0 && isFinite(x.capex) && x.capex >= 0; });
   }
   var api = {

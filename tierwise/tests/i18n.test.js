@@ -16,13 +16,13 @@ for (const f of ["app.js", "tour.js", "studio.js"]) {
   const s = fs.readFileSync(R + f, "utf8");
   for (const m of s.matchAll(/\bT\(\s*"((?:[^"\\]|\\.)*)"/g)) keys.add(JSON.parse('"' + m[1] + '"'));
 }
-const EDIT_LABELS = ["Base, a month", "Growth % (yrs 1–3)", "Growth % (yrs 4–13)", "Season swing %", "Launch (YYYY-MM)", "Ramp months", "Throughput a month", "Handling days", "Cover weeks", "Capacity a month", "Lead time, days", "Release time, days", "Yield %", "Priority (1–3)", "Candidate expansions (label:add:capex:build:qualify)"];
+const EDIT_LABELS = ["Base, a month", "Growth % (yrs 1–3)", "Growth % (yrs 4–13)", "Season swing %", "Launch (YYYY-MM)", "Ramp months", "Throughput a month", "Handling days", "Cover weeks", "Capacity a month", "Lead time, days", "Release time, days", "Yield %", "Priority (1–3)", "Candidate expansions (label:add:capex:build:qualify[:opex])"];
 EDIT_LABELS.forEach((k) => keys.add(k));
 P.TIERS.forEach((t) => { keys.add(t.name); keys.add(t.one); keys.add(t.short); keys.add(t.unit); });
 ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].forEach((m) => keys.add(m));
 Object.values(N.SCENARIOS).forEach((s) => keys.add(s.label));
 const net = N.base(); keys.add(net.product);
-net.sites.forEach((s) => { keys.add(s.name); keys.add(s.country); });
+net.sites.forEach((s) => { keys.add(s.name); keys.add(s.country); (s.candidates || []).forEach((c) => keys.add(c.label)); });
 (net.params || []).forEach((d) => keys.add(d.label));
 const html = new Set();
 for (const f of ["index.html", "about.html"]) {
@@ -45,6 +45,10 @@ IO.load("x.xlsx", new ArrayBuffer(2)).errors.forEach((e) => msgs.add(e));
 IO.load("x.xlsx", new ArrayBuffer(2), { read: () => { throw new Error("x"); } }).errors.forEach((e) => msgs.add(e));
 IO.fromWorkbook({ SheetNames: [] }, {}).errors.forEach((e) => msgs.add(e));
 msgs.add("The constrained plan could not be solved (Infeasible)."); msgs.add("The solver could not be loaded.");
+// the investment optimiser's messages, and broken candidate expansions in a network and in a file
+msgs.add("The investment optimiser could not be solved (Infeasible)."); msgs.add("The investment optimiser needs a pack value (currency per pack) greater than zero.");
+{ const n = N.base(); n.sites[9].candidates = [{ label: "Bay", add: 0, capex: -1, build: -1, qualify: -1, opex: -1 }, { id: "c2", label: "A", add: 1, capex: 1, build: 0, qualify: 0 }, { id: "c2", label: "B", add: 1, capex: 1, build: 0, qualify: 0 }]; P.validate(n).forEach((e) => msgs.add(e)); }
+{ const r = IO.fromCSV("id,tier,name,lat,lon,capacity,candidates\nw,warehouse,W,0,0,5,Bay:lots:1\n"); (r.errors || []).forEach((e) => msgs.add(e)); }
 // 2.1: routes tables and custom parameters
 ["id,tier,name,lat,lon,base,colour\nm,market,M,0,0,1,red\n\nfrom,to,share,days,mode\nx,m,1,,\nm,m,abc,,\nm,m,1,-3,\nm,m,1,,boat\n",
   "id,tier,name,lat,lon,base,capacity,suppliers\nm,market,M,0,0,1,,w\nw,warehouse,W,0,1,,5,\n\nfrom,to,share\n",

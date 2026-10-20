@@ -10,7 +10,7 @@
   function base() {
     return {
       product: "Fortified milk powder · 20 × 25 g sachets per pack",
-      config: { startYear: 2027, startMonth: 0, cover: 6, demandPeak: 10, rawPeak: 4, rawSeasonMax: 25, demandScale: 1, packValue: 2.5, discountRate: 8, currency: "$" },
+      config: { startYear: 2027, startMonth: 0, cover: 6, demandPeak: 10, rawPeak: 4, rawSeasonMax: 25, demandScale: 1, packValue: 2.5, discountRate: 8, terminalYears: 5, currency: "$" },
       bom: { packPerUnit: 20, kgPerSachet: 0.025, rawPerProduct: 0.7 },
       // a custom (descriptive) parameter: which CMOs hold a halal certificate
       params: [{ key: "halal", label: "Halal certified", type: "bool", applies: "sites", tiers: ["packaging", "dosing", "product"] }],

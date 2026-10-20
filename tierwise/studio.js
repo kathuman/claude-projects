@@ -267,8 +267,8 @@
   // ---- inspector
   var FIELDS = {
     market: [["base", "Base demand, a month", "num"], ["growth", "Growth % (yrs 1–3)", "num"], ["longGrowth", "Growth % (yrs 4–13)", "num"], ["season", "Season swing %", "num"], ["launch", "Launch (YYYY-MM)", "month"], ["ramp", "Ramp months", "num"], ["priority", "Priority (1–3)", "num"]],
-    warehouse: [["capacity", "Throughput a month", "num"], ["handling", "Handling days", "num"], ["cover", "Cover weeks", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify)", "cand"]],
-    cmo: [["capacity", "Capacity a month", "num"], ["lead", "Lead time, days", "num"], ["release", "Release time, days", "num"], ["yield", "Yield %", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify)", "cand"]]
+    warehouse: [["capacity", "Throughput a month", "num"], ["handling", "Handling days", "num"], ["cover", "Cover weeks", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify[:opex])", "cand"]],
+    cmo: [["capacity", "Capacity a month", "num"], ["lead", "Lead time, days", "num"], ["release", "Release time, days", "num"], ["yield", "Yield %", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify[:opex])", "cand"]]
   };
   function input(f, label, v, type, extra) {
     return "<label class='fi'><span>" + label + "</span><input data-f='" + f + "' value='" + esc(v == null ? "" : v) + "'" + (type === "num" ? " inputmode='decimal'" : "") + (extra || "") + "></label>";

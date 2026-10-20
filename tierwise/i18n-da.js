@@ -59,10 +59,13 @@
     "No site needs more capacity at this target.": "Intet sted har brug for mere kapacitet med dette mål.", "First addition": "Første udvidelse", "Additions": "Udvidelser", "Total added": "Tilføjet i alt", "vs today": "mod i dag",
     "Solving (this can take up to a couple of minutes)…": "Beregner (dette kan tage op til et par minutter)…",
     "Solved in {s} s": "Løst på {s} s", "best found in the time available, not proven optimal": "det bedste fundet på den tilgængelige tid, ikke bevist optimalt",
-    "Estimated fill": "Anslået dækning", "Investments chosen": "Valgte investeringer", "Total capex": "Capex i alt", "Present value": "Nutidsværdi",
+    "Net present value": "Nettonutidsværdi", "Margin recovered (PV)": "Genvundet margin (NV)", "Capex (PV)": "Capex (NV)", "Opex (PV)": "Opex (NV)",
+    "Investments chosen": "Valgte investeringer", "Total capex": "Capex i alt", "Screening fill": "Dækning (screeningmodel)",
+    "A year-resolution screening estimate. Present values at {r} a year; capacity is credited for {n} years after the horizon.": "Et skøn fra screeningmodellen på årsopløsning. Nutidsværdier ved {r} om året; kapaciteten krediteres i {n} år efter horisonten.",
     "No candidate is worth building at the pack value and discount rate set above.": "Ingen kandidat er værd at bygge med den pakkeværdi og diskonteringsrente, der er sat ovenfor.",
-    "Candidate": "Kandidat", "Review year": "Revisionsår", "Available": "Tilgængelig", "Capacity added": "Tilføjet kapacitet", "Capex": "Capex", "Year {n}": "År {n}",
+    "Candidate": "Kandidat", "Review year": "Revisionsår", "Ready": "Klar", "Opex a year": "Opex om året", "Capacity added": "Tilføjet kapacitet", "Capex": "Capex", "Year {n}": "År {n}",
     "Candidate {n}": "Kandidat {n}",
+    "Extra bay": "Ekstra lagerhal", "Second line": "Anden linje", "Fourth dosing line": "Fjerde doseringslinje", "Debottleneck the dryer": "Fjern flaskehalsen i tørreren",
     // ---- led, tidsstige, prognose
     "Other ({n} sites)": "Øvrige ({n} steder)", "Load by site against capacity, {t}": "Belastning pr. sted mod kapacitet, {t}", "Tier load / capacity": "Leddets belastning / kapacitet", "Tier utilisation": "Leddets udnyttelse", "Tier capacity": "Leddets kapacitet", "Period": "Periode",
     "Lead-time ladder for {m}": "Tidsstige for {m}", "on shelf": "på hylden", "transit": "transport", "handling": "håndtering", "release (QA)": "frigivelse (QA)", "production": "produktion",
@@ -84,7 +87,7 @@
     "Tier names and units can be changed below, for a chain whose tiers are called something else.": "Leddenes navne og enheder kan ændres nedenfor, til en kæde, hvis led hedder noget andet.",
     "Tier names and units": "Leddenes navne og enheder", "Name (plural)": "Navn (flertal)", "Name (one)": "Navn (ental)", "+ Add a site": "+ Tilføj et sted", "Country": "Land", "Lat": "Bredde", "Lon": "Længde",
     "Sourcing: supplier · share · transit days (blank = estimated)": "Indkøb: leverandør · andel · transportdage (tom = anslået)", "Expansions (YYYY-MM:+amount)": "Udvidelser (ÅÅÅÅ-MM:+mængde)",
-    "Candidate expansions (label:add:capex:build:qualify)": "Kandidatudvidelser (label:mængde:capex:opførsel:kvalificering)",
+    "Candidate expansions (label:add:capex:build:qualify[:opex])": "Kandidatudvidelser (label:mængde:capex:opførsel:kvalificering[:opex])",
     "Share": "Andel", "Transit days": "Transportdage", "Remove this supplier": "Fjern denne leverandør", "+ supplier": "+ leverandør", "Remove this site": "Fjern dette sted", "New site": "Nyt sted",
     "Base, a month": "Basis pr. måned", "Growth % (yrs 1–3)": "Vækst % (år 1–3)", "Growth % (yrs 4–13)": "Vækst % (år 4–13)", "Season swing %": "Sæsonudsving %", "Launch (YYYY-MM)": "Lancering (ÅÅÅÅ-MM)", "Ramp months": "Indfasning, måneder",
     "Throughput a month": "Gennemløb pr. måned", "Handling days": "Håndteringsdage", "Cover weeks": "Dækning, uger", "Capacity a month": "Kapacitet pr. måned", "Lead time, days": "Produktionstid, dage", "Release time, days": "Frigivelsestid, dage", "Yield %": "Udbytte %",
@@ -251,8 +254,8 @@
       "<li>Alle andre steder: <code>capacity</code> (pr. måned, i leddets enhed). Lagre: <code>handling</code> (dage) og <code>cover</code> (ugers sikkerhedslager). CMO'er: <code>lead</code> og <code>release</code> (dage) og <code>yield</code> (%).</li>" +
       "<li><code>suppliers</code>: steder i leddet lige over, skrevet <code>id:andel</code> og adskilt af <code>|</code>; tilføj <code>:dage</code> for at sætte en rutes transporttid i stedet for at anslå den ud fra afstanden.</li>" +
       "<li><code>expansions</code> som <code>ÅÅÅÅ-MM:+mængde</code> og <code>outages</code> som <code>ÅÅÅÅ-MM:måneder:tab%</code>, adskilt af <code>|</code>.</li>" +
-      "<li><code>candidates</code> til investeringsoptimeringen, skrevet <code>label:mængde:capex:opførsel:kvalificering</code>, adskilt af <code>|</code> (opførsel og kvalificering i måneder).</li></ul>" +
-      "<p>Efter stederne sætter en valgfri tabel med overskriften <code>setting,value</code> (eller et <b>Settings</b>-ark i Excel) produktet, <code>startYear</code>, <code>startMonth</code> (1–12), styklisten (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), sæsonerne (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>), investeringsoptimeringens <code>packValue</code>, <code>discountRate</code> og <code>currency</code>, og leddenes egne navne og enheder (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Adskilt af komma, semikolon eller tabulator; med semikolon læses decimalkommaer.</p>" +
+      "<li><code>candidates</code> til investeringsoptimeringen, skrevet <code>label:mængde:capex:opførsel:kvalificering</code>, adskilt af <code>|</code> (opførsel og kvalificering i måneder); tilføj <code>:opex</code> for en driftsomkostning om året.</li></ul>" +
+      "<p>Efter stederne sætter en valgfri tabel med overskriften <code>setting,value</code> (eller et <b>Settings</b>-ark i Excel) produktet, <code>startYear</code>, <code>startMonth</code> (1–12), styklisten (<code>packPerUnit</code>, <code>kgPerSachet</code>, <code>rawPerProduct</code>), sæsonerne (<code>demandPeak</code>, <code>rawPeak</code>, <code>rawSeasonMax</code>), investeringsoptimeringens <code>packValue</code>, <code>discountRate</code>, <code>terminalYears</code> og <code>currency</code>, og leddenes egne navne og enheder (<code>tier.dosing.name</code>, <code>tier.dosing.unit</code>…). Adskilt af komma, semikolon eller tabulator; med semikolon læses decimalkommaer.</p>" +
       "<p>Filen bliver i din browser: intet uploades.</p>",
     "o.h": "Overblik pr. led", "o.note": "Hvert leds belastning mod dets kapacitet. År 1 er den gennemsnitlige måned; toppene er den travleste enkeltmåned på et hvilket som helst sted i leddet, i det treårige månedsvindue og i de 10 årsperioder derefter.",
  "m.note": "Mælkesæsonen og efterspørgslen på den sydlige halvkugle ligger seks måneder efter den nordlige. En ring markerer et sted, der mangler kapacitet på et tidspunkt i de 13 år. Klik på et sted for at se dets plan.",
@@ -261,8 +264,8 @@
     "h.show": "Vis", "h.plan": "Denne plan", "h.diff": "Ændring mod sammenligning", "t.show": "Vis som tabel",
     "n.h": "Kapacitet, der skal tilføjes", "n.apply": "Tilføj alle som udvidelser",
     "iv.h": "Kapacitetsinvestering",
-    "iv.note": "Hvilke kandidatudvidelser er værd at bygge, og cirka hvornår. En screeningmodel på årsopløsning, adskilt fra måned-for-måned-planen ovenfor: den svarer på, om en udvidelse betaler sig selv, ikke hvad der afsendes i en given måned — tjek en valgt investerings sæsonmæssige tilstrækkelighed mod planen, før den besluttes. Definér kandidater (tilføjet kapacitet, capex, opførsels- og kvalificeringstid) på et sted i Netværksstudiets inspektør.",
-    "iv.packValue": "Pakkeværdi (margin pr. pakke)", "iv.discount": "Diskonteringsrente (% om året)", "iv.budget": "Budgetloft (valgfrit)",
+    "iv.note": "Hvilke kandidatudvidelser er værd at bygge, og cirka hvornår. En screeningmodel på årsopløsning, adskilt fra måned-for-måned-planen ovenfor: den svarer på, om en udvidelse betaler sig selv, ikke hvad der afsendes i en given måned — tjek en valgt investerings sæsonmæssige tilstrækkelighed mod planen, før den besluttes. Capex, driftsomkostninger og den margin, der tabes ved udækket efterspørgsel, diskonteres ens, og kapaciteten krediteres i et antal år efter horisonten. Definér kandidater (tilføjet kapacitet, capex, opførsels- og kvalificeringstid og en valgfri driftsomkostning om året) på et sted i Netværksstudiets inspektør.",
+    "iv.packValue": "Pakkeværdi (margin pr. pakke)", "iv.discount": "Diskonteringsrente (% om året)", "iv.terminal": "År krediteret efter horisonten", "iv.budget": "Budgetloft (valgfrit)",
     "iv.run": "Kør investeringsoptimeringen", "iv.apply": "Tilføj de valgte investeringer som udvidelser",
     "iv.none": "Intet sted har endnu en kandidatudvidelse defineret. Tilføj en til et sted i Netværksstudiets inspektør.",
     "ti.h": "Belastning pr. led", "ti.note": "Hvert steds belastning i et led, stablet, mod leddets samlede kapacitet. Leddet kan have ledig kapacitet i alt, mens ét sted mangler: indkøbsandelene ligger fast.",
@@ -289,11 +292,11 @@
     "a.li5": "<b>Din egen forsyningskæde</b>Indlæs et netværk fra CSV, Excel eller JSON (skabelonen er ét klik væk), redigér hvert sted, hver rute og hver indstilling, omdøb leddene til en anden slags kæde, og del hele planen som et link. Filerne bliver i din browser.",
 
     "a.how": "Sådan er den bygget",
-    "a.howp": "Motoren er en tidsfaset behovsplan, gennemregnet led for led fra forbrugeren og op over 156 måneder. Et lager sender det, dets markeder har brug for, og opbygger eller trækker på sikkerhedslager. En CMO laver sin produktion frigivelsestiden før, øget efter udbyttet. Dens input skal nå frem produktionstiden endnu tidligere. Behovene fordeles på leverandørerne efter andel, flyttes med hver rutes transporttid og omregnes gennem styklisten. Årsperioderne bygges af deres måneder, og hver bevarer sin travleste måned såvel som sit gennemsnit. Planen er lineær, så hvert steds belastning deler sig nøjagtigt i de markeder, det forsyner. Testene kontrollerer styklistens kæde, tidsforskydningerne, bevarelse af volumen, sikkerhedslager, indkøbsandele, årstiderne på begge halvkugler, udvidelser og udfald, den nøjagtige sporing, den kapacitet, der skal tilføjes, hvert filformat og hver oversættelse. Inden for kapaciteten afgør et lineært program over hele horisonten, hvad hvert sted laver, hvilken rute der bærer det, og hvilket lager der bygges op på forhånd, til den laveste omkostning ved udækket efterspørgsel, og det kontrolleres på små kæder, hvis svar er kendt. Alt kører i din browser.",
+    "a.howp": "Motoren er en tidsfaset behovsplan, gennemregnet led for led fra forbrugeren og op over 156 måneder. Et lager sender det, dets markeder har brug for, og opbygger eller trækker på sikkerhedslager. En CMO laver sin produktion frigivelsestiden før, øget efter udbyttet. Dens input skal nå frem produktionstiden endnu tidligere. Behovene fordeles på leverandørerne efter andel, flyttes med hver rutes transporttid og omregnes gennem styklisten. Årsperioderne bygges af deres måneder, og hver bevarer sin travleste måned såvel som sit gennemsnit. Planen er lineær, så hvert steds belastning deler sig nøjagtigt i de markeder, det forsyner. Testene kontrollerer styklistens kæde, tidsforskydningerne, bevarelse af volumen, sikkerhedslager, indkøbsandele, årstiderne på begge halvkugler, udvidelser og udfald, den nøjagtige sporing, den kapacitet, der skal tilføjes, hvert filformat og hver oversættelse. Inden for kapaciteten afgør et lineært program over hele horisonten, hvad hvert sted laver, hvilken rute der bærer det, og hvilket lager der bygges op på forhånd, til den laveste omkostning ved udækket efterspørgsel, og det kontrolleres på små kæder, hvis svar er kendt. Kapacitetsinvesteringsoptimeringen afgør, hvilke kandidatudvidelser der er værd at bygge, og cirka hvornår, ved at afveje den diskonterede capex mod den margin, der tabes ved udækket efterspørgsel. Alt kører i din browser.",
     "a.author": "Forfatter",
     "a.authorp": "Tierwise er designet og bygget af <b>Daniel Alberto Sepulveda Estay, PhD</b>, grundlægger af <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Han arbejder med systemdynamik og netværksoptimering for robuste forsyningskæder. Han har en ph.d. fra Danmarks Tekniske Universitet og en MSc fra Massachusetts Institute of Technology og er medlem af rådet i System Dynamics Society.",
     "a.more": "Mere om Daniel →", "a.touch": "Tag kontakt",
-    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 2.3.0) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
+    "a.cite": "<b>Citation:</b> Sepulveda Estay, D. A. (2026). <em>Tierwise: multi-tier capacity planning for a food supply chain</em> (version 2.3.1) [Software]. https://kathuman.github.io/claude-projects/tierwise/",
     "a.consult": "Tilgængelig for konsulentopgaver", "a.foot": "Kapacitetsplanlægning i flere led for en fødevarekæde på tværs af breddegrader. Alle tal i eksempelnetværket er illustrative.", "a.built": "Bygget med",
     "c.cap": "Kapacitet",
     "c.unl": "Ubegrænset",
@@ -387,6 +390,16 @@
     ["^Setting “(.*)” must be a month from 1 to 12\\.$", "Indstillingen »$1« skal være en måned fra 1 til 12."],
     ["^Setting “(.*)”: “(.*)” is not a number\\.$", "Indstilling »$1«: »$2« er ikke et tal."],
     ["^Setting “(.*)” is not used\\.$", "Indstillingen »$1« bruges ikke."],
+    ["^The investment optimiser needs a pack value \\(currency per pack\\) greater than zero\\.$", "Investeringsoptimeringen skal have en pakkeværdi (valuta pr. pakke) større end nul."],
+    ["^The investment optimiser could not be solved \\((.*)\\)\\.$", "Investeringsoptimeringen kunne ikke løses ($1)."],
+    ["^Row (\\d+): cannot read the candidate expansion “(.*)” \\(write label:add:capex:build:qualify\\[:opex\\]\\)\\.$", "Række $1: kan ikke læse kandidatudvidelsen »$2« (skriv label:mængde:capex:opførsel:kvalificering[:opex])."],
+    ["^(.*) has a candidate expansion with no id\\.$", "$1 har en kandidatudvidelse uden id."],
+    ["^(.*) has two candidate expansions with the id (.*)\\.$", "$1 har to kandidatudvidelser med id'et $2."],
+    ["^(.*)'s candidate (.*) needs capacity added greater than zero\\.$", "Kandidaten $2 hos $1 skal tilføje en kapacitet større end nul."],
+    ["^(.*)'s candidate (.*) needs a capex of zero or more\\.$", "Kandidaten $2 hos $1 skal have en capex på nul eller mere."],
+    ["^(.*)'s candidate (.*) needs a build time of zero or more\\.$", "Kandidaten $2 hos $1 skal have en opførselstid på nul eller mere."],
+    ["^(.*)'s candidate (.*) needs a qualification time of zero or more\\.$", "Kandidaten $2 hos $1 skal have en kvalificeringstid på nul eller mere."],
+    ["^(.*)'s candidate (.*) needs an opex of zero or more\\.$", "Kandidaten $2 hos $1 skal have en opex på nul eller mere."],
     ["^(.*) has no supplier\\.$", "$1 har ingen leverandør."],
     ["^(.*) must be supplied from the tier directly above it\\.$", "$1 skal forsynes fra leddet lige over."],
     ["^(.*) is supplied by an unknown site\\.$", "$1 forsynes af et ukendt sted."],
