@@ -1,0 +1,56 @@
+name: Robot Configurator tests
+
+# Engineering models, catalog, landed-cost pricing, pin assignment, the solver and its explanations, and the generated
+# firmware, wiring and build guide; then the generated sketches are built with arduino-cli for the Uno, Nano and ESP32.
+on:
+  push:
+    paths:
+      - 'robot-configurator/**'
+      - '.github/workflows/robot-configurator-ci.yml'
+  pull_request:
+    paths:
+      - 'robot-configurator/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: robot-configurator
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Syntax-check the page scripts
+        run: for f in app.js src/*.js tools/*.js; do node --check "$f"; done
+        shell: bash
+
+  firmware:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: arduino/setup-arduino-cli@v2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino-avr-esp32-v1
+      - name: Install the board packages
+        run: |
+          arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core install arduino:avr
+          arduino-cli core install esp32:esp32 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+      - name: Generate one firmware per variant
+        run: node tools/gen-fixtures.js build/fixtures
+      - name: Build every AVR variant
+        run: node tools/compile-fixtures.js build/fixtures --arch avr
+      - name: Build a covering set of ESP32 variants
+        run: node tools/compile-fixtures.js build/fixtures --arch esp32 --cover
