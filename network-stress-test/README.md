@@ -16,14 +16,12 @@ summary panel ("Swapping in a different solver", in the explanations at the bott
 
 **Version:** shown as a badge in the header and footer (currently v1.4.1), bumped on every
 user-visible change — see the `APP_VERSION` constant at the top of `web/src/app.js`. The
-header and footer also credit **Estay Dynamics**, with a header "Contact" button and the
-footer's "get in touch" link both pointing at the same consulting contact destination used
-site-wide (`github.com/kathuman`). [`web/about.html`](web/about.html) describes the app and its
+header and footer also credit **Estay Dynamics**. [`web/about.html`](web/about.html) describes the app and its
 author, Daniel Alberto Sepulveda Estay, PhD.
 
 ## Why this exists
 
-A network-design consulting question — "how resilient is this supply network, and where
+A network-design question — "how resilient is this supply network, and where
 would it break first?" — needs somewhere to actually try things, not just a diagram. This app
 is that sandbox: hundreds of editable nodes, real geography-based lane defaults, a genuine
 flow solver (not a heuristic approximation of one), and several ways to push on the network

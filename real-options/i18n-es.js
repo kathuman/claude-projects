@@ -244,7 +244,7 @@
     "brand.sub": "la flexibilidad en el diseño de redes, valorada",
     "nav.one": "Una instalación", "nav.network": "Red", "nav.model": "Modelo", "nav.report": "Informe", "nav.tutorial": "Tutorial", "nav.about": "Acerca de", "nav.all": "← Todos los proyectos",
     "sec.scenario": "Escenario", "aria.scenario": "Escenario",
-    "foot.consult": "Opciones Reales para el Diseño de Redes <span id=\"ver-foot\"></span> · <a href=\"about.html\">Acerca de</a> · Disponible para consultorías — <a href=\"https://github.com/kathuman\" target=\"_blank\" rel=\"noopener\">contáctenos</a>",
+    "foot.consult": "Opciones Reales para el Diseño de Redes <span id=\"ver-foot\"></span> · <a href=\"about.html\">Acerca de</a>",
     "foot.note": "Modelo sintético e ilustrativo; no es asesoría de inversión.",
     // single-site intro
     "i.h1": "¿Cuánto vale la flexibilidad en el diseño de una red?",
@@ -366,9 +366,9 @@
     "a.how.p": "La demanda sigue un árbol binomial recombinante cuyo paso se adapta para que el crecimiento fijado se represente con exactitud. Cada estrategia se resuelve por inducción hacia atrás, con los plazos tratados como esperanzas de varios pasos, y luego se replica hacia adelante en trayectorias simuladas. Sus pruebas verifican el árbol frente a Black–Scholes y una fórmula cerrada, las relaciones de dominancia entre estrategias, cómo responde el valor de la opción a la volatilidad, la ventana, los plazos y las penalizaciones, que las políticas simuladas reproduzcan los valores del árbol, y la convergencia al achicar el paso. Todo se ejecuta en su navegador.",
     "a.author.h": "Autor",
     "a.author.p": "Opciones Reales para el Diseño de Redes fue diseñada y construida por <b>Daniel Alberto Sepulveda Estay, PhD</b>, fundador de <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Trabaja en dinámica de sistemas y optimización de redes para la resiliencia de la cadena de suministro. Es doctor de la Universidad Técnica de Dinamarca (DTU) y magíster del Instituto Tecnológico de Massachusetts (MIT), y es miembro del consejo de la System Dynamics Society.",
-    "a.author.links": "<a href=\"https://kathuman.github.io/estay-dynamics/about.html\" target=\"_blank\" rel=\"noopener\">Más sobre Daniel →</a> · <a href=\"https://kathuman.github.io/estay-dynamics/contact.html\" target=\"_blank\" rel=\"noopener\">Contáctenos</a>",
+    "a.author.links": "<a href=\"https://kathuman.github.io/estay-dynamics/about.html\" target=\"_blank\" rel=\"noopener\">Más sobre Daniel →</a>",
     "a.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Real Options for Network Design</em> (versión 4.2.0) [Software]. https://kathuman.github.io/claude-projects/real-options/",
-    "a.foot": "Opciones Reales para el Diseño de Redes v4.2.0 · <a href=\"./\">Abrir la aplicación</a> · Disponible para consultorías — <a href=\"https://github.com/kathuman\" target=\"_blank\" rel=\"noopener\">contáctenos</a>",
+    "a.foot": "Opciones Reales para el Diseño de Redes v4.2.0 · <a href=\"./\">Abrir la aplicación</a>",
     "a.foot.note": "Modelo sintético e ilustrativo; no es asesoría de inversión. Construido con <a href=\"https://claude.com\" target=\"_blank\" rel=\"noopener\">Claude</a>."
   };
 
