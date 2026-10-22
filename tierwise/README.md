@@ -405,13 +405,26 @@ cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test
                                    # 41: the plan within capacity on chains with known answers, and the example
 node tierwise/tests/invest.test.js # 52: the investment optimiser on chains with known answers, and the example,
                                    # priced again in the month-by-month plan
+node tierwise/tests/validation.test.js
+                                   # the validation report's 8 cases (23 checks) → tests/validation-results.json
 ```
 
 CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 103 checks across
 the flows, file loading and links, and every tutorial step in three languages. It also scans the Spanish and Danish
 pages for leftover English.
 
+## Validation (`validation.html`, `src/validation.js`)
+
+The **[validation report](https://kathuman.github.io/claude-projects/tierwise/validation.html)** is for the analysts
+who vet the work: it runs the real engine on cases with a known answer — conservation checks, a priority test, the
+published example's fill rate and first-unmet-demand month, the investment optimiser's capex-vs-margin trade-off —
+and shows the result against the expected answer. The recorded results come from
+`tests/validation.test.js`; pressing **Re-run** computes them again in the browser, from the same code, in a Web
+Worker (`src/validation-worker.js`). The page also writes up the project's numerical-stability lessons: why every
+balance needs a stock, why quantities are scaled, the solver fallback cascade, the warm-up/run-out design, and the
+two dead ends on the way to the investment optimiser (a monthly mixed-integer search that could not converge, then a
+units bug that made it falsely conclude investing was never worth it) and why the annual model fixed both.
+
 ---
 
-By Daniel Alberto Sepulveda Estay, PhD · [Estay Dynamics](https://kathuman.github.io/estay-dynamics/) · Available for
-consulting: [get in touch](https://github.com/kathuman).
+By Daniel Alberto Sepulveda Estay, PhD · [Estay Dynamics](https://kathuman.github.io/estay-dynamics/).

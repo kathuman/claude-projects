@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tierwise Validation</title>
+  <meta name="description" content="Validation report for Tierwise: the requirements plan, the plan within capacity and the capacity investment optimiser checked against known answers and the published example — re-runnable in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --warn:#ffcf4a; --ok:#3ddc97; --bad:#ff6a6a;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html{background:var(--bg);}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body); line-height:1.55;}
+a{color:var(--accent);}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52); position:sticky; top:0; z-index:20; flex-wrap:wrap;}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.by{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+main{max-width:1180px; margin:0 auto; padding:24px 20px 10px;}
+h1{font-family:var(--head); font-weight:700; font-size:30px; letter-spacing:.03em; margin:0 0 6px;}
+h2{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); margin:34px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line-soft);}
+.lead{color:var(--ink-dim); max-width:860px; margin:0 0 16px;}
+.summary{display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+.big{font-family:var(--head); font-weight:700; font-size:28px;}
+.big.ok{color:var(--ok);} .big.bad{color:var(--bad);}
+.meta{font-family:var(--mono); font-size:12px; color:var(--ink-faint);}
+.btn{font-family:var(--head); font-weight:600; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); background:var(--panel-2); border:1px solid var(--line); border-radius:7px; padding:8px 12px; cursor:pointer;}
+.btn:hover{border-color:var(--accent); color:var(--accent);}
+.btn.primary{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+.btn:disabled{opacity:.4; cursor:not-allowed;}
+.progress{flex:1 1 240px; min-width:200px;}
+.bar{height:6px; background:var(--line-soft); border-radius:3px; overflow:hidden;} .bar i{display:block; height:100%; width:0; background:var(--accent); transition:width .3s;}
+.cases{display:grid; grid-template-columns:1fr; gap:14px;}
+.case{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+.case h3{font-family:var(--head); font-weight:700; font-size:18px; margin:0; letter-spacing:.02em;}
+.chip{display:inline-block; font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:999px; padding:1px 8px; margin-right:6px;}
+.verdict{font-family:var(--head); font-weight:700; font-size:12px; letter-spacing:.08em; text-transform:uppercase; padding:2px 9px; border-radius:999px;}
+.verdict.ok{color:var(--ok); border:1px solid rgba(61,220,151,.5);} .verdict.bad{color:var(--bad); border:1px solid rgba(255,106,106,.5);} .verdict.run{color:var(--warn); border:1px solid rgba(255,207,74,.5);}
+.what{font-size:14px; color:var(--ink-dim); margin:8px 0;}
+.cite{font-family:var(--mono); font-size:11px; color:var(--ink-faint);}
+table{border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12px; margin-top:8px;}
+th,td{text-align:left; padding:6px 8px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+th{color:var(--ink-faint); font-weight:500;}
+td.num{text-align:right; white-space:nowrap;}
+td.okc{color:var(--ok);} td.badc{color:var(--bad);}
+.case-foot{display:flex; justify-content:space-between; align-items:center; margin-top:10px; gap:10px; flex-wrap:wrap;}
+.note{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint);}
+.prose{color:var(--ink-dim); font-size:14.5px; max-width:900px;}
+.prose code, code{font-family:var(--mono); font-size:12.5px; color:var(--ink); background:var(--panel-2); border:1px solid var(--line-soft); border-radius:4px; padding:0 4px;}
+pre{font-family:var(--mono); font-size:12.5px; background:var(--panel-2); border:1px solid var(--line-soft); border-radius:8px; padding:12px; overflow-x:auto; color:var(--ink);}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; overflow-x:auto;}
+.foot{max-width:1180px; margin:30px auto 0; padding:18px 20px 30px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-faint); text-align:center;}
+.foot .consult{display:block; color:var(--ink); font-weight:600; margin-bottom:4px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">TIER<span>WISE</span></div>
+    <span class="by">validation report</span>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;"><a class="back-link" href="about.html">About</a><a class="back-link" href="./">← Tierwise</a></div>
+</header>
+
+<main>
+  <h1>How far can you trust the numbers?</h1>
+  <p class="lead">
+    Every case below runs the app's own engine (<code>src/plan.js</code>, <code>src/constrained.js</code>,
+    <code>src/invest.js</code>) on a problem with a known answer — an exact relationship, a conservation law,
+    or the published example — and checks the result against a stated tolerance. The results shown were
+    recorded with <code>node tierwise/tests/validation.test.js</code>; press <b>Re-run</b> to compute them
+    again in your browser, from the same code, using the same HiGHS solver.
+  </p>
+  <div class="summary">
+    <span class="big" id="sum-big">—</span>
+    <span class="meta" id="sum-meta">loading recorded results…</span>
+    <span style="flex:1 1 auto"></span>
+    <button class="btn primary" id="run-all" type="button">Re-run all in this browser</button>
+    <div class="progress" id="prog" hidden><div class="note" id="prog-label"></div><div class="bar"><i id="prog-bar"></i></div></div>
+  </div>
+
+  <h2>Cases</h2>
+  <div class="cases" id="cases"></div>
+
+  <h2>Numerical-stability lessons</h2>
+  <div class="card">
+    <p class="prose">A few things learned the hard way while building the LP, kept here because the mistakes were more instructive than the successes:</p>
+    <ul class="prose">
+      <li><b>Every balance needs a stock.</b> Lead, release and transit times are fractions of a month, split across
+        two months by weight. Without a stock to absorb the fraction, the LP is forced into exact month-by-month
+        equalities between flows with different weights, and the cheapest way to satisfy them is to oscillate
+        shipments between a high and a low value every other month (an IIR-filter instability, not a bug in the
+        sense of wrong code — a legitimate optimum of a badly posed problem). Every site carries a small stock
+        (finished stock at every production site and warehouse, input stock at every CMO that buys, a buffer at
+        every consumption point) specifically to remove this degree of freedom.</li>
+      <li><b>Scale the quantities.</b> The example network's flows are in the hundreds of thousands of packs a
+        month; solved directly, HiGHS's numerical tolerances (tuned for values near 1) make the interior-point
+        method far less reliable. Every quantity in the LP is in units of 10,000 pack-equivalents instead.</li>
+      <li><b>No HiGHS LP-format variable name may start with <code>e</code> followed by digits</b> — the reader
+        parses <code>e12</code> as a floating-point exponent, not a variable. Every variable prefix in the code
+        was chosen to avoid this (the re-routing variable is <code>g</code>, not the more obvious <code>e</code>).</li>
+      <li><b>The solver fallback cascade exists for a reason.</b> The interior-point method without crossover is
+        several times faster than simplex on a problem this size, but occasionally fails numerically on an
+        unusual network. <code>solve()</code> tries interior-point without crossover, then with crossover, then
+        the dual simplex, and only reports failure if all three do.</li>
+      <li><b>The warm-up and run-out exist to stop the horizon's edges from distorting the plan.</b> Without them,
+        the LP would either start with no pipeline filled (starving the first months) or end by building stock it
+        will never use (since nothing after the horizon needs it). The warm-up has the first month's demand and
+        fills the slowest pipeline; a site may make at most 110% of what the first month needs, so the plan does
+        not quietly pre-build stock before it even starts.</li>
+      <li><b>The capacity investment optimiser needed a different model, not a longer timeout.</b> The first
+        attempt wrapped the month-by-month LP (~20,000 rows) in a mixed-integer search over build decisions; even
+        one binary variable took over a minute to find any answer better than "build nothing", because every
+        branch re-solves the whole relaxation. Raising the time budget made this slower, not more useful. The fix
+        was a smaller, purpose-built annual-resolution model (<code>src/invest.js</code>), not a bigger timeout.</li>
+      <li><b>A quieter bug: annual rates look like annual totals until you check.</b> Early in building that annual
+        model, a pack of unmet demand was costed once per year-slot rather than once per pack — the model was
+        comparing a one-time capex against roughly a twelfth of the real annual cost of a shortfall, so it almost
+        always chose not to invest, even when investing was worth tens of millions of dollars. The <a href="#case-invest-builds">"builds when the margin
+        clearly beats the capex" case</a> below exists specifically to catch a regression of this kind.</li>
+    </ul>
+  </div>
+
+  <h2>Limits — what the numbers don't cover</h2>
+  <div class="prose">
+    <ul>
+      <li><b>One product, fixed sourcing shares.</b> The requirement plan and the plan within capacity both assume
+        a single product and sourcing shares that do not change over the horizon.</li>
+      <li><b>Inventory only at warehouses</b> in the requirement plan; the plan within capacity adds stock at every
+        site, but only to absorb timing, not as a general multi-echelon inventory policy.</li>
+      <li><b>The investment optimiser is a screening model, not the operational plan.</b> It represents each year
+        by its annual total, not month by month, so it will not catch a shortfall that is real within a year but
+        averages out over it. Candidates are expansions of existing sites only; a greenfield site is not yet a
+        candidate.</li>
+      <li><b>All figures in the example network are illustrative</b> — a fortified milk powder chain built to
+        exercise latitude, seasonality and multi-tier sourcing, not a real company's data.</li>
+    </ul>
+  </div>
+
+  <h2>Reproduce</h2>
+  <pre>node tierwise/tests/plan.test.js   # 61: the engine, tracing, capacity to add, custom tiers
+node tierwise/tests/graph.test.js  # 41: sites and routes, the tier rule, column order, problems, parameters, undo
+node tierwise/tests/geo.test.js    # 16: the world projection, great-circle routes over the date line, map views
+node tierwise/tests/io.test.js     # 49: CSV / Excel / JSON round trips, routes tables, custom parameters, errors by row
+node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
+node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
+cd tierwise && npm install --no-save highs@1.15.3
+node tests/constrained.test.js     # 41: the plan within capacity on chains with known answers, and the example
+node tests/invest.test.js          # 23: the investment optimiser on chains with known answers, and the example
+node tests/validation.test.js      # this report → tests/validation-results.json</pre>
+</main>
+
+<footer class="foot">
+  <span class="consult">Tierwise <span id="ver-foot"></span> · <a href="about.html">About</a></span>
+  A validated capacity-planning lab. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
+</footer>
+
+<script src="src/plan.js"></script>
+<script src="src/network.js"></script>
+<script src="src/constrained.js"></script>
+<script src="src/invest.js"></script>
+<script src="src/validation.js"></script>
+<script>
+(function () {
+  "use strict";
+  var APP_VERSION = "2.3.1";   // keep in step with index.html
+  document.getElementById('ver-foot').textContent = 'v' + APP_VERSION;
+  var CASES = TWValidation.CASES, results = {}, recorded = null, running = false;
+
+  function fmt(v){ return typeof v!=='number' ? String(v) : Math.abs(v)>=1000 ? v.toLocaleString('en-US',{maximumFractionDigits:0}) : Math.abs(v)>=1 ? v.toFixed(2) : Math.abs(v)>=0.001 ? v.toFixed(4) : v.toExponential(1); }
+  function render(){
+    var box=document.getElementById('cases');
+    box.innerHTML=CASES.map(function(c){
+      var r=results[c.id], st = r==='running' ? 'run' : r ? (r.pass?'ok':'bad') : '';
+      var rows = r && r.checks ? r.checks.map(function(k){ return '<tr><td>'+k.name+'</td><td class="num">'+fmt(k.value)+(k.unit?' '+k.unit:'')+'</td><td class="num">'+(typeof k.tol==='number'?'± '+k.tol:k.tol)+(k.unit&&typeof k.tol==='number'?' '+k.unit:'')+'</td><td class="'+(k.pass?'okc':'badc')+'">'+(k.pass?'✓':'✗')+'</td></tr>'; }).join('') : '';
+      return '<div class="case" id="case-'+c.id+'">'+
+        '<div><span class="chip">'+c.group+'</span>'+(st?'<span class="verdict '+st+'">'+(st==='run'?'running…':st==='ok'?'pass':'fail')+'</span>':'')+'</div>'+
+        '<h3 style="margin-top:8px">'+c.title+'</h3><p class="what">'+c.what+'</p><div class="cite">Reference: '+c.cite+'</div>'+
+        (rows?'<table><tr><th>check</th><th style="text-align:right">result</th><th style="text-align:right">expected</th><th></th></tr>'+rows+'</table>':'')+
+        '<div class="case-foot"><span class="note">'+(r && r.seconds!==undefined ? 'computed in '+r.seconds.toFixed(1)+' s'+(r.live?' in this browser':' (recorded)') : '')+'</span>'+
+        '<button class="btn" type="button" data-run="'+c.id+'"'+(running?' disabled':'')+'>Re-run</button></div>'+
+        '</div>';
+    }).join('');
+    box.querySelectorAll('[data-run]').forEach(function(b){ b.addEventListener('click', function(){ runCases([b.getAttribute('data-run')]); }); });
+    var done=CASES.map(function(c){ return results[c.id]; }).filter(function(r){ return r && r.checks; });
+    var nC=0, nP=0; done.forEach(function(r){ r.checks.forEach(function(k){ nC++; if (k.pass) nP++; }); });
+    var big=document.getElementById('sum-big'); big.textContent=nP+' / '+nC+' checks pass'; big.className='big '+(nP===nC&&nC?'ok':'bad');
+    document.getElementById('sum-meta').textContent = recorded ? 'recorded '+recorded.date+' · '+recorded.app+' · '+recorded.runtime + (done.some(function(r){ return r.live; }) ? ' · some re-run in this browser' : '') : '';
+  }
+  var worker=null;
+  function runCases(ids){
+    if (running) return;
+    running=true; ids.forEach(function(id){ results[id]='running'; }); render();
+    document.getElementById('run-all').disabled=true;
+    var prog=document.getElementById('prog'); prog.hidden=false;
+    worker = worker || new Worker('src/validation-worker.js');
+    worker.onmessage=function(e){
+      var m=e.data;
+      if (m.type==='progress'){ document.getElementById('prog-label').textContent=(m.title||'')+' — '+Math.round(m.frac*100)+'%'; document.getElementById('prog-bar').style.width=(m.frac*100)+'%'; }
+      else if (m.type==='case'){ m.result.live=true; results[m.result.id]=m.result; render(); }
+      else if (m.type==='done'){ running=false; prog.hidden=true; document.getElementById('run-all').disabled=false; render(); }
+    };
+    worker.postMessage({only:ids});
+  }
+  document.getElementById('run-all').addEventListener('click', function(){ runCases(CASES.map(function(c){ return c.id; })); });
+
+  fetch('tests/validation-results.json').then(function(r){ return r.json(); }).then(function(d){
+    recorded=d; d.results.forEach(function(r){ results[r.id]=r; }); render();
+  }).catch(function(){ document.getElementById('sum-meta').textContent='No recorded results found: press Re-run.'; render(); });
+  render();
+})();
+</script>
+</body>
+</html>

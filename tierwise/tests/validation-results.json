@@ -1,0 +1,256 @@
+{
+ "app": "Tierwise v2.3.1",
+ "date": "2026-10-22",
+ "runtime": "Node v24.19.0",
+ "results": [
+  {
+   "id": "ample-capacity",
+   "group": "Within capacity",
+   "title": "Ample capacity: the constrained plan matches the unconstrained one",
+   "cite": "sanity check",
+   "what": "When no site's capacity ever binds, solving the LP should change nothing: every pack is delivered, and every site's load matches the lot-for-lot requirement plan exactly.",
+   "seconds": 0.267,
+   "pass": true,
+   "checks": [
+    {
+     "name": "fill rate",
+     "value": 100,
+     "unit": "%",
+     "tol": "≥ 99.999 %",
+     "pass": true
+    },
+    {
+     "name": "load matches the requirement plan, max relative difference",
+     "value": 3.446984919719398e-11,
+     "unit": "%",
+     "tol": 0.3,
+     "pass": true
+    },
+    {
+     "name": "nothing re-routed",
+     "value": 0,
+     "unit": "%",
+     "tol": "< 1e-4 %",
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "bottleneck",
+   "group": "Within capacity",
+   "title": "A hard bottleneck: unmet demand equals the shortfall, exactly",
+   "cite": "conservation of pack-equivalents",
+   "what": "Packaging capped at 800 of a 1,000-pack-a-month demand, with no stock, re-sourcing or other relief: delivered plus unmet must equal demand in every month, and delivered can never exceed capacity by even a rounding error.",
+   "seconds": 0.131,
+   "pass": true,
+   "checks": [
+    {
+     "name": "fill rate ≈ 800/1000",
+     "value": 80.00000000000173,
+     "unit": "%",
+     "tol": 1,
+     "pass": true
+    },
+    {
+     "name": "delivered + unmet = demand, every month, max error",
+     "value": 0,
+     "unit": "packs",
+     "tol": 0.5,
+     "pass": true
+    },
+    {
+     "name": "delivered never exceeds the 800-pack cap",
+     "value": 9.9271801445866e-8,
+     "unit": "packs over",
+     "tol": 0.5,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "prebuild",
+   "group": "The example network",
+   "title": "Stock built ahead of a peak measurably improves service, as published",
+   "cite": "README, “Example results”",
+   "what": "The README states two fill rates for the example network with fixed sourcing shares: 88.1% with no stock built ahead of a peak, 88.7% allowing up to 6 months. Reproducing both from the same network confirms pre-building is doing real, bounded work — a modest, plausible gain, not a rounding artefact.",
+   "seconds": 7.836,
+   "pass": true,
+   "checks": [
+    {
+     "name": "no stock ahead (hold 0)",
+     "value": 88.07454417750486,
+     "unit": "%",
+     "tol": 0.2,
+     "pass": true
+    },
+    {
+     "name": "6 months of stock ahead (hold 6)",
+     "value": 88.67142842261329,
+     "unit": "%",
+     "tol": 0.2,
+     "pass": true
+    },
+    {
+     "name": "hold 6 strictly beats hold 0",
+     "value": 0.59688424510842,
+     "unit": "pts",
+     "tol": "> 0",
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "priority",
+   "group": "Within capacity",
+   "title": "Priorities: a higher-priority market is protected first when capacity is short",
+   "cite": "objective weighting",
+   "what": "Two markets share a capped warehouse; demand together exceeds capacity. Giving one market priority 3 against the other's 1 should concentrate the shortfall on the low-priority market.",
+   "seconds": 0.168,
+   "pass": true,
+   "checks": [
+    {
+     "name": "priority-3 market's fill rate",
+     "value": 99.99999999927908,
+     "unit": "%",
+     "tol": "≥ 99.999 %",
+     "pass": true
+    },
+    {
+     "name": "priority-1 market absorbs the shortfall (fill < priority-3's)",
+     "value": 50.00000001880488,
+     "unit": "%",
+     "tol": "< 100.0 %",
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "example-fill",
+   "group": "The example network",
+   "title": "The published example reproduces its stated fill rate",
+   "cite": "README, “Example results”",
+   "what": "The shipped example network (19 sites, 13-year horizon), solved within capacity with qualified-lane re-sourcing and 6 months of stock ahead allowed: the README states a 90.1% fill rate with the first unmet demand in December 2032.",
+   "seconds": 6.066,
+   "pass": true,
+   "checks": [
+    {
+     "name": "fill rate, 13 years",
+     "value": 90.14177959404672,
+     "unit": "%",
+     "tol": 0.2,
+     "pass": true
+    },
+    {
+     "name": "first unmet demand",
+     "value": "2032-12",
+     "unit": "",
+     "tol": "2032-12",
+     "pass": true
+    },
+    {
+     "name": "solved",
+     "value": 5.93,
+     "unit": "s",
+     "tol": "< 60 s",
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "invest-builds",
+   "group": "Investment optimiser",
+   "title": "Builds when the margin saved clearly beats the capex",
+   "cite": "NPV sanity check",
+   "what": "A warehouse short by 300 packs/month at a $10/pack margin loses $3,000/mo in margin, every month, forever. A $1,000 candidate that closes the gap should obviously be built, immediately.",
+   "seconds": 0.027,
+   "pass": true,
+   "checks": [
+    {
+     "name": "builds the candidate",
+     "value": 1,
+     "unit": "investments",
+     "tol": 1,
+     "pass": true
+    },
+    {
+     "name": "at review year 0 (immediately)",
+     "value": 0,
+     "unit": "",
+     "tol": 0,
+     "pass": true
+    },
+    {
+     "name": "fill reaches 100% (700 + 500 ≥ 1000)",
+     "value": 100,
+     "unit": "%",
+     "tol": "≥ 99.999 %",
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "invest-budget",
+   "group": "Investment optimiser",
+   "title": "A budget cap picks the affordable option, not just the best one",
+   "cite": "a binding resource constraint",
+   "what": "Two candidates would each be worth building on their own; a budget too small for both should pick the cheaper one and stay under the cap, not round up and overspend.",
+   "seconds": 0.008,
+   "pass": true,
+   "checks": [
+    {
+     "name": "picks the cheaper candidate only",
+     "value": "c1",
+     "unit": "",
+     "tol": "c1",
+     "pass": true
+    },
+    {
+     "name": "capex stays within the $900 budget",
+     "value": 500,
+     "unit": "$",
+     "tol": "≤ 900",
+     "pass": true
+    }
+   ]
+  },
+  {
+   "id": "invest-example",
+   "group": "Investment optimiser",
+   "title": "The example network's investment decision is reproducible and proven optimal",
+   "cite": "the shipped example's four candidates",
+   "what": "The example network's four illustrative candidates (Jebel Ali, Cape Town Packaging, Valencia Dosing, Hamilton Nutrition), at the default pack value and discount rate: the optimiser should reach a provably optimal answer — not a timed-out guess — within well under a minute.",
+   "seconds": 1.328,
+   "pass": true,
+   "checks": [
+    {
+     "name": "proven optimal, not timed out",
+     "value": "proven optimal",
+     "unit": "",
+     "tol": "proven optimal",
+     "pass": true
+    },
+    {
+     "name": "solved well under a minute",
+     "value": 1.319,
+     "unit": "s",
+     "tol": "< 45 s",
+     "pass": true
+    },
+    {
+     "name": "investing improves fill over building nothing",
+     "value": 89.6301370002776,
+     "unit": "%",
+     "tol": "> 86.3 %",
+     "pass": true
+    },
+    {
+     "name": "capexTotal matches the sum of the chosen investments",
+     "value": 0,
+     "unit": "$ discrepancy",
+     "tol": 1,
+     "pass": true
+    }
+   ]
+  }
+ ]
+}
