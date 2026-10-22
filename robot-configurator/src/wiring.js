@@ -3,6 +3,7 @@
 
 import { part } from './catalog.js';
 import { BOARDS } from './pins.js';
+import { t, num } from './i18n.js';
 
 const DRIVER_TERMINALS = {
   l298n: { vm: '+12V', gnd: 'GND', outL: ['OUT1', 'OUT2'], outR: ['OUT3', 'OUT4'], logic: '+5V',
@@ -19,7 +20,7 @@ const MCU_POWER = {
   esp32: { in5: '5V (VIN)', gnd: 'GND', v33: '3V3' },
 };
 
-// rows: { group, from, to, wire, note }
+// rows: { group, from, to, wire, note }; group and wire are keys (Power, red…) the page translates
 export function wiring(design) {
   const rows = [];
   const add = (group, from, to, wire, note = '') => rows.push({ group, from, to, wire, note });
@@ -27,98 +28,100 @@ export function wiring(design) {
   const board = BOARDS[design.board];
   const mcu = p.mcu;
   const mp = MCU_POWER[design.board];
-  const logicRail = board.logicV < 5 ? `controller ${mp.v33}` : '5 V rail';
+  const logicRail = board.logicV < 5 ? t('controller {pin}', { pin: mp.v33 }) : t('5 V rail');
   const isRover = design.type !== 'arm';
   const battery = p.battery;
   const pinOf = (id) => design.pins.map[id]?.label;
 
   if (battery) {
     const fuse = design.specs?.fuse ?? 5;
-    add('Power', `Battery + (${battery.name.split(',')[0]})`, `Fuse holder (${fuse} A blade fuse)`, 'red',
-      battery.chem === 'lipo' ? 'through the XT60 pigtail' : '');
-    add('Power', 'Fuse holder', 'Switch', 'red');
-    add('Power', 'Switch', 'Battery rail + (breadboard)', 'red');
-    add('Power', 'Battery −', 'Ground rail (breadboard)', 'black', 'every ground in the robot meets here');
-    add('Power', 'Battery rail +', `${part(p.reg.id).name.split(' ')[0]} IN+`, 'red');
-    add('Power', 'Ground rail', `${part(p.reg.id).name.split(' ')[0]} IN−`, 'black');
-    add('Power', `${part(p.reg.id).name.split(' ')[0]} OUT+ (set to 5.0 V first)`, '5 V rail (breadboard)', 'red');
-    add('Power', `${part(p.reg.id).name.split(' ')[0]} OUT−`, 'Ground rail', 'black');
-    add('Power', '5 V rail', `${board.name} ${mp.in5}`, 'red', 'not the barrel jack, and never together with a 5 V supply on another pin');
-    add('Power', 'Ground rail', `${board.name} ${mp.gnd}`, 'black');
+    const reg = part(p.reg.id).name.split(' ')[0];
+    add('Power', t('Battery + ({battery})', { battery: battery.name.split(',')[0] }), t('Fuse holder ({a} A blade fuse)', { a: fuse }), 'red',
+      battery.chem === 'lipo' ? t('through the XT60 pigtail') : '');
+    add('Power', t('Fuse holder'), t('Switch'), 'red');
+    add('Power', t('Switch'), t('Battery rail + (breadboard)'), 'red');
+    add('Power', t('Battery −'), t('Ground rail (breadboard)'), 'black', t('every ground in the robot meets here'));
+    add('Power', t('Battery rail +'), `${reg} IN+`, 'red');
+    add('Power', t('Ground rail'), `${reg} IN−`, 'black');
+    add('Power', t('{reg} OUT+ (set to {v} V first)', { reg, v: num(5, 1) }), t('5 V rail (breadboard)'), 'red');
+    add('Power', `${reg} OUT−`, t('Ground rail'), 'black');
+    add('Power', t('5 V rail'), `${board.name} ${mp.in5}`, 'red', t('not the barrel jack, and never together with a 5 V supply on another pin'));
+    add('Power', t('Ground rail'), `${board.name} ${mp.gnd}`, 'black');
   } else {
-    add('Power', 'USB cable (computer or USB charger)', `${board.name} USB`, '', 'the controller runs from USB');
+    add('Power', t('USB cable (computer or USB charger)'), `${board.name} USB`, '', t('the controller runs from USB'));
   }
 
   if (isRover) {
     const d = p.driver;
-    const t = DRIVER_TERMINALS[d.id];
+    const term = DRIVER_TERMINALS[d.id];
     const units = d.channels === 1 ? 2 : 1;
     const n = p.chassis.driven;
-    const dname = (s) => (units === 2 ? `BTS7960 ${s === 'L' ? 'left' : 'right'}` : d.name.split(' ')[0]);
+    const dname = (s) => (units === 2 ? `BTS7960 ${s === 'L' ? t('left') : t('right')}` : d.name.split(' ')[0]);
     for (const s of units === 2 ? ['L', 'R'] : ['']) {
-      add('Power', 'Battery rail +', `${dname(s || 'L')} ${t.vm}`, 'red', design.ev?.peakBatt > 2 ? '20 AWG silicone wire' : '');
-      add('Power', 'Ground rail', `${dname(s || 'L')} ${t.gnd}`, 'black');
+      add('Power', t('Battery rail +'), `${dname(s || 'L')} ${term.vm}`, 'red', design.ev?.peakBatt > 2 ? t('20 AWG silicone wire') : '');
+      add('Power', t('Ground rail'), `${dname(s || 'L')} ${term.gnd}`, 'black');
     }
-    if (t.logic) {
+    if (term.logic) {
       for (const s of units === 2 ? ['L', 'R'] : ['']) {
-        add('Power', d.id === 'tb6612' ? logicRail : '5 V rail', `${dname(s || 'L')} ${t.logic}`, 'red',
-          d.id === 'l298n' ? t.note : '');
+        add('Power', d.id === 'tb6612' ? logicRail : t('5 V rail'), `${dname(s || 'L')} ${term.logic}`, 'red',
+          d.id === 'l298n' ? t(term.note) : '');
       }
     }
-    if (t.standby) add('Power', logicRail, `${dname('L')} ${t.standby}`, 'red', 'holds the driver awake');
-    if (t.enables) for (const s of ['L', 'R']) add('Power', '5 V rail', `${dname(s)} ${t.enables}`, 'red', 'both enables high');
-    if (t.sigGnd) add('Power', 'Ground rail', `${dname('L')} ${t.sigGnd} (signal header)`, 'black');
-    for (const [s, side] of [['L', 'left'], ['R', 'right']]) {
-      const outs = s === 'L' ? t.outL : t.outR;
-      const motors = n === 4 ? `both ${side} motors (in parallel)` : `${side[0].toUpperCase() + side.slice(1)} motor`;
-      add('Motors', `${motors} red lead`, `${dname(s)} ${outs[0]}`, 'red', 'swap the two leads if it turns backwards');
-      add('Motors', `${motors} black lead`, `${dname(s)} ${outs[1]}`, 'black');
+    if (term.standby) add('Power', logicRail, `${dname('L')} ${term.standby}`, 'red', t('holds the driver awake'));
+    if (term.enables) for (const s of ['L', 'R']) add('Power', t('5 V rail'), `${dname(s)} ${term.enables}`, 'red', t('both enables high'));
+    if (term.sigGnd) add('Power', t('Ground rail'), t('{pin} (signal header)', { pin: `${dname('L')} ${term.sigGnd}` }), 'black');
+    for (const s of ['L', 'R']) {
+      const outs = s === 'L' ? term.outL : term.outR;
+      const motors = n === 4 ? t(s === 'L' ? 'both left motors (in parallel)' : 'both right motors (in parallel)')
+        : t(s === 'L' ? 'Left motor' : 'Right motor');
+      add('Motors', t('{motors}, red lead', { motors }), `${dname(s)} ${outs[0]}`, 'red', t('swap the two leads if it turns backwards'));
+      add('Motors', t('{motors}, black lead', { motors }), `${dname(s)} ${outs[1]}`, 'black');
     }
     if (p.motor.cpr) {
-      for (const side of ['Left', 'Right']) {
-        add('Power', logicRail, `${side} encoder VCC`, 'red', board.logicV < 5 ? 'encoders at 3.3 V keep their outputs safe for the ESP32' : '');
-        add('Power', 'Ground rail', `${side} encoder GND`, 'black');
+      for (const side of [t('Left encoder'), t('Right encoder')]) {
+        add('Power', logicRail, `${side} VCC`, 'red', board.logicV < 5 ? t('encoders at 3.3 V keep their outputs safe for the ESP32') : '');
+        add('Power', t('Ground rail'), `${side} GND`, 'black');
       }
     }
   }
 
   const sensors = design.ev?.sensors ?? [];
   if (sensors.includes('hcsr04')) {
-    add('Power', '5 V rail', 'HC-SR04 VCC', 'red');
-    add('Power', 'Ground rail', 'HC-SR04 GND', 'black');
+    add('Power', t('5 V rail'), 'HC-SR04 VCC', 'red');
+    add('Power', t('Ground rail'), 'HC-SR04 GND', 'black');
   }
   if (sensors.includes('line-5ch')) {
-    add('Power', logicRail, 'Line sensor VCC', 'red');
-    add('Power', 'Ground rail', 'Line sensor GND', 'black');
+    add('Power', logicRail, `${t('Line sensor')} VCC`, 'red');
+    add('Power', t('Ground rail'), `${t('Line sensor')} GND`, 'black');
   }
   if (sensors.includes('mpu6050')) {
-    add('Power', '5 V rail', 'MPU-6050 VCC', 'red', 'the GY-521 board has its own 3.3 V regulator');
-    add('Power', 'Ground rail', 'MPU-6050 GND', 'black');
+    add('Power', t('5 V rail'), 'MPU-6050 VCC', 'red', t('the GY-521 board has its own 3.3 V regulator'));
+    add('Power', t('Ground rail'), 'MPU-6050 GND', 'black');
   }
   if (design.bt) {
-    add('Power', '5 V rail', 'HC-05 VCC', 'red');
-    add('Power', 'Ground rail', 'HC-05 GND', 'black');
+    add('Power', t('5 V rail'), 'HC-05 VCC', 'red');
+    add('Power', t('Ground rail'), 'HC-05 GND', 'black');
   }
 
   if (design.arm) {
     const sr = p.servoReg;
     if (p.psu) {
-      add('Power', `${p.psu.name.split('(')[0].trim()}`, 'DC jack adapter', '', 'plug in only after the regulator is set');
+      add('Power', `${p.psu.name.split('(')[0].trim()}`, t('DC jack adapter'), '', t('plug in only after the regulator is set'));
       if (sr) {
-        add('Power', 'DC jack adapter +', `${sr.name.split(' ')[0]} IN+`, 'red');
-        add('Power', 'DC jack adapter −', `${sr.name.split(' ')[0]} IN−`, 'black');
+        add('Power', `${t('DC jack adapter')} +`, `${sr.name.split(' ')[0]} IN+`, 'red');
+        add('Power', `${t('DC jack adapter')} −`, `${sr.name.split(' ')[0]} IN−`, 'black');
       }
     } else if (sr) {
-      add('Power', 'Battery rail +', `${sr.name.split(' ')[0]} IN+ (servo regulator)`, 'red', '20 AWG silicone wire');
-      add('Power', 'Ground rail', `${sr.name.split(' ')[0]} IN−`, 'black');
+      add('Power', t('Battery rail +'), t('{reg} IN+ (servo regulator)', { reg: sr.name.split(' ')[0] }), 'red', t('20 AWG silicone wire'));
+      add('Power', t('Ground rail'), `${sr.name.split(' ')[0]} IN−`, 'black');
     }
-    const servoSrc = sr ? `${sr.name.split(' ')[0]} OUT+ (set to 6.0 V first)` : 'DC jack adapter + (6 V)';
-    add('Power', servoSrc, 'PCA9685 V+ (screw terminal)', 'red', 'servo power only, thick wire');
-    add('Power', sr ? `${sr.name.split(' ')[0]} OUT−` : 'DC jack adapter −', 'PCA9685 GND (screw terminal)', 'black');
-    add('Power', board.logicV < 5 ? `${board.name} ${mp.v33}` : `${board.name} 5V`, 'PCA9685 VCC', 'red', 'logic power, not servo power');
-    add('Power', `${board.name} GND`, 'PCA9685 GND (header)', 'black', 'common ground between controller and servo supply');
+    const servoSrc = sr ? t('{reg} OUT+ (set to {v} V first)', { reg: sr.name.split(' ')[0], v: num(6, 1) }) : `${t('DC jack adapter')} + (6 V)`;
+    add('Power', servoSrc, t('PCA9685 V+ (screw terminal)'), 'red', t('servo power only, thick wire'));
+    add('Power', sr ? `${sr.name.split(' ')[0]} OUT−` : `${t('DC jack adapter')} −`, t('PCA9685 GND (screw terminal)'), 'black');
+    add('Power', board.logicV < 5 ? `${board.name} ${mp.v33}` : `${board.name} 5V`, 'PCA9685 VCC', 'red', t('logic power, not servo power'));
+    add('Power', `${board.name} GND`, t('PCA9685 GND (header)'), 'black', t('common ground between controller and servo supply'));
     for (const j of design.arm.frame.joints.concat('gripper').map((name, ch) => ({ name, ch }))) {
-      add('Servos', `${j.name[0].toUpperCase() + j.name.slice(1)} servo plug`, `PCA9685 channel ${j.ch}`, 'brown/black = GND, red = V+, orange/yellow = signal', '');
+      add('Servos', t('{joint} servo plug', { joint: t(j.name) }), t('PCA9685 channel {n}', { n: j.ch }), t('brown/black = GND, red = V+, orange/yellow = signal'), '');
     }
   }
 
@@ -135,11 +138,11 @@ export function wiring(design) {
     const dem = design.pinDemands?.find((x) => x.id === id);
     let note = '';
     if (id === 'SONAR_ECHO' && board.logicV < 5) {
-      note = 'through a divider: ECHO → 1 kΩ → pin, pin → 2 kΩ → GND (5 V echo to 3.3 V)';
+      note = t('through a divider: ECHO → 1 kΩ → pin, pin → 2 kΩ → GND (5 V echo to 3.3 V)');
       dividers.push('HC-SR04 ECHO');
     }
     if (id === 'BT_TX' && board.logicV >= 5) {
-      note = 'through a divider: pin → 1 kΩ → RXD, RXD → 2 kΩ → GND (5 V to the 3.3 V input)';
+      note = t('through a divider: pin → 1 kΩ → RXD, RXD → 2 kΩ → GND (5 V to the 3.3 V input)');
       dividers.push('HC-05 RXD');
     }
     const [from, to] = id === 'BT_RX' || id.includes('ENC') || id === 'SONAR_ECHO' || id.startsWith('LINE')
@@ -214,9 +217,9 @@ export function signalDiagram(design) {
       parts.push(`<text class="pin" x="${devX + 10}" y="${sy + 4}">${esc(e.signal)}</text>`);
     });
   }
-  const legend = [['w-pwm', 'PWM', 40], ['w-out', 'digital out', 150], ['w-in', 'digital in / interrupt', 300], ['w-i2c', 'I²C', 520]]
-    .map(([c, l, x]) => `<path class="wire ${c}" d="M${x} 24 h24"/><text class="pin" x="${x + 30}" y="28">${l}</text>`).join('');
-  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="Signal wiring">${legend}${parts.join('')}</svg>`;
+  const legend = [['w-pwm', 'PWM', 40], ['w-out', t('digital out'), 150], ['w-in', t('digital in / interrupt'), 300], ['w-i2c', 'I²C', 520]]
+    .map(([c, l, x]) => `<path class="wire ${c}" d="M${x} 24 h24"/><text class="pin" x="${x + 30}" y="28">${esc(l)}</text>`).join('');
+  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t('Signal wiring'))}">${legend}${parts.join('')}</svg>`;
 }
 
 // Power: where the energy goes, from the battery (or adapter) through fuse, switch and regulators to each load.
@@ -227,41 +230,41 @@ export function powerDiagram(design) {
   const node = (id, label, sub, col, row) => nodes.push({ id, label, sub, col, row });
   const edge = (a, b, label = '') => edges.push({ a, b, label });
   if (p.battery) {
-    node('batt', 'Battery', `${p.battery.vNom} V ${p.battery.chem === 'lipo' ? 'LiPo' : p.battery.chem === 'liion' ? 'Li-ion' : 'NiMH'}`, 0, 0);
-    node('fuse', `Fuse ${design.specs?.fuse ?? ''} A`, '+ switch', 1, 0);
+    node('batt', t('Battery'), `${num(p.battery.vNom, 1)} V ${p.battery.chem === 'lipo' ? 'LiPo' : p.battery.chem === 'liion' ? 'Li-ion' : 'NiMH'}`, 0, 0);
+    node('fuse', t('Fuse {a} A', { a: design.specs?.fuse ?? '' }), t('+ switch'), 1, 0);
     edge('batt', 'fuse');
     let row = 0;
     if (design.type !== 'arm') {
-      node('drv', p.driver.name.split(' ')[0], 'motor driver', 2, row);
-      edge('fuse', 'drv', `${p.battery.vMin}–${p.battery.vMax} V`);
-      node('mot', `${p.chassis.driven} motors`, p.motor.name.split(' ')[0], 3, row);
+      node('drv', p.driver.name.split(' ')[0], t('motor driver'), 2, row);
+      edge('fuse', 'drv', `${num(p.battery.vMin, 1)}–${num(p.battery.vMax, 1)} V`);
+      node('mot', t('{n} motors', { n: p.chassis.driven }), p.motor.name.split(' ')[0], 3, row);
       edge('drv', 'mot');
       row++;
     }
-    node('reg', p.reg.name.split(' ')[0], 'buck → 5.0 V', 2, row);
+    node('reg', p.reg.name.split(' ')[0], `buck → ${num(5, 1)} V`, 2, row);
     edge('fuse', 'reg');
-    node('mcu', BOARDS[design.board].name, 'and sensors', 3, row);
+    node('mcu', BOARDS[design.board].name, t('and sensors'), 3, row);
     edge('reg', 'mcu', '5 V');
     row++;
     if (p.servoReg) {
-      node('sreg', p.servoReg.name.split(' ')[0], 'buck → 6.0 V', 2, row);
+      node('sreg', p.servoReg.name.split(' ')[0], `buck → ${num(6, 1)} V`, 2, row);
       edge('fuse', 'sreg');
-      node('pca', 'PCA9685 V+', `${design.arm.frame.joints.length + 1} servos`, 3, row);
+      node('pca', 'PCA9685 V+', t('{n} servos', { n: design.arm.frame.joints.length + 1 }), 3, row);
       edge('sreg', 'pca', '6 V');
     }
   } else {
-    node('psu', p.psu.name.split('(')[0].replace('desktop power adapter', 'adapter').trim(), 'mains, enclosed', 0, 0);
+    node('psu', p.psu.name.split('(')[0].replace('desktop power adapter', 'adapter').trim(), t('mains, enclosed'), 0, 0);
     if (p.servoReg) {
-      node('sreg', p.servoReg.name.split(' ')[0], 'buck → 6.0 V', 1, 0);
+      node('sreg', p.servoReg.name.split(' ')[0], `buck → ${num(6, 1)} V`, 1, 0);
       edge('psu', 'sreg', `${p.psu.vOut} V`);
-      node('pca', 'PCA9685 V+', `${design.arm.frame.joints.length + 1} servos`, 2, 0);
+      node('pca', 'PCA9685 V+', t('{n} servos', { n: design.arm.frame.joints.length + 1 }), 2, 0);
       edge('sreg', 'pca', '6 V');
     } else {
-      node('pca', 'PCA9685 V+', `${design.arm.frame.joints.length + 1} servos`, 1, 0);
+      node('pca', 'PCA9685 V+', t('{n} servos', { n: design.arm.frame.joints.length + 1 }), 1, 0);
       edge('psu', 'pca', '6 V');
     }
-    node('usb', 'USB', 'computer or charger', 0, 1);
-    node('mcu', BOARDS[design.board].name, 'logic only', 1, 1);
+    node('usb', 'USB', t('computer or charger'), 0, 1);
+    node('mcu', BOARDS[design.board].name, t('logic only'), 1, 1);
     edge('usb', 'mcu', '5 V');
   }
   const bw = 150;
@@ -289,5 +292,5 @@ export function powerDiagram(design) {
     out.push(`<text class="title" x="${x + 10}" y="${y + 21}">${esc(n.label)}</text>`);
     out.push(`<text class="pin" x="${x + 10}" y="${y + 40}">${esc(n.sub)}</text>`);
   }
-  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="Power distribution">${out.join('')}</svg>`;
+  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t('Power distribution'))}">${out.join('')}</svg>`;
 }

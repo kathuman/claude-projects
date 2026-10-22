@@ -4,7 +4,7 @@ Describe the robot you want: a wheeled rover, a desktop arm, or a rover carrying
 designs you can actually build from parts sold in **Denmark, Sweden or Norway**. Each design comes with a landed-cost
 budget, building instructions, wiring, and Arduino programs that compile as delivered.
 
-**Live:** https://kathuman.github.io/claude-projects/robot-configurator/
+**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 1.1.0 · English, Dansk, Svenska, Norsk, Español
 
 ## What it does
 
@@ -16,8 +16,18 @@ budget, building instructions, wiring, and Arduino programs that compile as deli
    combinations. Each one runs through the engineering checks below.
 3. **Pricing.** The best candidates are priced exactly for the chosen country. Every subset of vendors is tried, and
    each parcel's shipping, VAT, customs duty and carrier clearance fee are counted.
-4. **Proposals.** Up to three designs: **lowest cost**, **most headroom** (largest margin on its tightest check), and
-   **quickest delivery** (only vendors that deliver within a week).
+4. **Proposals.** Up to three designs: **lowest cost**, **most headroom**, and **quickest delivery** (only vendors that
+   deliver within a week; when its parts are the lowest-cost ones, the card says so).
+   - *Headroom* is the margin on a design's tightest check. Most headroom is the design on the **cost–headroom
+     frontier** with the largest margin for at most twice the lowest cost (or within the budget). It must beat the
+     lowest-cost design by more than 2 points; otherwise the page says the cheapest is also the sturdiest buy.
+   - **Compare side by side:** price, delivery, headroom and its check, performance, building time, and every part, with
+     the parts that differ highlighted.
+   - **Cost against headroom:** a chart of every design that passes (a sample above 700, and the whole frontier), the
+     frontier as a staircase, the proposals ringed. Click any point, or a row of the frontier table, and it is priced
+     exactly and becomes **your pick**.
+   - **Try another part:** for each part of the design, the alternatives with everything else unchanged: the price
+     difference and headroom of those that work, and the check that stops each that does not.
 5. **Per proposal:** the parts list with every check and its margin, the budget by parcel (CSV export), a step-by-step
    build guide, power and signal wiring (diagrams and a full connection table), and two sketches (a self-test and the
    robot program) as a zip.
@@ -79,13 +89,26 @@ node tools/compile-fixtures.js build/fixtures --arch avr          # all AVR vari
 node tools/compile-fixtures.js build/fixtures --arch esp32 --cover # a covering subset (the ESP32 build is slow)
 ```
 
+## Languages
+
+English, Danish, Swedish, Norwegian (Bokmål) and Latin American Spanish: the page, the checks and their details, the
+budget, the building guide, the wiring and the About page. The Arduino programs stay in English, like the IDE they are
+read in; part names are the shops' own.
+
+- `src/i18n.js`: `t('English text', { placeholders })`, with the English text as the key, and number formats per
+  language. The worker gets the language with each search, so the checks come back translated.
+- `src/lang/{da,sv,nb,es}.js`: one dictionary each.
+- The language comes from the picker, `?lang=da|sv|nb|es|en`, or the browser. Danish, Swedish and Norwegian also
+  preselect their market.
+- `tools/i18n-keys.js` finds every text by reading the sources (`--missing -v` lists what a dictionary lacks).
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-42 checks:
+53 checks:
 - the motor, slope, PWM-cap, runtime, servo and joint-torque models, against hand calculations;
 - catalog schema and consistency;
 - every shipping/tax mode, against hand-computed parcels;
@@ -97,12 +120,26 @@ npm test
 - the inverse kinematics inverts the forward kinematics;
 - the wiring covers every pin and level divider;
 - the build guide sets the regulators before anything is wired;
-- the ZIP writer.
+- the ZIP writer;
+- the most-headroom proposal differs from the lowest cost, adds margin and lies on the frontier, which only gains
+  headroom as the cost rises;
+- a design picked on the chart is priced and passes; a swap changes only its part and prices the difference;
+- every text in every language with the same placeholders, and the engine run in each language asks for nothing a
+  dictionary lacks.
+
+A browser check drives the page (55 checks: every robot type, the chart pick, swaps, the comparison, every tab, both
+downloads, every language with no English left, the About page, phone width, the theme):
+
+```bash
+python -m http.server 8766          # from the repository root
+PW=<path to playwright or playwright-core> CHROME=<chrome.exe> node robot-configurator/tools/browser-check.cjs
+```
 
 ## Layout
 
 ```
-index.html, styles.css, app.js   the page (wizard, proposals, tabs)
+index.html, styles.css, app.js   the page (wizard, proposals, chart, comparison, swaps, tabs)
+about.html                       what it does, limits, versions, citation
 src/catalog.js                   parts, vendors, regions, tax rules
 src/physics.js                   motor, drive, battery and arm models
 src/pins.js                      controller pin maps and assignment
@@ -110,8 +147,9 @@ src/solver.js                    enumeration, checks, ranking, explanations
 src/pricing.js                   landed cost and vendor optimisation
 src/firmware.js                  sketch generation
 src/wiring.js, src/guide.js      wiring table + diagrams, building instructions
-src/zip.js, src/worker.js        download archive, background search
-tools/                           firmware build matrix
+src/zip.js, src/worker.js        download archive, background search (keeps the last search for picks and swaps)
+src/i18n.js, src/lang/           translation and the four dictionaries
+tools/                           firmware build matrix, translation keys, browser check
 tests/                           node --test suites
 ```
 

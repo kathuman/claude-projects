@@ -27,7 +27,7 @@ jobs:
           node-version: 22
       - run: npm test
       - name: Syntax-check the page scripts
-        run: for f in app.js src/*.js tools/*.js; do node --check "$f"; done
+        run: for f in app.js src/*.js src/lang/*.js tools/*.js tools/*.cjs; do node --check "$f"; done
         shell: bash
 
   firmware:

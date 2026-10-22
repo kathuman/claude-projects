@@ -52,7 +52,7 @@ stress tests, time-to-survive / time-to-recover, and adversarial worst-case sear
 </tr>
 </table>
 
-Also here: a robot configurator that turns requirements into a buildable rover or arm from Nordic-market parts (budget, build guide, wiring and firmware), Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
+Also here: a robot configurator that turns requirements into a buildable rover or arm from Nordic-market parts (budget, build guide, wiring and firmware, in five languages), Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
 simulator, a live view of every phone sensor (streamable to a computer), live face morphing, a simulator that shows how much of a post-step overshoot is really forecast error, a strategy flight simulator for commercial vs supply chain clock speeds, real options for network design, and a library of supply-chain visualisations.
 
 ## Tests
@@ -64,7 +64,7 @@ simulator, a live view of every phone sensor (streamable to a computer), live fa
 | Warehouse Model | 300 checks + 400 designs identical in the FreeCAD script and the web app | CI (FreeCAD-only checks locally) |
 | balancebot-sim | dynamics derivation and energy conservation | CI |
 | Clockspeed Balancing | 34 checks: a 20-year steady state, exact accounting, the three clock speeds, the promise ratchet, unsupported push vs support and pacing, firefighting, complexity, resilience, scenarios | CI |
-| Robot Configurator | 42 checks: motor, slope, runtime and arm-torque models by hand; every tax/shipping mode; vendor optimiser vs brute force; pin assignment; proposals pass their checks and constraints; suggested relaxations really are feasible; firmware, wiring and guide agree with the design. Plus ~200 generated firmware variants built with arduino-cli for Uno, Nano and ESP32 | CI |
+| Robot Configurator | 53 checks: motor, slope, runtime and arm-torque models by hand; every tax/shipping mode; vendor optimiser vs brute force; pin assignment; proposals pass their checks and constraints; the most-headroom proposal lies on the cost–headroom frontier; part swaps change only their part; suggested relaxations really are feasible; firmware, wiring and guide agree with the design; every text in five languages. Plus ~200 generated firmware variants built with arduino-cli for Uno, Nano and ESP32 | CI |
 | Lag Lab | 73 checks: delay and smoothing against exact solutions, exact conservation, the textbook stock-management and workforce results, a decomposition that adds up and vanishes when its cause is removed, and every published equation reproducing the model | CI |
 | Sensor Deck | 93 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the USB bridge's WebSocket framing, relay, origin check and adb handling; the Android app's bridge timing (Flutter) | CI |
 

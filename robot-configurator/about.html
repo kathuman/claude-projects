@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About · Robot Configurator</title>
+  <meta name="description" content="What the Robot Configurator does, how it checks and prices a design, its limits, its versions and how to cite it.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .about { max-width: 820px; margin: 24px auto; display: grid; gap: 16px; }
+    .about p { margin: 0 0 10px; }
+    .about ul { margin: 0; padding-left: 20px; }
+    .about li { margin-bottom: 6px; }
+    .cite { font-family: var(--mono); font-size: .85rem; background: var(--soft); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px; }
+  </style>
+  <script>try { const t = localStorage.getItem('rc-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="mark" href="./" id="homeLink">ROBOT <span>CONFIGURATOR</span></a>
+      <span class="ver">v1.1.0</span>
+    </div>
+    <div class="header-actions">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="./" id="openLink" data-i18n>Open the configurator</a>
+      <a class="back-link" href="../" data-i18n>← Projects</a>
+    </div>
+  </header>
+
+  <main class="wrap about">
+    <section class="panel">
+      <h2 data-i18n>What it does</h2>
+      <p data-i18n>You describe the robot you want: a wheeled rover, a desktop arm, or a rover carrying an arm, with its payload, speed, slope, runtime or reach, and how you like to build and shop. The configurator returns designs you can build from parts sold in Denmark, Sweden or Norway, each with a landed-cost budget, step-by-step building instructions, the wiring, and two Arduino programs that compile as delivered.</p>
+      <p data-i18n>It is meant for makers, students and teachers who want a robot that works the first time, and for anyone who wants to see why one part choice works and another does not.</p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>How it works</h2>
+      <ul>
+        <li data-i18n>Every compatible combination of catalog parts is checked against engineering limits: motor torque on the slope, tyre grip, top speed, driver and regulator voltage and current, battery discharge, runtime, logic levels, free pins, servo holding torque at the required reach, and tipping.</li>
+        <li data-i18n>The designs that pass are priced as landed cost for your country: each parcel's shipping, VAT, IOSS or VOEC, import duty and the carrier's clearance fee, choosing the vendor mix exactly.</li>
+        <li data-i18n>Three proposals come first: the lowest cost, the most headroom (the largest margin on the tightest check, for at most twice the lowest cost), and the quickest delivery. A chart shows every design by cost and headroom; any point can be picked, and any part of a design swapped for another to see what it costs and which check it fails.</li>
+        <li data-i18n>When nothing fits, it says which checks block the closest designs and how far each requirement would have to move.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Limits</h2>
+      <ul>
+        <li data-i18n>The models are first-order engineering models with safety factors, not a simulation. Cheap cells below their label, stiff gearboxes and flexible frames all cost margin, which is what headroom is for.</li>
+        <li data-i18n>Prices are indicative catalog listings for planning, not quotes. Check each item on the vendor's site before ordering.</li>
+        <li data-i18n>Arm checks are static: fast moves with a heavy payload add inertial torque.</li>
+        <li data-i18n>Stationary arms use enclosed, CE-marked mains adapters. The configurator never asks you to wire mains voltage.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Languages</h2>
+      <p data-i18n>The page, the checks, the budget, the building guide and the wiring are in English, Danish, Swedish, Norwegian and Spanish. The Arduino programs and their comments stay in English, like the Arduino IDE they are read in. Part names are the ones the shops use.</p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Versions</h2>
+      <ul>
+        <li data-i18n>1.1.0 (2026-10-22): a cost–headroom chart with the frontier, picks from the chart, part swaps with the check that stops each alternative, a side-by-side comparison, a most-headroom proposal that really differs from the cheapest, the blueprint look of the other projects, and five languages.</li>
+        <li data-i18n>1.0.0 (2026-10-22): requirements to designs for rovers, desktop arms and rovers with arms; landed-cost pricing in Denmark, Sweden and Norway; building guide, wiring and Arduino programs built in CI.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Cite</h2>
+      <p class="cite">Sepulveda Estay, D. A. (2026). <em>Robot Configurator</em> (version 1.1.0) [Software]. https://kathuman.github.io/claude-projects/robot-configurator/</p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    Robot Configurator v1.1.0 · <span data-i18n>by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://github.com/kathuman/claude-projects/tree/main/robot-configurator" data-i18n>Source and method</a> · <a href="../" data-i18n>All projects</a> · <span data-i18n>Built with Claude</span>
+  </footer>
+
+  <script type="module">
+    import { LANGS, t, setLang, lang, guessLang } from './src/i18n.js';
+    let stored = null;
+    try { stored = localStorage.getItem('rc-lang'); } catch { /* storage unavailable */ }
+    const q = new URLSearchParams(location.search).get('lang');
+    setLang(LANGS[q] ? q : stored ?? guessLang(navigator.languages ?? [navigator.language]));
+    function apply() {
+      document.documentElement.lang = lang();
+      for (const el of document.querySelectorAll('[data-i18n]')) {
+        el.dataset.key ??= el.textContent.replace(/\s+/g, ' ').trim();
+        el.textContent = t(el.dataset.key);
+      }
+      document.title = `${t('About')} · ${t('Robot Configurator')}`;
+      const suffix = lang() === 'en' ? '' : `?lang=${lang()}`;
+      document.getElementById('openLink').href = `./${suffix}`;
+      document.getElementById('homeLink').href = `./${suffix}`;
+    }
+    const sel = document.getElementById('langSel');
+    sel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+    sel.value = lang();
+    sel.addEventListener('change', () => {
+      setLang(sel.value);
+      try { localStorage.setItem('rc-lang', sel.value); } catch { /* storage unavailable */ }
+      apply();
+    });
+    apply();
+  </script>
+</body>
+</html>

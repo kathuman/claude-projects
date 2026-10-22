@@ -1,7 +1,7 @@
 // What the solver proposes passes its checks, respects the user's constraints, and explains itself when it can't.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { solve, feasibleDesigns, feasible } from '../src/solver.js';
+import { solve, solveSession, pickDesign, swapOptions, feasibleDesigns, feasible } from '../src/solver.js';
 import { part } from '../src/catalog.js';
 import { allowedVendors } from '../src/pricing.js';
 
@@ -109,4 +109,48 @@ test('an arm that is asked for too much payload fails on the shoulder and sugges
   assert.equal(r.ok, false);
   assert.ok(r.explain.nearest.some((c) => c.id.startsWith('arm-')));
   assert.ok(r.explain.relax.some((x) => x.label === 'Arm payload'));
+});
+
+test('most headroom is a different design with clearly more margin, on the cost–headroom frontier', () => {
+  for (const type of ['rover', 'arm']) {
+    const r = solve({ region: 'SE', type });
+    const cheap = r.proposals.find((p) => p.kinds.includes('cheapest'));
+    const robust = r.proposals.find((p) => p.kinds.includes('robust'));
+    assert.ok(robust, `${type}: no most-headroom proposal`);
+    assert.notEqual(robust.design.key, cheap.design.key);
+    assert.ok(robust.design.robust > cheap.design.robust + 0.02);
+    assert.ok(robust.price.total <= 2 * cheap.price.total + 1e-9);
+    const front = r.chart.points.filter((p) => p.f);
+    assert.ok(front.some((p) => p.i === robust.idx), 'the proposal lies on the frontier');
+    // the frontier only gains headroom as the estimated cost rises
+    const sorted = [...front].sort((a, b) => a.x - b.x);
+    for (let i = 1; i < sorted.length; i++) assert.ok(sorted[i].y > sorted[i - 1].y);
+  }
+});
+
+test('a design picked on the chart is priced exactly and passes its checks', () => {
+  const { ctx, result } = solveSession({ region: 'DK', type: 'rover' });
+  const pt = result.chart.points.find((p) => p.f && !result.proposals.some((q) => q.idx === p.i));
+  const p = pickDesign(ctx, pt.i);
+  assert.equal(p.kind, 'pick');
+  assert.ok(p.price.ok && feasible(p.design.checks) && p.design.specs);
+});
+
+test('swapping one part keeps the rest, prices the ones that work and names the check that stops the others', () => {
+  const { ctx, result } = solveSession({ region: 'SE', type: 'rover' });
+  const base = ctx.feasibleOnes[result.proposals[0].idx];
+  const opts = swapOptions(ctx, base.idx, 'battery');
+  assert.ok(opts.some((o) => o.ok) && opts.some((o) => !o.ok));
+  for (const o of opts) {
+    if (o.ok) {
+      const d = ctx.feasibleOnes[o.idx];
+      assert.equal(d.slots.battery, o.value);
+      for (const k of Object.keys(base.slots)) if (k !== 'battery') assert.equal(d.slots[k], base.slots[k]);
+      assert.ok(Math.abs(o.delta - (d.price.total - base.price.total)) < 1e-6);
+    } else {
+      assert.ok(o.fails.length > 0);
+    }
+  }
+  const arm = solveSession({ region: 'SE', type: 'arm' });
+  assert.ok(swapOptions(arm.ctx, arm.result.proposals[0].idx, 'shoulder').length > 0);
 });

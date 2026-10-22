@@ -4,113 +4,119 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Configurator</title>
-  <meta name="description" content="Describe the robot you want; get a feasible design from parts sold in Denmark, Sweden or Norway, with a landed-cost budget, building instructions, wiring and ready-to-upload programs.">
+  <meta name="description" content="Describe the robot you want; get a feasible design from parts sold in Denmark, Sweden or Norway, with a landed-cost budget, building instructions, wiring and ready-to-upload programs. In English, Danish, Swedish, Norwegian and Spanish.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script>try { const t = localStorage.getItem('rc-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
 </head>
 <body>
-  <header class="top">
-    <div class="wrap top-inner">
-      <a class="brand" href="../">← AI Projects</a>
-      <h1>Robot Configurator</h1>
-      <button id="theme" class="ghost" type="button" aria-label="Toggle colour theme">◐</button>
+  <header class="topbar">
+    <div class="brand">
+      <a class="mark" href="./">ROBOT <span>CONFIGURATOR</span></a>
+      <span class="ver" id="ver">v1.1.0</span>
+      <span class="sub" data-i18n>Requirements to a buildable robot · Nordic parts</span>
+    </div>
+    <div class="header-actions">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <button id="theme" class="back-link" type="button" aria-label="Toggle colour theme" data-i18n-attr="aria-label">◐</button>
+      <a class="back-link" href="about.html" id="aboutLink" data-i18n>About</a>
+      <a class="back-link" href="../" data-i18n>← Projects</a>
     </div>
   </header>
 
   <main class="wrap layout">
     <form id="wizard" class="panel wizard" autocomplete="off">
       <fieldset>
-        <legend>Where you buy</legend>
-        <div class="seg" role="radiogroup" aria-label="Market">
-          <label><input type="radio" name="region" value="DK"><span>🇩🇰 Denmark</span></label>
-          <label><input type="radio" name="region" value="SE" checked><span>🇸🇪 Sweden</span></label>
-          <label><input type="radio" name="region" value="NO"><span>🇳🇴 Norway</span></label>
+        <legend data-i18n>Where you buy</legend>
+        <div class="seg" role="radiogroup" aria-label="Market" data-i18n-attr="aria-label">
+          <label><input type="radio" name="region" value="DK"><span data-i18n>Denmark</span></label>
+          <label><input type="radio" name="region" value="SE" checked><span data-i18n>Sweden</span></label>
+          <label><input type="radio" name="region" value="NO"><span data-i18n>Norway</span></label>
         </div>
       </fieldset>
-
       <fieldset>
-        <legend>What robot</legend>
-        <div class="types" role="radiogroup" aria-label="Robot type">
-          <label><input type="radio" name="type" value="rover" checked><span><b>Rover</b><small>wheeled, drives around</small></span></label>
-          <label><input type="radio" name="type" value="arm"><span><b>Desktop arm</b><small>picks and places</small></span></label>
-          <label><input type="radio" name="type" value="mobile"><span><b>Rover + arm</b><small>an arm that drives</small></span></label>
+        <legend data-i18n>What robot</legend>
+        <div class="types" role="radiogroup" aria-label="Robot type" data-i18n-attr="aria-label">
+          <label><input type="radio" name="type" value="rover" checked><span><b data-i18n>Rover</b><small data-i18n>wheeled, drives around</small></span></label>
+          <label><input type="radio" name="type" value="arm"><span><b data-i18n>Desktop arm</b><small data-i18n>picks and places</small></span></label>
+          <label><input type="radio" name="type" value="mobile"><span><b data-i18n>Rover + arm</b><small data-i18n>an arm that drives</small></span></label>
         </div>
       </fieldset>
 
       <fieldset id="roverReq">
-        <legend>Rover requirements</legend>
+        <legend data-i18n>Rover requirements</legend>
         <div class="grid2">
-          <label>Payload it carries <span class="unit">kg</span><input name="payload" type="number" min="0" max="20" step="0.1" value="0.3"></label>
-          <label>Top speed <span class="unit">m/s</span><input name="speed" type="number" min="0.05" max="3" step="0.05" value="0.4"></label>
-          <label>Steepest slope <span class="unit">°</span><input name="slope" type="number" min="0" max="30" step="1" value="5"></label>
-          <label>Runtime <span class="unit">min</span><input name="runtime" type="number" min="5" max="600" step="5" value="60"></label>
-          <label class="span2">Surface
+          <label><span data-i18n>Payload it carries</span> <span class="unit">kg</span><input name="payload" type="number" min="0" max="20" step="0.1" value="0.3"></label>
+          <label><span data-i18n>Top speed</span> <span class="unit">m/s</span><input name="speed" type="number" min="0.05" max="3" step="0.05" value="0.4"></label>
+          <label><span data-i18n>Steepest slope</span> <span class="unit">°</span><input name="slope" type="number" min="0" max="30" step="1" value="5"></label>
+          <label><span data-i18n>Runtime</span> <span class="unit">min</span><input name="runtime" type="number" min="5" max="600" step="5" value="60"></label>
+          <label class="span2"><span data-i18n>Surface</span>
             <select name="terrain">
-              <option value="indoor-smooth">Smooth indoor floor</option>
-              <option value="indoor-carpet">Carpet</option>
-              <option value="outdoor-paved">Paved paths</option>
-              <option value="outdoor-grass">Grass and gravel</option>
+              <option value="indoor-smooth" data-i18n>Smooth indoor floor</option>
+              <option value="indoor-carpet" data-i18n>Carpet</option>
+              <option value="outdoor-paved" data-i18n>Paved paths</option>
+              <option value="outdoor-grass" data-i18n>Grass and gravel</option>
             </select>
           </label>
         </div>
-        <div class="checks" aria-label="Behaviours">
-          <label><input type="checkbox" name="b-remote" checked> Drive it from a phone</label>
-          <label><input type="checkbox" name="b-obstacle" checked> Avoid obstacles</label>
-          <label><input type="checkbox" name="b-line"> Follow a line</label>
-          <label><input type="checkbox" name="b-odometry"> Measured moves (encoders + gyro)</label>
+        <div class="checks" role="group" aria-label="Behaviours" data-i18n-attr="aria-label">
+          <label><input type="checkbox" name="b-remote" checked> <span data-i18n>Drive it from a phone</span></label>
+          <label><input type="checkbox" name="b-obstacle" checked> <span data-i18n>Avoid obstacles</span></label>
+          <label><input type="checkbox" name="b-line"> <span data-i18n>Follow a line</span></label>
+          <label><input type="checkbox" name="b-odometry"> <span data-i18n>Measured moves (encoders + gyro)</span></label>
         </div>
       </fieldset>
 
       <fieldset id="armReq">
-        <legend>Arm requirements</legend>
+        <legend data-i18n>Arm requirements</legend>
         <div class="grid2">
-          <label>Reach <span class="unit">mm</span><input name="reach" type="number" min="80" max="500" step="10" value="150"></label>
-          <label>Payload <span class="unit">g</span><input name="armPayload" type="number" min="0" max="1000" step="5" value="20"></label>
-          <label>Axes (without gripper)
-            <select name="axes"><option value="3">3: base, shoulder, elbow</option><option value="4">4: + wrist pitch</option><option value="5">5: + wrist roll</option></select>
+          <label><span data-i18n>Reach</span> <span class="unit">mm</span><input name="reach" type="number" min="80" max="500" step="10" value="150"></label>
+          <label><span data-i18n>Payload</span> <span class="unit">g</span><input name="armPayload" type="number" min="0" max="1000" step="5" value="20"></label>
+          <label><span data-i18n>Axes (without gripper)</span>
+            <select name="axes"><option value="3" data-i18n>3: base, shoulder, elbow</option><option value="4" data-i18n>4: + wrist pitch</option><option value="5" data-i18n>5: + wrist roll</option></select>
           </label>
-          <label class="inline"><input type="checkbox" name="wireless" checked> Control it from a phone</label>
+          <label class="inline"><input type="checkbox" name="wireless" checked> <span data-i18n>Control it from a phone</span></label>
         </div>
       </fieldset>
 
       <fieldset>
-        <legend>How you build and shop</legend>
+        <legend data-i18n>How you build and shop</legend>
         <div class="grid2">
-          <label>Controller
-            <select name="controller"><option value="auto">Let the app choose</option><option value="avr">Arduino (Uno / Nano)</option><option value="esp32">ESP32 (Wi-Fi)</option></select>
+          <label><span data-i18n>Controller</span>
+            <select name="controller"><option value="auto" data-i18n>Let the app choose</option><option value="avr" data-i18n>Arduino (Uno / Nano)</option><option value="esp32" data-i18n>ESP32 (Wi-Fi)</option></select>
           </label>
-          <label>Soldering
-            <select name="solder"><option value="yes">I can solder and have an iron</option><option value="buy">I can solder; add an iron</option><option value="no">No soldering</option></select>
+          <label><span data-i18n>Soldering</span>
+            <select name="solder"><option value="yes" data-i18n>I can solder and have an iron</option><option value="buy" data-i18n>I can solder; add an iron</option><option value="no" data-i18n>No soldering</option></select>
           </label>
-          <label>Buy from
-            <select name="shopping"><option value="cheapest">Any vendor (cheapest)</option><option value="fast">Vendors delivering within a week</option><option value="local">Nordic shops only</option></select>
+          <label><span data-i18n>Buy from</span>
+            <select name="shopping"><option value="cheapest" data-i18n>Any vendor (cheapest)</option><option value="fast" data-i18n>Vendors delivering within a week</option><option value="local" data-i18n>Nordic shops only</option></select>
           </label>
-          <label>Budget cap <span class="unit" id="budgetUnit">SEK</span><input name="budget" type="number" min="0" step="50" placeholder="none"></label>
+          <label><span data-i18n>Budget cap</span> <span class="unit" id="budgetUnit">SEK</span><input name="budget" type="number" min="0" step="50" placeholder="none" data-i18n-attr="placeholder"></label>
         </div>
         <div class="checks">
-          <label><input type="checkbox" name="charger" checked> Include the battery charger</label>
-          <label><input type="checkbox" name="tools"> Add a multimeter and screwdrivers</label>
-          <label><input type="checkbox" name="printer"> I have a 3D printer</label>
+          <label><input type="checkbox" name="charger" checked> <span data-i18n>Include the battery charger</span></label>
+          <label><input type="checkbox" name="tools"> <span data-i18n>Add a multimeter and screwdrivers</span></label>
+          <label><input type="checkbox" name="printer"> <span data-i18n>I have a 3D printer</span></label>
         </div>
       </fieldset>
 
-      <button class="primary" type="submit" id="go">Find designs</button>
-      <p class="fine">Prices are indicative listings from the catalog of <span id="catDate"></span>; check them on the vendor's site before ordering.</p>
+      <button class="primary" type="submit" id="go" data-i18n>Find designs</button>
+      <p class="fine"><span data-i18n>Prices are indicative listings from the catalog of</span> <span id="catDate"></span><span data-i18n>; check them on the vendor's site before ordering.</span></p>
     </form>
 
     <section id="results" class="results" aria-live="polite">
       <div class="panel intro">
-        <h2>Describe the robot, get a buildable design</h2>
-        <p>The configurator checks every compatible combination of parts sold in your market against motor, battery, current, voltage, pin and torque limits, then prices the best ones with VAT, duty and shipping. For each proposal you get the parts list, a building guide, the wiring and the programs.</p>
+        <h2 data-i18n>Describe the robot, get a buildable design</h2>
+        <p data-i18n>The configurator checks every compatible combination of parts sold in your market against motor, battery, current, voltage, pin and torque limits, then prices the best ones with VAT, duty and shipping. For each proposal you get the parts list, a building guide, the wiring and the programs.</p>
       </div>
     </section>
   </main>
 
   <footer class="wrap foot">
-    <p>Built with <a href="https://claude.com">Claude</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/robot-configurator">Source and method</a></p>
+    Robot Configurator v<span id="ver2">1.1.0</span> · <span data-i18n>by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="about.html" data-i18n>About and citation</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/robot-configurator" data-i18n>Source and method</a> · <a href="../" data-i18n>All projects</a> · <span data-i18n>Built with Claude</span>
   </footer>
 
   <script type="module" src="app.js"></script>
