@@ -46,6 +46,7 @@ export function firmwareConfig(design, req) {
     cfg.drive = {
       driver, scheme: driver.scheme, wheelD: wheel.diameter, track: chassis.track,
       maxSpeed: design.specs?.topSpeed ?? design.ev.perf.flat.speed,
+      airSpeed: design.specs?.airSpeed ?? design.specs?.topSpeed ?? design.ev.perf.flat.speed,
       pwmLimit: Math.max(1, Math.round(255 * design.ev.perf.capDuty)), accel: req.rover.accel,
       cpr: motor.cpr, encoders: !!motor.cpr, motorV: motor.vNom, battV: design.parts.battery.vMax,
       sonar: b.includes('obstacle'), line: b.includes('line'), imu: b.includes('odometry'),
@@ -1001,11 +1002,18 @@ void waitKey(const __FlashStringHelper* what) {
   motorWrite(0, 0);
   motorWrite(1, 0);
   float perTick = PI * ${f3(d.wheelD)} / ${d.cpr}.0;
+  float speedL = abs(readTicks(0) - l0) * perTick / 2;
+  float speedR = abs(readTicks(1) - r0) * perTick / 2;
   Serial.print(F("  wheel speed m/s, left "));
-  Serial.print(abs(readTicks(0) - l0) * perTick / 2, 2);
+  Serial.print(speedL, 2);
   Serial.print(F(", right "));
-  Serial.println(abs(readTicks(1) - r0) * perTick / 2, 2);
-  Serial.println(F("  Put about 90 % of the lower number in MAX_WHEEL_SPEED in robot.ino (the model says ${f2(d.maxSpeed)})."));`);
+  Serial.println(speedR, 2);
+  Serial.println(F("  Put about 90 % of the lower number in MAX_WHEEL_SPEED in robot.ino."));
+  Serial.println(F("  The model says ${f2(d.airSpeed)} m/s in the air. Paste the next line into the page to compare:"));
+  Serial.print(F("RESULT speed_air_left="));
+  Serial.print(speedL, 2);
+  Serial.print(F(" speed_air_right="));
+  Serial.println(speedR, 2);`);
     }
     if (d.sonar) {
       steps.push(`  pinMode(PIN_SONAR_TRIG, OUTPUT);

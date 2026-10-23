@@ -4,7 +4,7 @@ Describe the robot you want: a wheeled rover, a desktop arm, or a rover carrying
 designs you can actually build from parts sold in **Denmark, Sweden or Norway**. Each design comes with a landed-cost
 budget, building instructions, wiring, and Arduino programs that compile as delivered.
 
-**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 2.1.0 · English, Dansk, Svenska, Norsk, Español
+**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 2.2.0 · English, Dansk, Svenska, Norsk, Español
 
 ## What it does
 
@@ -45,6 +45,19 @@ budget, building instructions, wiring, and Arduino programs that compile as deli
   not a mechanical drawing.
 - **Build pack:** one printable document with the drawing, parts and budget, wiring and building guide (and the
   program file names), to print or save as PDF from the browser.
+
+## Proven numbers (2.2)
+
+- **Validation page** (`validation.html`, `src/validation.js`): the engine run live in the browser on ten cases
+  whose answer is known independently — the motor line, slope force, PWM cap, runtime, shoulder and gripper torque
+  by hand; the IOSS and VOEC rules by their definition; the vendor optimiser against brute force; and a suggested
+  relaxation searched again. It also states the firmware build matrix and how much of the catalog is checked.
+- **Built it? Compare your robot with the model** (`src/measure.js`): a panel in the overview for the air and floor
+  speed, runtime, steepest slope and arm payload. Type what you measured, or paste the self-test output, which now
+  ends with `RESULT speed_air_left=… speed_air_right=…` beside the model's prediction. Each number gets a verdict
+  (as modelled, below or above, with a tolerance per quantity) and what a difference usually means. Measurements stay
+  in the browser per design; **Send these numbers** opens a prefilled GitHub issue labelled `measurement` that the
+  person reads and edits before submitting. Those reports are how the models will be calibrated.
 
 ## Engineering checks
 
@@ -167,7 +180,7 @@ read in; part names are the shops' own.
 npm test
 ```
 
-60 checks:
+63 checks:
 - the motor, slope, PWM-cap, runtime, servo and joint-torque models, against hand calculations;
 - catalog schema and consistency;
 - every shipping/tax mode, against hand-computed parcels;
@@ -190,9 +203,11 @@ npm test
 - a pack you assemble is bought as holder and cells with the loose-cell charger; a chassis kit's motors and wheels
   are not bought again; with checked prices only, every line is checked, and an arm says no arm frame has one;
 - the drawing places every board inside the plate or on a second deck without overlaps, and the arm's drawn geometry
-  matches its link lengths.
+  matches its link lengths;
+- every validation case agrees; the self-test prints its RESULT line, which parses back, and measurements get the
+  right verdicts and a prefilled issue link.
 
-A browser check drives the page (59 checks: the drawing and the build pack, every robot type, the chart pick, swaps, the comparison, every tab, both
+A browser check drives the page (67 checks: the drawing and the build pack, the measurement panel and the validation page, every robot type, the chart pick, swaps, the comparison, every tab, both
 downloads, every language with no English left, the About page, phone width, the theme):
 
 ```bash
@@ -206,6 +221,8 @@ PW=<path to playwright or playwright-core> CHROME=<chrome.exe> node robot-config
 index.html, styles.css, app.js   the page (wizard, proposals, chart, comparison, swaps, tabs, build pack)
 src/layout.js                    the drawing: footprints, placement on the plate, top and side views
 about.html                       what it does, limits, versions, citation
+validation.html, src/validation.js  known-answer cases run live, firmware and catalog coverage
+src/measure.js                   measured against modelled, self-test parsing, the issue link
 src/catalog.js                   parts, vendors, regions, tax rules
 src/physics.js                   motor, drive, battery and arm models
 src/pins.js                      controller pin maps and assignment

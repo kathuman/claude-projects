@@ -62,6 +62,20 @@ async function ready(p) {
     await p.click(`[data-tab="${tab}"]`);
     check(!!(await p.$(sel)), `tab ${tab} renders`);
   }
+  // built it? measurements beside the model, kept per design, with a link to send them
+  await p.click('#measure summary');
+  const mIn = await p.$('[data-measure="speed_floor"]');
+  check(!!mIn, 'measure panel lists top speed on the floor');
+  await mIn.fill('0.05');
+  await mIn.dispatchEvent('change');
+  await p.waitForSelector('#measure tr.below');
+  check(!!(await p.$('#measure[open] a[href*="issues/new"]')), 'a measurement shows its verdict and a send link, panel stays open');
+  if (await p.$('#readSelfTest')) {
+    await p.fill('#selfTestText', 'RESULT speed_air_left=0.40 speed_air_right=0.38');
+    await p.click('#readSelfTest');
+    check((await p.inputValue('[data-measure="speed_air"]')) === '0.38', 'self-test RESULT line fills the air speed');
+  }
+  await p.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('rc-measured:')) localStorage.removeItem(k); });
   // the build pack: every section assembled for printing (print itself is stubbed)
   await p.evaluate(() => { window.print = () => {}; });
   await p.click('#packBtn');
@@ -113,9 +127,17 @@ async function ready(p) {
       const body = await p.textContent('#tabBody');
       check(!/\b(Total incl\. VAT|Check the delivery|Ground rail|How a design is found)\b/.test(body), `${lang}: tab ${tab} translated`);
     }
+    await p.goto(`${BASE}validation.html?lang=${lang}`);
+    check(!(await p.evaluate(() => document.body.innerText)).includes('Known-answer cases'), `${lang}: Validation page translated`);
     await p.goto(`${BASE}about.html?lang=${lang}`);
     check(!(await p.evaluate(() => document.body.innerText)).includes('What it does'), `${lang}: About page translated`);
   }
+
+  // ---- validation page: every known-answer case agrees
+  await p.goto(`${BASE}validation.html?lang=en`);
+  const vrows = await p.$$eval('#cases tr', (rs) => rs.map((r) => r.lastElementChild.className));
+  check(vrows.length >= 10 && vrows.every((c) => c === 'pass'), `validation: all cases pass (${vrows})`);
+  check(/\d+ of \d+ prices were read/.test(await p.textContent('#coverage')), 'validation: catalog coverage shown');
 
   // ---- phone width
   await p.goto(`${BASE}?lang=en`);

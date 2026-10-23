@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Validation · Robot Configurator</title>
+  <meta name="description" content="The Robot Configurator's engine run live on cases with a known answer: motor, drive, battery and arm models, taxes, the vendor optimiser and the explanations; plus the firmware builds, the catalog checks and measured builds.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .about { max-width: 980px; margin: 24px auto; display: grid; gap: 16px; }
+    .about p { margin: 0 0 10px; }
+    .vt td:first-child { white-space: nowrap; color: var(--faint); font-family: var(--head); font-weight: 600; }
+    .vt .pass { color: var(--ok); font-weight: 700; } .vt .fail { color: var(--bad); font-weight: 700; }
+    .big { font: 700 1.6rem var(--head); }
+  </style>
+  <script>try { const t = localStorage.getItem('rc-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="mark" href="./" id="homeLink">ROBOT <span>CONFIGURATOR</span></a>
+      <span class="ver">v2.2.0</span>
+    </div>
+    <div class="header-actions">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="./" id="openLink" data-i18n>Open the configurator</a>
+      <a class="back-link" href="../" data-i18n>← Projects</a>
+    </div>
+  </header>
+
+  <main class="wrap about">
+    <section class="panel">
+      <h2 data-i18n>Validation</h2>
+      <p data-i18n>The engine run on cases whose answer is known independently: a hand calculation, the definition of a tax rule, or a brute-force search. These run live in your browser, from the same code the configurator uses, every time this page opens.</p>
+      <p class="big" id="summary"></p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Known-answer cases</h2>
+      <div class="table-scroll"><table class="vt"><thead><tr><th data-i18n>Area</th><th data-i18n>Case</th><th class="num" data-i18n>Expected</th><th class="num" data-i18n>Computed</th><th></th></tr></thead><tbody id="cases"></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Firmware</h2>
+      <p data-i18n>Every program the configurator can generate, about 200 combinations of controller, motor driver, encoders, behaviours, link and arm, is compiled on every change with arduino-cli for the Uno, the Nano and the ESP32, exactly as the Arduino IDE does. A build fails on any compiler warning in the generated code.</p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Prices</h2>
+      <p id="coverage"></p>
+      <p data-i18n>A weekly job follows every product link and lists prices older than 90 days.</p>
+    </section>
+
+    <section class="panel">
+      <h2 data-i18n>Measured builds</h2>
+      <p data-i18n>The models are first-order engineering models with safety factors. The real test is a built robot: on the main page, "Built it? Compare your robot with the model" sets your measurements beside the predictions and can send them in, which is how the models will be calibrated.</p>
+      <p><a href="https://github.com/kathuman/claude-projects/issues?q=label%3Ameasurement" target="_blank" rel="noopener" data-i18n>Measurements sent in so far</a></p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    Robot Configurator v2.2.0 · <span data-i18n>by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="about.html" data-i18n>About and citation</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/robot-configurator" data-i18n>Source and method</a> · <a href="../" data-i18n>All projects</a> · <span data-i18n>Built with Claude</span>
+  </footer>
+
+  <script type="module">
+    import { LANGS, t, setLang, lang, guessLang, num } from './src/i18n.js';
+    import { validationCases, catalogCoverage, fmtCase } from './src/validation.js';
+    let stored = null;
+    try { stored = localStorage.getItem('rc-lang'); } catch { /* storage unavailable */ }
+    const q = new URLSearchParams(location.search).get('lang');
+    setLang(LANGS[q] ? q : stored ?? guessLang(navigator.languages ?? [navigator.language]));
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    function apply() {
+      document.documentElement.lang = lang();
+      for (const el of document.querySelectorAll('[data-i18n]')) {
+        el.dataset.key ??= el.textContent.replace(/\s+/g, ' ').trim();
+        el.textContent = t(el.dataset.key);
+      }
+      document.title = `${t('Validation')} · ${t('Robot Configurator')}`;
+      const suffix = lang() === 'en' ? '' : `?lang=${lang()}`;
+      for (const id of ['openLink', 'homeLink']) document.getElementById(id).href = `./${suffix}`;
+      const cases = validationCases();
+      const ok = cases.filter((c) => c.ok).length;
+      document.getElementById('summary').textContent = t('{n} of {m} cases agree.', { n: ok, m: cases.length });
+      document.getElementById('cases').innerHTML = cases.map((c) => `<tr><td>${esc(c.area)}</td><td>${esc(c.title)}<br><small>${esc(c.how)}</small></td>
+        <td class="num">${esc(fmtCase(c, c.expected))}</td><td class="num">${esc(fmtCase(c, c.computed))}</td>
+        <td class="${c.ok ? 'pass' : 'fail'}">${c.ok ? '✓' : '✗'}</td></tr>`).join('');
+      const cov = catalogCoverage();
+      document.getElementById('coverage').textContent = t('{checked} of {offers} prices were read on the shop\'s own product page, with the link and the date; the rest are estimates and say so. {dropped} offers were removed because the shop does not sell the part.', { checked: num(cov.checked, 0), offers: num(cov.offers, 0), dropped: num(cov.dropped, 0) });
+    }
+    const sel = document.getElementById('langSel');
+    sel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
+    sel.value = lang();
+    sel.addEventListener('change', () => {
+      setLang(sel.value);
+      try { localStorage.setItem('rc-lang', sel.value); } catch { /* storage unavailable */ }
+      apply();
+    });
+    apply();
+  </script>
+</body>
+</html>

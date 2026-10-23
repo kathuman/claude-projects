@@ -9,10 +9,11 @@ import { MODE_LABEL } from '../src/pricing.js';
 import { TERRAIN } from '../src/physics.js';
 import { REGIONS, PARTS } from '../src/catalog.js';
 import { SLOT_LABEL, BEHAVIOURS } from '../src/solver.js';
+import { MEASURES } from '../src/measure.js';
 
 const ROOT = new URL('../', import.meta.url);
 const read = (f) => readFileSync(new URL(f, ROOT), 'utf8');
-const SOURCES = ['app.js', 'src/solver.js', 'src/guide.js', 'src/wiring.js', 'src/layout.js'];
+const SOURCES = ['app.js', 'src/solver.js', 'src/guide.js', 'src/wiring.js', 'src/layout.js', 'src/measure.js', 'src/validation.js', 'validation.html'];
 
 // the string literals in the first argument of every t( … ) call
 function tCalls(src) {
@@ -64,13 +65,14 @@ function htmlKeys(src) {
 export function allKeys() {
   const keys = new Set();
   for (const f of SOURCES) for (const k of tCalls(read(f))) keys.add(k);
-  for (const f of ['index.html', 'about.html']) for (const k of htmlKeys(read(f))) keys.add(k);
+  for (const f of ['index.html', 'about.html', 'validation.html']) for (const k of htmlKeys(read(f))) keys.add(k);
   const add = (list) => list.forEach((k) => keys.add(k));
   add(Object.values(MODE_LABEL));
   add(Object.values(TERRAIN).map((x) => x.label));
   add(Object.values(REGIONS).flatMap((r) => [r.name, r.note]));
   add(Object.values(SLOT_LABEL));
   add(Object.values(BEHAVIOURS));
+  add(MEASURES.flatMap((m) => [m.label, m.how])); // measure.js: what you can measure and how
   add(['Lowest cost', 'Most headroom', 'Quickest delivery', 'Your pick']); // app.js KIND
   add(['red', 'black', 'blue', 'yellow', 'jumper']); // wire colours
   add(['Power', 'Motors', 'Servos', 'Signals']); // wiring groups

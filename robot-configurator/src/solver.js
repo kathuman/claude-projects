@@ -686,6 +686,9 @@ function specs(d, req) {
     const { ev, combo } = d;
     s.mass = ev.mass;
     s.topSpeed = ev.perf.flat.speed;
+    // wheels in the air at full PWM on a nominal battery: what the self-test measures
+    s.airSpeed = P.driveAt({ motor: combo.motor, driver: combo.driver, battery: combo.battery, wheel: combo.wheel,
+      nMotors: combo.chassis.driven }, 0, combo.battery.vNom).speed;
     s.maxSlope = roverMaxSlope(combo, req, d.arm, d.parts.servoReg);
     s.runtime = ev.hours * 60;
     s.loadHeadroom = combo.chassis.maxLoad - (ev.mass - combo.chassis.mass);

@@ -148,6 +148,13 @@ table.cmp td.num { white-space: normal; min-width: 150px; }
 .callout.bad { background: var(--bad-soft); border-color: transparent; }
 .callout.info { background: var(--soft); }
 
+/* your robot against the model */
+details.measure { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 0 0 16px; background: var(--soft); }
+details.measure summary { cursor: pointer; font-family: var(--head); font-weight: 700; letter-spacing: .03em; }
+details.measure textarea { flex: 1; min-width: 220px; font: 12px var(--mono); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.mtable input.mnum { width: 80px; display: inline-block; margin: 0; padding: 4px 6px; text-align: right; font: 13px var(--mono); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; }
+.mtable tr.below b { color: var(--warn); } .mtable tr.as b { color: var(--ok); } .mtable tr.above b { color: var(--accent); }
+
 /* swap a part */
 .swap { margin: 4px 0 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
 .swap table { font-size: .85rem; }

@@ -131,3 +131,22 @@ test('the drawing places every board on the plate (or a second deck) without ove
     }
   }
 });
+
+test('the self-test prints a RESULT line the page reads, and the comparison says what a gap means', async () => {
+  const { parseSelfTest, compare, issueUrl } = await import('../src/measure.js');
+  const { DEFAULT_REQ } = await import('../src/solver.js');
+  const r = solve({ region: 'SE', type: 'rover', rover: { ...DEFAULT_REQ.rover, behaviours: ['remote', 'odometry'] } });
+  const d = r.proposals[0].design;
+  const fw = generateFirmware(d, r.req);
+  const st = fw.files.find((f) => f.path.includes('selftest')).content;
+  assert.match(st, /RESULT speed_air_left=/);
+  const got = parseSelfTest('  wheel speed m/s, left 0.52, right 0.50\nRESULT speed_air_left=0.52 speed_air_right=0.50\n');
+  assert.equal(got.speed_air, 0.5);
+  const slow = compare(d, { speed_air: d.specs.airSpeed * 0.5, runtime: d.specs.runtime });
+  assert.equal(slow.find((x) => x.key === 'speed_air').verdict, 'below');
+  assert.equal(slow.find((x) => x.key === 'runtime').verdict, 'as');
+  assert.equal(slow.find((x) => x.key === 'slope').value, null);
+  const url = issueUrl(d, slow, r.req, 'test design');
+  assert.match(url, /^https:\/\/github\.com\/kathuman\/claude-projects\/issues\/new\?/);
+  assert.ok(decodeURIComponent(url.replace(/\+/g, ' ')).includes(d.key));
+});

@@ -11,6 +11,7 @@ import { SWAP_SLOTS, SLOT_LABEL } from './src/solver.js';
 import { buildGuide } from './src/guide.js';
 import { wiring, signalDiagram, powerDiagram } from './src/wiring.js';
 import { roverLayout, roverTopView, armSideView } from './src/layout.js';
+import { compare, parseSelfTest, issueUrl } from './src/measure.js';
 import { generateFirmware } from './src/firmware.js';
 import { zip } from './src/zip.js';
 import { LANGS, t, num, setLang, lang, locale, guessLang } from './src/i18n.js';
@@ -417,6 +418,23 @@ function renderTab(p, req) {
 
 function wireTab(p, req) {
   if (state.tab === 'overview') {
+    const box = $('#measure');
+    box?.addEventListener('toggle', () => { state.measureOpen = box.open; });
+    for (const inp of results.querySelectorAll('[data-measure]')) {
+      inp.addEventListener('change', () => {
+        const m = loadMeasured(p.design.key);
+        const v = Number(String(inp.value).replace(',', '.'));
+        if (inp.value === '' || !Number.isFinite(v)) delete m[inp.dataset.measure]; else m[inp.dataset.measure] = v;
+        saveMeasured(p.design.key, m);
+        render();
+      });
+    }
+    $('#readSelfTest')?.addEventListener('click', () => {
+      const got = parseSelfTest($('#selfTestText').value);
+      if (!Object.keys(got).length) { $('#selfTestMsg').textContent = t('No RESULT line found: paste everything the self-test printed.'); return; }
+      saveMeasured(p.design.key, { ...loadMeasured(p.design.key), speed_air: got.speed_air });
+      render();
+    });
     for (const b of results.querySelectorAll('[data-swap]')) {
       b.addEventListener('click', () => {
         const slot = b.dataset.swap;
@@ -482,6 +500,7 @@ function renderOverview(p, req) {
   return `
     <div class="tiles">${tiles.map(([v, l]) => `<div class="tile"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('')}</div>
     ${warns}
+    ${renderMeasure(p, req)}
     <h3>${esc(t('Parts'))}</h3>
     <div class="table-scroll"><table><tbody>${parts}</tbody></table></div>
     <h3 style="margin-top:18px">${esc(t('Try another part'))}</h3>
@@ -514,6 +533,31 @@ function renderSwaps(p, req) {
       ${open ? `<tr><td colspan="3">${body}</td></tr>` : ''}`;
   }).join('');
   return `<div class="table-scroll"><table><tbody>${rows}</tbody></table></div>`;
+}
+
+// Your robot against the model: measurements typed in or pasted from the self-test, kept in this browser.
+const loadMeasured = (key) => { try { return JSON.parse(localStorage.getItem(`rc-measured:${key}`) ?? '{}'); } catch { return {}; } };
+const saveMeasured = (key, m) => { try { localStorage.setItem(`rc-measured:${key}`, JSON.stringify(m)); } catch { /* storage unavailable */ } };
+
+function renderMeasure(p, req) {
+  const d = p.design;
+  const rows = compare(d, loadMeasured(d.key));
+  const any = rows.some((r) => r.value != null);
+  const verdict = { as: t('as modelled'), below: t('below the model'), above: t('above the model') };
+  const body = rows.map((r) => `<tr class="${r.verdict ?? ''}">
+      <td>${esc(r.label)}<br><small>${esc(r.how)}</small></td>
+      <td class="num">${num(r.model, r.digits)} ${esc(r.unit)}</td>
+      <td class="num"><input class="mnum" type="text" inputmode="decimal" data-measure="${r.key}" value="${r.value == null ? '' : num(r.value, r.digits)}" aria-label="${esc(r.label)}"> ${esc(r.unit)}</td>
+      <td>${r.verdict ? `<b>${esc(verdict[r.verdict])}</b> (${Math.round(r.ratio * 100)} %)<br><small>${esc(r.hint)}</small>` : ''}</td>
+    </tr>`).join('');
+  return `<details class="measure" id="measure"${state.measureOpen ? ' open' : ''}>
+    <summary>${esc(t('Built it? Compare your robot with the model'))}</summary>
+    <p class="fine">${esc(t('Type what you measured, or paste what the self-test printed. The numbers stay in this browser; sending them opens a GitHub issue you can read and edit before you submit it, which helps calibrate the models.'))}</p>
+    ${d.ev?.encoders ? `<div class="row"><textarea id="selfTestText" rows="3" placeholder="RESULT speed_air_left=… speed_air_right=…"></textarea>
+      <button class="small-btn" type="button" id="readSelfTest">${esc(t('Read the self-test output'))}</button><small id="selfTestMsg"></small></div>` : ''}
+    <div class="table-scroll"><table class="mtable"><thead><tr><th>${esc(t('Quantity'))}</th><th class="num">${esc(t('Model'))}</th><th class="num">${esc(t('Measured'))}</th><th>${esc(t('What it means'))}</th></tr></thead><tbody>${body}</tbody></table></div>
+    ${any ? `<div class="row"><a class="small-btn" href="${esc(issueUrl(d, rows, req, describe(d)))}" target="_blank" rel="noopener">${esc(t('Send these numbers'))}</a></div>` : ''}
+  </details>`;
 }
 
 // The robot drawn from its parts: the rover from above with every board placed, and the arm from the side.
