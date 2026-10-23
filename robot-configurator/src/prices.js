@@ -22,6 +22,9 @@ export const SEARCH_TERMS = {
   'wheel-d6-85': 'off-road wheel 85mm 6mm', 'wheel-d6-125': 'off-road wheel 125mm 6mm',
   'kit-2wd-olimex': 'robot car kit 2WD', 'kit-4wd-joyit': 'robot car kit 4WD', 'chassis-2wd-acrylic': '2WD robot chassis', 'chassis-4wd-acrylic': '4WD robot chassis', 'chassis-n20-mini': 'N20 robot chassis',
   'chassis-alu-2wd-25': 'aluminium robot chassis 25mm motor', 'chassis-alu-4wd-37': 'aluminium 4WD chassis 37mm',
+  'chassis-zumo': 'Zumo chassis', 'tank-alu-25': 'aluminium tank chassis encoder motor', 'tank-alu-37': 'aluminium tank chassis 37mm encoder motor', 'jga25-21-enc': 'JGA25-370 encoder 280rpm', 'bal-frame-n20': 'balancing robot chassis N20',
+  'bal-frame-25': 'self-balancing robot chassis 25mm motor', 'mecanum-60-tt': 'mecanum wheel 60mm TT', 'mecanum-80': 'mecanum wheel 80mm',
+  'mecanum-97': 'mecanum wheel 97mm',
   'batt-6aa-nimh': 'NiMH AA 2000mAh', 'batt-2s-18650': '2S 18650 battery pack', 'batt-3s-18650': '3S 18650 battery pack',
   'batt-2s-lipo-2200': '2S LiPo 2200mAh', 'batt-3s-lipo-2200': '3S LiPo 2200mAh', 'batt-3s-lipo-5000': '3S LiPo 5000mAh',
   'chg-nimh': 'NiMH charger AA', 'chg-2s': '2S li-ion charger 8.4V', 'chg-3s': '3S li-ion charger 12.6V',
@@ -309,6 +312,10 @@ export const CHECKS = {
   },
   'kit-4wd-joyit': {
     electrokit: {"price": 249, "url": "https://www.electrokit.com/en/robot-car-kit-base-with-4-wheels-and-motors", "checked": "2026-10-23", "listed": "Robot car kit 4WD, base with 4 wheels and motors (Joy-It)", "note": "its motors are rated 4.5–9 V and modelled as TT gearmotors"},
+  },
+  'chassis-zumo': {
+    electrokit: {"price": 299, "url": "https://www.electrokit.com/en/product/zumo-robot-chassi/", "checked": "2026-10-23", "listed": "Zumo Robot Chassis (Pololu 1418)", "note": "tracks, 2 drive and 2 idler sprockets, acrylic plate, 4×AA compartment; motors not included"},
+    pololu: {"price": 23.49, "url": "https://www.pololu.com/product/1418", "checked": "2026-10-23", "listed": "Zumo Chassis Kit (No Motors)", "note": "98 × 86 × 39 mm; about 210 g with motors and batteries"},
   },
   'reg-s13v30f5': {
     electrokit: {"price": 189, "url": "https://www.electrokit.com/en/switchregulator-2.8-22v-/-5v", "checked": "2026-10-23", "listed": "Switch regulator 2.8-22V / 5V 3A (Pololu 4082)", "note": "2–4 A depending on input; wires or headers to solder"},

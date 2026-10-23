@@ -112,6 +112,8 @@ export const VENDORS = {
 
 // [vendor, price] pairs, in the vendor's currency
 const offers = (o) => Object.entries(o).map(([vendor, price]) => ({ vendor, price }));
+// the same for parts sold only as a set: the price is for the set of `pack` catalog units
+const sets = (pack, o) => offers(o).map((x) => ({ ...x, pack }));
 
 // Microcontroller pin maps live in pins.js; `board` points there.
 const MCUS = [
@@ -166,6 +168,9 @@ const MOTORS = [
   { id: 'jga25-34-enc', cat: 'motor', name: 'JGA25-370 gearmotor 12 V 1:34 with Hall encoder', vNom: 12, noLoadRpm: 170,
     stallTorque: 0.65, stallCurrent: 2.0, noLoadCurrent: 0.1, cpr: 374, mount: 'jga25', shaft: 'd4', mass: 0.100,
     solder: false, offers: offers({ ali: 9.5 }) },
+  { id: 'jga25-21-enc', cat: 'motor', name: 'JGA25-370 gearmotor 12 V 1:21 with Hall encoder', vNom: 12, noLoadRpm: 280,
+    stallTorque: 0.40, stallCurrent: 2.0, noLoadCurrent: 0.1, cpr: 231, mount: 'jga25', shaft: 'd4', mass: 0.095,
+    solder: false, offers: offers({ ali: 9.5 }) },
   { id: 'jgb37-30-enc', cat: 'motor', name: 'JGB37-520 gearmotor 12 V 1:30 with Hall encoder', vNom: 12, noLoadRpm: 333,
     stallTorque: 0.9, stallCurrent: 3.0, noLoadCurrent: 0.15, cpr: 330, mount: '37mm', shaft: 'd6', mass: 0.160,
     solder: false, offers: offers({ ali: 11 }) },
@@ -185,12 +190,31 @@ const WHEELS = [
     terrain: 'outdoor', mass: 0.070, solder: false, offers: offers({ ali: 4.5 }) },
   { id: 'wheel-d6-125', cat: 'wheel', name: 'Off-road wheel 125 mm with 6 mm hub coupling', diameter: 0.125,
     shaft: ['d6'], terrain: 'outdoor', mass: 0.140, solder: false, offers: offers({ ali: 7.5 }) },
+  // Mecanum wheels: rollers at 45 degrees let a four-wheel base drive sideways. Sold as sets of two left and two right
+  // wheels; the price is for the set of four.
+  { id: 'mecanum-60-tt', cat: 'wheel', kind: 'mecanum', name: 'Mecanum wheel 60 mm for TT motors (set of 4: 2 left, 2 right)',
+    diameter: 0.060, shaft: ['tt'], terrain: 'indoor', mass: 0.040, solder: false, offers: sets(4, { ali: 7.5 }) },
+  { id: 'mecanum-80', cat: 'wheel', kind: 'mecanum', name: 'Mecanum wheel 80 mm with 4 and 6 mm hub couplings (set of 4)',
+    diameter: 0.080, shaft: ['d4', 'd6'], terrain: 'indoor', mass: 0.075, solder: false, offers: sets(4, { ali: 21 }) },
+  { id: 'mecanum-97', cat: 'wheel', kind: 'mecanum', name: 'Mecanum wheel 97 mm with 6 mm hub couplings (set of 4)',
+    diameter: 0.097, shaft: ['d6'], terrain: 'indoor', mass: 0.140, solder: false, offers: sets(4, { ali: 34 }) },
+  // Track drives: the sprockets and tracks that come with a tracked chassis, never bought on their own. diameter is
+  // the drive sprocket's pitch diameter with the track on it (what one turn moves the robot, divided by pi).
+  { id: 'tracks-zumo', cat: 'wheel', kind: 'track', partOf: 'chassis-zumo', name: 'Zumo silicone tracks on 35 mm drive sprockets',
+    diameter: 0.039, shaft: ['d3'], terrain: 'indoor', mass: 0.010, solder: false, offers: [] },
+  { id: 'tracks-alu-tank', cat: 'wheel', kind: 'track', partOf: 'tank-alu-25', name: 'Rubber tracks on the tank chassis drive sprockets',
+    diameter: 0.050, shaft: ['d4'], terrain: 'outdoor', mass: 0.15, solder: false, offers: [] },
+  { id: 'tracks-alu-tank37', cat: 'wheel', kind: 'track', partOf: 'tank-alu-37', name: 'Rubber tracks on the 37 mm tank chassis drive sprockets',
+    diameter: 0.055, shaft: ['d6'], terrain: 'outdoor', mass: 0.18, solder: false, offers: [] },
 ];
 
 // Chassis: mounts accept that motor mount; driven = driven wheels (2 = differential drive + caster, 4 = skid steer).
 // length/track: support polygon used for the tipping check.
 // Kits that come with their motors and wheels: `includes` names the parts they bring, which are then not bought
 // separately (their mass and specs still count).
+// drive: 'wheels' (the default), 'tracks' (a tank: contact = length of track on the ground, track = between the track
+// centres) or 'balance' (two wheels on one axle and no caster: height of the frame, comH = the robot's centre of mass
+// above the axle without payload, decks = how many plates the frame stacks).
 const CHASSIS = [
   { id: 'kit-2wd-olimex', cat: 'chassis', name: '2WD acrylic robot kit with 2 TT gearmotors and 65 mm wheels (Olimex)', mount: 'tt',
     driven: 2, maxLoad: 1.0, mass: 0.18, length: 0.20, track: 0.15, terrain: 'indoor', solder: false,
@@ -213,6 +237,23 @@ const CHASSIS = [
   { id: 'chassis-alu-4wd-37', cat: 'chassis', name: 'Aluminium 4WD off-road chassis for 37 mm gearmotors',
     mount: '37mm', driven: 4, maxLoad: 6.0, mass: 1.10, length: 0.30, track: 0.24, terrain: 'outdoor', solder: false,
     offers: offers({ ali: 42 }) },
+  // tracked: the Zumo takes two micro metal gearmotors (not included); the aluminium tank comes with its motors
+  { id: 'chassis-zumo', cat: 'chassis', drive: 'tracks', name: 'Pololu Zumo tracked chassis kit (tracks and sprockets, motors not included)',
+    mount: 'n20', driven: 2, maxLoad: 0.45, mass: 0.09, length: 0.086, track: 0.086, contact: 0.068, terrain: 'indoor',
+    solder: false, includes: { wheel: 'tracks-zumo' }, offers: offers({ electrokit: 299, pololu: 23.49 }) },
+  { id: 'tank-alu-25', cat: 'chassis', drive: 'tracks', name: 'Aluminium tank chassis with two 25 mm encoder gearmotors and rubber tracks',
+    mount: 'jga25', driven: 2, maxLoad: 3.0, mass: 0.90, length: 0.275, track: 0.16, contact: 0.21, terrain: 'outdoor',
+    solder: false, includes: { motor: 'jga25-34-enc', wheel: 'tracks-alu-tank' }, offers: offers({ ali: 48 }) },
+  { id: 'tank-alu-37', cat: 'chassis', drive: 'tracks', name: 'Aluminium tank chassis with two 37 mm encoder gearmotors and rubber tracks',
+    mount: '37mm', driven: 2, maxLoad: 5.0, mass: 1.30, length: 0.30, track: 0.19, contact: 0.23, terrain: 'outdoor',
+    solder: false, includes: { motor: 'jgb37-30-enc', wheel: 'tracks-alu-tank37' }, offers: offers({ ali: 65 }) },
+  // balancing frames: stacked acrylic plates on standoffs, motor brackets at the bottom (motors and wheels not included)
+  { id: 'bal-frame-n20', cat: 'chassis', drive: 'balance', name: 'Balancing-robot frame for N20 micro gearmotors (3 acrylic decks)',
+    mount: 'n20', driven: 2, maxLoad: 0.40, mass: 0.05, length: 0.06, track: 0.11, height: 0.12, comH: 0.06, decks: 3,
+    terrain: 'indoor', solder: false, offers: offers({ ali: 7 }) },
+  { id: 'bal-frame-25', cat: 'chassis', drive: 'balance', name: 'Balancing-robot frame for 25 mm gearmotors (3 acrylic decks)',
+    mount: 'jga25', driven: 2, maxLoad: 1.2, mass: 0.16, length: 0.09, track: 0.19, height: 0.20, comH: 0.10, decks: 3,
+    terrain: 'indoor', solder: false, offers: offers({ ali: 12 }) },
 ];
 
 // vMin: cut-off under load; iMax: continuous discharge the pack (or its BMS) allows.

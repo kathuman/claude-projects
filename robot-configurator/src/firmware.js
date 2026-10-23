@@ -2,8 +2,9 @@
 // numbers, PWM limit, wheel geometry, speed-loop gains, servo channels and arm geometry filled in from the parts.
 //
 //   selftest/selftest.ino — bring-up: I²C scan, each motor and encoder, each sensor, servos to their centre
-//   robot/robot.ino       — the robot: drive with speed control and ramps, the chosen behaviours, the arm with
-//                           inverse kinematics and teach/replay, commands over USB serial, Bluetooth or Wi-Fi
+//   robot/robot.ino       — the robot: drive with speed control and ramps (two sides, four mecanum wheels, or a
+//                           balancing loop), the chosen behaviours, the arm with inverse kinematics and teach/replay,
+//                           commands over USB serial, Bluetooth or Wi-Fi
 //
 // Only the code a design needs is emitted, so the sketches stay readable. No third-party libraries: the PCA9685 and
 // MPU-6050 are driven over Wire directly, which keeps the build to the board package alone.
@@ -35,7 +36,8 @@ export function firmwareConfig(design, req) {
   const pins = {};
   for (const [id, p] of Object.entries(design.pins?.map ?? {})) pins[id] = p;
   const cfg = {
-    title: { rover: 'Rover', arm: 'Desktop arm', mobile: 'Rover with arm' }[design.type],
+    title: { rover: 'Rover', tracked: 'Tracked rover', mecanum: 'Mecanum rover', balance: 'Balancing robot', arm: 'Desktop arm',
+      mobile: 'Rover with arm' }[design.type],
     type: design.type, board, esp, pins, key: design.key,
     wifi: esp && design.wireless, bt: !!design.bt,
     wifiCred: wifiCredentials(design.key),
@@ -49,9 +51,14 @@ export function firmwareConfig(design, req) {
       airSpeed: design.specs?.airSpeed ?? design.specs?.topSpeed ?? design.ev.perf.flat.speed,
       pwmLimit: Math.max(1, Math.round(255 * design.ev.perf.capDuty)), accel: req.rover.accel,
       cpr: motor.cpr, encoders: !!motor.cpr, motorV: motor.vNom, battV: design.parts.battery.vMax,
-      sonar: b.includes('obstacle'), line: b.includes('line'), imu: b.includes('odometry'),
+      sonar: b.includes('obstacle'), line: b.includes('line') && design.ev.kind !== 'balance',
+      imu: b.includes('odometry') || design.ev.kind === 'balance',
       remote: b.includes('remote'), behaviours: b,
+      kind: design.ev.kind, motors: design.ev.motors,
+      // mecanum: the distance between the front and rear axles
+      wheelBase: Math.max(0.05, chassis.length - wheel.diameter - 0.008),
     };
+    if (design.ev.kind === 'balance') cfg.drive.balance = balanceGains(design);
   }
   if (design.arm) {
     const { frame, servos } = design.arm;
@@ -63,7 +70,22 @@ export function firmwareConfig(design, req) {
       hasRoll: frame.joints.includes('roll') };
   }
   cfg.i2c = !!(cfg.arm || cfg.drive?.imu);
+  cfg.loopMs = cfg.drive?.balance ? 10 : 20;
   return cfg;
+}
+
+// Start values for the balancing loop, from the model: the lean loop gives three times the gravity torque per degree
+// of lean (m·g·h per radian, shared by the motors), and damps over about 0.4 of the robot's fall time √(h/g). They
+// are starting points to tune from (the K command), not final gains.
+export function balanceGains(design) {
+  const { ev, parts } = design;
+  const b = ev.perf.balance;
+  const n = parts.chassis.driven;
+  const Ts = parts.motor.stallTorque * (parts.battery.vNom * ev.perf.capDuty) / parts.motor.vNom;
+  const perDeg = (3 * ev.mass * 9.81 * b.h * Math.PI) / 180;
+  const kp = Math.min(60, Math.max(5, (perDeg / (n * Ts)) * 255));
+  const tau = Math.sqrt(b.h / 9.81);
+  return { kp, kd: kp * tau * 0.4, h: b.h, lean: b.lean };
 }
 
 const inputMode = (cfg, id) => (cfg.pins[id].caps.has('out') ? 'INPUT_PULLUP' : 'INPUT');
@@ -169,6 +191,38 @@ void imuBegin() {
 `;
 }
 
+// Pitch for a balancing robot: the accelerometer gives the lean against gravity (noisy, but it never drifts), the gyro
+// its rate (smooth, but it drifts); a complementary filter blends the two.
+function tiltCode() {
+  return `
+// ---- Tilt (MPU-6050 flat, its X arrow pointing forward): pitch from accelerometer and gyro, blended
+const bool IMU_FLIP = false;   // set true if leaning forward makes the angle fall (see the self-test)
+float gyroBiasY = 0;
+float pitch = 0;               // degrees, positive = leaning forward
+float pitchRate = 0;           // degrees per second
+
+float accelPitch() {
+  float ax = imuRead16(0x3B);
+  float az = imuRead16(0x3F);
+  float a = degrees(atan2(-ax, az));
+  return IMU_FLIP ? -a : a;
+}
+
+void tiltBegin() {
+  float sum = 0;          // still standing still from imuBegin()
+  for (int i = 0; i < 200; i++) { sum += imuRead16(0x45) / 131.0f; delay(3); }
+  gyroBiasY = sum / 200;
+  pitch = accelPitch();
+}
+
+void tiltUpdate(float dt) {
+  float rate = imuRead16(0x45) / 131.0f - gyroBiasY;
+  pitchRate = IMU_FLIP ? -rate : rate;
+  pitch = 0.98f * (pitch + pitchRate * dt) + 0.02f * accelPitch();
+}
+`;
+}
+
 // ---------------------------------------------------------------- drive
 
 function driveChannelCode(scheme) {
@@ -207,8 +261,67 @@ function channelPins(scheme, s) {
   }[scheme];
 }
 
+const MOTOR_LABEL = { FL: 'FRONT LEFT', RL: 'REAR LEFT', FR: 'FRONT RIGHT', RR: 'REAR RIGHT' };
+
+// Four motors, one per mecanum wheel, each on its own driver channel. Indices follow the wiring: 0 front left,
+// 1 rear left, 2 front right, 3 rear right.
+function motorCore4(cfg, { selftest = false } = {}) {
+  const d = cfg.drive;
+  const isr = cfg.esp ? 'IRAM_ATTR ' : '';
+  const outs = d.motors.flatMap((m) => channelPins(d.scheme, m));
+  let code = `
+// ---- Motors: 0 front left, 1 rear left, 2 front right, 3 rear right
+const uint8_t MOTOR_COUNT = 4;
+const int PWM_LIMIT = ${d.pwmLimit};${d.pwmLimit < 255 ? `            // ${Math.round(d.pwmLimit / 2.55)} % of 255: a full ${f2(d.battV)} V battery gives the ${d.motorV} V motors at most their rating` : '            // the battery never exceeds the motor rating'}
+${selftest ? 'bool INVERT[MOTOR_COUNT] = {false, false, false, false};  // the self-test drives the raw directions' : 'const bool INVERT[MOTOR_COUNT] = {false, false, false, false};  // true for a wheel that turns backwards on "forward" (see the self-test)'}
+
+${driveChannelCode(d.scheme)}
+
+${d.encoders ? `// the direction each wheel was last driven, which its encoder counts in (only channel A is wired)
+volatile int8_t motorDir[MOTOR_COUNT] = {1, 1, 1, 1};
+
+` : ''}// power from -255 (full reverse) to 255 (full forward)
+void motorWrite(uint8_t m, int power) {
+  power = constrain(power, -PWM_LIMIT, PWM_LIMIT);${d.encoders ? '\n  if (power != 0) motorDir[m] = power > 0 ? 1 : -1;' : ''}
+  if (INVERT[m]) power = -power;
+  switch (m) {
+${d.motors.map((m, i) => `    case ${i}: driveChannel(${channelPins(d.scheme, m).join(', ')}, power); break;`).join('\n')}
+  }
+}
+
+void motorsBegin() {
+${outs.map((p) => `  pinMode(${p}, OUTPUT);`).join('\n')}
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) motorWrite(m, 0);
+}
+`;
+  if (d.encoders) {
+    code += `
+// ---- Encoders: channel A only (four encoders with both channels need more pins than the board has); each count
+// takes the direction the wheel is being driven, which is exact except for the moment a wheel reverses
+const float COUNTS_PER_REV = ${d.cpr}.0f;   // channel-A rising edges per wheel revolution
+volatile long encTicks[MOTOR_COUNT] = {0, 0, 0, 0};
+
+${d.motors.map((m, i) => `void ${isr}enc${m}ISR() { encTicks[${i}] += motorDir[${i}]; }`).join('\n')}
+
+long readTicks(uint8_t m) {
+  noInterrupts();
+  long t = encTicks[m];
+  interrupts();
+  return t;
+}
+
+void encodersBegin() {
+${d.motors.map((m) => `  pinMode(PIN_${m}_ENCA, ${inputMode(cfg, `${m}_ENCA`)});`).join('\n')}
+${d.motors.map((m) => `  attachInterrupt(digitalPinToInterrupt(PIN_${m}_ENCA), enc${m}ISR, RISING);`).join('\n')}
+}
+`;
+  }
+  return code;
+}
+
 function motorCore(cfg, { selftest = false } = {}) {
   const d = cfg.drive;
+  if (d.kind === 'mecanum') return motorCore4(cfg, { selftest });
   const isr = cfg.esp ? 'IRAM_ATTR ' : '';
   const outs = ['L', 'R'].flatMap((s) => channelPins(d.scheme, s));
   let code = `
@@ -307,8 +420,148 @@ function sensorsBegin(cfg) {
   return l.join('\n');
 }
 
+// Mecanum: forward, sideways and turn commands become four wheel speeds (rollers in an X seen from above).
+function mecanumControl(cfg) {
+  const d = cfg.drive;
+  let code = `
+// ---- Drive: body speed command → ramped → four wheel speeds → ${d.encoders ? 'PI speed loop per wheel' : 'open-loop PWM'}
+const float WHEEL_DIAMETER = ${f3(d.wheelD)}f;   // m; measure your wheels and correct
+const float TRACK_WIDTH = ${f3(d.track)}f;      // m between the left and right wheel centres; measure and correct
+const float WHEEL_BASE = ${f3(d.wheelBase)}f;       // m between the front and rear axles; measure and correct
+const float MAX_WHEEL_SPEED = ${f2(d.maxSpeed)}f;   // m/s at PWM_LIMIT (from the motor model; the self-test measures it)
+const float MAX_ACCEL = ${f2(d.accel)}f;         // m/s²; the ramp also keeps the start-up current down
+const unsigned long COMMAND_TIMEOUT = 600;   // ms: remote driving stops when commands stop arriving
+
+float targetV = 0, targetS = 0, targetW = 0;   // forward m/s, sideways m/s (positive = left), turn rad/s (positive = left)
+float rampV = 0, rampS = 0, rampW = 0;
+float wheelTarget[MOTOR_COUNT] = {0, 0, 0, 0};
+`;
+  if (d.encoders) {
+    code += `const float KP = 0.50f * PWM_LIMIT / MAX_WHEEL_SPEED;   // PWM per m/s of speed error
+const float KI = 2.00f * PWM_LIMIT / MAX_WHEEL_SPEED;   // PWM per m of accumulated error
+float integral[MOTOR_COUNT] = {0, 0, 0, 0};
+float wheelSpeed[MOTOR_COUNT] = {0, 0, 0, 0};
+long lastTicks[MOTOR_COUNT] = {0, 0, 0, 0};
+float odoDistance = 0;    // m travelled forward
+float odoSideways = 0;    // m travelled sideways (positive = left)
+float odoHeading = 0;     // degrees, positive = left
+`;
+  }
+  code += `
+void driveUpdate(float dt) {
+  const float k = (TRACK_WIDTH + WHEEL_BASE) / 2;
+  rampV += constrain(targetV - rampV, -MAX_ACCEL * dt, MAX_ACCEL * dt);
+  rampS += constrain(targetS - rampS, -MAX_ACCEL * dt, MAX_ACCEL * dt);
+  float maxAlpha = MAX_ACCEL / k;
+  rampW += constrain(targetW - rampW, -maxAlpha * dt, maxAlpha * dt);
+  wheelTarget[0] = rampV - rampS - rampW * k;   // front left
+  wheelTarget[1] = rampV + rampS - rampW * k;   // rear left
+  wheelTarget[2] = rampV + rampS + rampW * k;   // front right
+  wheelTarget[3] = rampV - rampS + rampW * k;   // rear right
+  float peak = 0;
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) peak = max(peak, (float)fabs(wheelTarget[m]));
+  if (peak > MAX_WHEEL_SPEED) for (uint8_t m = 0; m < MOTOR_COUNT; m++) wheelTarget[m] *= MAX_WHEEL_SPEED / peak;
+`;
+  if (d.encoders) {
+    code += `  const float metresPerTick = PI * WHEEL_DIAMETER / COUNTS_PER_REV;
+  float step[MOTOR_COUNT];
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) {
+    long t = readTicks(m);
+    step[m] = (t - lastTicks[m]) * metresPerTick;
+    lastTicks[m] = t;
+    wheelSpeed[m] = step[m] / dt;
+    float target = wheelTarget[m];
+    if (fabs(target) < 0.005f && fabs(wheelSpeed[m]) < 0.02f) { integral[m] = 0; motorWrite(m, 0); continue; }
+    float err = target - wheelSpeed[m];
+    integral[m] = constrain(integral[m] + err * dt, -0.3f * PWM_LIMIT / KI, 0.3f * PWM_LIMIT / KI);
+    float pwm = target / MAX_WHEEL_SPEED * PWM_LIMIT + KP * err + KI * integral[m];
+    motorWrite(m, (int)pwm);
+  }
+  odoDistance += (step[0] + step[1] + step[2] + step[3]) / 4;
+  odoSideways += (-step[0] + step[1] + step[2] - step[3]) / 4;
+${d.imu ? '  odoHeading += gyroZ() * dt;' : '  odoHeading += degrees((-step[0] - step[1] + step[2] + step[3]) / (4 * k));'}
+}
+`;
+  } else {
+    code += `  for (uint8_t m = 0; m < MOTOR_COUNT; m++) motorWrite(m, (int)(wheelTarget[m] / MAX_WHEEL_SPEED * PWM_LIMIT));
+}
+`;
+  }
+  return code;
+}
+
+// Balancing: an outer speed loop turns the speed error into a lean to hold, an inner loop drives the wheels under the
+// centre of mass to reach that lean. Wheel encoders give the speed; the turn is a difference between the wheels.
+function balanceControl(cfg) {
+  const d = cfg.drive;
+  const g = d.balance;
+  return `
+// ---- Balance: the speed loop asks for a lean, the lean loop drives the wheels under the centre of mass
+const float WHEEL_DIAMETER = ${f3(d.wheelD)}f;   // m; measure your wheels and correct
+const float TRACK_WIDTH = ${f3(d.track)}f;      // m between the wheel centres; measure and correct
+const float MAX_WHEEL_SPEED = ${f2(d.maxSpeed)}f;   // m/s at PWM_LIMIT (from the motor model; the self-test measures it)
+const float MAX_ACCEL = ${f2(d.accel)}f;         // m/s²: how fast the commanded speed changes
+const unsigned long COMMAND_TIMEOUT = 600;   // ms: remote driving stops when commands stop arriving
+// Start values from the model (centre of mass ${(g.h * 1000).toFixed(0)} mm above the axle); tune them with K, then write them here.
+float BALANCE_ZERO = 0;              // degrees read when it stands balanced on its own (the self-test or Z measures it)
+float ANGLE_KP = ${f2(g.kp)}f;           // PWM per degree of lean
+float ANGLE_KD = ${f2(g.kd)}f;            // PWM per degree per second
+float SPEED_KP = 8.0f;               // degrees of lean per m/s of speed error
+float SPEED_KI = 4.0f;               // degrees of lean per metre of accumulated speed error
+const float MAX_LEAN = 8;            // degrees the speed loop may ask for
+const float FALL_ANGLE = 45;         // degrees: past this the motors stop; stand it up to start again
+const int DEADBAND = 8;              // PWM that only overcomes gearbox friction; raise it if the wheels hesitate
+const float TURN_GAIN = PWM_LIMIT / MAX_WHEEL_SPEED * TRACK_WIDTH / 2;   // PWM per rad/s of turn
+
+float targetV = 0, targetW = 0;   // commanded forward speed (m/s) and turn rate (rad/s, positive = left)
+float rampV = 0;
+float wheelSpeed[2] = {0, 0};
+long lastTicks[2] = {0, 0};
+float odoDistance = 0;    // m travelled (mean of both wheels)
+float odoHeading = 0;     // degrees, positive = left
+float speedFiltered = 0, speedIntegral = 0;
+bool fallen = true;       // it starts lying down; it balances once stood up within 3 degrees
+
+void driveUpdate(float dt) {
+  tiltUpdate(dt);
+  const float metresPerTick = PI * WHEEL_DIAMETER / COUNTS_PER_REV;
+  float step[2];
+  for (uint8_t s = 0; s < 2; s++) {
+    long t = readTicks(s);
+    step[s] = (t - lastTicks[s]) * metresPerTick;
+    lastTicks[s] = t;
+    wheelSpeed[s] = step[s] / dt;
+  }
+  odoDistance += (step[0] + step[1]) / 2;
+  odoHeading += gyroZ() * dt;
+  speedFiltered += 0.2f * ((wheelSpeed[0] + wheelSpeed[1]) / 2 - speedFiltered);
+
+  float lean = pitch - BALANCE_ZERO;
+  if (fabs(lean) > FALL_ANGLE) fallen = true;
+  if (fallen) {
+    motorWrite(0, 0);
+    motorWrite(1, 0);
+    if (fabs(lean) < 3) { fallen = false; speedIntegral = 0; rampV = 0; }
+    return;
+  }
+  rampV += constrain(targetV - rampV, -MAX_ACCEL * dt, MAX_ACCEL * dt);
+  float speedErr = rampV - speedFiltered;
+  speedIntegral = constrain(speedIntegral + speedErr * dt, -MAX_LEAN / SPEED_KI, MAX_LEAN / SPEED_KI);
+  float targetLean = constrain(SPEED_KP * speedErr + SPEED_KI * speedIntegral, -MAX_LEAN, MAX_LEAN);
+  float power = ANGLE_KP * (lean - targetLean) + ANGLE_KD * pitchRate;
+  if (power > 0) power += DEADBAND;
+  else if (power < 0) power -= DEADBAND;
+  float turn = TURN_GAIN * targetW;
+  motorWrite(0, (int)(power - turn));
+  motorWrite(1, (int)(power + turn));
+}
+`;
+}
+
 function driveControl(cfg) {
   const d = cfg.drive;
+  if (d.kind === 'mecanum') return mecanumControl(cfg);
+  if (d.balance) return balanceControl(cfg);
   const kp = 0.5;
   const ki = 2.0;
   let code = `
@@ -618,11 +871,18 @@ function commandCode(cfg) {
   const d = cfg.drive;
   const a = cfg.arm;
   const help = [];
+  const m4 = d?.kind === 'mecanum';
+  const zeroS = m4 ? ' targetS =' : '';
   if (d) {
-    help.push('D v w    drive: v m/s forward, w rad/s left (repeat within 0.6 s)');
+    help.push(m4 ? 'D v w s  drive: v m/s forward, w rad/s left, s m/s sideways to the left (repeat within 0.6 s)'
+      : 'D v w    drive: v m/s forward, w rad/s left (repeat within 0.6 s)');
     help.push(`M n      mode: ${['idle', 'remote', d.sonar && 'avoid', d.line && 'line'].filter(Boolean).map((m, i) => `${i} ${m}`).join(', ')}`);
     if (d.encoders) { help.push('F m      drive forward m metres (negative = back)'); help.push('T deg    turn deg degrees (positive = left)'); }
     help.push('S        stop');
+    if (d.balance) {
+      help.push('K p d    lean gains (PWM per degree, PWM per degree/s); K p d sp si also sets the speed gains');
+      help.push('Z        the angle it stands at now is the balance point');
+    }
   }
   if (a) {
     help.push('J i deg  servo i to deg (0-180)');
@@ -641,7 +901,7 @@ function commandCode(cfg) {
   if (d) {
     cases.push(`    case 'D':
       targetV = constrain(a1, -MAX_WHEEL_SPEED, MAX_WHEEL_SPEED);
-      targetW = a2;
+      targetW = a2;${m4 ? '\n      targetS = constrain(a3, -MAX_WHEEL_SPEED, MAX_WHEEL_SPEED);' : ''}
       mode = MODE_REMOTE;
       lastCommand = millis();
       out.println(F("ok"));
@@ -649,7 +909,7 @@ function commandCode(cfg) {
     case 'M':
       if (a1 >= 0 && a1 < MODE_COUNT) {
         mode = (Mode)(int)a1;
-        targetV = targetW = 0;
+        targetV =${zeroS} targetW = 0;
         lastCommand = millis();
         out.print(F("mode "));
         out.println(MODE_NAMES[mode]);
@@ -657,9 +917,28 @@ function commandCode(cfg) {
       break;
     case 'S':
       mode = MODE_IDLE;
-      targetV = targetW = 0;${a ? '\n      replayIndex = -1;' : ''}
+      targetV =${zeroS} targetW = 0;${a ? '\n      replayIndex = -1;' : ''}
       out.println(F("stopped"));
       break;`);
+    if (d.balance) {
+      cases.push(`    case 'K':
+      if (n >= 2) { ANGLE_KP = a1; ANGLE_KD = a2; }
+      if (n >= 4) { SPEED_KP = a3; SPEED_KI = a4; }
+      out.print(F("ANGLE_KP "));
+      out.print(ANGLE_KP, 2);
+      out.print(F("  ANGLE_KD "));
+      out.print(ANGLE_KD, 2);
+      out.print(F("  SPEED_KP "));
+      out.print(SPEED_KP, 2);
+      out.print(F("  SPEED_KI "));
+      out.println(SPEED_KI, 2);
+      break;
+    case 'Z':
+      BALANCE_ZERO = pitch;
+      out.print(F("BALANCE_ZERO "));
+      out.println(BALANCE_ZERO, 2);
+      break;`);
+    }
     if (d.encoders) {
       cases.push(`    case 'F':
       startMove(a1, 0);
@@ -724,10 +1003,15 @@ function commandCode(cfg) {
   if (d) {
     status.push(`  out.print(F("mode "));
   out.println(MODE_NAMES[mode]);`);
-    if (d.encoders) status.push(`  out.print(F("wheel speeds m/s "));
-  out.print(wheelSpeed[0], 2);
-  out.print(' ');
-  out.println(wheelSpeed[1], 2);
+    if (d.balance) status.push(`  out.print(F("lean deg "));
+  out.print(pitch - BALANCE_ZERO, 1);
+  out.println(fallen ? F("  (down: stand it up to balance)") : F("  (balancing)"));`);
+    if (d.encoders) status.push(`  out.print(F("wheel speeds m/s"));
+  for (uint8_t m = 0; m < ${m4 ? 4 : 2}; m++) {
+    out.print(' ');
+    out.print(wheelSpeed[m], 2);
+  }
+  out.println();
   out.print(F("distance m "));
   out.print(odoDistance, 2);
   out.print(F("  heading deg "));
@@ -795,12 +1079,15 @@ function webPage(cfg) {
   if (d) {
     const modeButtons = ['Idle', 'Remote', d.sonar && 'Avoid', d.line && 'Line'].filter(Boolean)
       .map((m, i) => `<button onclick="send('M ${i}')">${m}</button>`).join('');
-    body += `<h2>Drive</h2><div id="pad"><div id="knob"></div></div><div class="row">${modeButtons}<button class="stop" onclick="send('S')">Stop</button></div>`;
+    const slide = d.kind === 'mecanum' ? '<label><input type="checkbox" id="slide" style="width:auto"> joystick slides sideways</label>' : '';
+    body += `<h2>Drive</h2><div id="pad"><div id="knob"></div></div>${slide}<div class="row">${modeButtons}<button class="stop" onclick="send('S')">Stop</button></div>`;
     script += `const pad=document.getElementById('pad'),knob=document.getElementById('knob');let jx=0,jy=0,held=false;
 function place(e){const r=pad.getBoundingClientRect(),p=e.touches?e.touches[0]:e;let x=(p.clientX-r.left)/r.width*2-1,y=(p.clientY-r.top)/r.height*2-1;const m=Math.hypot(x,y);if(m>1){x/=m;y/=m}jx=x;jy=y;knob.style.left=(50+x*40)+'%';knob.style.top=(50+y*40)+'%'}
 function release(){held=false;jx=jy=0;knob.style.left=knob.style.top='50%';send('D 0 0')}
 pad.addEventListener('pointerdown',e=>{held=true;pad.setPointerCapture(e.pointerId);place(e)});pad.addEventListener('pointermove',e=>{if(held)place(e)});pad.addEventListener('pointerup',release);pad.addEventListener('pointercancel',release);
-setInterval(()=>{if(held)send('D '+(-jy*${f2(d.maxSpeed)}).toFixed(2)+' '+(-jx*3).toFixed(2))},150);\n`;
+${d.kind === 'mecanum'
+    ? `setInterval(()=>{if(held){const s=document.getElementById('slide').checked;send('D '+(-jy*${f2(d.maxSpeed)}).toFixed(2)+' '+(s?0:-jx*3).toFixed(2)+' '+(s?-jx*${f2(d.maxSpeed)}:0).toFixed(2))}},150);`
+    : `setInterval(()=>{if(held)send('D '+(-jy*${f2(d.maxSpeed)}).toFixed(2)+' '+(-jx*3).toFixed(2))},150);`}\n`;
   }
   if (a) {
     const sliders = a.joints.map((j, i) => `<label>${j.name}<input type="range" min="0" max="180" value="90" oninput="send('J ${i} '+this.value)"></label>`).join('');
@@ -879,6 +1166,7 @@ export function robotSketch(cfg) {
   let code = header(cfg, 'robot program') + '\n' + includes.join('\n') + '\n\n' + typesBlock() + '\n' + pinConsts(cfg);
   if (a) code += pcaCode();
   if (d?.imu) code += imuCode();
+  if (d?.balance) code += tiltCode();
   if (d) code += motorCore(cfg) + sensorCode(cfg) + driveControl(cfg) + behaviourCode(cfg);
   if (a) code += armCode(cfg);
   code += commandCode(cfg);
@@ -897,7 +1185,7 @@ LineReader btReader = {{0}, 0};
     if (d.encoders) setup.push('  encodersBegin();');
     const sb = sensorsBegin(cfg);
     if (sb) setup.push(sb);
-    if (d.imu) setup.push('  imuBegin();   // keep the robot still for a second');
+    if (d.imu) setup.push(d.balance ? '  imuBegin();   // lay it down or hold it still for two seconds\n  tiltBegin();' : '  imuBegin();   // keep the robot still for a second');
     if (d.sonar) setup.push('  randomSeed(analogRead(A0));');
   }
   if (a) setup.push('  armBegin();');
@@ -912,12 +1200,13 @@ LineReader btReader = {{0}, 0};
   if (cfg.wifi) loop.push('  server.handleClient();');
   loop.push(`
   unsigned long now = millis();
-  if (now - lastUpdate < 20) return;   // 50 Hz control loop
+  if (now - lastUpdate < ${cfg.loopMs}) return;   // ${1000 / cfg.loopMs} Hz control loop
   float dt = (now - lastUpdate) / 1000.0f;
   lastUpdate = now;`);
   if (d) {
-    const sw = ['    case MODE_IDLE:\n      targetV = targetW = 0;\n      break;',
-      '    case MODE_REMOTE:\n      if (now - lastCommand > COMMAND_TIMEOUT) targetV = targetW = 0;\n      break;'];
+    const zs = d.kind === 'mecanum' ? ' targetS =' : '';
+    const sw = [`    case MODE_IDLE:\n      targetV =${zs} targetW = 0;\n      break;`,
+      `    case MODE_REMOTE:\n      if (now - lastCommand > COMMAND_TIMEOUT) targetV =${zs} targetW = 0;\n      break;`];
     if (d.sonar) sw.push('    case MODE_AVOID:\n      avoidStep();\n      break;');
     if (d.line) sw.push('    case MODE_LINE:\n      lineStep(dt);\n      break;');
     if (d.encoders) sw.push('    case MODE_MOVE:\n      moveStep();\n      break;');
@@ -954,6 +1243,7 @@ export function selftestSketch(cfg) {
   let code = header(cfg, 'self-test (run this first, step by step, from the serial monitor)') + '\n'
     + includes.join('\n') + '\n\n' + pinConsts(cfg);
   if (a) code += pcaCode();
+  if (d?.balance) code += imuCode() + tiltCode();
   if (d) code += motorCore(cfg, { selftest: true }) + sensorCode(cfg);
   if (cfg.bt) code += '\nSoftwareSerial bt(PIN_BT_RX, PIN_BT_TX);\n';
   code += `
@@ -985,7 +1275,18 @@ void waitKey(const __FlashStringHelper* what) {
   if (d) {
     steps.push(`  motorsBegin();${d.encoders ? '\n  encodersBegin();' : ''}
   waitKey(F("MOTORS: lift the robot so the wheels spin freely."));`);
-    for (const [side, name] of [[0, 'LEFT'], [1, 'RIGHT']]) {
+    const m4 = d.kind === 'mecanum';
+    if (m4) {
+      d.motors.forEach((m, i) => {
+        steps.push(`  Serial.println(F("${MOTOR_LABEL[m]} motor forward at 40 % for 1.5 s ..."));${d.encoders ? `\n  long before${i} = readTicks(${i});` : ''}
+  motorWrite(${i}, PWM_LIMIT * 2 / 5);
+  delay(1500);
+  motorWrite(${i}, 0);${d.encoders ? `\n  Serial.print(F("  encoder counts: "));\n  Serial.println(readTicks(${i}) - before${i});` : ''}
+  Serial.println(F("  It must have turned FORWARD. If it went backwards, set INVERT[${i}] = true in robot.ino."));${d.encoders ? `\n  Serial.println(F("  The count must be above zero; 0 means its encoder A wire is not connected."));` : ''}
+  delay(800);`);
+      });
+    }
+    for (const [side, name] of m4 ? [] : [[0, 'LEFT'], [1, 'RIGHT']]) {
       steps.push(`  Serial.println(F("${name} motor forward at 40 % for 1.5 s ..."));${d.encoders ? `\n  long before${side} = readTicks(${side});` : ''}
   motorWrite(${side}, PWM_LIMIT * 2 / 5);
   delay(1500);
@@ -993,7 +1294,31 @@ void waitKey(const __FlashStringHelper* what) {
   Serial.println(F("  It must have turned FORWARD. If it went backwards, set INVERT_${name} = true in robot.ino."));${d.encoders ? `\n  Serial.println(F("  The count must be positive. If it was negative, set INVERT_ENC_${name} = true."));` : ''}
   delay(800);`);
     }
-    if (d.encoders) {
+    if (d.encoders && m4) {
+      steps.push(`  Serial.println(F("Full-speed test, 2 s (wheels in the air read a little faster than on the floor) ..."));
+  long t0[MOTOR_COUNT];
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) t0[m] = readTicks(m);
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) motorWrite(m, PWM_LIMIT);
+  delay(2000);
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) motorWrite(m, 0);
+  float perTick = PI * ${f3(d.wheelD)} / ${d.cpr}.0;
+  float sp[MOTOR_COUNT];
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) sp[m] = abs(readTicks(m) - t0[m]) * perTick / 2;
+  float speedL = min(sp[0], sp[1]);
+  float speedR = min(sp[2], sp[3]);
+  Serial.print(F("  wheel speeds m/s, front left, rear left, front right, rear right:"));
+  for (uint8_t m = 0; m < MOTOR_COUNT; m++) {
+    Serial.print(' ');
+    Serial.print(sp[m], 2);
+  }
+  Serial.println();
+  Serial.println(F("  Put about 90 % of the lowest number in MAX_WHEEL_SPEED in robot.ino."));
+  Serial.println(F("  The model says ${f2(d.airSpeed)} m/s in the air. Paste the next line into the page to compare:"));
+  Serial.print(F("RESULT speed_air_left="));
+  Serial.print(speedL, 2);
+  Serial.print(F(" speed_air_right="));
+  Serial.println(speedR, 2);`);
+    } else if (d.encoders) {
       steps.push(`  Serial.println(F("Full-speed test, 2 s (wheels in the air read a little faster than on the floor) ..."));
   long l0 = readTicks(0), r0 = readTicks(1);
   motorWrite(0, PWM_LIMIT);
@@ -1037,7 +1362,23 @@ void waitKey(const __FlashStringHelper* what) {
   }
   Serial.println(F("  Only the middle one should read 1. If the pattern is inverted, set LINE_ON_HIGH = false."));`);
     }
-    if (d.imu) {
+    if (d.balance) {
+      steps.push(`  waitKey(F("TILT: lay the robot on its back and keep it still for two seconds (the gyro is measured)."));
+  imuBegin();
+  tiltBegin();
+  waitKey(F("Now hold it upright, wheels on the floor, at the angle where it would stay up by itself."));
+  float zero = 0;
+  for (uint8_t i = 0; i < 50; i++) { tiltUpdate(0.01f); zero += pitch / 50; delay(10); }
+  Serial.print(F("  angle at the balance point, degrees: "));
+  Serial.println(zero, 1);
+  Serial.println(F("  Put this number in BALANCE_ZERO in robot.ino (or stand it there and send Z later)."));
+  waitKey(F("Lean it FORWARD by about 20 degrees and hold it there."));
+  float fwd = 0;
+  for (uint8_t i = 0; i < 50; i++) { tiltUpdate(0.01f); fwd += pitch / 50; delay(10); }
+  Serial.print(F("  angle leaning forward, degrees: "));
+  Serial.println(fwd, 1);
+  Serial.println(fwd > zero ? F("  Good: leaning forward raises the angle.") : F("  It fell: set IMU_FLIP = true in robot.ino."));`);
+    } else if (d.imu) {
       steps.push(`  Wire.beginTransmission(0x68);
   Wire.write(0x75);
   Wire.endTransmission(false);

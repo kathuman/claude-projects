@@ -22,7 +22,9 @@ test('ids are unique and every part has a name, mass, solder flag and offers', (
     assert.ok(!ids.has(p.id), `duplicate ${p.id}`);
     ids.add(p.id);
     assert.ok(p.name && typeof p.mass === 'number' && typeof p.solder === 'boolean', p.id);
-    assert.ok(p.offers.length > 0 || p.kit?.every((k) => PARTS.some((x) => x.id === k.id)), `${p.id} has no offer`);
+    // a pack you assemble is bought as its kit; tracks come with their chassis
+    assert.ok(p.offers.length > 0 || p.kit?.every((k) => PARTS.some((x) => x.id === k.id))
+      || PARTS.find((x) => x.id === p.partOf)?.includes?.wheel === p.id, `${p.id} has no offer`);
     for (const k of REQUIRED[p.cat] ?? []) assert.ok(p[k] !== undefined, `${p.id} lacks ${k}`);
     assert.ok(p.cat in EU_DUTY, `${p.id}: no duty rate for ${p.cat}`);
   }

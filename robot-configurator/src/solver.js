@@ -16,9 +16,18 @@ export const BEHAVIOURS = {
   odometry: 'Measured moves (encoders + gyro)',
 };
 
+// Robot types: the four that drive on their own (each with its kind of drive), the desktop arm, and a wheeled rover
+// carrying an arm.
+export const DRIVE_OF = { rover: 'wheels', tracked: 'tracks', mecanum: 'mecanum', balance: 'balance', mobile: 'wheels' };
+export const drives = (type) => type in DRIVE_OF;
+export const hasArm = (type) => type === 'arm' || type === 'mobile';
+// A design's drive kind, from its chassis and wheels.
+export const driveKind = (chassis, wheel) =>
+  (chassis.drive === 'tracks' || chassis.drive === 'balance' ? chassis.drive : wheel?.kind === 'mecanum' ? 'mecanum' : 'wheels');
+
 export const DEFAULT_REQ = {
   region: 'SE',
-  type: 'rover', // rover | arm | mobile
+  type: 'rover', // rover | tracked | mecanum | balance | arm | mobile
   rover: { payload: 0.3, speed: 0.4, slope: 5, terrain: 'indoor-smooth', runtime: 60, accel: 0.5,
     behaviours: ['remote', 'obstacle'] },
   arm: { reach: 0.15, payload: 0.02, axes: 3, wireless: true },
@@ -77,24 +86,41 @@ function usableParts(req) {
 
 // ---------------------------------------------------------------- electronics: signals, pins, logic current
 
+// The motor channels a drive needs: one per side, or one per wheel on mecanum (each wheel turns on its own).
+export const motorChannels = (kind) => (kind === 'mecanum' ? ['FL', 'RL', 'FR', 'RR'] : ['L', 'R']);
+export const SIDE_NAME = { L: 'left', R: 'right', FL: 'front left', RL: 'rear left', FR: 'front right', RR: 'rear right' };
+const ENCODER_NAME = { L: 'Left motor encoder', R: 'Right motor encoder', FL: 'Front-left motor encoder',
+  RL: 'Rear-left motor encoder', FR: 'Front-right motor encoder', RR: 'Rear-right motor encoder' };
+
+// Which driver board and which of its channels (A or B) runs each motor: dual drivers take the motors in pairs (the
+// left pair on the first board), single-channel boards one each.
+export function driverChannels(driver, motors) {
+  const units = motors.length / driver.channels;
+  return motors.map((m, i) => {
+    const unit = Math.floor(i / driver.channels);
+    const dev = units === 1 ? driver.name
+      : `${driver.name} (${t(units === 2 ? (unit === 0 ? 'left' : 'right') : SIDE_NAME[m])})`;
+    return { motor: m, unit, ch: i % driver.channels === 0 ? 'A' : 'B', dev };
+  });
+}
+
 // The signals a set of electronics needs, as pin demands.
-export function pinDemands({ driver, encoders, sensors, bt }) {
+export function pinDemands({ driver, encoders, sensors, bt, motors = ['L', 'R'] }) {
   const d = [];
   const add = (id, need, device, signal) => d.push({ id, need, device, signal });
   if (driver) {
-    for (const s of ['L', 'R']) {
-      // a dual driver is one board serving both sides; single-channel drivers come in pairs
-      const dev = driver.channels === 1 ? `${driver.name} (${s === 'L' ? t('left') : t('right')})` : driver.name;
+    for (const { motor: s, ch, dev } of driverChannels(driver, motors)) {
+      const A = ch === 'A';
       if (driver.scheme === 'en-in') {
-        add(`${s}_EN`, 'pwm', dev, driver.id === 'l298n' ? (s === 'L' ? 'ENA' : 'ENB') : (s === 'L' ? 'PWMA' : 'PWMB'));
-        add(`${s}_IN1`, 'out', dev, driver.id === 'l298n' ? (s === 'L' ? 'IN1' : 'IN3') : (s === 'L' ? 'AIN1' : 'BIN1'));
-        add(`${s}_IN2`, 'out', dev, driver.id === 'l298n' ? (s === 'L' ? 'IN2' : 'IN4') : (s === 'L' ? 'AIN2' : 'BIN2'));
+        add(`${s}_EN`, 'pwm', dev, driver.id === 'l298n' ? (A ? 'ENA' : 'ENB') : (A ? 'PWMA' : 'PWMB'));
+        add(`${s}_IN1`, 'out', dev, driver.id === 'l298n' ? (A ? 'IN1' : 'IN3') : (A ? 'AIN1' : 'BIN1'));
+        add(`${s}_IN2`, 'out', dev, driver.id === 'l298n' ? (A ? 'IN2' : 'IN4') : (A ? 'AIN2' : 'BIN2'));
       } else if (driver.scheme === 'in-in') {
-        add(`${s}_IN1`, 'pwm', dev, s === 'L' ? 'AIN1' : 'BIN1');
-        add(`${s}_IN2`, 'pwm', dev, s === 'L' ? 'AIN2' : 'BIN2');
+        add(`${s}_IN1`, 'pwm', dev, A ? 'AIN1' : 'BIN1');
+        add(`${s}_IN2`, 'pwm', dev, A ? 'AIN2' : 'BIN2');
       } else if (driver.scheme === 'pwm-dir') {
-        add(`${s}_PWM`, 'pwm', dev, s === 'L' ? 'PWM1' : 'PWM2');
-        add(`${s}_DIR`, 'out', dev, s === 'L' ? 'DIR1' : 'DIR2');
+        add(`${s}_PWM`, 'pwm', dev, A ? 'PWM1' : 'PWM2');
+        add(`${s}_DIR`, 'out', dev, A ? 'DIR1' : 'DIR2');
       } else if (driver.scheme === 'two-pwm') {
         add(`${s}_RPWM`, 'pwm', dev, 'RPWM');
         add(`${s}_LPWM`, 'pwm', dev, 'LPWM');
@@ -102,10 +128,11 @@ export function pinDemands({ driver, encoders, sensors, bt }) {
     }
   }
   if (encoders) {
-    for (const s of ['L', 'R']) {
-      const dev = s === 'L' ? t('Left motor encoder') : t('Right motor encoder');
+    // with four motors only channel A is wired: the firmware takes the direction from the motor command
+    for (const s of motors) {
+      const dev = t(ENCODER_NAME[s]);
       add(`${s}_ENCA`, 'int', dev, 'A');
-      add(`${s}_ENCB`, 'in', dev, 'B');
+      if (motors.length === 2) add(`${s}_ENCB`, 'in', dev, 'B');
     }
   }
   if (sensors.includes('hcsr04')) {
@@ -122,7 +149,8 @@ export function pinDemands({ driver, encoders, sensors, bt }) {
 
 const pinCache = new Map();
 function pinsFor(mcu, spec) {
-  const key = [mcu.board, spec.driver?.scheme, spec.driver?.id, !!spec.encoders, spec.sensors.join(','), !!spec.bt].join('|');
+  const key = [mcu.board, spec.driver?.scheme, spec.driver?.id, !!spec.encoders, spec.sensors.join(','), !!spec.bt,
+    (spec.motors ?? ['L', 'R']).join(',')].join('|');
   if (!pinCache.has(key)) {
     const demands = pinDemands(spec);
     pinCache.set(key, { ...assignPins(mcu.board, demands), demands });
@@ -222,24 +250,31 @@ function armBom(a) {
 
 // ---------------------------------------------------------------- rover
 
-function roverSensors(req) {
+function roverSensors(req, kind) {
   const b = req.rover.behaviours;
   const s = [];
   if (b.includes('obstacle')) s.push('hcsr04');
-  if (b.includes('line')) s.push('line-5ch');
-  if (b.includes('odometry')) s.push('mpu6050');
+  if (b.includes('line') && kind !== 'balance') s.push('line-5ch');
+  // a balancing robot always needs the gyro and accelerometer to know which way it is falling
+  if (b.includes('odometry') || kind === 'balance') s.push('mpu6050');
   return s;
 }
+
+const DEG = Math.PI / 180;
+export const BALANCE_LEAN = 12; // degrees a balancing robot must be able to catch (a firm push)
 
 // Evaluate one rover combination. `arm` (optional) is a chosen arm candidate riding on top.
 function evalRover(c, req, arm, servoReg) {
   const R = req.rover;
   const { chassis, motor, wheel, driver, battery, reg, mcu } = c;
   const terr = P.TERRAIN[R.terrain];
+  const kind = driveKind(chassis, wheel);
+  const grd = P.ground(R.terrain, kind);
   const n = chassis.driven;
-  const perChannel = n / 2;
-  const units = driver.channels === 1 ? 2 : 1;
-  const sensors = roverSensors(req);
+  const motors = motorChannels(kind);
+  const perChannel = n / motors.length;
+  const units = motors.length / driver.channels;
+  const sensors = roverSensors(req, kind);
   const wireless = R.behaviours.includes('remote') || (arm && req.arm.wireless);
   const bt = wireless && !mcu.wifi;
   const encoders = !!motor.cpr;
@@ -247,7 +282,7 @@ function evalRover(c, req, arm, servoReg) {
 
   // logic rail
   let logicCurrent = mcu.current + driver.current * units + sensors.reduce((s, id) => s + part(id).current, 0)
-    + (encoders ? 0.02 : 0) + (bt ? part('hc05').current : 0) + (arm ? part('pca9685').current : 0);
+    + (encoders ? 0.01 * motors.length : 0) + (bt ? part('hc05').current : 0) + (arm ? part('pca9685').current : 0);
   const elecMass = mcu.mass + driver.mass * units + reg.mass + sensors.reduce((s, id) => s + part(id).mass, 0) + 0.08
     + (servoReg ? servoReg.mass : 0);
   const armLoad = arm ? arm.mass + req.arm.payload : 0;
@@ -261,26 +296,72 @@ function evalRover(c, req, arm, servoReg) {
     checks.push(flag('terrain-chassis', t('Chassis built for outdoor use'), chassis.terrain === 'outdoor'));
     checks.push(flag('terrain-wheel', t('Wheels with outdoor tread'), wheel.terrain === 'outdoor'));
   }
-  if (terr.minWheel) checks.push(ge('terrain-diameter', t('Wheel diameter for {surface}', { surface: t(terr.label).toLowerCase() }),
+  if (terr.minWheel && kind !== 'tracks') checks.push(ge('terrain-diameter', t('Wheel diameter for {surface}', { surface: t(terr.label).toLowerCase() }),
     wheel.diameter, terr.minWheel, 'm', { key: false }));
 
   const theta = (R.slope * Math.PI) / 180;
-  const sys = { motor, driver, battery, wheel, nMotors: n };
-  const Fc = P.tractiveForce(mass, terr.crr, theta);
-  const Fp = P.tractiveForce(mass, terr.crr, theta, R.accel);
+  const sys = { motor, driver, battery, wheel, nMotors: n, kind };
+  const Fc = P.tractiveForce(mass, grd.crr, theta);
+  const Fp = P.tractiveForce(mass, grd.crr, theta, R.accel);
   const cont = P.driveAt(sys, Fc, battery.vMin);
   const peak = P.driveAt(sys, Fp, battery.vMin);
-  const flat = P.driveAt(sys, P.tractiveForce(mass, terr.crr, 0), battery.vNom);
-  const drivenShare = n === 4 ? 1 : 0.75;
-  checks.push(le('traction', t('Force to climb and accelerate within tyre grip'), Fp,
-    terr.mu * mass * P.G * Math.cos(theta) * drivenShare, 'N',
-    { detail: t('grip μ {mu} on {pct} % of the weight', { mu: num(terr.mu, 1), pct: num(drivenShare * 100, 0) }) }));
+  const flat = P.driveAt(sys, P.tractiveForce(mass, grd.crr, 0), battery.vNom);
+  // the share of the weight on driven wheels: a caster carries a quarter; tracks and a balancing robot carry nothing else
+  const drivenShare = n === 4 || kind === 'tracks' || kind === 'balance' ? 1 : 0.75;
+  checks.push(le('traction', t(kind === 'tracks' ? 'Force to climb and accelerate within track grip' : 'Force to climb and accelerate within tyre grip'), Fp,
+    grd.mu * mass * P.G * Math.cos(theta) * drivenShare, 'N',
+    { detail: t('grip μ {mu} on {pct} % of the weight', { mu: num(grd.mu, 1), pct: num(drivenShare * 100, 0) }) }));
   checks.push(le('torque-cont', t('Motor torque on the slope ≤ 30 % of stall (continuous duty)'), cont.torque,
     0.3 * cont.stallTorque, 'N·m', { detail: t('at the battery\'s cut-off voltage, the worst case') }));
   checks.push(le('torque-peak', t('Motor torque accelerating up the slope ≤ 60 % of stall'), peak.torque,
     0.6 * peak.stallTorque, 'N·m'));
   checks.push(ge('speed', t('Top speed on the flat'), flat.speed, R.speed, 'm/s', { detail: t('nominal battery voltage') }));
   checks.push(ge('speed-slope', t('Still moves up the slope on an empty battery'), cont.speed, 0.1, 'm/s'));
+
+  // tracks: turning on the spot drags both tracks sideways over their whole contact length
+  let pivot = null;
+  if (kind === 'tracks') {
+    const Ft = P.pivotForce(mass, grd, chassis.contact, chassis.track);
+    pivot = P.driveAt(sys, Ft * n, battery.vMin);
+    checks.push(le('pivot-torque', t('Turning on the spot: torque per track ≤ 60 % of stall'), pivot.torque, 0.6 * pivot.stallTorque, 'N·m',
+      { detail: t('each track scrubs sideways along {mm} mm of ground; empty battery', { mm: num(chassis.contact * 1000, 0) }) }));
+    checks.push(le('pivot-grip', t('Turning on the spot: force within each track\'s grip'), Ft, (grd.mu * mass * P.G) / 2, 'N',
+      { detail: t('long, narrow tracks cannot turn on the spot') }));
+  }
+
+  // mecanum: driving sideways takes √2 times the force per wheel, along the rollers
+  let strafe = null;
+  if (kind === 'mecanum') {
+    const Fs = P.strafeWheelForce(mass, grd.crr, R.accel);
+    strafe = P.driveAt(sys, Fs * n, battery.vMin);
+    checks.push(le('strafe-torque', t('Starting sideways: wheel torque ≤ 60 % of stall'), strafe.torque, 0.6 * strafe.stallTorque, 'N·m',
+      { detail: t('each wheel pushes √2 times its share along its rollers; empty battery') }));
+    checks.push(le('strafe-grip', t('Starting sideways within the rollers\' grip'), Fs, (grd.mu * mass * P.G) / n, 'N'));
+    if (R.terrain === 'indoor-carpet') {
+      checks.push({ ...info('mecanum-carpet', t('Mecanum wheels on carpet'), t('the rollers sink into pile: sideways driving is slow and drifts')),
+        severity: 'warn', ok: false });
+    }
+  }
+
+  // balancing: the motors must catch a lean, and outrun the fall while driving
+  let balance = null;
+  if (kind === 'balance') {
+    const h = (chassis.comH * (mass - R.payload) + chassis.height * R.payload) / mass;
+    const r = wheel.diameter / 2;
+    const Ts = P.driveAt(sys, 0, battery.vMin).stallTorque;
+    const aMax = (n * 0.6 * Ts / r - grd.crr * mass * P.G) / mass;
+    const lean = P.recoverableLean(aMax);
+    const reserve = P.catchSpeed(h, BALANCE_LEAN * DEG);
+    balance = { h, aMax, lean, reserve };
+    checks.push(ge('bal-lean', t('Steepest lean the motors can catch (60 % of stall, empty battery)'), lean, BALANCE_LEAN, '°',
+      { detail: t('the wheels accelerate at g × tan(lean) to get back under the centre of mass') }));
+    checks.push(ge('bal-speed', t('Top speed with the reserve to catch a {deg}° lean', { deg: BALANCE_LEAN }), flat.speed, R.speed + reserve, 'm/s',
+      { detail: t('{v} m/s to drive + {c} m/s to catch the fall; centre of mass {mm} mm above the axle',
+        { v: num(R.speed, 2), c: num(reserve, 2), mm: num(h * 1000, 0) }) }));
+    if (R.behaviours.includes('line')) {
+      checks.push(flag('bal-line', t('Line following on a balancing robot'), false, t('the sensor tilts with the body; choose a rover for line following')));
+    }
+  }
 
   const capDuty = P.pwmLimit(motor, driver, battery);
   checks.push(ge('motor-voltage', t('Motor rating vs battery: firmware PWM cap'), capDuty, 0.4, '',
@@ -329,13 +410,13 @@ function evalRover(c, req, arm, servoReg) {
   const logicBatt = (5 * logicCurrent) / (0.85 * battery.vMin);
   const peakBatt = n * peak.current + logicBatt + armPeakBatt;
   checks.push(le('battery-current', t('Peak battery current ≤ battery discharge rating'), peakBatt, battery.iMax, 'A'));
-  const power = P.averagePower(sys, { mass, crr: terr.crr, cruise: 0.7 * flat.speed,
+  const power = P.averagePower(sys, { mass, crr: grd.crr, cruise: 0.7 * flat.speed,
     movingFraction: 0.6, logicCurrent }) + armAvgPower;
   const hours = P.runtimeHours(battery, power);
   checks.push(ge('runtime', t('Runtime (moving 60 % of the time at 70 % of top speed, with starts and turns)'), hours * 60,
     R.runtime, 'min'));
 
-  const pins = pinsFor(mcu, { driver, encoders, sensors, bt });
+  const pins = pinsFor(mcu, { driver, encoders, sensors, bt, motors });
   checks.push(flag('pins', t('Enough suitable pins on the {board}', { board: BOARDS[mcu.board].name }), pins.ok,
     pins.ok ? t('{n} pins left free', { n: pins.free })
       : t('missing: {list}', { list: pins.missing.map((m) => `${m.device} ${m.signal} (${m.need})`).join(', ') })));
@@ -345,8 +426,8 @@ function evalRover(c, req, arm, servoReg) {
   }
 
   return {
-    checks, mass, power, hours, peakBatt, logicCurrent, pins, sensors, bt, encoders, wireless,
-    perf: { cont, peak, flat, capDuty, n, perChannel, units, fuse: P.fuseFor(peakBatt) },
+    checks, mass, power, hours, peakBatt, logicCurrent, pins, sensors, bt, encoders, wireless, kind, motors,
+    perf: { cont, peak, flat, capDuty, n, perChannel, units, fuse: P.fuseFor(peakBatt), pivot, strafe, balance },
   };
 }
 
@@ -367,9 +448,14 @@ function roverMaxSlope(c, req, arm, servoReg) {
 function roverBom(c, ev, req) {
   const { chassis, motor, wheel, driver, battery, reg, mcu } = c;
   const n = chassis.driven;
+  const inc = chassis.includes ?? {};
+  const role = chassis.drive === 'tracks' ? (inc.motor ? t('Tracked chassis with motors') : t('Tracked chassis'))
+    : chassis.drive === 'balance' ? t('Balancing-robot frame')
+      : inc.motor ? t('Chassis kit with motors and wheels') : t('Chassis');
   const items = [
-    { id: chassis.id, qty: 1, role: chassis.includes ? t('Chassis kit with motors and wheels') : t('Chassis') },
-    ...(chassis.includes ? [] : [{ id: motor.id, qty: n, role: t('Drive motors') }, { id: wheel.id, qty: n, role: t('Wheels') }]),
+    { id: chassis.id, qty: 1, role },
+    ...(inc.motor ? [] : [{ id: motor.id, qty: n, role: t('Drive motors') }]),
+    ...(inc.wheel ? [] : [{ id: wheel.id, qty: n, role: wheel.kind === 'mecanum' ? t('Mecanum wheels') : t('Wheels') }]),
     { id: driver.id, qty: ev.perf.units, role: t('Motor driver') },
     ...(battery.kit
       ? battery.kit.map((k) => ({ id: k.id, qty: k.qty, kitOf: battery.id,
@@ -409,11 +495,18 @@ function commonBom(req, items, mcu) {
 // ---------------------------------------------------------------- enumeration
 
 function* roverCombos(U, req) {
-  const needEnc = req.rover.behaviours.includes('odometry');
+  const want = DRIVE_OF[req.type];
+  // measured moves and balancing both need encoders on the motors
+  const needEnc = req.rover.behaviours.includes('odometry') || want === 'balance';
   for (const chassis of U.chassis) {
-    // a kit comes with its own motors and wheels
-    const motors = chassis.includes ? [part(chassis.includes.motor)] : U.motors;
-    const wheels = chassis.includes ? [part(chassis.includes.wheel)] : U.wheels;
+    const drive = chassis.drive ?? 'wheels';
+    if (drive !== (want === 'mecanum' ? 'wheels' : want)) continue;
+    // mecanum needs four separately driven wheels, and wheels it can change
+    if (want === 'mecanum' && (chassis.driven !== 4 || chassis.includes?.wheel)) continue;
+    // a kit comes with its own motors and wheels (or tracks)
+    const motors = chassis.includes?.motor ? [part(chassis.includes.motor)] : U.motors;
+    const wheels = chassis.includes?.wheel ? [part(chassis.includes.wheel)]
+      : U.wheels.filter((w) => (w.kind === 'mecanum') === (want === 'mecanum'));
     for (const motor of motors) {
     if (motor.mount !== chassis.mount || (needEnc && !motor.cpr)) continue;
     for (const wheel of wheels) {
@@ -456,6 +549,9 @@ function buildArmDesign(a, power, mcu, req) {
 // The parts a proposal can swap one at a time, by robot type, and what each slot is called on the page.
 export const SWAP_SLOTS = {
   rover: ['chassis', 'motor', 'wheel', 'driver', 'battery', 'reg', 'mcu'],
+  tracked: ['chassis', 'motor', 'driver', 'battery', 'reg', 'mcu'],
+  mecanum: ['chassis', 'motor', 'wheel', 'driver', 'battery', 'reg', 'mcu'],
+  balance: ['chassis', 'motor', 'wheel', 'driver', 'battery', 'reg', 'mcu'],
   mobile: ['chassis', 'motor', 'wheel', 'driver', 'battery', 'reg', 'mcu', 'servoReg'],
   arm: ['shoulder', 'elbow', 'wrist', 'mcu', 'power'],
 };
@@ -616,7 +712,7 @@ export function feasibleDesigns(reqIn) {
 }
 
 function* designs(req, U) {
-  if (req.type === 'rover') {
+  if (drives(req.type) && req.type !== 'mobile') {
     for (const c of roverCombos(U, req)) yield roverDesign(c, req, null, null);
   } else if (req.type === 'arm') {
     const arms = armCandidates(req, U, (id) => refPrice(id, req.region, U.vendors, req.fx ?? FX, req.shopping));
@@ -671,7 +767,7 @@ function roverDesign(c, req, arm, servoReg) {
     reg: c.reg.id, mcu: c.mcu.id };
   if (arm) Object.assign(slots, { servoReg: servoReg.id, arm: [arm.frame.id, ...Object.values(arm.servos).map((x) => x.id)].join('/') });
   return {
-    key, slots, type: arm ? 'mobile' : 'rover', combo: c, arm, ev, items, checks,
+    key, slots, type: arm ? 'mobile' : req.type, combo: c, arm, ev, items, checks,
     parts: { ...c, servoReg, frame: arm?.frame, servos: arm?.servos },
     ok, robust: robustness(checks), pins: ev.pins, pinDemands: ev.pins.demands, bt: ev.bt, wireless: ev.wireless,
     board: c.mcu.board,
@@ -695,6 +791,11 @@ function specs(d, req) {
     s.peakCurrent = ev.peakBatt;
     s.fuse = ev.perf.fuse;
     s.pwmLimit = ev.perf.capDuty;
+    s.kind = ev.kind;
+    if (ev.perf.balance) {
+      s.lean = ev.perf.balance.lean;
+      s.comHeight = ev.perf.balance.h;
+    }
   }
   if (d.arm) {
     s.reach = d.arm.reach;
@@ -744,7 +845,7 @@ function explain(req, U, candidates) {
     search(['rover', 'slope'], 'Slope', '°', 'down');
     search(['rover', 'runtime'], 'Runtime', 'min', 'down');
   }
-  if (req.type !== 'rover') {
+  if (hasArm(req.type)) {
     search(['arm', 'payload'], 'Arm payload', 'g', 'down', 1000);
     search(['arm', 'reach'], 'Arm reach', 'mm', 'down', 1000);
   }
@@ -756,11 +857,17 @@ function explain(req, U, candidates) {
   for (const [k, what] of Object.entries(needs)) {
     if (!U[k].length) hints.push(t('No {what} is sold by the shops you allowed.', { what: t(what) }));
   }
+  // the parts only one robot type uses
+  const special = { tracked: [U.chassis.some((c) => c.drive === 'tracks'), 'tracked chassis'],
+    balance: [U.chassis.some((c) => c.drive === 'balance'), 'balancing-robot frame'],
+    mecanum: [U.wheels.some((w) => w.kind === 'mecanum'), 'mecanum wheel set'] }[req.type];
+  if (special && !special[0]) hints.push(t('No {what} is sold by the shops you allowed.', { what: t(special[1]) }));
+  if (req.type === 'balance' && !U.has('mpu6050')) hints.push(t('A balancing robot needs the MPU-6050 gyro, which has to be soldered or bought where it is sold.'));
   if (req.solder === 'no') hints.push(t('Allowing soldering opens up the breakout boards (TB6612, DRV8833, PCA9685, MPU-6050).'));
   if (req.shopping === 'checked') hints.push(t('Allowing estimated prices widens the parts range: many parts have a checked price at one shop only.'));
   else if (req.shopping !== 'cheapest') hints.push(t('Allowing all vendors (including AliExpress and Pololu) widens the parts range.'));
   if (req.controller !== 'auto') hints.push(t('Letting the app choose the controller can free pins.'));
   const printable = offersFor(part('arm-printed-5axis'), req.shopping).some((o) => U.vendors.includes(o.vendor));
-  if (!req.printer && req.type !== 'rover' && printable) hints.push(t('A 3D printer unlocks the printed 5-axis arm (longer reach, 0.5 kg rated).'));
+  if (!req.printer && hasArm(req.type) && printable) hints.push(t('A 3D printer unlocks the printed 5-axis arm (longer reach, 0.5 kg rated).'));
   return { blockers, nearest: nearestFails, relax, hints };
 }

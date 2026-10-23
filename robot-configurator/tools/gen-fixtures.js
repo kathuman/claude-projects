@@ -25,6 +25,14 @@ for (const behaviours of subsets) {
 for (const axes of [3, 4, 5]) for (const wireless of [false, true]) {
   requests.push({ region: 'DK', type: 'arm', printer: true, arm: { axes, wireless, reach: axes === 3 ? 0.15 : 0.25, payload: 0.02 } });
 }
+// tracked and mecanum rovers (mecanum: four driver channels, single-channel encoders) and balancing robots
+for (const behaviours of subsets) {
+  requests.push({ region: 'SE', type: 'tracked', rover: { behaviours, payload: 0.3, slope: 5, speed: 0.3, runtime: 30 } });
+  requests.push({ region: 'SE', type: 'mecanum', rover: { behaviours, payload: 0.3, slope: 0, speed: 0.3, runtime: 30 } });
+}
+for (const behaviours of [[], ['remote'], ['obstacle'], ['remote', 'odometry'], ['remote', 'obstacle', 'odometry']]) {
+  requests.push({ region: 'SE', type: 'balance', rover: { behaviours, payload: 0.1, slope: 0, speed: 0.3, runtime: 30 } });
+}
 for (const behaviours of [['remote'], ['obstacle', 'odometry']]) {
   requests.push({ region: 'NO', type: 'mobile', rover: { behaviours, payload: 0.2 }, arm: { axes: 4, reach: 0.25, payload: 0.05, wireless: true } });
 }

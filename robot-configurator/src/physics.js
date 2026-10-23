@@ -13,6 +13,42 @@ export const TERRAIN = {
   'outdoor-grass': { label: 'Grass and gravel', crr: 0.12, mu: 0.5, minWheel: 0.08, outdoor: true },
 };
 
+// Rubber tracks: more rolling loss than wheels on hard floors, a better grip on soft ground, and the whole weight on
+// the driven tracks. Mecanum rollers roll worse than a tyre, so their rolling resistance is doubled.
+export const TRACKS = {
+  'indoor-smooth': { crr: 0.05, mu: 0.8 },
+  'indoor-carpet': { crr: 0.08, mu: 0.8 },
+  'outdoor-paved': { crr: 0.06, mu: 0.8 },
+  'outdoor-grass': { crr: 0.09, mu: 0.7 },
+};
+export const mecanumCrr = (terrain) => 2 * terrain.crr;
+
+// The surface under a drive: rolling resistance and grip for wheels, tracks or mecanum rollers.
+export function ground(terrainId, kind) {
+  const terr = TERRAIN[terrainId];
+  if (kind === 'tracks') return { ...terr, ...TRACKS[terrainId] };
+  if (kind === 'mecanum') return { ...terr, crr: mecanumCrr(terr) };
+  return terr;
+}
+
+// Turning a tank on the spot: the tracks scrub sideways along their whole contact length. With the weight spread
+// evenly along a contact length L, the ground resists the turn with a moment μt·m·g·L/4, which the two tracks
+// (B apart, one pushing forward, one back) must overcome; each also rolls against crr·m·g/2. μt, the sideways
+// friction of a track, is taken as 0.75 of its grip. Returns the force each track must push with (N).
+export const pivotForce = (m, ground, contact, B) => 0.75 * ground.mu * m * G * contact / (4 * B) + ground.crr * m * G / 2;
+
+// Driving sideways on mecanum wheels (rollers at 45°): each wheel's force acts along its rollers, so to push the body
+// sideways with force F every one of the four wheels pushes F·√2/4 along its rim.
+export const strafeWheelForce = (m, crr, a) => (Math.SQRT2 * m * (crr * G + a)) / 4;
+
+// A balancing robot holds a lean θ by accelerating its wheels at g·tan θ under the centre of mass; the largest
+// acceleration the motors give is therefore the steepest lean it can still catch (degrees).
+export const recoverableLean = (aMax) => (Math.atan(Math.max(0, aMax) / G) * 180) / Math.PI;
+
+// To catch a lean θ (rad) the wheels must also outrun the falling body: a pendulum with its centre of mass h above
+// the axle falls at speeds of order θ·√(g·h), which the wheels need on top of the driving speed.
+export const catchSpeed = (h, theta) => theta * Math.sqrt(G * h);
+
 // Motor at applied voltage V (linear in V): the no-load speed and the stall torque scale with V; the current rises
 // along the torque line from the no-load current to the stall current, independent of V.
 export function motorAt(motor, V) {
@@ -69,10 +105,12 @@ export function driveAt({ motor, driver, battery, wheel, nMotors }, force, Vb) {
 // Average battery power for a duty cycle: the robot moves `movingFraction` of the time at `cruise` m/s on the flat,
 // and the electronics draw `logicCurrent` from a 5 V rail through a buck of efficiency `eff`. Straight rolling is
 // the easy part of real driving; starts, stops and turns (scrubbing tyres sideways, worst on skid steer) multiply the
-// drive power by `turnFactor`: 1.5 for differential drive with a caster, 2.5 for four-wheel skid steer.
-export const turnFactor = (nMotors) => (nMotors === 4 ? 2.5 : 1.5);
+// drive power by `turnFactor`: 1.5 for differential drive with a caster, a balancing robot, or mecanum wheels (whose
+// rollers turn without scrubbing), 2.5 for four-wheel skid steer, 3 for tracks (the whole contact length scrubs).
+export const turnFactor = (nMotors, kind = 'wheels') =>
+  (kind === 'tracks' ? 3 : kind === 'mecanum' || kind === 'balance' ? 1.5 : nMotors === 4 ? 2.5 : 1.5);
 
-export function averagePower({ motor, driver, battery, wheel, nMotors }, { mass, crr, cruise, movingFraction,
+export function averagePower({ motor, driver, battery, wheel, nMotors, kind }, { mass, crr, cruise, movingFraction,
   logicCurrent, eff = 0.85 }) {
   const r = wheel.diameter / 2;
   const torque = (tractiveForce(mass, crr, 0) * r) / nMotors;
@@ -80,7 +118,7 @@ export function averagePower({ motor, driver, battery, wheel, nMotors }, { mass,
   const Vm = motorVoltageFor(motor, cruise / r, torque);
   // the bridge loses its drop at the motor current; the battery supplies the motor's power plus that loss
   const drivePower = nMotors * (Vm + driverDrop(driver, I)) * I;
-  return movingFraction * turnFactor(nMotors) * drivePower + (5 * logicCurrent) / eff;
+  return movingFraction * turnFactor(nMotors, kind) * drivePower + (5 * logicCurrent) / eff;
 }
 
 // Runtime in hours from a battery (80 % of the rated capacity is usable) at an average power.

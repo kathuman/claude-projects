@@ -31,7 +31,8 @@ export function validateChecks(checks = CHECKS, today = new Date()) {
       if (!c.listed) errors.push(`${at}: listed (the shop's product name) is missing`);
     }
   }
-  for (const p of PARTS) if (!p.offers.length && !p.kit) errors.push(`${p.id}: no offer left`);
+  // a pack you assemble is bought as its kit, and tracks come with their chassis
+  for (const p of PARTS) if (!p.offers.length && !p.kit && !p.partOf) errors.push(`${p.id}: no offer left`);
   return errors;
 }
 
