@@ -34,6 +34,14 @@ export function buildGuide(design, req) {
       t('Set the charger to LiPo, the right cell count and at most 1C (the capacity in amps).'),
       t('Never charge a puffed or damaged pack. Store it at about 3.8 V per cell when not in use.'),
     ], { warn: t('LiPo cells can catch fire if over-charged, short-circuited or punctured.') });
+  } else if (p.battery?.kit) {
+    const cells = p.battery.kit.find((k) => part(k.id).cat === 'cell').qty;
+    step(t('Charge the cells and assemble the battery'), 30 + 60 * Math.ceil(cells / 2), [
+      t('Charge the {n} cells in the cell charger, two at a time, until each shows full.', { n: cells }),
+      t('Insert the cells as the markings in the holder show, each + end at a + mark. A cell the wrong way round works against the others and can overheat.'),
+      t('With the multimeter, measure the holder\'s output: {lo}–{hi} V. Much less means a cell is the wrong way round.', { lo: num(p.battery.vMin + 0.6, 1), hi: num(p.battery.vMax, 1) }),
+    ], { warn: t('Use only protected cells, and take them out to charge: the holder has no charging or balancing circuit.'),
+      check: t('The holder reads between {lo} and {hi} V.', { lo: num(p.battery.vMin + 0.6, 1), hi: num(p.battery.vMax, 1) }) });
   } else if (p.battery) {
     step(t('Charge the battery'), 60, [t('Charge the {battery} with its charger while you build.', { battery: p.battery.name.split(',')[0] })]);
   }
@@ -54,7 +62,8 @@ export function buildGuide(design, req) {
   }
 
   // regulators first: an unset buck converter can put its full input on the controller
-  const regs = [p.reg && { r: p.reg, v: num(5, 1) }, p.servoReg && { r: p.servoReg, v: num(6, 1) }].filter(Boolean);
+  // fixed-output regulators have nothing to set
+  const regs = [p.reg && { r: p.reg, v: num(5, 1) }, p.servoReg && { r: p.servoReg, v: num(6, 1) }].filter((x) => x && !x.r.fixed);
   if (regs.length) {
     step(t('Set the regulator output voltages before connecting anything'), 15, regs.map(({ r, v }) =>
       t(p.battery ? '{reg}: connect only the battery to IN+/IN−, measure OUT+/OUT− with the multimeter and turn the trim screw until it reads {v} V.'

@@ -22,7 +22,7 @@ test('ids are unique and every part has a name, mass, solder flag and offers', (
     assert.ok(!ids.has(p.id), `duplicate ${p.id}`);
     ids.add(p.id);
     assert.ok(p.name && typeof p.mass === 'number' && typeof p.solder === 'boolean', p.id);
-    assert.ok(p.offers.length > 0, `${p.id} has no offer`);
+    assert.ok(p.offers.length > 0 || p.kit?.every((k) => PARTS.some((x) => x.id === k.id)), `${p.id} has no offer`);
     for (const k of REQUIRED[p.cat] ?? []) assert.ok(p[k] !== undefined, `${p.id} lacks ${k}`);
     assert.ok(p.cat in EU_DUTY, `${p.id}: no duty rate for ${p.cat}`);
   }
@@ -57,7 +57,7 @@ test('Norway is served by VOEC or import modes only, never EU distance selling',
 test('physical sanity of the specs', () => {
   for (const m of catalog.motors) assert.ok(m.stallCurrent > m.noLoadCurrent && m.stallTorque > 0);
   for (const b of catalog.batteries) assert.ok(b.vMin < b.vNom && b.vNom < b.vMax);
-  for (const r of catalog.regulators) assert.ok(r.vInMin < r.vInMax && r.out[0] < r.out[1] && r.eff < 1);
+  for (const r of catalog.regulators) assert.ok(r.vInMin < r.vInMax && (r.out[0] < r.out[1] || (r.fixed && r.out[0] === r.out[1])) && r.eff < 1, r.id);
   for (const s of catalog.servos) assert.ok(s.t60 >= s.t48);
   for (const m of catalog.mcus) assert.ok(BOARDS[m.board], m.id);
   for (const b of catalog.batteries) assert.ok(PARTS.some((p) => p.id === b.charger), b.id);
@@ -66,4 +66,20 @@ test('physical sanity of the specs', () => {
     assert.ok(catalog.chassis.some((c) => c.mount === m.mount), m.id);
     assert.ok(catalog.wheels.some((w) => w.shaft.includes(m.shaft)), m.id);
   }
+});
+
+test('every price check is well formed, and every offer is checked (with a link and a date) or an estimate', async () => {
+  const { validateChecks } = await import('../tools/check-catalog.mjs');
+  assert.deepEqual(validateChecks(), []);
+  for (const p of PARTS) for (const o of p.offers) {
+    assert.ok(['checked', 'estimate'].includes(o.status), `${p.id}@${o.vendor}`);
+    if (o.status === 'checked') assert.ok(o.url && o.checked, `${p.id}@${o.vendor}`);
+  }
+  const bad = validateChecks({ tb6612: { electrokit: { price: 0, checked: '2999-01-01' }, nowhere: { gone: true, checked: 'x' } } });
+  assert.ok(bad.some((e) => /future/.test(e)) && bad.some((e) => /positive/.test(e)) && bad.some((e) => /no such vendor/.test(e))
+    && bad.some((e) => /YYYY-MM-DD/.test(e)) && bad.some((e) => /note/.test(e)));
+});
+
+test('every vendor can be searched, so an estimate always links somewhere', () => {
+  for (const [id, v] of Object.entries(VENDORS)) assert.match(v.search ?? '', /^https:\/\/.+\{q\}/, id);
 });

@@ -1,13 +1,16 @@
 // The parts catalog, the vendors that sell them in Denmark, Sweden and Norway, and the tax rules of those markets.
 //
-// Every price is an indicative listing compiled for planning on CATALOG_DATE: it is what the part typically sells for
-// at that vendor, not a quote. Vendor coverage, shipping fees and free-shipping thresholds are modelled from the
+// Prices come in two kinds. A checked price was read on the shop's own product page on a given day (src/prices.js
+// holds those checks, with the link and the date). Any other price is an estimate compiled for planning on
+// CATALOG_DATE: what the part typically sells for at that vendor, not a quote. Vendor coverage, shipping fees and free-shipping thresholds are modelled from the
 // vendors' published terms at that date and change without notice; the app tells the user to confirm before ordering.
 // Specifications are typical datasheet or seller values for the generic part; clones vary, which is why the checks keep
 // safety margins rather than designing to the number.
 //
 // Units: SI throughout (kg, m, N·m, A, V). Prices are in the vendor's currency; `inclVat` says whether the listed price
 // already includes the vendor's home VAT (Nordic consumer shops) or not (distributors, marketplaces).
+
+import { CHECKS, SEARCH_TERMS } from './prices.js';
 
 export const CATALOG_DATE = '2026-10-22';
 
@@ -43,7 +46,7 @@ export const REGIONS = {
 // non-EU consignments above €150 that were not taxed at checkout. Norway: 0 % for all of these.
 export const EU_DUTY = {
   mcu: 0, driver: 0, sensor: 0, servo: 0.027, motor: 0.027, battery: 0.027, charger: 0.033, regulator: 0.033,
-  psu: 0.033, chassis: 0.06, frame: 0.06, wheel: 0.035, misc: 0.03, tool: 0.03,
+  psu: 0.033, chassis: 0.06, frame: 0.06, wheel: 0.035, misc: 0.03, tool: 0.03, cell: 0.027,
 };
 
 // Shipping modes per destination:
@@ -55,7 +58,7 @@ export const EU_DUTY = {
 //   import   — taxes and the carrier's clearance fee are paid on arrival.
 export const VENDORS = {
   electrokit: {
-    name: 'Electrokit', url: 'https://www.electrokit.com', origin: 'SE', currency: 'SEK', inclVat: true, vat: 0.25,
+    name: 'Electrokit', url: 'https://www.electrokit.com', search: 'https://www.electrokit.com/?s={q}&post_type=product', origin: 'SE', currency: 'SEK', inclVat: true, vat: 0.25,
     ship: {
       SE: { mode: 'domestic', fee: 59, freeOver: null, days: [1, 3] },
       DK: { mode: 'eu', fee: 119, freeOver: null, days: [2, 5] },
@@ -63,19 +66,19 @@ export const VENDORS = {
     },
   },
   'kjell-se': {
-    name: 'Kjell & Company (SE)', url: 'https://www.kjell.com/se', origin: 'SE', currency: 'SEK', inclVat: true, vat: 0.25,
+    name: 'Kjell & Company (SE)', url: 'https://www.kjell.com/se', search: 'https://www.kjell.com/se/sok?query={q}', origin: 'SE', currency: 'SEK', inclVat: true, vat: 0.25,
     ship: { SE: { mode: 'domestic', fee: 49, freeOver: 499, days: [1, 3] } },
   },
   'kjell-no': {
-    name: 'Kjell & Company (NO)', url: 'https://www.kjell.com/no', origin: 'NO', currency: 'NOK', inclVat: true, vat: 0.25,
+    name: 'Kjell & Company (NO)', url: 'https://www.kjell.com/no', search: 'https://www.kjell.com/no/sok?query={q}', origin: 'NO', currency: 'NOK', inclVat: true, vat: 0.25,
     ship: { NO: { mode: 'domestic', fee: 69, freeOver: 599, days: [1, 3] } },
   },
   let: {
-    name: 'Let Elektronik', url: 'https://www.let-elektronik.dk', origin: 'DK', currency: 'DKK', inclVat: true, vat: 0.25,
+    name: 'Let Elektronik', url: 'https://let-elektronik.dk', search: 'https://let-elektronik.dk/search?q={q}', origin: 'DK', currency: 'DKK', inclVat: true, vat: 0.25,
     ship: { DK: { mode: 'domestic', fee: 49, freeOver: null, days: [1, 3] } },
   },
   mouser: {
-    name: 'Mouser Electronics', url: 'https://www.mouser.com', origin: 'US', currency: 'EUR', inclVat: false, vat: 0,
+    name: 'Mouser Electronics', url: 'https://www.mouser.com', search: 'https://www.mouser.com/c/?q={q}', origin: 'US', currency: 'EUR', inclVat: false, vat: 0,
     ship: {
       DK: { mode: 'ddp', fee: 20, freeOver: 50, days: [2, 4] },
       SE: { mode: 'ddp', fee: 20, freeOver: 50, days: [2, 4] },
@@ -83,15 +86,22 @@ export const VENDORS = {
     },
   },
   ali: {
-    name: 'AliExpress', url: 'https://www.aliexpress.com', origin: 'CN', currency: 'EUR', inclVat: false, vat: 0,
+    name: 'AliExpress', url: 'https://www.aliexpress.com', search: 'https://www.aliexpress.com/wholesale?SearchText={q}', origin: 'CN', currency: 'EUR', inclVat: false, vat: 0,
     ship: {
       DK: { mode: 'ioss', fee: 2, freeOver: 10, days: [8, 20] },
       SE: { mode: 'ioss', fee: 2, freeOver: 10, days: [8, 20] },
       NO: { mode: 'voec', fee: 2, freeOver: 10, days: [8, 22] },
     },
   },
+  // RC-hobby shop for LiPo packs and their chargers. It will not send lithium batteries outside the EU and states no
+  // Danish shipping fee, so it is modelled for Sweden only. Shipping is at cost, capped at 89 kr within Sweden.
+  mbs: {
+    name: 'MBS RC Models', url: 'https://mbs-rcmodels.se', search: 'https://mbs-rcmodels.se/?s={q}&post_type=product',
+    origin: 'SE', currency: 'SEK', inclVat: true, vat: 0.25,
+    ship: { SE: { mode: 'domestic', fee: 89, freeOver: null, days: [1, 3] } },
+  },
   pololu: {
-    name: 'Pololu', url: 'https://www.pololu.com', origin: 'US', currency: 'USD', inclVat: false, vat: 0,
+    name: 'Pololu', url: 'https://www.pololu.com', search: 'https://www.pololu.com/search?query={q}', origin: 'US', currency: 'USD', inclVat: false, vat: 0,
     ship: {
       DK: { mode: 'import', fee: 22, freeOver: null, days: [5, 12] },
       SE: { mode: 'import', fee: 22, freeOver: null, days: [5, 12] },
@@ -179,7 +189,15 @@ const WHEELS = [
 
 // Chassis: mounts accept that motor mount; driven = driven wheels (2 = differential drive + caster, 4 = skid steer).
 // length/track: support polygon used for the tipping check.
+// Kits that come with their motors and wheels: `includes` names the parts they bring, which are then not bought
+// separately (their mass and specs still count).
 const CHASSIS = [
+  { id: 'kit-2wd-olimex', cat: 'chassis', name: '2WD acrylic robot kit with 2 TT gearmotors and 65 mm wheels (Olimex)', mount: 'tt',
+    driven: 2, maxLoad: 1.0, mass: 0.18, length: 0.20, track: 0.15, terrain: 'indoor', solder: false,
+    includes: { motor: 'tt-dc', wheel: 'wheel-tt-65' }, offers: offers({ electrokit: 199 }) },
+  { id: 'kit-4wd-joyit', cat: 'chassis', name: '4WD acrylic robot kit with 4 gearmotors and 65 mm wheels (Joy-It Robot03)', mount: 'tt',
+    driven: 4, maxLoad: 1.5, mass: 0.30, length: 0.28, track: 0.156, terrain: 'indoor', solder: false,
+    includes: { motor: 'tt-dc', wheel: 'wheel-tt-65' }, offers: offers({ electrokit: 249 }) },
   { id: 'chassis-2wd-acrylic', cat: 'chassis', name: '2WD acrylic robot chassis (TT mounts, ball caster)', mount: 'tt',
     driven: 2, maxLoad: 1.0, mass: 0.18, length: 0.20, track: 0.15, terrain: 'indoor', solder: false,
     offers: offers({ ali: 4.5, electrokit: 129, let: 99 }) },
@@ -204,30 +222,52 @@ const BATTERIES = [
     offers: offers({ 'kjell-se': 279, 'kjell-no': 349, electrokit: 259, let: 199 }) },
   { id: 'batt-2s-18650', cat: 'battery', name: '2S 18650 Li-ion pack, 3000 mAh, with BMS (7.4 V)', chem: 'liion',
     vNom: 7.4, vMax: 8.4, vMin: 6.0, capacity: 3.0, iMax: 8, mass: 0.11, charger: 'chg-2s', solder: false,
-    offers: offers({ electrokit: 239, let: 199, 'kjell-se': 299, 'kjell-no': 379 }) },
+    offers: offers({ electrokit: 239, let: 199, 'kjell-se': 299, 'kjell-no': 379, ali: 12 }) },
   { id: 'batt-3s-18650', cat: 'battery', name: '3S 18650 Li-ion pack, 3000 mAh, with BMS (11.1 V)', chem: 'liion',
     vNom: 11.1, vMax: 12.6, vMin: 9.0, capacity: 3.0, iMax: 8, mass: 0.16, charger: 'chg-3s', solder: false,
-    offers: offers({ electrokit: 339, let: 279, 'kjell-se': 429, 'kjell-no': 529 }) },
+    offers: offers({ electrokit: 339, let: 279, 'kjell-se': 429, 'kjell-no': 529, ali: 16 }) },
   { id: 'batt-2s-lipo-2200', cat: 'battery', name: '2S LiPo 2200 mAh 25C, XT60 (7.4 V)', chem: 'lipo', vNom: 7.4,
     vMax: 8.4, vMin: 6.6, capacity: 2.2, iMax: 40, mass: 0.12, charger: 'chg-lipo', solder: false,
-    offers: offers({ electrokit: 229, let: 189 }) },
+    offers: offers({ electrokit: 229, let: 189, ali: 15 }) },
   { id: 'batt-3s-lipo-2200', cat: 'battery', name: '3S LiPo 2200 mAh 25C, XT60 (11.1 V)', chem: 'lipo', vNom: 11.1,
     vMax: 12.6, vMin: 9.9, capacity: 2.2, iMax: 40, mass: 0.18, charger: 'chg-lipo', solder: false,
-    offers: offers({ electrokit: 299, let: 239 }) },
+    offers: offers({ electrokit: 299, let: 239, ali: 19 }) },
   { id: 'batt-3s-lipo-5000', cat: 'battery', name: '3S LiPo 5000 mAh 30C, XT60 (11.1 V)', chem: 'lipo', vNom: 11.1,
     vMax: 12.6, vMin: 9.9, capacity: 5.0, iMax: 80, mass: 0.38, charger: 'chg-lipo', solder: false,
-    offers: offers({ electrokit: 549, let: 449 }) },
+    offers: offers({ electrokit: 549, let: 449, ali: 36 }) },
+];
+
+// Packs you assemble from what the Nordic shops sell: a holder with the cells in series and protected 18650 cells,
+// charged as loose cells. `kit` lists what is bought; the pack itself has no offer. iMax is the holder's spring
+// contacts (about 5 A), below the cells' 10 A.
+const PACKS = [
+  { id: 'pack-2s-18650', cat: 'battery', name: '2S 18650 pack you assemble, holder + 2 protected cells (7.2 V)', chem: 'liion',
+    vNom: 7.2, vMax: 8.4, vMin: 6.0, capacity: 3.3, iMax: 5, mass: 0.12, charger: 'chg-18650-cells', solder: false,
+    kit: [{ id: 'holder-2x18650', qty: 1 }, { id: 'cell-18650-prot', qty: 2 }], offers: [] },
+  { id: 'pack-3s-18650', cat: 'battery', name: '3S 18650 pack you assemble, holder + 3 protected cells (10.8 V)', chem: 'liion',
+    vNom: 10.8, vMax: 12.6, vMin: 9.0, capacity: 3.3, iMax: 5, mass: 0.18, charger: 'chg-18650-cells', solder: false,
+    kit: [{ id: 'holder-3x18650', qty: 1 }, { id: 'cell-18650-prot', qty: 3 }], offers: [] },
+];
+const CELLS = [
+  { id: 'cell-18650-prot', cat: 'cell', name: 'Protected 18650 Li-ion cell, 3300 mAh, 10 A', mass: 0.047, solder: false,
+    offers: offers({ electrokit: 129, ali: 3.5 }) },
+  { id: 'holder-2x18650', cat: 'misc', name: '2×18650 holder, cells in series (7.4 V)', mass: 0.025, solder: false,
+    offers: offers({ electrokit: 25, let: 23, ali: 1.2 }) },
+  { id: 'holder-3x18650', cat: 'misc', name: '3×18650 holder, cells in series (11.1 V)', mass: 0.035, solder: false,
+    offers: offers({ let: 30, ali: 1.6 }) },
 ];
 
 const CHARGERS = [
+  { id: 'chg-18650-cells', cat: 'charger', name: 'Charger for loose 18650 cells, 2 slots (USB)', mass: 0, solder: false,
+    offers: offers({ electrokit: 79, ali: 4 }) },
   { id: 'chg-nimh', cat: 'charger', name: 'Smart NiMH charger for AA cells', mass: 0, solder: false,
     offers: offers({ 'kjell-se': 249, 'kjell-no': 299, electrokit: 229, let: 179 }) },
   { id: 'chg-2s', cat: 'charger', name: '2S Li-ion charger 8.4 V 1 A (mains adapter)', mass: 0, solder: false,
     offers: offers({ electrokit: 129, let: 99 }) },
   { id: 'chg-3s', cat: 'charger', name: '3S Li-ion charger 12.6 V 1 A (mains adapter)', mass: 0, solder: false,
-    offers: offers({ electrokit: 149, let: 119 }) },
+    offers: offers({ electrokit: 149, let: 119, ali: 7 }) },
   { id: 'chg-lipo', cat: 'charger', name: 'LiPo balance charger 2–6S with power supply', mass: 0, solder: false,
-    offers: offers({ electrokit: 449, let: 349 }) },
+    offers: offers({ electrokit: 449, let: 349, ali: 32 }) },
   { id: 'lipo-bag', cat: 'misc', name: 'LiPo safety bag (charge and store in it)', mass: 0, solder: false,
     offers: offers({ electrokit: 99, let: 79, ali: 3.5 }) },
 ];
@@ -246,6 +286,10 @@ const REGULATORS = [
   { id: 'buck-xl4016', cat: 'regulator', name: 'XL4016 buck converter, 8 A, screw terminals', vInMin: 8, vInMax: 40,
     dropout: 1.5, iCont: 8.0, out: [1.25, 36], eff: 0.9, mass: 0.045, solder: false,
     offers: offers({ ali: 6.5, electrokit: 179 }) },
+  // buck-boost: makes 5 V from anything between 2.8 and 22 V, so an empty 2S pack is no problem; fixed output
+  { id: 'reg-s13v30f5', cat: 'regulator', name: 'Pololu S13V30F5 5 V buck-boost regulator, 2.8–22 V in (2 A)', vInMin: 2.8,
+    vInMax: 22, dropout: 0, iCont: 2.0, out: [5, 5], eff: 0.85, mass: 0.004, solder: true, fixed: true,
+    offers: offers({ electrokit: 189 }) },
   { id: 'ubec-5a', cat: 'regulator', name: 'UBEC switching regulator 5/6 V, 5 A', vInMin: 7, vInMax: 26, dropout: 1.0,
     iCont: 5.0, out: [5, 6], eff: 0.88, mass: 0.015, solder: false,
     offers: offers({ ali: 4.0, let: 99 }) },
@@ -254,7 +298,7 @@ const REGULATORS = [
 // Enclosed desktop power adapters (CE-marked, EU plug) for stationary arms. No mains wiring by the user.
 const PSUS = [
   { id: 'psu-6v-5a', cat: 'psu', name: '6 V 5 A desktop power adapter (EU plug, 5.5 × 2.1 mm)', vOut: 6, iCont: 5,
-    mass: 0, solder: false, offers: offers({ electrokit: 249, let: 199, 'kjell-se': 299, 'kjell-no': 349 }) },
+    mass: 0, solder: false, offers: offers({ electrokit: 249, let: 199, 'kjell-se': 299, 'kjell-no': 349, ali: 11 }) },
   { id: 'psu-12v-5a', cat: 'psu', name: '12 V 5 A desktop power adapter (EU plug, 5.5 × 2.1 mm)', vOut: 12, iCont: 5,
     mass: 0, solder: false, offers: offers({ electrokit: 229, let: 179, 'kjell-se': 249, 'kjell-no': 299 }) },
   { id: 'dc-jack-terminal', cat: 'misc', name: 'DC barrel jack to screw terminal adapter', mass: 0, solder: false,
@@ -346,9 +390,26 @@ const TOOLS = [
 ];
 
 export const PARTS = [
-  ...MCUS, ...DRIVERS, ...MOTORS, ...WHEELS, ...CHASSIS, ...BATTERIES, ...CHARGERS, ...REGULATORS, ...PSUS,
+  ...MCUS, ...DRIVERS, ...MOTORS, ...WHEELS, ...CHASSIS, ...BATTERIES, ...PACKS, ...CELLS, ...CHARGERS, ...REGULATORS, ...PSUS,
   ...SENSORS, ...SERVOS, ...FRAMES, ...MISC, ...TOOLS,
 ];
+
+// Apply the price checks: a checked price replaces the estimate, a shop that does not sell the part loses the offer,
+// and a shop found selling it is added. Every offer ends up `checked` (url + date) or an `estimate`.
+for (const p of PARTS) {
+  const c = CHECKS[p.id] ?? {};
+  p.query = SEARCH_TERMS[p.id] ?? p.name;
+  p.dropped = p.offers.filter((o) => c[o.vendor]?.gone).map((o) => ({ vendor: o.vendor, ...c[o.vendor] }));
+  p.offers = p.offers.filter((o) => !c[o.vendor]?.gone)
+    .map((o) => (c[o.vendor] ? { vendor: o.vendor, ...c[o.vendor], status: 'checked' } : { ...o, status: 'estimate' }));
+  for (const [vendor, x] of Object.entries(c)) {
+    if (x.adds && !p.offers.some((o) => o.vendor === vendor)) p.offers.push({ vendor, ...x, status: 'checked' });
+  }
+  for (const o of p.offers) delete o.adds;
+}
+
+// Where an offer can be seen: its product page when it was checked, otherwise a search for the part at that shop.
+export const offerUrl = (p, o) => o.url ?? VENDORS[o.vendor].search.replace('{q}', encodeURIComponent(p.query));
 
 const BY_ID = new Map(PARTS.map((p) => [p.id, p]));
 export function part(id) {
@@ -359,7 +420,7 @@ export function part(id) {
 
 export const byCat = (cat) => PARTS.filter((p) => p.cat === cat);
 export const catalog = {
-  mcus: MCUS, drivers: DRIVERS, motors: MOTORS, wheels: WHEELS, chassis: CHASSIS, batteries: BATTERIES,
+  mcus: MCUS, drivers: DRIVERS, motors: MOTORS, wheels: WHEELS, chassis: CHASSIS, batteries: [...BATTERIES, ...PACKS],
   chargers: CHARGERS, regulators: REGULATORS, psus: PSUS, sensors: SENSORS, servos: SERVOS, frames: FRAMES,
   misc: MISC, tools: TOOLS,
 };

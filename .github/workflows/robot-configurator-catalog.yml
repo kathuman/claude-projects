@@ -1,0 +1,30 @@
+name: Robot Configurator catalog check
+
+# Weekly, and whenever the catalog changes: every price record well formed, how much of each vendor's range has been
+# checked at the shop and how recently, and whether every product page and vendor search still answers. The report is
+# the job summary; a malformed record fails the job, a broken link is listed for a person to look at.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  push:
+    paths:
+      - 'robot-configurator/src/catalog.js'
+      - 'robot-configurator/src/prices.js'
+      - '.github/workflows/robot-configurator-catalog.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: robot-configurator
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the price records and follow every link
+        run: node tools/check-catalog.mjs --links

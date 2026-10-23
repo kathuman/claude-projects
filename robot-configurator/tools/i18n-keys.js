@@ -75,6 +75,8 @@ export function allKeys() {
   add(['red', 'black', 'blue', 'yellow', 'jumper']); // wire colours
   add(['Power', 'Motors', 'Servos', 'Signals']); // wiring groups
   add(['Payload', 'Top speed', 'Slope', 'Runtime', 'Arm payload', 'Arm reach']); // explain(): relaxed requirements
+  add(['arm frame', 'servo', 'chassis', 'battery (with a charger you can buy)', 'motor driver', '5 V regulator', 'controller',
+    '6 V servo regulator']); // explain(): kinds of part no allowed shop sells
   add([...new Set(PARTS.filter((p) => p.cat === 'frame').flatMap((p) => p.joints)), 'gripper']); // joint names
   add(['Remove the 5V-EN jumper and the ENA/ENB jumpers; the enable pins take PWM from the controller.']); // wiring.js
   keys.delete('');

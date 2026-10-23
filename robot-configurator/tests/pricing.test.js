@@ -12,11 +12,11 @@ test('currency conversion through EUR', () => {
 });
 
 test('a domestic shop: the listed price already holds the VAT', () => {
-  // Electrokit in Sweden: 259 SEK incl. 25 % VAT, 59 SEK shipping incl. VAT
-  const c = consignment('electrokit', [{ id: 'batt-6aa-nimh', qty: 1 }], 'SE');
+  // Electrokit in Sweden: the NiMH charger at 229 SEK incl. 25 % VAT, 59 SEK shipping incl. VAT
+  const c = consignment('electrokit', [{ id: 'chg-nimh', qty: 1 }], 'SE');
   assert.equal(c.mode, 'domestic');
-  near(c.total, 259 + 59);
-  near(c.vat, (259 + 59) * 0.2);
+  near(c.total, 229 + 59);
+  near(c.vat, (229 + 59) * 0.2);
   assert.equal(c.fees, 0);
 });
 
@@ -90,4 +90,17 @@ test('shopping preferences restrict the vendors', () => {
   const plan = priceOrder([{ id: 'jgb37-30-enc', qty: 2 }], 'SE', { shopping: 'local' });
   assert.equal(plan.ok, false);
   assert.deepEqual(plan.missing, ['jgb37-30-enc']);
+});
+
+test('packs are bought whole, and a single item can be a share of a set', async () => {
+  const { itemsFor, freshness } = await import('../src/pricing.js');
+  assert.equal(itemsFor(2, 2), 1);
+  assert.equal(itemsFor(3, 2), 2);
+  assert.equal(itemsFor(1, 0.2), 5);
+  const c = consignment('electrokit', [{ id: 'wheel-tt-65', qty: 2 }], 'SE');
+  near(c.goodsNet * 1.25, 79); // one 2-pack
+  const today = new Date('2026-12-01T00:00:00Z');
+  assert.equal(freshness({ status: 'checked', checked: '2026-10-23' }, today).kind, 'checked');
+  assert.equal(freshness({ status: 'checked', checked: '2026-08-01' }, today).kind, 'stale');
+  assert.equal(freshness({ status: 'estimate' }, today).kind, 'estimate');
 });

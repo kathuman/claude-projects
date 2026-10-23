@@ -154,6 +154,9 @@ table.cmp td.num { white-space: normal; min-width: 150px; }
 .swap td { border-bottom-style: dotted; }
 .swap .no { color: var(--faint); }
 .swap button { white-space: nowrap; }
+.ptag { display: inline-block; font: 10.5px var(--mono); padding: 0 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--faint); vertical-align: 1px; }
+.ptag.checked { color: var(--ok); border-color: var(--ok); }
+.ptag.stale, .ptag.est { color: var(--warn); border-color: var(--warn); }
 .delta-up { color: var(--warn); }
 .delta-down { color: var(--ok); }
 

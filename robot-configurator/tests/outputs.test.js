@@ -81,13 +81,15 @@ test('the wiring table covers every assigned pin and the dividers the levels nee
   }
 });
 
-test('the build guide sets the regulators before anything is connected, and adds up its time', () => {
+test('the build guide sets any adjustable regulator before anything is connected, and adds up its time', () => {
   for (const { d, req } of designs) {
     const g = buildGuide(d, req);
     const titles = g.steps.map((s) => s.title);
     const setReg = titles.findIndex((t) => t.startsWith('Set the regulator'));
     const firstWiring = titles.findIndex((t) => t.startsWith('Wire'));
-    assert.ok(setReg >= 0 && setReg < firstWiring, titles.join(' | '));
+    const adjustable = [d.parts.reg, d.parts.servoReg].some((r) => r && !r.fixed);
+    if (adjustable) assert.ok(setReg >= 0 && setReg < firstWiring, titles.join(' | '));
+    else assert.equal(setReg, -1, 'a fixed regulator has nothing to set');
     assert.equal(g.total, g.steps.reduce((s, x) => s + x.minutes, 0));
     for (const s of g.steps) assert.ok(s.minutes > 0 && s.body.length > 0, s.title);
   }

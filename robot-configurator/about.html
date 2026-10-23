@@ -23,7 +23,7 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./" id="homeLink">ROBOT <span>CONFIGURATOR</span></a>
-      <span class="ver">v1.1.0</span>
+      <span class="ver">v2.0.0</span>
     </div>
     <div class="header-actions">
       <select class="lang" id="langSel" aria-label="Language"></select>
@@ -53,7 +53,7 @@
       <h2 data-i18n>Limits</h2>
       <ul>
         <li data-i18n>The models are first-order engineering models with safety factors, not a simulation. Cheap cells below their label, stiff gearboxes and flexible frames all cost margin, which is what headroom is for.</li>
-        <li data-i18n>Prices are indicative catalog listings for planning, not quotes. Check each item on the vendor's site before ordering.</li>
+        <li data-i18n>A price is either checked on the shop's own page on the date shown, or an estimate. Either way it is not a quote: check each item on the vendor's site before ordering.</li>
         <li data-i18n>Arm checks are static: fast moves with a heavy payload add inertial torque.</li>
         <li data-i18n>Stationary arms use enclosed, CE-marked mains adapters. The configurator never asks you to wire mains voltage.</li>
       </ul>
@@ -67,6 +67,7 @@
     <section class="panel">
       <h2 data-i18n>Versions</h2>
       <ul>
+        <li data-i18n>2.0.0 (2026-10-23): a catalog you can check. Every price is either checked on the shop's own product page, with the link and the date, or marked as an estimate with a search link; a weekly job follows every link and lists prices older than 90 days. Shops that do not sell a part lose the offer, with the reason recorded. New: packs you assemble from a holder and protected cells, chassis kits with their motors and wheels, a 5 V buck-boost regulator, an RC-hobby shop for LiPo packs and chargers, parts sold in packs, and a choice to use checked prices only.</li>
         <li data-i18n>1.1.0 (2026-10-22): a cost–headroom chart with the frontier, picks from the chart, part swaps with the check that stops each alternative, a side-by-side comparison, a most-headroom proposal that really differs from the cheapest, the blueprint look of the other projects, and five languages.</li>
         <li data-i18n>1.0.0 (2026-10-22): requirements to designs for rovers, desktop arms and rovers with arms; landed-cost pricing in Denmark, Sweden and Norway; building guide, wiring and Arduino programs built in CI.</li>
       </ul>
@@ -74,12 +75,12 @@
 
     <section class="panel">
       <h2 data-i18n>Cite</h2>
-      <p class="cite">Sepulveda Estay, D. A. (2026). <em>Robot Configurator</em> (version 1.1.0) [Software]. https://kathuman.github.io/claude-projects/robot-configurator/</p>
+      <p class="cite">Sepulveda Estay, D. A. (2026). <em>Robot Configurator</em> (version 2.0.0) [Software]. https://kathuman.github.io/claude-projects/robot-configurator/</p>
     </section>
   </main>
 
   <footer class="wrap foot">
-    Robot Configurator v1.1.0 · <span data-i18n>by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://github.com/kathuman/claude-projects/tree/main/robot-configurator" data-i18n>Source and method</a> · <a href="../" data-i18n>All projects</a> · <span data-i18n>Built with Claude</span>
+    Robot Configurator v2.0.0 · <span data-i18n>by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://github.com/kathuman/claude-projects/tree/main/robot-configurator" data-i18n>Source and method</a> · <a href="../" data-i18n>All projects</a> · <span data-i18n>Built with Claude</span>
   </footer>
 
   <script type="module">

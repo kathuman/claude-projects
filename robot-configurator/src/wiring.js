@@ -43,7 +43,7 @@ export function wiring(design) {
     add('Power', t('Battery −'), t('Ground rail (breadboard)'), 'black', t('every ground in the robot meets here'));
     add('Power', t('Battery rail +'), `${reg} IN+`, 'red');
     add('Power', t('Ground rail'), `${reg} IN−`, 'black');
-    add('Power', t('{reg} OUT+ (set to {v} V first)', { reg, v: num(5, 1) }), t('5 V rail (breadboard)'), 'red');
+    add('Power', p.reg.fixed ? `${reg} OUT+` : t('{reg} OUT+ (set to {v} V first)', { reg, v: num(5, 1) }), t('5 V rail (breadboard)'), 'red');
     add('Power', `${reg} OUT−`, t('Ground rail'), 'black');
     add('Power', t('5 V rail'), `${board.name} ${mp.in5}`, 'red', t('not the barrel jack, and never together with a 5 V supply on another pin'));
     add('Power', t('Ground rail'), `${board.name} ${mp.gnd}`, 'black');

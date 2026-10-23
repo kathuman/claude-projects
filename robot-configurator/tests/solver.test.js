@@ -113,10 +113,18 @@ test('an arm that is asked for too much payload fails on the shoulder and sugges
 
 test('most headroom is a different design with clearly more margin, on the cost–headroom frontier', () => {
   for (const type of ['rover', 'arm']) {
-    const r = solve({ region: 'SE', type });
+    const { ctx, result: r } = solveSession({ region: 'SE', type });
     const cheap = r.proposals.find((p) => p.kinds.includes('cheapest'));
     const robust = r.proposals.find((p) => p.kinds.includes('robust'));
-    assert.ok(robust, `${type}: no most-headroom proposal`);
+    if (!robust) {
+      // then no frontier design with real extra margin costs at most twice the lowest
+      assert.ok(r.robustSame, `${type}: neither a most-headroom proposal nor the note`);
+      for (const pt of r.chart.points.filter((q) => q.f && q.y > cheap.design.robust + 0.02)) {
+        const d = ctx.feasibleOnes[pt.i];
+        assert.ok(!d.price?.ok || d.price.total > 2 * cheap.price.total, `${type}: ${d.key} was within reach`);
+      }
+      continue;
+    }
     assert.notEqual(robust.design.key, cheap.design.key);
     assert.ok(robust.design.robust > cheap.design.robust + 0.02);
     assert.ok(robust.price.total <= 2 * cheap.price.total + 1e-9);
@@ -153,4 +161,33 @@ test('swapping one part keeps the rest, prices the ones that work and names the 
   }
   const arm = solveSession({ region: 'SE', type: 'arm' });
   assert.ok(swapOptions(arm.ctx, arm.result.proposals[0].idx, 'shoulder').length > 0);
+});
+
+test('a pack you assemble is bought as its holder and cells, with the loose-cell charger', () => {
+  const r = solve({ region: 'SE', type: 'rover' });
+  const d = r.proposals.map((p) => p.design).find((x) => x.parts.battery.kit);
+  assert.ok(d, 'a built pack among the proposals');
+  const ids = d.items.map((i) => i.id);
+  for (const k of d.parts.battery.kit) assert.equal(d.items.find((i) => i.id === k.id)?.qty, k.qty, k.id);
+  assert.ok(!ids.includes(d.parts.battery.id), 'the pack itself is not bought');
+  assert.ok(ids.includes('chg-18650-cells') && ids.includes('switch-fuse'));
+});
+
+test('a chassis kit brings its own motors and wheels, which are not bought again', () => {
+  const r = solve({ region: 'DK', type: 'rover', shopping: 'local' });
+  const d = r.proposals.map((p) => p.design).find((x) => x.parts.chassis.includes);
+  assert.ok(d, 'a kit among the Danish Nordic-only proposals');
+  const ids = d.items.map((i) => i.id);
+  assert.ok(!ids.includes(d.parts.motor.id) && !ids.includes(d.parts.wheel.id));
+  assert.equal(d.parts.motor.id, d.parts.chassis.includes.motor);
+});
+
+test('with checked prices only, every line of every proposal was checked at the shop', () => {
+  for (const region of ['SE', 'DK', 'NO']) {
+    const r = solve({ region, type: 'rover', shopping: 'checked' });
+    assert.ok(r.ok, region);
+    for (const p of r.proposals) for (const c of p.price.parcels) for (const l of c.lines) assert.equal(l.status, 'checked', `${region} ${l.id}`);
+  }
+  const arm = solve({ region: 'SE', type: 'arm', shopping: 'checked' });
+  assert.ok(!arm.ok && arm.explain.hints.some((h) => /arm frame/.test(h)), 'says no arm frame has a checked price');
 });

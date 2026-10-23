@@ -6,7 +6,7 @@
 import { catalog, part, FX } from './catalog.js';
 import * as P from './physics.js';
 import { BOARDS, assignPins } from './pins.js';
-import { allowedVendors, refPrice, priceOrder } from './pricing.js';
+import { allowedVendors, refPrice, priceOrder, offersFor } from './pricing.js';
 import { t, num } from './i18n.js';
 
 export const BEHAVIOURS = {
@@ -55,7 +55,8 @@ const violation = (checks) => checks.filter((c) => !c.ok && c.severity === 'fail
 
 function usableParts(req) {
   const vendors = allowedVendors(req.region, req.shopping);
-  const ok = (p) => p.offers.some((o) => vendors.includes(o.vendor))
+  // a pack you assemble is usable when everything in its kit can be bought
+  const ok = (p) => (p.kit ? p.kit.every((k) => ok(part(k.id))) : offersFor(p, req.shopping).some((o) => vendors.includes(o.vendor)))
     && !(req.solder === 'no' && p.solder) && !(p.printer && !req.printer);
   const f = (list) => list.filter(ok);
   let mcus = f(catalog.mcus);
@@ -64,7 +65,9 @@ function usableParts(req) {
   return {
     vendors, ok,
     mcus, drivers: f(catalog.drivers), motors: f(catalog.motors), wheels: f(catalog.wheels),
-    chassis: f(catalog.chassis), batteries: f(catalog.batteries), servos: f(catalog.servos),
+    // a battery is only usable when its charger can be bought too (when the request includes one)
+    chassis: f(catalog.chassis), batteries: f(catalog.batteries).filter((b) => !req.charger || ok(part(b.charger))),
+    servos: f(catalog.servos),
     frames: f(catalog.frames),
     logicRegs: f(catalog.regulators.filter((r) => r.out[0] <= 5 && r.out[1] >= 5 && r.iCont <= 5)),
     servoRegs: f(catalog.regulators.filter((r) => r.out[0] <= 6 && r.out[1] >= 6 && r.iCont >= 5)),
@@ -365,11 +368,13 @@ function roverBom(c, ev, req) {
   const { chassis, motor, wheel, driver, battery, reg, mcu } = c;
   const n = chassis.driven;
   const items = [
-    { id: chassis.id, qty: 1, role: t('Chassis') },
-    { id: motor.id, qty: n, role: t('Drive motors') },
-    { id: wheel.id, qty: n, role: t('Wheels') },
+    { id: chassis.id, qty: 1, role: chassis.includes ? t('Chassis kit with motors and wheels') : t('Chassis') },
+    ...(chassis.includes ? [] : [{ id: motor.id, qty: n, role: t('Drive motors') }, { id: wheel.id, qty: n, role: t('Wheels') }]),
     { id: driver.id, qty: ev.perf.units, role: t('Motor driver') },
-    { id: battery.id, qty: 1, role: t('Battery') },
+    ...(battery.kit
+      ? battery.kit.map((k) => ({ id: k.id, qty: k.qty, kitOf: battery.id,
+        role: part(k.id).cat === 'cell' ? t('Battery cells') : t('Battery holder') }))
+      : [{ id: battery.id, qty: 1, role: t('Battery') }]),
     { id: reg.id, qty: 1, role: t('5 V regulator (logic)') },
     { id: mcu.id, qty: 1, role: t('Controller') },
     ...ev.sensors.map((id) => ({ id, qty: 1, role: t('Sensor') })),
@@ -387,11 +392,11 @@ function commonBom(req, items, mcu) {
   out.push({ id: 'jumpers', qty: 1, role: t('Signal wiring') });
   out.push({ id: 'breadboard-mini', qty: 1, role: t('Power distribution') });
   out.push({ id: 'm3-kit', qty: 1, role: t('Mounting hardware') });
-  const batt = out.find((i) => part(i.id).cat === 'battery');
-  if (batt) {
+  const battId = out.find((i) => part(i.id).cat === 'battery')?.id ?? out.find((i) => i.kitOf)?.kitOf;
+  if (battId) {
     out.push({ id: 'switch-fuse', qty: 1, role: t('Power switch + fuse') });
-    if (req.charger) out.push({ id: part(batt.id).charger, qty: 1, role: t('Charger') });
-    if (part(batt.id).chem === 'lipo') out.push({ id: 'lipo-bag', qty: 1, role: t('LiPo safety') });
+    if (req.charger) out.push({ id: part(battId).charger, qty: 1, role: t('Charger') });
+    if (part(battId).chem === 'lipo') out.push({ id: 'lipo-bag', qty: 1, role: t('LiPo safety') });
   }
   if (req.tools) {
     out.push({ id: 'tool-multimeter', qty: 1, role: t('Tool') });
@@ -405,13 +410,18 @@ function commonBom(req, items, mcu) {
 
 function* roverCombos(U, req) {
   const needEnc = req.rover.behaviours.includes('odometry');
-  for (const chassis of U.chassis) for (const motor of U.motors) {
+  for (const chassis of U.chassis) {
+    // a kit comes with its own motors and wheels
+    const motors = chassis.includes ? [part(chassis.includes.motor)] : U.motors;
+    const wheels = chassis.includes ? [part(chassis.includes.wheel)] : U.wheels;
+    for (const motor of motors) {
     if (motor.mount !== chassis.mount || (needEnc && !motor.cpr)) continue;
-    for (const wheel of U.wheels) {
+    for (const wheel of wheels) {
       if (!wheel.shaft.includes(motor.shaft)) continue;
       for (const driver of U.drivers) for (const battery of U.batteries) for (const reg of U.logicRegs) {
         for (const mcu of U.mcus) yield { chassis, motor, wheel, driver, battery, reg, mcu };
       }
+    }
     }
   }
 }
@@ -463,7 +473,7 @@ export function solveSession(reqIn) {
   const U = usableParts(req);
   const priceCache = new Map();
   const price = (id) => {
-    if (!priceCache.has(id)) priceCache.set(id, refPrice(id, req.region, U.vendors, fx));
+    if (!priceCache.has(id)) priceCache.set(id, refPrice(id, req.region, U.vendors, fx, req.shopping));
     return priceCache.get(id);
   };
   const refCost = (items) => items.reduce((s, i) => s + i.qty * price(i.id), 0);
@@ -609,7 +619,7 @@ function* designs(req, U) {
   if (req.type === 'rover') {
     for (const c of roverCombos(U, req)) yield roverDesign(c, req, null, null);
   } else if (req.type === 'arm') {
-    const arms = armCandidates(req, U, (id) => refPrice(id, req.region, U.vendors, req.fx ?? FX));
+    const arms = armCandidates(req, U, (id) => refPrice(id, req.region, U.vendors, req.fx ?? FX, req.shopping));
     const powers = stationaryArmPower(U);
     const mcus = U.mcus.filter((m) => !req.arm.wireless || m.wifi || U.has('hc05'));
     for (const a of arms) for (const pw of powers) for (const mcu of mcus) {
@@ -625,7 +635,7 @@ function* designs(req, U) {
     }
   } else {
     // mobile manipulator: the arm sub-designs that pass on their own, cheapest and strongest few, on every rover
-    const priceFn = (id) => refPrice(id, req.region, U.vendors, req.fx ?? FX);
+    const priceFn = (id) => refPrice(id, req.region, U.vendors, req.fx ?? FX, req.shopping);
     const arms = armCandidates(req, U, priceFn).filter((a) => feasible(a.checks));
     const armCost = (a) => armBom(a).reduce((s, i) => s + i.qty * priceFn(i.id), 0);
     const pick = [...new Set([
@@ -736,9 +746,18 @@ function explain(req, U, candidates) {
     search(['arm', 'reach'], 'Arm reach', 'mm', 'down', 1000);
   }
   const hints = [];
+  // a whole kind of part that the allowed shops do not sell at all
+  const needs = req.type === 'arm' ? { frames: 'arm frame', servos: 'servo' }
+    : { chassis: 'chassis', batteries: 'battery (with a charger you can buy)', drivers: 'motor driver', logicRegs: '5 V regulator',
+      mcus: 'controller', ...(req.type === 'mobile' ? { frames: 'arm frame', servoRegs: '6 V servo regulator' } : {}) };
+  for (const [k, what] of Object.entries(needs)) {
+    if (!U[k].length) hints.push(t('No {what} is sold by the shops you allowed.', { what: t(what) }));
+  }
   if (req.solder === 'no') hints.push(t('Allowing soldering opens up the breakout boards (TB6612, DRV8833, PCA9685, MPU-6050).'));
-  if (req.shopping !== 'cheapest') hints.push(t('Allowing all vendors (including AliExpress and Pololu) widens the parts range.'));
+  if (req.shopping === 'checked') hints.push(t('Allowing estimated prices widens the parts range: many parts have a checked price at one shop only.'));
+  else if (req.shopping !== 'cheapest') hints.push(t('Allowing all vendors (including AliExpress and Pololu) widens the parts range.'));
   if (req.controller !== 'auto') hints.push(t('Letting the app choose the controller can free pins.'));
-  if (!req.printer && req.type !== 'rover') hints.push(t('A 3D printer unlocks the printed 5-axis arm (longer reach, 0.5 kg rated).'));
+  const printable = offersFor(part('arm-printed-5axis'), req.shopping).some((o) => U.vendors.includes(o.vendor));
+  if (!req.printer && req.type !== 'rover' && printable) hints.push(t('A 3D printer unlocks the printed 5-axis arm (longer reach, 0.5 kg rated).'));
   return { blockers, nearest: nearestFails, relax, hints };
 }

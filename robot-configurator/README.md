@@ -4,7 +4,7 @@ Describe the robot you want: a wheeled rover, a desktop arm, or a rover carrying
 designs you can actually build from parts sold in **Denmark, Sweden or Norway**. Each design comes with a landed-cost
 budget, building instructions, wiring, and Arduino programs that compile as delivered.
 
-**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 1.1.0 · English, Dansk, Svenska, Norsk, Español
+**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 2.0.0 · English, Dansk, Svenska, Norsk, Español
 
 ## What it does
 
@@ -51,7 +51,7 @@ budget, building instructions, wiring, and Arduino programs that compile as deli
 | | Denmark | Sweden | Norway |
 |---|---|---|---|
 | VAT | 25 % | 25 % | 25 % |
-| Domestic shops | Let Elektronik | Electrokit, Kjell & Company | Kjell & Company |
+| Domestic shops | Let Elektronik | Electrokit, Kjell & Company, MBS RC Models | Kjell & Company |
 | EU shop (Electrokit) | VAT at checkout (OSS) | domestic | VOEC: VAT at checkout |
 | AliExpress | IOSS ≤ €150, else import + duty + fee | IOSS ≤ €150, else import + duty + fee | VOEC < NOK 3,000 per item |
 | Mouser | delivered duty paid | delivered duty paid | delivered duty paid |
@@ -60,9 +60,56 @@ budget, building instructions, wiring, and Arduino programs that compile as deli
 EU duty rates are approximate TARIC rates by part type (0 % for electronics, 2.7 % for motors, servos and batteries,
 6 % for frames). Norway charges no duty on industrial goods. Exchange rates can be edited in the app.
 
-**The catalog is dated** (`CATALOG_DATE` in `src/catalog.js`). Prices are indicative listings for planning, not
-quotes. Vendor ranges, shipping fees and free-shipping thresholds change. The app says so wherever it shows a price.
-Updating the catalog means editing one file; the tests check its schema and consistency.
+MBS RC Models (a Swedish RC-hobby shop, for LiPo packs and their chargers) is modelled for Sweden only: it does not
+send lithium batteries outside the EU and states no Danish shipping fee.
+
+## Prices you can check (2.0)
+
+Every offer is one of two kinds, and the page shows which:
+
+- **Checked:** read on the shop's own product page on a given day. `src/prices.js` holds the price as listed, the
+  link, the date and the shop's own product name (and a note when it matters: out of stock, ordered in, a different
+  but equivalent board). The budget links each line to that page and says how long ago it was checked; after 90 days
+  it is marked as possibly changed.
+- **Estimate:** a typical price from `src/catalog.js` that has not been checked. The budget links to a search for the
+  part at that shop.
+
+A shop that turned out not to sell a part loses the offer, with the reason recorded (`gone: true, note`), so it does
+not come back by accident. The first full check (2026-10-22/23) went through every Nordic offer, Pololu and the new
+RC shop:
+
+| | Offers |
+|---|---|
+| Checked, with link and date | 79 |
+| Dropped: the shop does not sell it (reason recorded) | 64 |
+| Estimates: AliExpress 65, Mouser 6, Nordic prices that could not be confirmed 12 | 83 |
+
+Mouser and AliExpress turn automated readers away, so their prices stay estimates. **Buy from: only prices checked at
+the shop** restricts a search to checked offers; each proposal card says how many of its prices were checked.
+
+What the check changed:
+
+- **Packs you assemble.** No shop in the catalog sells a ready-made 2S or 3S lithium pack, so the configurator builds
+  one: a holder with the cells in series (Electrokit, Let) and protected 18650 cells (Electrokit, 10 A), charged as
+  loose cells in a 2-slot charger. A pack's `kit` is what is bought; the build guide charges the cells, assembles the
+  pack and measures it before anything is wired.
+- **Chassis kits.** The Nordic shops sell 2WD and 4WD kits with their motors and wheels, not bare chassis. A kit's
+  `includes` names the motor and wheel it brings; they count for mass and the checks but are not bought again.
+- **Parts sold in packs.** An offer's `pack` is how many catalog units one shop item holds (2 for a pair of wheels,
+  0.2 when a set of five is sold singly); only whole items are bought.
+- **A 5 V buck-boost regulator** (Pololu S13V30F5 at Electrokit), which runs from an empty 2S pack, where the LM2596
+  cannot.
+- **AliExpress estimates** for the ready-made packs, LiPo chargers and the 6 V adapter, so those designs remain
+  possible, clearly marked.
+
+**The weekly catalog job** (`.github/workflows/robot-configurator-catalog.yml`, Mondays and on every catalog change)
+runs `tools/check-catalog.mjs --links`: it rejects a malformed record, lists coverage and stale checks per vendor, and
+follows every product link and vendor search, reporting what did not answer in the job summary.
+
+```bash
+node tools/check-catalog.mjs            # records and coverage
+node tools/check-catalog.mjs --links    # also follow every link
+```
 
 ## Firmware
 
@@ -108,7 +155,7 @@ read in; part names are the shops' own.
 npm test
 ```
 
-53 checks:
+59 checks:
 - the motor, slope, PWM-cap, runtime, servo and joint-torque models, against hand calculations;
 - catalog schema and consistency;
 - every shipping/tax mode, against hand-computed parcels;
@@ -125,7 +172,11 @@ npm test
   headroom as the cost rises;
 - a design picked on the chart is priced and passes; a swap changes only its part and prices the difference;
 - every text in every language with the same placeholders, and the engine run in each language asks for nothing a
-  dictionary lacks.
+  dictionary lacks;
+- every price record well formed (dates, links, reasons for dropped offers), every offer checked or an estimate;
+- packs are bought whole; a check goes stale after 90 days;
+- a pack you assemble is bought as holder and cells with the loose-cell charger; a chassis kit's motors and wheels
+  are not bought again; with checked prices only, every line is checked, and an arm says no arm frame has one.
 
 A browser check drives the page (55 checks: every robot type, the chart pick, swaps, the comparison, every tab, both
 downloads, every language with no English left, the About page, phone width, the theme):

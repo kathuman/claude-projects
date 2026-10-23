@@ -2,8 +2,9 @@
 // part swaps, budget, building guide, wiring and programs. The search runs in a worker that keeps its results, so a
 // design picked on the chart or a swapped part comes back without a new search; everything else is computed here.
 
-import { CATALOG_DATE, FX, REGIONS, VENDORS, part } from './src/catalog.js';
-import { MODE_LABEL } from './src/pricing.js';
+import { CATALOG_DATE, FX, REGIONS, VENDORS, PARTS, part } from './src/catalog.js';
+import { MODE_LABEL, freshness, checkedShare } from './src/pricing.js';
+import { STALE_DAYS } from './src/prices.js';
 import { TERRAIN } from './src/physics.js';
 import { BOARDS } from './src/pins.js';
 import { SWAP_SLOTS, SLOT_LABEL } from './src/solver.js';
@@ -242,6 +243,7 @@ function renderCard(p, i) {
       <div class="meta">${esc(t(p.price.parcels.length > 1 ? '{n} parcels · arrives in ≈ {days} days' : '{n} parcel · arrives in ≈ {days} days',
         { n: p.price.parcels.length, days: p.price.days }))}</div>
       ${tc ? `<div class="tight">${esc(t('Headroom'))} <b>${pct(Math.max(0, tc.margin))}</b> · ${esc(t('tightest: {check}', { check: tc.label }))}</div>` : ''}
+      <div class="tight">${esc(t('{n} of {m} prices checked at the shop', { n: checkedShare(p.price).checkedLines, m: checkedShare(p.price).lines }))}</div>
       ${twin ? `<p class="same">${esc(t('Same parts as {kind}, bought from vendors that deliver within a week.', { kind: kindLabel(twin) }))}</p>`
         : `<p class="why">${esc(describe(p.design))}</p>`}
     </button>`;
@@ -520,21 +522,24 @@ function renderBudget(p, req) {
     const v = VENDORS[c.vendor];
     rows += `<tr class="parcel"><td colspan="3"><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.name)}</a> <small>· ${esc(t(MODE_LABEL[c.mode]))} · ${esc(t('{a}–{b} days', { a: c.days[0], b: c.days[1] }))}</small></td><td class="num">${m(c.total)}</td></tr>`;
     for (const l of c.lines) {
-      rows += `<tr><td>${esc(part(l.id).name)}<br><small>${esc(l.role ?? '')}</small></td><td class="num">${l.qty}</td><td class="num">${m(l.unitNet * (1 + r.vat))}</td><td class="num">${m(l.lineNet * (1 + r.vat))}</td></tr>`;
+      rows += `<tr><td><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(part(l.id).name)}</a><br><small>${esc(l.role ?? '')}</small> ${priceTag(l)}</td><td class="num">${l.qty}</td><td class="num">${m(l.unitNet * (1 + r.vat))}</td><td class="num">${m(l.lineNet * (1 + r.vat))}</td></tr>`;
     }
     rows += `<tr class="sub"><td colspan="3">${esc(c.freeShip ? t('Shipping (free above the threshold)') : t('Shipping'))}</td><td class="num">${m(c.shipping * (1 + r.vat))}</td></tr>`;
     if (c.duty) rows += `<tr class="sub"><td colspan="3">${esc(t('Customs duty (incl. VAT on it)'))}</td><td class="num">${m(c.duty * (1 + r.vat))}</td></tr>`;
     if (c.fees) rows += `<tr class="sub"><td colspan="3">${esc(t('Carrier clearance fee'))}</td><td class="num">${m(c.fees)}</td></tr>`;
   }
   const contingency = price.total * 0.1;
+  const cs = checkedShare(price);
   return `
     <div class="tiles">
       <div class="tile"><div class="v">${m(price.total)}</div><div class="l">${esc(t('landed total, everything included'))}</div></div>
+      <div class="tile"><div class="v">${pct(cs.share)}</div><div class="l">${esc(t('of the value checked at the shop ({n} of {m} lines)', { n: cs.checkedLines, m: cs.lines }))}</div></div>
       <div class="tile"><div class="v">${m(price.vat)}</div><div class="l">${esc(t('of which VAT ({pct} %)', { pct: num(r.vat * 100, 0) }))}</div></div>
       <div class="tile"><div class="v">${m(price.shipping + price.duty + price.fees)}</div><div class="l">${esc(t('shipping, duty and fees (ex VAT)'))}</div></div>
       <div class="tile"><div class="v">≈ ${esc(t('{days} days', { days: price.days }))}</div><div class="l">${esc(t('until the last parcel arrives'))}</div></div>
     </div>
     <div class="callout info">${esc(t(r.note))}</div>
+    ${cs.checkedLines < cs.lines ? `<div class="callout warn">${esc(t('Lines marked estimate carry a typical price that has not been checked at the shop yet: the link searches the shop for the part, so you can see today\'s price before ordering.'))}</div>` : ''}
     <div class="table-scroll"><table>
       <thead><tr><th>${esc(t('Item'))}</th><th class="num">${esc(t('Qty'))}</th><th class="num">${esc(t('Unit incl. VAT'))}</th><th class="num">${esc(t('Total incl. VAT'))}</th></tr></thead>
       <tbody>${rows}
@@ -545,14 +550,22 @@ function renderBudget(p, req) {
     <small>${esc(t('Prices are indicative catalog listings of {date} at the exchange rates in Method & assumptions; confirm each item on the vendor\'s site.', { date: CATALOG_DATE }))}</small></div>`;
 }
 
+// A budget line's price status: checked at the shop (and when), stale, or an estimate.
+function priceTag(l) {
+  const f = freshness(l);
+  if (f.kind === 'estimate') return `<span class="ptag est">${esc(t('estimate'))}</span>`;
+  const when = f.days < 1 ? t('checked today') : t(f.days === 1 ? 'checked 1 day ago' : 'checked {n} days ago', { n: f.days });
+  return `<span class="ptag ${f.kind}" title="${esc(l.shopName ? t('Listed as: {name}', { name: l.shopName }) : '')}">${esc(f.kind === 'stale' ? t('{when}, may have changed', { when }) : when)}</span>`;
+}
+
 function downloadCsv(p, req) {
   const r = REGIONS[req.region];
   const cur = p.price.currency;
-  const lines = [[t('vendor'), t('item'), t('role'), t('qty'), `${t('unit incl VAT')} (${cur})`, `${t('total incl VAT')} (${cur})`, t('tax mode')]];
+  const lines = [[t('vendor'), t('item'), t('role'), t('qty'), `${t('unit incl VAT')} (${cur})`, `${t('total incl VAT')} (${cur})`, t('tax mode'), t('price'), t('checked on'), t('link')]];
   for (const c of p.price.parcels) {
     for (const l of c.lines) {
       lines.push([VENDORS[c.vendor].name, part(l.id).name, l.role ?? '', l.qty, (l.unitNet * (1 + r.vat)).toFixed(2),
-        (l.lineNet * (1 + r.vat)).toFixed(2), c.mode]);
+        (l.lineNet * (1 + r.vat)).toFixed(2), c.mode, l.status === 'checked' ? t('checked') : t('estimate'), l.checked ?? '', l.url]);
     }
     lines.push([VENDORS[c.vendor].name, t('shipping'), '', '', '', (c.shipping * (1 + r.vat)).toFixed(2), c.mode]);
     if (c.duty) lines.push([VENDORS[c.vendor].name, t('customs duty incl VAT'), '', '', '', (c.duty * (1 + r.vat)).toFixed(2), c.mode]);
@@ -631,9 +644,23 @@ function renderMethod(req) {
     <h3 style="margin-top:16px">${esc(t('Prices and taxes in {country}', { country: t(r.name) }))}</h3>
     <p>${esc(t(r.note))} ${esc(t('The vendor mix is optimised exactly: every subset of vendors is tried and each part bought where it lands cheapest, counting each parcel\'s shipping, VAT, duty and clearance fee.'))}</p>
     <p class="fine">${esc(t('Catalog of {date}. Prices are indicative listings for planning, not quotes; vendor ranges, shipping fees and thresholds change. Duty rates are approximate TARIC rates by part type.', { date: CATALOG_DATE }))}</p>
+    ${renderCatalogState()}
     <h3 style="margin-top:16px">${esc(t('Exchange rates (per 1 EUR)'))}</h3>
     <div class="fx-grid">${['DKK', 'SEK', 'NOK', 'USD'].map((c) => `<label>${c}<input type="number" step="0.01" data-fx="${c}" value="${fx[c]}"></label>`).join('')}</div>
     <div class="row"><button class="small-btn" id="fxReset" type="button">${esc(t('Reset to catalog rates'))}</button></div>`;
+}
+
+// How much of the catalog has been checked at the shops, vendor by vendor.
+function renderCatalogState() {
+  const rows = Object.entries(VENDORS).map(([id, v]) => {
+    const offers = PARTS.flatMap((p) => p.offers.filter((o) => o.vendor === id));
+    const checked = offers.filter((o) => o.status === 'checked');
+    const latest = checked.map((o) => o.checked).sort().at(-1);
+    return `<tr><td><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.name)}</a></td><td class="num">${checked.length} / ${offers.length}</td><td class="num">${latest ?? '–'}</td></tr>`;
+  }).join('');
+  return `<h3 style="margin-top:16px">${esc(t('How current the prices are'))}</h3>
+    <p>${esc(t('A checked price was read on the shop\'s own product page on the date shown, and links to that page; after {n} days it is marked as possibly changed. An estimate is a typical price for the part at that shop, and links to a search there.', { n: STALE_DAYS }))}</p>
+    <div class="table-scroll"><table><thead><tr><th>${esc(t('Vendor'))}</th><th class="num">${esc(t('Prices checked'))}</th><th class="num">${esc(t('Last checked'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function renderInfeasible(r) {
