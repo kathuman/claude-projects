@@ -58,10 +58,15 @@ async function ready(p) {
     await p.waitForFunction(() => [...document.querySelectorAll('.proposal .kind')].some((k) => k.textContent.includes('Your pick')), null, { timeout: 15000 });
     check(true, 'using a swap adds your pick');
   }
-  for (const [tab, sel] of [['budget', 'tr.total'], ['build', 'ol.steps > li'], ['wiring', 'svg.diagram'], ['programs', 'pre.code'], ['method', 'dl.kv'], ['overview', '.tiles']]) {
+  for (const [tab, sel] of [['drawing', 'svg.drawing'], ['budget', 'tr.total'], ['build', 'ol.steps > li'], ['wiring', 'svg.diagram'], ['programs', 'pre.code'], ['method', 'dl.kv'], ['overview', '.tiles']]) {
     await p.click(`[data-tab="${tab}"]`);
     check(!!(await p.$(sel)), `tab ${tab} renders`);
   }
+  // the build pack: every section assembled for printing (print itself is stubbed)
+  await p.evaluate(() => { window.print = () => {}; });
+  await p.click('#packBtn');
+  check((await p.$$('#pack .pack-sec')).length === 5 && !!(await p.$('#pack svg.drawing')), 'build pack has its five sections and the drawing');
+  await p.evaluate(() => document.documentElement.classList.remove('print-pack'));
   await p.click('[data-tab="programs"]');
   const [zip] = await Promise.all([p.waitForEvent('download'), p.click('#zip')]);
   check(zip.suggestedFilename() === 'robot-programs.zip', 'programs download as a zip');
@@ -75,6 +80,8 @@ async function ready(p) {
     await p.click('#go');
     await p.waitForFunction(() => !document.querySelector('#go').disabled, null, { timeout: 120000 });
     check((await p.$$('.proposal')).length >= 1, `${type}: proposals`);
+    await p.click('[data-tab="drawing"]');
+    check(!!(await p.$('svg.drawing')), `${type}: drawing`);
     check(!!(await p.$('#chart svg')), `${type}: chart`);
   }
 

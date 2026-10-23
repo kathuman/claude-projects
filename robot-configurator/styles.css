@@ -223,7 +223,44 @@ dl.kv dt { color: var(--faint); font-family: var(--head); font-weight: 600; }
   .grid2 { grid-template-columns: 1fr; } .grid2 .span2 { grid-column: auto; }
   dl.kv { grid-template-columns: 1fr; } dl.kv dd { margin: 0 0 8px; }
 }
+/* the robot drawn from its parts */
+.drawing { width: 100%; max-width: 720px; height: auto; display: block; margin: 8px 0 12px; min-width: 480px; }
+.drawing .plate { fill: var(--soft); stroke: var(--line); stroke-width: 2; }
+.drawing .wheel { fill: var(--faint); opacity: .55; }
+.drawing .caster { fill: none; stroke: var(--faint); stroke-width: 2; }
+.drawing .mod { stroke: var(--panel); stroke-width: 1.5; }
+.drawing .mod.battery { fill: #b45309; } .drawing .mod.mcu { fill: #2a78d6; } .drawing .mod.driver { fill: #127a5a; }
+.drawing .mod.reg { fill: #6250d6; } .drawing .mod.misc { fill: #52606d; } .drawing .mod.sensor { fill: #8a5a00; }
+.drawing .mod.arm { fill: none; stroke: var(--accent); stroke-dasharray: 6 4; stroke-width: 2; }
+.drawing .under { fill: none; stroke: var(--faint); stroke-dasharray: 3 3; }
+.drawing .mod-label { font: 600 11px var(--head); fill: #ffffff; letter-spacing: .02em; pointer-events: none; }
+.drawing .title { font: 700 13px var(--head); fill: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.drawing .dim { font: 11px var(--mono); fill: var(--muted); }
+.drawing .pwire { fill: none; stroke-width: 2.5; stroke-linejoin: round; opacity: .85; }
+.drawing .w-batt, .legend .lg.w-batt { stroke: var(--w-power); background: var(--w-power); }
+.drawing .w-5v, .legend .lg.w-5v { stroke: var(--w-pwm); background: var(--w-pwm); }
+.drawing .w-motor, .legend .lg.w-motor { stroke: var(--w-out); background: var(--w-out); stroke-dasharray: 5 4; }
+.legend .lg { display: inline-block; width: 18px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: 3px; }
+.drawing .ground { stroke: var(--line); stroke-width: 2; }
+.drawing .link { fill: none; stroke: var(--ink); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.drawing .link.stretched { stroke: var(--faint); stroke-width: 3; stroke-dasharray: 6 5; }
+.drawing .joint { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.drawing .reach-full { fill: none; stroke: var(--faint); stroke-dasharray: 3 4; }
+.drawing .reach-want { fill: none; stroke: var(--s-front); stroke-width: 2; }
+.drawing .payload { fill: var(--s-front); }
+#pack { display: none; }
+
 @media print {
+  html.print-pack body > *:not(#pack) { display: none !important; }
+  html.print-pack #pack { display: block; }
+  #pack .pack-sec + .pack-sec { break-before: page; }
+  #pack .pack-head .fine { word-break: break-all; }
+  #pack svg, #pack .steps > li, #pack tr { break-inside: avoid; }
+  #pack .drawing { width: auto; max-width: 100%; max-height: 16cm; }
+  #pack .pack-head .fine { font-size: 7pt; }
+  #pack .pack-head h1 { font-size: 1.4rem; }
+  #pack .no-print, #pack button { display: none !important; }
+  #pack .drawing, #pack .diagram { min-width: 0; }
   :root { --bg: #fff; --panel: #fff; --soft: #fff; --ink: #000; --muted: #333; --faint: #444; --line: #bbb; --line-soft: #ddd; }
   body { background-image: none; }
   .topbar, .wizard, .tabs, .foot, .proposals, .no-print, .chart-panel, .note-card, .summary-line { display: none !important; }

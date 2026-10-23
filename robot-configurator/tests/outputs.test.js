@@ -103,3 +103,31 @@ test('zip: CRC-32 check value and archive structure', () => {
   assert.equal(v.getUint32(z.length - 22, true), 0x06054b50);
   assert.equal(v.getUint16(z.length - 22 + 10, true), 1);
 });
+
+test('the drawing places every board on the plate (or a second deck) without overlaps, and the arm geometry adds up', async () => {
+  const { roverLayout, roverTopView, armSide, armSideView, FOOTPRINT } = await import('../src/layout.js');
+  const reqs = [{ region: 'SE', type: 'rover' }, { region: 'DK', type: 'rover', rover: { terrain: 'outdoor-grass', payload: 2, slope: 15, speed: 0.8, runtime: 90 } },
+    { region: 'SE', type: 'rover', rover: { behaviours: ['remote', 'obstacle', 'line', 'odometry'] } }, { region: 'SE', type: 'mobile', arm: { reach: 0.25, payload: 0.05, axes: 4 } }];
+  const overlap = (a, b) => a.x < b.x + b.l && b.x < a.x + a.l && a.y < b.y + b.w && b.y < a.y + a.w;
+  for (const req of reqs) {
+    for (const p of solve(req).proposals) {
+      const d = p.design;
+      for (const id of [d.parts.mcu.id, d.parts.driver.id, d.parts.reg.id, d.parts.battery.id]) assert.ok(FOOTPRINT[id], `no footprint for ${id}`);
+      const lay = roverLayout(d);
+      assert.deepEqual(lay.unplaced, [], 'everything finds a place');
+      for (const deck of [lay.deck1, lay.deck2]) {
+        for (const r of deck) assert.ok(r.x >= 0 && r.y >= 0 && r.x + r.l <= lay.L && r.y + r.w <= lay.W, `${r.id} inside the plate`);
+        for (let i = 0; i < deck.length; i++) for (let j = i + 1; j < deck.length; j++) assert.ok(!overlap(deck[i], deck[j]), `${deck[i].id} / ${deck[j].id}`);
+        if (lay.armBase && deck === lay.deck1) for (const r of deck) assert.ok(!overlap(r, lay.armBase), `${r.id} under the arm`);
+      }
+      assert.equal(lay.deck1.length + lay.deck2.length, 4 + (d.ev.perf.units - 1) + 2 + (d.arm ? 2 : 0) + (d.bt ? 1 : 0) + (d.ev.sensors.includes('mpu6050') ? 1 : 0));
+      assert.match(roverTopView(d, lay), /^<svg/);
+      if (d.arm) {
+        const g = armSide(d.arm.frame, req);
+        assert.ok(Math.abs(g.stretched.at(-1)[0] - (d.arm.frame.L1 + d.arm.frame.L2 + d.arm.frame.tool) * 1000) < 1e-6);
+        assert.ok(Math.abs(g.home.at(-1)[0] - (d.arm.frame.L2 + d.arm.frame.tool) * 1000) < 1e-6);
+        assert.match(armSideView(d.arm.frame, req), /^<svg/);
+      }
+    }
+  }
+});

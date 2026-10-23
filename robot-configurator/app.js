@@ -10,6 +10,7 @@ import { BOARDS } from './src/pins.js';
 import { SWAP_SLOTS, SLOT_LABEL } from './src/solver.js';
 import { buildGuide } from './src/guide.js';
 import { wiring, signalDiagram, powerDiagram } from './src/wiring.js';
+import { roverLayout, roverTopView, armSideView } from './src/layout.js';
 import { generateFirmware } from './src/firmware.js';
 import { zip } from './src/zip.js';
 import { LANGS, t, num, setLang, lang, locale, guessLang } from './src/i18n.js';
@@ -198,12 +199,12 @@ function render() {
   if (!r.ok) { results.innerHTML = renderInfeasible(r); return; }
   const cards = state.cards;
   const p = cards[state.selected];
-  const tabs = [['overview', t('Design & checks')], ['budget', t('Budget')], ['build', t('Build guide')], ['wiring', t('Wiring')],
+  const tabs = [['overview', t('Design & checks')], ['drawing', t('Drawing')], ['budget', t('Budget')], ['build', t('Build guide')], ['wiring', t('Wiring')],
     ['programs', t('Programs')], ['method', t('Method & assumptions')]];
   const time = state.ms < 1000 ? t('{n} ms', { n: Math.max(1, Math.round(state.ms)) }) : `${num(state.ms / 1000, 1)} s`;
   results.innerHTML = `
     <p class="summary-line">${esc(t('{count} combinations checked, {feasible} pass every check, in {time}.',
-      { count: num(r.count, 0), feasible: num(r.feasibleCount, 0), time }))} <a href="${esc(location.href)}" id="share">${esc(t('Link to this request'))}</a></p>
+      { count: num(r.count, 0), feasible: num(r.feasibleCount, 0), time }))} <a href="${esc(location.href)}" id="share">${esc(t('Link to this request'))}</a> · <button class="link-btn" type="button" id="packBtn">${esc(t('Build pack: print or save as PDF'))}</button></p>
     <div class="proposals">${cards.map(renderCard).join('')}${r.robustSame ? `<div class="note-card">${esc(t(r.req.budget == null
       ? 'No design adds real headroom for at most twice the lowest cost: the lowest-cost design is also the sturdiest buy.'
       : 'No design within your budget adds real headroom over the lowest-cost one.'))}</div>` : ''}</div>
@@ -228,6 +229,7 @@ function render() {
   $('#cmpBtn')?.addEventListener('click', () => { state.compare = !state.compare; render(); });
   for (const b of results.querySelectorAll('[data-tab]')) b.addEventListener('click', () => { state.tab = b.dataset.tab; render(); });
   $('#share').addEventListener('click', (e) => { e.preventDefault(); navigator.clipboard?.writeText(location.href); e.target.textContent = t('Link copied'); });
+  $('#packBtn').addEventListener('click', () => printPack(p, r.req));
   wireChart(r);
   wireTab(p, r.req);
 }
@@ -403,6 +405,7 @@ function wireChart(r) {
 
 function renderTab(p, req) {
   switch (state.tab) {
+    case 'drawing': return renderDrawing(p, req);
     case 'budget': return renderBudget(p, req);
     case 'build': return renderBuild(p, req);
     case 'wiring': return renderWiring(p);
@@ -511,6 +514,56 @@ function renderSwaps(p, req) {
       ${open ? `<tr><td colspan="3">${body}</td></tr>` : ''}`;
   }).join('');
   return `<div class="table-scroll"><table><tbody>${rows}</tbody></table></div>`;
+}
+
+// The robot drawn from its parts: the rover from above with every board placed, and the arm from the side.
+function renderDrawing(p, req) {
+  const d = p.design;
+  let html = '';
+  if (d.type !== 'arm') {
+    const lay = roverLayout(d);
+    const deck2 = lay.deck2.map((r) => r.label).join(', ');
+    html += `<h3>${esc(t('The rover from above'))}</h3>
+      <p>${esc(lay.deck2.length
+        ? t('The boards do not all fit on the chassis plate: {list} go on a second deck, on M3 standoffs of 25 mm or more above the first.', { list: deck2 })
+        : t('Everything fits on the chassis plate, using {pct} of it, so there is room for wiring.', { pct: pct(lay.fill) }))}
+      ${lay.unplaced.length ? `<b>${esc(t('Even two decks are tight: {list} need a place of their own.', { list: lay.unplaced.map((r) => r.label).join(', ') }))}</b>` : ''}</p>
+      <div class="diagram-scroll">${roverTopView(d, lay)}</div>
+      <div class="legend"><span><i class="lg w-batt"></i>${esc(t('battery power'))}</span><span><i class="lg w-5v"></i>${esc(t('5 V'))}</span><span><i class="lg w-motor"></i>${esc(t('motor leads'))}</span></div>`;
+  }
+  if (d.arm) {
+    html += `<h3 style="margin-top:16px">${esc(t('The arm from the side'))}</h3>
+      <p>${esc(t('The home pose the build guide sets up, the arm stretched out, and the reach you asked for against its full stretch.'))}</p>
+      <div class="diagram-scroll">${armSideView(d.arm.frame, req)}</div>`;
+  }
+  return html + `<p class="fine">${esc(t('Board sizes are typical module footprints, not your boards: check them before you drill or cut.'))}</p>`;
+}
+
+// Everything needed at the bench on one printable page: the drawing, the parts and budget, the wiring and the guide.
+function printPack(p, req) {
+  const d = p.design;
+  const tc = tightest(d);
+  const date = new Intl.DateTimeFormat(locale(), { dateStyle: 'long' }).format(new Date());
+  const keep = state.tab;
+  const sec = (title, tab, f) => { state.tab = tab; return `<section class="pack-sec"><h2>${esc(title)}</h2>${f()}</section>`; };
+  let html = `<header class="pack-head"><h1>${esc(t('Robot Configurator'))}: ${esc(kindLabel(p))}</h1>
+    <p>${esc(describe(d))}</p>
+    <p>${money(p.price.total, p.price.currency)} · ${esc(t('{n} of {m} prices checked at the shop', { n: checkedShare(p.price).checkedLines, m: checkedShare(p.price).lines }))}${tc ? ` · ${esc(t('Headroom'))} ${pct(Math.max(0, tc.margin))}` : ''} · ${esc(date)}</p>
+    <p class="fine">${esc(location.href)}</p></header>`;
+  html += sec(t('Drawing'), 'drawing', () => renderDrawing(p, req));
+  html += sec(t('Parts and budget'), 'budget', () => renderBudget(p, req));
+  html += sec(t('Wiring'), 'wiring', () => renderWiring(p));
+  html += sec(t('Build guide'), 'build', () => renderBuild(p, req));
+  const fw = generateFirmware(d, req);
+  html += `<section class="pack-sec"><h2>${esc(t('Programs'))}</h2><p>${esc(t('Download the programs from the page (Programs tab): {files}.', { files: fw.files.map((f) => f.path).join(', ') }))}</p></section>`;
+  state.tab = keep;
+  let pack = document.getElementById('pack');
+  if (!pack) { pack = document.createElement('div'); pack.id = 'pack'; document.body.append(pack); }
+  pack.innerHTML = html;
+  root.classList.add('print-pack');
+  const done = () => { root.classList.remove('print-pack'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
 }
 
 function renderBudget(p, req) {

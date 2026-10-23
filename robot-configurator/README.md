@@ -4,7 +4,7 @@ Describe the robot you want: a wheeled rover, a desktop arm, or a rover carrying
 designs you can actually build from parts sold in **Denmark, Sweden or Norway**. Each design comes with a landed-cost
 budget, building instructions, wiring, and Arduino programs that compile as delivered.
 
-**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 2.0.0 · English, Dansk, Svenska, Norsk, Español
+**Live:** https://kathuman.github.io/claude-projects/robot-configurator/ · version 2.1.0 · English, Dansk, Svenska, Norsk, Español
 
 ## What it does
 
@@ -33,6 +33,18 @@ budget, building instructions, wiring, and Arduino programs that compile as deli
    robot program) as a zip.
 6. **When nothing fits,** it says why. It lists the checks that block the closest candidates, and binary-searches each
    requirement to tell you how far it would have to move ("payload up to 4.84 kg works").
+
+## See it before you buy (2.1)
+
+- **Drawing** tab: the rover from above, drawn from its parts (`src/layout.js`). The battery goes in the middle, then
+  every board takes the first free spot on the chassis plate; what does not fit goes on a second deck, and the page
+  says which boards and what standoffs. The power wiring is drawn along that layout (battery → switch and fuse →
+  breadboard rails → driver and regulator → controller) with the motor leads to the wheels. An arm is drawn from the
+  side in the home pose the build guide sets up, stretched out, and with the reach you asked for against its full
+  stretch. Board sizes are typical module footprints (`FOOTPRINT`), so the drawing is a guide to fitting and wiring,
+  not a mechanical drawing.
+- **Build pack:** one printable document with the drawing, parts and budget, wiring and building guide (and the
+  program file names), to print or save as PDF from the browser.
 
 ## Engineering checks
 
@@ -155,7 +167,7 @@ read in; part names are the shops' own.
 npm test
 ```
 
-59 checks:
+60 checks:
 - the motor, slope, PWM-cap, runtime, servo and joint-torque models, against hand calculations;
 - catalog schema and consistency;
 - every shipping/tax mode, against hand-computed parcels;
@@ -176,9 +188,11 @@ npm test
 - every price record well formed (dates, links, reasons for dropped offers), every offer checked or an estimate;
 - packs are bought whole; a check goes stale after 90 days;
 - a pack you assemble is bought as holder and cells with the loose-cell charger; a chassis kit's motors and wheels
-  are not bought again; with checked prices only, every line is checked, and an arm says no arm frame has one.
+  are not bought again; with checked prices only, every line is checked, and an arm says no arm frame has one;
+- the drawing places every board inside the plate or on a second deck without overlaps, and the arm's drawn geometry
+  matches its link lengths.
 
-A browser check drives the page (55 checks: every robot type, the chart pick, swaps, the comparison, every tab, both
+A browser check drives the page (59 checks: the drawing and the build pack, every robot type, the chart pick, swaps, the comparison, every tab, both
 downloads, every language with no English left, the About page, phone width, the theme):
 
 ```bash
@@ -189,7 +203,8 @@ PW=<path to playwright or playwright-core> CHROME=<chrome.exe> node robot-config
 ## Layout
 
 ```
-index.html, styles.css, app.js   the page (wizard, proposals, chart, comparison, swaps, tabs)
+index.html, styles.css, app.js   the page (wizard, proposals, chart, comparison, swaps, tabs, build pack)
+src/layout.js                    the drawing: footprints, placement on the plate, top and side views
 about.html                       what it does, limits, versions, citation
 src/catalog.js                   parts, vendors, regions, tax rules
 src/physics.js                   motor, drive, battery and arm models

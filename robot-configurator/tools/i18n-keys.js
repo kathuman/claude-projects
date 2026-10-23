@@ -12,7 +12,7 @@ import { SLOT_LABEL, BEHAVIOURS } from '../src/solver.js';
 
 const ROOT = new URL('../', import.meta.url);
 const read = (f) => readFileSync(new URL(f, ROOT), 'utf8');
-const SOURCES = ['app.js', 'src/solver.js', 'src/guide.js', 'src/wiring.js'];
+const SOURCES = ['app.js', 'src/solver.js', 'src/guide.js', 'src/wiring.js', 'src/layout.js'];
 
 // the string literals in the first argument of every t( … ) call
 function tCalls(src) {
