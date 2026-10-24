@@ -195,9 +195,9 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content
 .brandbar{display:flex;align-items:center;padding:4px 0 14px;margin-bottom:14px;border-bottom:1px solid var(--line)}
 .brandbar a{display:inline-flex;line-height:0}
 .brandbar a:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
-.brandbar .lk{height:72px;width:auto}
+.brandbar .lk{height:56px;width:auto}
 .lk-dark{display:none}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .lk-light{display:none}:root:not([data-theme="light"]) .lk-dark{display:inline}}
 :root[data-theme="dark"] .lk-light{display:none}
 :root[data-theme="dark"] .lk-dark{display:inline}
-@media (max-width:520px){.brandbar .lk{height:52px}}
+@media (max-width:520px){.brandbar .lk{height:44px}}
