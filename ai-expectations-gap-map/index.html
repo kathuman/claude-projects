@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Expectations Gap Map</title>
+<meta name="description" content="Where AI expectations outrun the evidence: an interactive scenario board for AI investment decisions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav" aria-label="Site">
+    <span class="eyebrow">AI Expectations Gap Map</span>
+    <a href="about.html">Methodology and data updates →</a>
+  </nav>
+  <header>
+    <div>
+      <div class="eyebrow" id="eyebrow">AI portfolio board</div>
+      <h1>Where AI expectations outrun the evidence</h1>
+      <p class="lede">Each bubble is a technology. Height is market expectation, horizontal position is demonstrated value, size is business impact if it works. The gap between the two is the risk. Change the drivers to see how a different future reshapes the board.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="panel toolbar">
+    <div class="scen" role="group" aria-label="Scenario">
+      <span class="eyebrow">Scenario</span>
+      <div id="presets" class="chips"></div>
+    </div>
+    <div class="scen" role="group" aria-label="Starting positions">
+      <span class="eyebrow">Starting positions</span>
+      <div class="chips" id="sources">
+        <button class="chip" data-mode="analyst">Analyst</button>
+        <button class="chip" data-mode="blend">Blend</button>
+        <button class="chip" data-mode="signals">Signals only</button>
+      </div>
+      <button class="btn" id="share">Copy link to this view</button>
+    </div>
+    <p class="scen-note" id="scenNote"></p>
+    <p class="scen-note" id="dataNote"></p>
+  </div>
+
+  <div class="main">
+    <div class="panel">
+      <div class="chart-head">
+        <h2 id="chartTitle">Expectation gap map</h2>
+        <div class="legend">
+          <span><i style="background:var(--over)"></i>Overheated</span>
+          <span><i style="background:var(--proven)"></i>Proven</span>
+          <span><i style="background:var(--under)"></i>Underpriced</span>
+          <span><i style="background:var(--emerg)"></i>Emerging</span>
+          <label class="toggle"><input type="checkbox" id="allLbl"> All labels</label>
+        </div>
+      </div>
+      <div class="svgbox"><svg id="map" viewBox="0 0 680 540" role="img" aria-label="Scatter of AI technologies by evidence and expectations"></svg></div>
+    </div>
+
+    <aside class="panel side">
+      <section>
+        <h2>Watch out: correction risk</h2>
+        <p>Largest gap between expectations and evidence at the chosen horizon, weighted by impact, with the signal that would confirm or kill the bet.</p>
+        <div class="list" id="overList"></div>
+      </section>
+      <section>
+        <h2>Underpriced: build quietly</h2>
+        <p>Delivering more than the market credits.</p>
+        <div class="list" id="underList"></div>
+      </section>
+      <section id="reviewSec" hidden>
+        <h2>Needs analyst review</h2>
+        <p>Collected signals disagree with the analyst score on expectations.</p>
+        <div class="list" id="reviewList"></div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="lower">
+    <div class="panel">
+      <h2>Drivers of the future</h2>
+      <div class="drv" id="drivers"></div>
+    </div>
+    <div class="panel" id="detail"></div>
+  </div>
+
+  <div class="panel method">
+    <h2>How to read this</h2>
+    <p>Analyst scores (0–100) for expectations, evidence and impact live in <code>data/assessments.csv</code>. A monthly job collects public attention signals (Wikipedia page views, Hacker News stories, arXiv papers, PyPI downloads) into <code>data/signals.json</code>. "Blend" mixes the two using the weights in <code>data/settings.json</code>. Gartner's 2026 phase is shown in each detail card for comparison only.</p>
+    <p>The projection is a two-stock adjustment model. Evidence grows logistically: <code>dE/dt = r·(1 + Σ sᵢ·dᵢ)·E·(1 − E/100)</code>, where <code>dᵢ</code> are the driver settings and <code>sᵢ</code> each technology's sensitivity. Expectations adjust toward evidence plus a narrative premium: <code>dH/dt = k·(E + premium − H)</code>, with <code>premium = a·(impact − 50) + b·capital + c·capability</code>. <code>k</code> is the hype correction speed.</p>
+    <p id="thresholdNote"></p>
+    <p>Attention is not adoption, and the thresholds and sensitivities are judgement calls. Use the board to structure the discussion, not to settle it. <a href="about.html" style="color:var(--accent)">Full methodology and update process</a>.</p>
+  </div>
+</div>
+<script type="module" src="assets/app.js"></script>
+</body>
+</html>
