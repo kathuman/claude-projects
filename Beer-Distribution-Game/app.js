@@ -7,8 +7,9 @@ import { SCENARIOS } from './src/scenarios.js';
 import { anchoring, orderUpTo, bestRule, TYPICAL, leadTime } from './src/rules.js';
 import { summary, benchmarks, fits, causes } from './src/debrief.js';
 import { lineChart, curveChart, wire } from './src/charts.js';
+import { structureSvg } from './src/diagram.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 const KEY = 'ripple-game';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,8 +42,9 @@ function renderStart() {
     const names = stageNames(Number($('stages').value));
     $('people').innerHTML = names.map((n, i) => `<label><input type="checkbox" name="person" value="${i}" checked> ${esc(n)}</label>`).join('');
   };
-  $('stages').onchange = drawPeople;
+  $('stages').onchange = () => { drawPeople(); drawStructure(); };
   drawPeople();
+  drawStructure();
   $('resume').hidden = true;
   const saved = load();
   if (saved?.game && !saved.finished) {
@@ -60,37 +62,41 @@ function renderStart() {
   }
 }
 
+// The settings as they stand on the form (the diagram follows them while a team chooses).
+function formInput() {
+  const num = (id) => Number($(id).value);
+  return { stages: num('stages'), weeks: num('weeks'), initInv: num('initInv'), orderDelay: num('orderDelay'),
+    shipDelay: num('shipDelay'), prodDelay: num('prodDelay'), holding: num('holding'), backlog: num('backlog'), seed: num('seed') };
+}
+const formPeople = () => [...$('setup').querySelectorAll('input[name=person]:checked')].map((x) => Number(x.value));
+
 function readSetup() {
   const f = $('setup');
   const num = (id) => Number($(id).value);
+  const whole = (id, dflt, max) => ($(id).value === '' ? dflt : Math.min(max, Math.max(0, Math.round(num(id)))));
   let scenario = f.elements.scenario.value;
   const surprise = scenario === 'surprise';
   if (surprise) scenario = ['step', 'seasonal', 'promotion', 'random'][Math.floor(Math.random() * 4)];
   const input = { stages: num('stages'), weeks: num('weeks'), initInv: num('initInv'), orderDelay: num('orderDelay'),
     shipDelay: num('shipDelay'), prodDelay: num('prodDelay'), holding: num('holding'), backlog: num('backlog'), seed: num('seed'), scenario };
   const people = [...f.querySelectorAll('input[name=person]:checked')].map((x) => Number(x.value));
-  return { team: $('team').value.trim() || 'Team 1', input, people, surprise, mode: f.elements.mode.value, botKind: $('botKind').value };
+  return { team: $('team').value.trim() || 'Team 1', input, people, surprise, mode: f.elements.mode.value, botKind: $('botKind').value,
+    limit: whole('limit', 15, 600), defaultOrder: whole('defaultOrder', 4, 999) };
 }
 
 // ---------------------------------------------------------------- briefing
 
-function chainDiagram(cfg, { now = -1, done = [] } = {}) {
-  const n = cfg.stages;
-  const parts = ['<span class="cust">Customers</span>'];
-  for (let i = 0; i < n; i++) {
-    // between customers and the store orders and goods are immediate; between stages they take the delays
-    parts.push(i === 0
-      ? '<span class="link"><span>orders →</span><span class="arr">⇄</span><span>← goods</span></span>'
-      : `<span class="link"><span>orders ${cfg.orderDelay} wk →</span><span class="arr">⇄</span><span>← goods ${cfg.shipDelay} wk</span></span>`);
-    const note = i === n - 1 ? `produces in ${cfg.prodDelay} wk` : S?.people && !S.people.includes(i) ? 'simulated' : '';
-    parts.push(`<div class="node${i === now ? ' now' : ''}${done.includes(i) ? ' done' : ''}"><b><span class="sw" style="background:${color(i)}"></span>${esc(cfg.names[i])}</b><small>${note}${i === n - 1 && S?.people && !S.people.includes(i) ? ' · simulated' : ''}</small></div>`);
-  }
-  return `<div class="chain" aria-label="The chain from customers to the plant">${parts.join('')}</div>`;
+// The structure of the chain at the top of every screen: the game being played, or the settings being chosen.
+function drawStructure({ cfg, people, now = -1, done = [] } = {}) {
+  const c = cfg ?? config(formInput());
+  const ppl = people ?? formPeople();
+  $('structure').innerHTML = `<div class="structure-head"><h2>The chain</h2><span class="fine">${c.stages} stages · orders take ${c.orderDelay} wk · goods ${c.shipDelay} wk · production ${c.prodDelay} wk</span></div>
+    <div class="structure-scroll">${structureSvg(c, { now, done, simulated: c.names.map((_, i) => i).filter((i) => !ppl.includes(i)) })}</div>`;
 }
 
 function renderBrief() {
   const cfg = config(S.input);
-  $('chainDiagram').innerHTML = chainDiagram(cfg);
+  drawStructure({ cfg, people: S.people });
   const lt = leadTime(cfg, 1);
   const sims = cfg.names.filter((_, i) => !S.people.includes(i));
   $('briefText').innerHTML = `
@@ -100,7 +106,8 @@ function renderBrief() {
     <p><b>What you see.</b> Only your own stage: your stock, what you owe, what arrived, what was ordered from you, and what you have on order. The ${esc(cfg.names[0])} sees what customers order; nobody else does.</p>
     ${S.mode === 'turn' ? `<p><b>Turn by turn.</b> Each week the device goes from the ${esc(cfg.names[0])} up the chain. When it's your turn, look only at your own screen, and don't tell the others your numbers: in a real chain you wouldn't know them.</p>` : `<p><b>Open table.</b> Everyone sees every stage and the team decides together.</p>`}
     ${sims.length ? `<p><b>Simulated players</b> run the ${sims.map(esc).join(', ')}, behaving ${S.botKind === 'best' ? 'like the best simple rule' : 'like typical players'}.</p>` : ''}
-    <p><b>The start.</b> Every stage holds ${cfg.initInv} units, and ${cfg.base} units a week are flowing through the chain.</p>`;
+    <p><b>The start.</b> Every stage holds ${cfg.initInv} units, and ${cfg.base} units a week are flowing through the chain.</p>
+    <p><b>Time to answer.</b> ${S.limit ? `Each player has ${S.limit} seconds to place an order. When time runs out the order is placed for them: what they typed, or ${S.defaultOrder} units if they typed nothing.` : 'There is no time limit.'} Placing an order with nothing entered orders ${S.defaultOrder} units.</p>`;
   show('brief');
 }
 
@@ -125,6 +132,7 @@ function nextWeek() {
   startWeek(g);
   S.orders = g.stages.map((_, i) => (S.people.includes(i) ? null : botRule(i)(view(g, i))));
   S.seconds = g.stages.map(() => null);
+  S.auto = g.stages.map(() => null);
   S.turn = 0;
   save();
   resumePlay();
@@ -155,7 +163,7 @@ function showCover(i) {
   const g = S.game;
   meta();
   const done = humans().filter((k) => S.orders[k] != null);
-  $('chainMini').innerHTML = chainDiagram(g.cfg, { now: i, done });
+  drawStructure({ cfg: g.cfg, people: S.people, now: i, done });
   $('stageView').hidden = true;
   $('stageView').innerHTML = '';
   $('tableView').hidden = true;
@@ -190,14 +198,41 @@ function stageHtml(i, { compact = false } = {}) {
     <form class="order" data-stage="${i}" autocomplete="off" novalidate>
       <label for="ord${i}">${ask}</label>
       <div class="stepper"><button type="button" data-d="-1" aria-label="One less">−</button>
-        <input id="ord${i}" type="number" inputmode="numeric" min="0" max="999" step="1" required>
+        <input id="ord${i}" type="number" inputmode="numeric" min="0" max="999" step="1" placeholder="${S.defaultOrder ?? 4}">
         <button type="button" data-d="1" aria-label="One more">+</button></div>
-      ${compact ? '' : `<button class="btn primary big" type="submit">Place order</button>`}
-      <p class="fine">${up ? `It reaches the ${esc(up)} in ${g.cfg.orderDelay} week${g.cfg.orderDelay > 1 ? 's' : ''}; the goods arrive about ${lt} weeks from now if it has them.` : `Production finishes in ${g.cfg.prodDelay} weeks.`}</p>
+      ${compact ? '' : `${timerHtml()}<button class="btn primary big" type="submit">Place order</button>`}
+      <p class="fine">Leave it empty to order ${S.defaultOrder ?? 4}. ${up ? `It reaches the ${esc(up)} in ${g.cfg.orderDelay} week${g.cfg.orderDelay > 1 ? 's' : ''}; the goods arrive about ${lt} weeks from now if it has them.` : `Production finishes in ${g.cfg.prodDelay} weeks.`}</p>
       <p class="fine err" role="alert"></p>
     </form>
     ${compact || !past.length ? '' : `<details class="pastwrap"><summary>Your last weeks</summary><div class="scroll"><table class="past"><thead><tr><th>Week</th><th class="num">Ordered from you</th><th class="num">Arrived</th><th class="num">You ordered</th><th class="num">Stock</th><th class="num">Owed</th></tr></thead><tbody>
       ${past.map((p) => `<tr><td>${p.week}</td><td class="num">${p.incoming}</td><td class="num">${p.arrived}</td><td class="num">${p.order}</td><td class="num">${p.inv}</td><td class="num">${p.backlog}</td></tr>`).join('')}</tbody></table></div></details>`}`;
+}
+
+// ---- the time to answer: a countdown that places the order when it runs out
+let ticker = null;
+const stopTimer = () => { clearInterval(ticker); ticker = null; };
+const timerHtml = () => (S.limit ? `<div class="timer" role="timer"><div class="bar"><i></i></div><span class="left"></span><small>to answer</small></div>` : '');
+function startTimer(root, onExpire) {
+  stopTimer();
+  const el = root.querySelector('.timer');
+  if (!S.limit || !el) return;
+  const end = performance.now() + S.limit * 1000;
+  const tick = () => {
+    const left = Math.max(0, (end - performance.now()) / 1000);
+    el.querySelector('.left').textContent = `${Math.ceil(left)} s`;
+    el.querySelector('i').style.width = `${(100 * left) / S.limit}%`;
+    el.classList.toggle('low', left <= 5);
+    if (left <= 0) { stopTimer(); onExpire(); }
+  };
+  tick();
+  ticker = setInterval(tick, 200);
+}
+
+// What the box holds: a valid order, nothing (null), or something invalid (NaN).
+function readOrder(inp) {
+  if (inp.value.trim() === '') return null;
+  const v = Number(inp.value);
+  return Number.isInteger(v) && v >= 0 && v <= 999 ? v : NaN;
 }
 
 function wireOrder(form, onValue) {
@@ -208,13 +243,13 @@ function wireOrder(form, onValue) {
   }));
   form.addEventListener('submit', (ev) => {
     ev.preventDefault();
-    const v = Number(inp.value);
-    if (inp.value === '' || !Number.isInteger(v) || v < 0 || v > 999) {
-      form.querySelector('.err').textContent = 'Enter a whole number of units, 0 or more.';
+    const v = readOrder(inp);
+    if (Number.isNaN(v)) {
+      form.querySelector('.err').textContent = 'Enter a whole number of units, 0 or more, or leave it empty.';
       inp.focus();
       return;
     }
-    onValue(v);
+    onValue(v ?? S.defaultOrder, v == null ? 'empty' : null);
   });
 }
 
@@ -226,49 +261,63 @@ function showStage(i) {
   $('stageView').innerHTML = `<div class="panel"><div class="stagehead"><h2><span class="sw" style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${color(i)};margin-right:8px"></span>${esc(g.cfg.names[i])}</h2><span class="fine">Week ${g.week} of ${g.cfg.weeks}</span></div>${stageHtml(i)}</div>`;
   const shownAt = performance.now();
   const form = $('stageView').querySelector('form');
-  wireOrder(form, (v) => {
+  const inp = form.querySelector('input');
+  const place = (v, why) => {
+    stopTimer();
     S.orders[i] = v;
     S.seconds[i] = Math.round((performance.now() - shownAt) / 100) / 10;
+    S.auto[i] = why;
     save();
     resumePlay();
-  });
-  form.querySelector('input').focus();
+  };
+  wireOrder(form, place);
+  startTimer(form, () => { const v = readOrder(inp); place(Number.isInteger(v) ? v : S.defaultOrder, 'timeout'); });
+  inp.focus();
 }
 
 function showTable() {
   const g = S.game;
   meta();
-  $('chainMini').innerHTML = chainDiagram(g.cfg);
+  drawStructure({ cfg: g.cfg, people: S.people });
   $('cover').hidden = true;
   $('stageView').hidden = true;
   $('stageView').innerHTML = '';
   $('tableView').hidden = false;
   const h = humans();
-  $('tableView').innerHTML = `<div class="tablegrid">${h.map((i) => `<div class="panel"><h3><span class="sw" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${color(i)};margin-right:6px"></span>${esc(g.cfg.names[i])}</h3>${stageHtml(i, { compact: true })}</div>`).join('')}</div>
+  $('tableView').innerHTML = `${timerHtml()}<div class="tablegrid">${h.map((i) => `<div class="panel"><h3><span class="sw" style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${color(i)};margin-right:6px"></span>${esc(g.cfg.names[i])}</h3>${stageHtml(i, { compact: true })}</div>`).join('')}</div>
     <div class="row"><button class="btn primary big" id="placeAll" type="button">Place all orders for week ${g.week}</button><span class="fine err" id="tableErr" role="alert"></span></div>`;
   const shownAt = performance.now();
-  $('tableView').querySelectorAll('form').forEach((f) => wireOrder(f, () => $('placeAll').click()));
-  $('placeAll').onclick = () => {
-    const vals = h.map((i) => $(`ord${i}`).value);
-    if (vals.some((x) => x === '' || !Number.isInteger(Number(x)) || Number(x) < 0)) {
-      $('tableErr').textContent = 'Every stage needs an order: a whole number of units, 0 or more.';
+  const placeAll = (timedOut) => {
+    const vals = h.map((i) => readOrder($(`ord${i}`)));
+    if (!timedOut && vals.some((v) => Number.isNaN(v))) {
+      $('tableErr').textContent = 'Every order is a whole number of units, 0 or more, or left empty.';
       return;
     }
+    stopTimer();
     const each = Math.round((performance.now() - shownAt) / 100 / h.length) / 10;
-    h.forEach((i, k) => { S.orders[i] = Number(vals[k]); S.seconds[i] = each; });
+    h.forEach((i, k) => {
+      const v = vals[k];
+      S.orders[i] = Number.isInteger(v) ? v : S.defaultOrder;
+      S.seconds[i] = each;
+      S.auto[i] = timedOut ? 'timeout' : v == null ? 'empty' : null;
+    });
     save();
     closeWeek();
   };
+  $('tableView').querySelectorAll('form').forEach((f) => wireOrder(f, () => placeAll(false)));
+  $('placeAll').onclick = () => placeAll(false);
+  startTimer($('tableView'), () => placeAll(true));
   $(`ord${h[0]}`).focus();
 }
 
 function closeWeek() {
-  placeOrders(S.game, S.orders, S.seconds);
+  placeOrders(S.game, S.orders, S.seconds, S.auto ?? []);
   save();
   nextWeek();
 }
 
 function finish() {
+  stopTimer();
   S.finished = true;
   S.finishedAt ??= Date.now();
   save();
@@ -300,6 +349,7 @@ function renderDebrief() {
   $('status').hidden = true;
   const g = S.game;
   const cfg = g.cfg;
+  drawStructure({ cfg, people: S.people });
   const sm = summary(g, S.people);
   const played = g.history.length;
   const bm = benchmarks(g);
@@ -359,7 +409,7 @@ function renderDebrief() {
         <small>Cost ${fmt(s.cost)}: stock ${fmt(s.holdingCost)}, owed ${fmt(s.backlogCost)}</small>
         <dl><dt>Largest order</dt><dd>${s.peakOrder}</dd><dt>Most owed</dt><dd>${s.peakBacklog}</dd>
           <dt>Swing against demand</dt><dd>${s.amplification == null ? '–' : `${fmt(s.amplification, 1)}×`}</dd>
-          ${s.person ? `<dt>Time per decision</dt><dd>${s.seconds.median == null ? '–' : `${fmt(s.seconds.median, 1)} s`}</dd><dt>Longest decision</dt><dd>${s.seconds.longest == null ? '–' : `${fmt(s.seconds.longest, 0)} s`}</dd>` : ''}</dl>
+          ${s.person ? `<dt>Orders placed by default</dt><dd>${s.autoEmpty + s.autoTimeout}${s.autoTimeout ? ` (${s.autoTimeout} when time ran out)` : ''}</dd><dt>Time per decision</dt><dd>${s.seconds.median == null ? '–' : `${fmt(s.seconds.median, 1)} s`}</dd><dt>Longest decision</dt><dd>${s.seconds.longest == null ? '–' : `${fmt(s.seconds.longest, 0)} s`}</dd>` : ''}</dl>
         <div class="rule">${ruleText(f[i], s.person ? '' : S.botKind === 'best' ? 'Simulated with the best simple rule.' : 'Simulated as a typical player.')}</div></div>`).join('')}
     </div></div>
 
@@ -375,8 +425,8 @@ function renderDebrief() {
 
 function csv(g) {
   const head = ['week', 'customer_demand'];
-  g.cfg.names.forEach((nm) => ['incoming', 'arrived', 'shipped', 'stock', 'owed', 'on_order', 'order', 'cost', 'seconds'].forEach((k) => head.push(`${nm} ${k}`)));
-  const rows = g.history.map((h) => [h.week, h.demand, ...h.stages.flatMap((r) => [r.incoming, r.arrived, r.shipped, r.inv, r.backlog, r.supplyLine, r.order, r.cost, r.seconds ?? ''])]);
+  g.cfg.names.forEach((nm) => ['incoming', 'arrived', 'shipped', 'stock', 'owed', 'on_order', 'order', 'placed_by_default', 'cost', 'seconds'].forEach((k) => head.push(`${nm} ${k}`)));
+  const rows = g.history.map((h) => [h.week, h.demand, ...h.stages.flatMap((r) => [r.incoming, r.arrived, r.shipped, r.inv, r.backlog, r.supplyLine, r.order, r.auto ?? '', r.cost, r.seconds ?? ''])]);
   return [head, ...rows].map((r) => r.map((x) => (/[",]/.test(String(x)) ? `"${String(x).replace(/"/g, '""')}"` : x)).join(',')).join('\n') + '\n';
 }
 
@@ -399,18 +449,21 @@ $('theme').onclick = () => {
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem('ripple-theme', next); } catch { /* ignore */ }
 };
+$('setup').addEventListener('input', () => drawStructure());
+$('setup').addEventListener('change', () => drawStructure());
 $('setup').addEventListener('submit', (ev) => {
   ev.preventDefault();
   S = readSetup();
   renderBrief();
 });
 $('begin').onclick = begin;
-$('backSetup').onclick = () => show('start');
+$('backSetup').onclick = () => { show('start'); drawStructure(); };
 $('endEarly').onclick = () => { $('endConfirm').hidden = false; $('endWeek').textContent = String(S.game.history.length); };
 $('endNo').onclick = () => { $('endConfirm').hidden = true; };
 $('endYes').onclick = () => {
   $('endConfirm').hidden = true;
   if (!S.game.history.length) { $('endConfirm').hidden = true; return; }
+  stopTimer();
   S.game.over = true;
   finish();
 };

@@ -33,6 +33,8 @@ export function summary(game, people = []) {
       peakOrder: Math.max(...orders), peakBacklog: Math.max(...rows.map((r) => r.backlog)),
       amplification: sdD > 1e-9 ? sd(orders) / sdD : null,
       seconds: { total: sum(secs), median: median(secs), longest: secs.length ? Math.max(...secs) : null, n: secs.length },
+      // orders placed for the player: nothing entered, or time ran out
+      autoEmpty: rows.filter((r) => r.auto === 'empty').length, autoTimeout: rows.filter((r) => r.auto === 'timeout').length,
     };
   });
   const allSecs = game.history.flatMap((h) => h.stages.map((r) => r.seconds)).filter((x) => x != null);

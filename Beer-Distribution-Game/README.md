@@ -5,7 +5,7 @@ Every stage orders from the one above it, and orders and shipments take time to 
 customers buy become large swings further up the chain: the bullwhip effect. The debrief shows each team, with its own
 numbers, why it happened.
 
-**Live:** https://kathuman.github.io/claude-projects/Beer-Distribution-Game/ · version 1.0.0 · method and references
+**Live:** https://kathuman.github.io/claude-projects/Beer-Distribution-Game/ · version 1.0.1 · method and references
 in [about.html](about.html)
 
 Ripple is an original game in the tradition of the supply chain games used in management teaching (Forrester 1958;
@@ -13,6 +13,11 @@ Sterman 1989). Its chain, numbers, demand patterns and debrief are its own; it i
 
 ## What it does
 
+- **The chain's structure on every screen**: every stage, orders travelling up and goods travelling down with one box
+  per week in transit, the plant's production line and the costs; structure only, never a stage's numbers.
+- **Time to answer each round** (15 seconds unless set otherwise), with a countdown; when time runs out the order is
+  placed for the player (what they typed, or the default). An empty answer orders 4 units (adjustable). The debrief
+  counts the orders placed by default, and the CSV marks each one.
 - **One team, one device.** Turn by turn (the default), each stage decides in turn and sees only its own numbers,
   behind a hand-over screen; or an open table, with every stage on one screen. Simulated players run any stage
   without a person, behaving like typical players or like the best simple rule.
@@ -50,6 +55,7 @@ src/rules.js                     decision rules: typical players, the best simpl
 src/fit.js                       reading a stage's decision rule from its orders
 src/debrief.js                   summary, benchmarks, fitted rules, the supply-line curve
 src/charts.js                    the debrief's SVG charts (legend, line labels, hover, table view)
+src/diagram.js                   the structure diagram shown on every screen
 tests/                           node --test suites
 tools/browser-check.cjs          plays the game in a real browser
 ```
@@ -68,8 +74,9 @@ calm and amplify a step up the chain; the best rule beats typical play on every 
 the game; counting more of the supply line damps the swings; rules decide from what a stage can see; fitting
 recovers known rules; the summary, the supply-line curve and the benchmarks add up.
 
-A browser check plays the game (47 checks: set-up, briefing, the hand-over screen hiding every number, a reload mid-
-week, the debrief's charts, hover, table and CSV, an open-table game, the theme and phone width):
+A browser check plays the game (62 checks: the diagram on every screen and following the settings, set-up,
+briefing, the hand-over screen hiding every number, a reload mid-week, an empty answer, an answer left unsent and no
+answer when time runs out, an open table that times out, the debrief's charts, hover, table and CSV, an open-table game, the theme and phone width):
 
 ```bash
 python -m http.server 8766          # from the repository root

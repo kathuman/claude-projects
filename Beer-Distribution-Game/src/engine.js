@@ -113,8 +113,9 @@ export function view(g, i) {
 }
 
 // Second half of a week: every stage's order goes out, the week's costs are counted, and the next week begins.
-// orders[i] is a whole number of units ≥ 0; seconds[i] (optional) the time stage i took to decide.
-export function placeOrders(g, orders, seconds = []) {
+// orders[i] is a whole number of units ≥ 0; seconds[i] (optional) the time stage i took to decide; auto[i]
+// (optional) why the order was placed for the player: 'empty' (nothing entered) or 'timeout' (time ran out).
+export function placeOrders(g, orders, seconds = [], auto = []) {
   if (g.phase !== 'decide') throw new Error('start the week first');
   const n = g.stages.length;
   if (orders.length !== n) throw new Error(`expected ${n} orders`);
@@ -128,7 +129,7 @@ export function placeOrders(g, orders, seconds = []) {
     if (i === n - 1) { s.inbound.push(q[i]); g.produced += q[i]; } else s.outbound.push(q[i]);
     const c = g.cfg.holding * s.inv + g.cfg.backlog * s.backlog;
     s.cost += c;
-    Object.assign(row.stages[i], { order: q[i], cost: c, seconds: seconds[i] ?? null });
+    Object.assign(row.stages[i], { order: q[i], cost: c, seconds: seconds[i] ?? null, auto: auto[i] ?? null });
   });
   g.history.push(row);
   delete g.pending;
