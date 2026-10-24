@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Methodology · AI Expectations Gap Map</title>
+<meta name="description" content="How the AI Expectations Gap Map scores technologies, projects scenarios and keeps its data current.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="doc">
+<div class="wrap">
+  <nav class="topnav" aria-label="Site">
+    <a href="./">← Back to the board</a>
+    <span class="eyebrow" id="asOf">Methodology</span>
+  </nav>
+
+  <header class="doc-head">
+    <div class="eyebrow">AI Expectations Gap Map</div>
+    <h1>Methodology and data updates</h1>
+    <p class="lede">How each technology is scored, how the board projects different futures, and how the data is kept current. Numbers on this page are read from the same data files the board uses, so they always match what you see there.</p>
+  </header>
+
+  <div class="doc-grid">
+    <aside class="toc" aria-label="Contents">
+      <div class="eyebrow">Contents</div>
+      <ol>
+        <li><a href="#why">Why not a hype cycle</a></li>
+        <li><a href="#axes">What the board measures</a></li>
+        <li><a href="#rubric">Scoring rubric</a></li>
+        <li><a href="#classes">Classes and actions</a></li>
+        <li><a href="#signals">Collected signals</a></li>
+        <li><a href="#blend">Blending judgement and signals</a></li>
+        <li><a href="#model">The projection model</a></li>
+        <li><a href="#example">Worked example</a></li>
+        <li><a href="#scenarios">Drivers and scenarios</a></li>
+        <li><a href="#limits">Limitations</a></li>
+        <li><a href="#updating">How the data is updated</a></li>
+        <li><a href="#files">Data files</a></li>
+        <li><a href="#log">Update log</a></li>
+      </ol>
+    </aside>
+
+    <article class="prose">
+
+<section id="why">
+<h2>1. Why not a hype cycle</h2>
+<p>The hype cycle places each technology on one curve against an unlabelled time axis. It has three weaknesses for investment decisions.</p>
+<ul>
+  <li><strong>One axis carries two meanings.</strong> A position on the curve mixes how much attention a technology gets with how mature it is. The two often move independently: foundation models are commoditising while attention stays high; knowledge graphs deliver value with little attention.</li>
+  <li><strong>No mechanism.</strong> The curve is a shape, not a model. It cannot say what would move a technology faster or slower, so it cannot be used to test scenarios.</li>
+  <li><strong>Weak empirical record.</strong> Reviews of the model (Dedehayir and Steinert, 2016) and retrospectives of past cycles (Mullany, 2016) found that most technologies do not follow the full curve. Many appear once and vanish.</li>
+</ul>
+<p>This board separates the two quantities, makes the dynamics explicit, and exposes every assumption in an editable file.</p>
+</section>
+
+<section id="axes">
+<h2>2. What the board measures</h2>
+<p>Each technology has three scores from 0 to 100.</p>
+<dl class="defs">
+  <dt>Expectations <span>vertical axis</span></dt>
+  <dd>How much the market believes the technology will deliver, and how soon. It shows up as attention, investment announcements, valuations and executive agendas. High expectations are not a problem in themselves; they are a problem when evidence does not support them.</dd>
+  <dt>Evidence <span>horizontal axis</span></dt>
+  <dd>How much value the technology has demonstrably delivered in production, outside the vendors selling it. Production deployments, measured financial impact, independent trials and failure rates count. Demonstrations, pilots and vendor claims count for little.</dd>
+  <dt>Impact <span>bubble size</span></dt>
+  <dd>How much business value the technology would create if it worked as promised. Impact does not move the bubble. It decides how much a wrong call costs, and it weights the correction-risk ranking.</dd>
+  <dt>Gap</dt>
+  <dd><code>gap = expectations − evidence</code>. A positive gap means the market is ahead of the evidence and a correction is possible. A negative gap means the technology delivers more than it is credited for.</dd>
+</dl>
+</section>
+
+<section id="rubric">
+<h2>3. Scoring rubric</h2>
+<p>Analysts score against these anchors. Scores between anchors are interpolated. Each score is recorded in <code>data/assessments.csv</code> with the review date and a one-line rationale.</p>
+
+<div class="tbl"><table>
+<caption>Expectations</caption>
+<thead><tr><th>Score</th><th>Anchor</th><th>Typical observable signs</th></tr></thead>
+<tbody>
+<tr><td>0–20</td><td>Niche</td><td>Discussed mainly in research papers or specialist forums. No dedicated vendor category.</td></tr>
+<tr><td>20–40</td><td>Specialist interest</td><td>Early-stage startups, conference tracks, occasional trade-press coverage.</td></tr>
+<tr><td>40–60</td><td>Mainstream business topic</td><td>Large vendors market it, analyst firms cover it, appears in business press regularly.</td></tr>
+<tr><td>60–80</td><td>Board-level priority</td><td>Large funding rounds and capex commitments, CEO statements, valuations that assume success.</td></tr>
+<tr><td>80–100</td><td>Treated as inevitable</td><td>Capital and public policy committed ahead of results. Sceptics are a small minority in public debate.</td></tr>
+</tbody></table></div>
+
+<div class="tbl"><table>
+<caption>Evidence</caption>
+<thead><tr><th>Score</th><th>Anchor</th><th>Typical observable signs</th></tr></thead>
+<tbody>
+<tr><td>0–20</td><td>Laboratory</td><td>Research results and demonstrations. No paying production use.</td></tr>
+<tr><td>20–40</td><td>Pilots</td><td>Pilots and a few production deployments. No independent measurement of financial impact. High pilot cancellation.</td></tr>
+<tr><td>40–60</td><td>Early production</td><td>Early adopters in production with quantified case studies. Results vary widely between organisations.</td></tr>
+<tr><td>60–80</td><td>Repeatable value</td><td>Widespread production use, repeatable returns, mature vendors and established practices.</td></tr>
+<tr><td>80–100</td><td>Infrastructure</td><td>Standard practice or commodity. Value is assumed and competition is on price.</td></tr>
+</tbody></table></div>
+
+<div class="tbl"><table>
+<caption>Impact (if it works)</caption>
+<thead><tr><th>Score</th><th>Anchor</th></tr></thead>
+<tbody>
+<tr><td>0–20</td><td>Marginal efficiency gain in one activity.</td></tr>
+<tr><td>20–40</td><td>Material improvement within one function.</td></tr>
+<tr><td>40–60</td><td>Material improvement across several functions, or a meaningful cost line.</td></tr>
+<tr><td>60–80</td><td>Changes the operating model of an industry.</td></tr>
+<tr><td>80–100</td><td>General-purpose technology with economy-wide effects.</td></tr>
+</tbody></table></div>
+
+<h3>Weighting evidence sources</h3>
+<p>When sources conflict, rank them in this order and state in the notes which one drove the score:</p>
+<ol>
+  <li>Independent measurement: randomised or controlled studies, audited financial results, regulator data.</li>
+  <li>Observed behaviour: production deployment counts, renewal and cancellation rates, spend data.</li>
+  <li>Practitioner reports with numbers: case studies that state baseline, intervention and result.</li>
+  <li>Surveys of intent or satisfaction.</li>
+  <li>Vendor claims and press coverage. These inform expectations, not evidence.</li>
+</ol>
+</section>
+
+<section id="classes">
+<h2>4. Classes and actions</h2>
+<p>Each technology falls into one of four classes based on its gap and evidence. The thresholds live in <code>data/settings.json</code>.</p>
+<div class="classes" id="classTable"></div>
+<p>The diagonal band on the map is the region where expectations and evidence roughly agree. The class decides the recommended action, which follows real-options logic: commit capital in proportion to evidence, and buy cheap options where uncertainty is high.</p>
+</section>
+
+<section id="signals">
+<h2>5. Collected signals</h2>
+<p>A monthly job collects four public signals per technology. They need no API keys and are reproducible by anyone. Queries per technology are configured in <code>data/technologies.json</code>.</p>
+<div class="tbl"><table>
+<thead><tr><th>Signal</th><th>Source</th><th>What it measures</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td>Page views</td><td>Wikimedia REST API, English Wikipedia, human traffic only</td><td>Broad public attention</td><td>Expectations</td></tr>
+<tr><td>Story counts</td><td>Hacker News via Algolia search, query in story title</td><td>Practitioner and technical attention</td><td>Expectations</td></tr>
+<tr><td>Momentum</td><td>Change in page views and story counts against the prior three months</td><td>Whether attention is rising or falling</td><td>Expectations</td></tr>
+<tr><td>Paper counts</td><td>arXiv API, query in any field</td><td>Research activity</td><td>Shown only</td></tr>
+<tr><td>Downloads</td><td>pypistats.org, last month, configured packages</td><td>Developer usage</td><td>Evidence proxy</td></tr>
+</tbody></table></div>
+
+<h3>Time windows</h3>
+<p>Each refresh uses the <strong>last three complete calendar months</strong> as the current window and the three months before as the prior window. A run on 3 November reports August to October. Three months smooths one-off news spikes.</p>
+
+<h3>From raw counts to indices</h3>
+<p>Raw counts differ by orders of magnitude between technologies and sources, so each component is log-scaled and normalised across the set:</p>
+<pre class="eq">n<sub>c</sub>(i) = ( ln(1 + x<sub>c</sub>(i)) − min<sub>j</sub> ln(1 + x<sub>c</sub>(j)) ) / ( max<sub>j</sub> − min<sub>j</sub> )</pre>
+<p>Momentum is the average log ratio of current to prior window across Wikipedia and Hacker News, then min-max normalised the same way.</p>
+<pre class="eq">attention index = 100 × ( 0.4·n<sub>wiki</sub> + 0.4·n<sub>hn</sub> + 0.2·n<sub>momentum</sub> )
+usage index     = 100 × n<sub>pypi</sub></pre>
+<p>When a component is missing for a technology (no Wikipedia article, no package), its weight is redistributed over the components that exist. A component is only computed when at least three technologies have it.</p>
+<p class="callout"><strong>The indices are relative.</strong> 0 means the least attention in this set and 100 the most. If attention to all AI rises together, the indices stay flat. The raw counts and momentum in each detail card show absolute change.</p>
+</section>
+
+<section id="blend">
+<h2>6. Blending judgement and signals</h2>
+<p>The board offers three ways to set each technology's starting position, selected under "Starting positions".</p>
+<dl class="defs">
+  <dt>Analyst</dt><dd>Scores from <code>assessments.csv</code> only.</dd>
+  <dt>Blend <span>default once signals exist</span></dt><dd id="blendText">A weighted mix of analyst scores and indices.</dd>
+  <dt>Signals only</dt><dd>Indices wherever they exist, analyst scores elsewhere. Useful to see what the market's attention alone says.</dd>
+</dl>
+<pre class="eq">H₀ = (1 − w<sub>H</sub>)·analyst expectations + w<sub>H</sub>·attention index
+E₀ = (1 − w<sub>E</sub>)·analyst evidence     + w<sub>E</sub>·usage index</pre>
+<p>The evidence weight is deliberately lower. Attention is a reasonable proxy for expectations; downloads are a weak proxy for value. Evidence remains mainly a matter of analyst judgement against the rubric.</p>
+</section>
+
+<section id="model">
+<h2>7. The projection model</h2>
+<p>The projection is a two-stock system dynamics model, solved with Euler steps (<span data-k="steps"></span> per year). It is deliberately small: every parameter can be explained in a sentence and changed in a file.</p>
+
+<h3>Evidence grows logistically</h3>
+<pre class="eq">dE/dt = r<sub>eff</sub> · E · (1 − E/100)
+r<sub>eff</sub> = max(0, r · (1 + Σ<sub>d</sub> s<sub>d</sub> · D<sub>d</sub>))</pre>
+<p>Evidence accumulates fastest at mid-maturity and slows near saturation. <code>r</code> is the technology's base growth rate per year. <code>D<sub>d</sub></code> is the setting of driver <em>d</em> (from −1 to +1) and <code>s<sub>d</sub></code> is the technology's sensitivity to that driver. A sensitivity of +0.7 to capability progress means a strong capability scenario (+1) raises the growth rate by 70%.</p>
+
+<h3>Expectations adjust toward evidence plus a premium</h3>
+<pre class="eq">dH/dt = k · ( clamp(E + P, 0, 100) − H )
+P = a·(impact − 50) + b·D<sub>capital</sub> + c·D<sub>capability</sub></pre>
+<p>Expectations are a stock that closes the gap to a target at rate <code>k</code>, the hype correction speed. The target is current evidence plus a narrative premium <code>P</code>. The premium is higher for high-impact technologies (people tolerate a larger gap for bigger prizes), when capital is abundant, and when capability progress is strong. A capex correction scenario turns the premium negative and pulls expectations below evidence.</p>
+
+<div class="tbl"><table>
+<caption>Parameters in use</caption>
+<thead><tr><th>Symbol</th><th>Meaning</th><th>Value</th><th>Set in</th></tr></thead>
+<tbody id="paramTable"></tbody></table></div>
+
+<h3>What the model does not do</h3>
+<ul>
+  <li>Evidence never falls. A technology that fails outright shows up as expectations collapsing toward a stagnant evidence level, not as evidence declining.</li>
+  <li>Technologies do not interact. Progress in foundation models does not automatically lift agents. Shared drivers (capability, cost) stand in for those links.</li>
+  <li>Drivers are constant over the horizon. A scenario is a sustained condition, not a shock in a given year.</li>
+</ul>
+</section>
+
+<section id="example">
+<h2>8. Worked example</h2>
+<p id="exIntro">Projection of one technology under the base case.</p>
+<div class="tbl"><table>
+<thead><tr><th>Year</th><th>Expectations</th><th>Evidence</th><th>Gap</th><th>Class</th></tr></thead>
+<tbody id="exTable"></tbody></table></div>
+<p id="exNote" class="note"></p>
+</section>
+
+<section id="scenarios">
+<h2>9. Drivers and scenarios</h2>
+<p>Five drivers describe the environment. Each runs from −1 (much weaker than today) to +1 (much stronger). Zero means current trends continue.</p>
+<div class="tbl"><table>
+<thead><tr><th>Driver</th><th>Meaning</th></tr></thead>
+<tbody id="driverTable"></tbody></table></div>
+<p>Presets combine driver settings into named futures. They are stress tests, not forecasts: the useful question is which technologies change class across scenarios, because those are the bets most exposed to the future you cannot control.</p>
+<div class="tbl"><table>
+<thead id="scenHead"></thead><tbody id="scenTable"></tbody></table></div>
+</section>
+
+<section id="limits">
+<h2>10. Limitations</h2>
+<ul>
+  <li><strong>Judgement drives the result.</strong> Starting scores, sensitivities, thresholds and the premium formula are analyst choices. The board makes them explicit and testable; it does not make them objective.</li>
+  <li><strong>Attention is not adoption.</strong> The attention index measures looking and talking. It is a fair proxy for expectations and a poor one for value.</li>
+  <li><strong>Queries are imperfect.</strong> Broad terms ("AGI", "LLM") pick up unrelated stories; narrow ones ("AI factory") miss relevant ones. Review flags in each refresh are partly a check on query quality.</li>
+  <li><strong>Usage proxies are biased.</strong> PyPI downloads overweight open-source Python ecosystems and automated installs. They are not available for most technologies.</li>
+  <li><strong>English-language sources.</strong> Wikipedia (English), Hacker News and arXiv over-represent US and English-speaking technical communities.</li>
+  <li><strong>Gartner phases are for comparison only.</strong> They appear in detail cards and are not used in any calculation.</li>
+</ul>
+</section>
+
+<section id="updating">
+<h2>11. How the data is updated</h2>
+<p>Two kinds of data are updated on different cycles, with different levels of automation. Signals are collected by machine and reviewed by a person. Scores are set by a person and checked by machine. Nothing reaches the live board without a merged pull request.</p>
+
+<div class="cadence">
+  <div><span class="eyebrow">Monthly · automatic</span><strong>Signal refresh</strong><p>3rd of each month, 05:17 UTC. Collects signals, opens a pull request.</p></div>
+  <div><span class="eyebrow">Quarterly · prompted</span><strong>Analyst review</strong><p>1st day of each quarter. An issue lists stale scores and a checklist.</p></div>
+  <div><span class="eyebrow">As needed · manual</span><strong>Structural changes</strong><p>Add technologies, tune queries, adjust sensitivities, scenarios or thresholds.</p></div>
+</div>
+
+<h3>Monthly signal refresh</h3>
+<ol class="steps">
+  <li><strong>Collect.</strong> The <code>Monthly signal refresh</code> workflow runs <code>scripts/update_signals.py</code>. It queries each source for every technology, with retries and the pacing each API asks for. It takes 5 to 10 minutes.</li>
+  <li><strong>Safeguard.</strong> If more than half of the requests fail, the job stops and changes nothing. Individual failures, such as a missing Wikipedia article, are recorded and the rest proceeds.</li>
+  <li><strong>Compute.</strong> The script calculates the indices, writes <code>data/signals.json</code>, and adds a snapshot for the month to <code>data/history.json</code>. A rerun for the same month replaces that month's snapshot.</li>
+  <li><strong>Validate.</strong> <code>scripts/validate_data.py</code> checks every data file.</li>
+  <li><strong>Propose.</strong> The workflow opens a pull request titled "Data: signal refresh for YYYY-MM". Its description lists the largest moves in the attention index, every technology where signals and the analyst score differ by more than <span data-k="flag"></span> points, and any failed requests.</li>
+  <li><strong>Review.</strong> For each flagged technology, decide whether the signal reflects a real shift. If it does, edit <code>data/assessments.csv</code> on the pull request branch, update the score and set <code>reviewed</code> to today. If the signal is noise, leave the score and consider tuning the query.</li>
+  <li><strong>Publish.</strong> Merge the pull request. The <code>Deploy site</code> workflow validates the data again and publishes the board within a few minutes.</li>
+</ol>
+<p>To refresh outside the schedule, open <em>Actions → Monthly signal refresh → Run workflow</em>. You can enter a specific month (YYYY-MM) to backfill.</p>
+
+<h3>Quarterly analyst review</h3>
+<ol class="steps">
+  <li>On the first day of each quarter, the <code>Quarterly analyst review</code> workflow opens an issue listing every technology whose score has not been reviewed in 120 days.</li>
+  <li>Read the last three refresh pull requests and their review flags.</li>
+  <li>Re-score each technology against the <a href="#rubric">rubric</a>, using the evidence hierarchy. Record the main reason in <code>notes</code>.</li>
+  <li>Set <code>reviewed</code> to today on every row you confirmed or changed, including rows that did not change. The date records that someone looked.</li>
+  <li>Open a pull request with the changes. The <code>Validate</code> workflow must pass before merging.</li>
+  <li>Close the issue with a link to the merged pull request.</li>
+</ol>
+
+<h3>Editing scores on GitHub</h3>
+<p>Open <code>data/assessments.csv</code> on GitHub, select the pencil icon, edit, and choose "Create a new branch and start a pull request". Each row has this format:</p>
+<pre class="code">id,expectations,evidence,impact,reviewed,notes
+ai-agents,82,35,90,2026-10-24,High cancellation risk; coding and service agents deliver.</pre>
+<p>Notes that contain commas must be wrapped in double quotes. The validator rejects scores outside 0–100, malformed dates, duplicate rows and ids that do not exist in <code>technologies.json</code>.</p>
+
+<h3>Structural changes</h3>
+<dl class="defs">
+  <dt>Add a technology</dt><dd>Add an entry to <code>data/technologies.json</code> (id, name, base rate, five sensitivities, watch signal, signal queries) and a matching row in <code>data/assessments.csv</code>. Validation fails if either is missing.</dd>
+  <dt>Tune a query</dt><dd>Edit the <code>signals</code> block of the technology. Prefer specific phrases over single words. Check the next refresh for the effect.</dd>
+  <dt>Change sensitivities or thresholds</dt><dd>Edit <code>technologies.json</code> or <code>settings.json</code>. Record the reason in the pull request description, because these change every projection.</dd>
+  <dt>Add a scenario</dt><dd>Add a preset to <code>data/scenarios.json</code> with a unique id, a name, a value for each driver and a one-sentence note.</dd>
+</dl>
+
+<h3>Roles</h3>
+<div class="tbl"><table>
+<thead><tr><th>Role</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td>Data owner</td><td>Merges refresh pull requests within a week; owns query quality; runs the workflow by hand if a scheduled run fails.</td></tr>
+<tr><td>Analyst reviewers</td><td>Score technologies quarterly against the rubric; resolve review flags; propose new technologies.</td></tr>
+<tr><td>Model owner</td><td>Approves changes to sensitivities, thresholds, premium constants and scenarios.</td></tr>
+</tbody></table></div>
+<p>One person can hold all three roles. Separating at least the analyst and model-owner roles reduces the risk of tuning the model until it confirms a view.</p>
+
+<h3>When something goes wrong</h3>
+<dl class="defs">
+  <dt>No pull request this month</dt><dd>Check the <em>Actions</em> tab. A failed run usually means a source API was down; rerun it by hand. If the workflow could not open a pull request, check that Actions may create pull requests (<em>Settings → Actions → General</em>).</dd>
+  <dt>Many failed requests for one source</dt><dd>The source may have changed its API. The other sources still work; the affected component is dropped and its weight redistributed.</dd>
+  <dt>A technology jumps implausibly</dt><dd>Usually a query matching an unrelated event. Do not change the score; tune the query.</dd>
+  <dt>The board shows an error</dt><dd>A data file failed to load or parse. Validation should prevent this; check the latest <code>Deploy site</code> run.</dd>
+</dl>
+</section>
+
+<section id="files">
+<h2>12. Data files</h2>
+<div class="tbl"><table>
+<thead><tr><th>File</th><th>Contents</th><th>Updated by</th></tr></thead>
+<tbody>
+<tr><td><code>data/assessments.csv</code></td><td>Analyst scores, review date, rationale</td><td>People, via pull request</td></tr>
+<tr><td><code>data/technologies.json</code></td><td>Names, Gartner phase, base rate, sensitivities, watch signal, signal queries</td><td>People, via pull request</td></tr>
+<tr><td><code>data/scenarios.json</code></td><td>Drivers and preset scenarios</td><td>People, via pull request</td></tr>
+<tr><td><code>data/settings.json</code></td><td>Blend weights, thresholds, model constants, defaults</td><td>People, via pull request</td></tr>
+<tr><td><code>data/signals.json</code></td><td>Latest indices and raw counts per technology</td><td>Monthly workflow</td></tr>
+<tr><td><code>data/history.json</code></td><td>Monthly snapshots of indices, up to five years</td><td>Monthly workflow</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="log">
+<h2>13. Update log</h2>
+<div id="logBody"><p class="note">Loading.</p></div>
+</section>
+
+<section class="refs">
+<h2>References</h2>
+<ul>
+  <li>Dedehayir, O. and Steinert, M. (2016). The hype cycle model: A review and future directions. <em>Technological Forecasting and Social Change</em>, 108, 28–41.</li>
+  <li>Mullany, M. (2016). 8 lessons from 20 years of hype cycles.</li>
+  <li>Sterman, J. D. (2000). <em>Business Dynamics: Systems Thinking and Modeling for a Complex World</em>. McGraw-Hill. Stock adjustment and logistic diffusion structures.</li>
+</ul>
+</section>
+
+    </article>
+  </div>
+</div>
+<script type="module" src="assets/about.js"></script>
+</body>
+</html>

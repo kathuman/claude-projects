@@ -12,6 +12,10 @@
 </head>
 <body>
 <div class="wrap">
+  <nav class="topnav" aria-label="Site">
+    <span class="eyebrow">AI Expectations Gap Map</span>
+    <a href="about.html">Methodology and data updates →</a>
+  </nav>
   <header>
     <div>
       <div class="eyebrow" id="eyebrow">AI portfolio board</div>
@@ -86,7 +90,7 @@
     <p>Analyst scores (0–100) for expectations, evidence and impact live in <code>data/assessments.csv</code>. A monthly job collects public attention signals (Wikipedia page views, Hacker News stories, arXiv papers, PyPI downloads) into <code>data/signals.json</code>. "Blend" mixes the two using the weights in <code>data/settings.json</code>. Gartner's 2026 phase is shown in each detail card for comparison only.</p>
     <p>The projection is a two-stock adjustment model. Evidence grows logistically: <code>dE/dt = r·(1 + Σ sᵢ·dᵢ)·E·(1 − E/100)</code>, where <code>dᵢ</code> are the driver settings and <code>sᵢ</code> each technology's sensitivity. Expectations adjust toward evidence plus a narrative premium: <code>dH/dt = k·(E + premium − H)</code>, with <code>premium = a·(impact − 50) + b·capital + c·capability</code>. <code>k</code> is the hype correction speed.</p>
     <p id="thresholdNote"></p>
-    <p>Attention is not adoption, and the thresholds and sensitivities are judgement calls. Use the board to structure the discussion, not to settle it.</p>
+    <p>Attention is not adoption, and the thresholds and sensitivities are judgement calls. Use the board to structure the discussion, not to settle it. <a href="about.html" style="color:var(--accent)">Full methodology and update process</a>.</p>
   </div>
 </div>
 <script type="module" src="assets/app.js"></script>

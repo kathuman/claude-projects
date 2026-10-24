@@ -5,9 +5,11 @@ An interactive board that replaces the hype-cycle curve with two measurable axes
 Static site, no build step, no runtime dependencies. Hosted on GitHub Pages. Data refreshed by GitHub Actions.
 
 ```
-index.html              page shell
+index.html              the board
+about.html              methodology and update process (reads live values from data/)
 assets/app.js           UI (ES module)
 assets/model.js         pure model functions (tested in Node)
+assets/about.js         fills the methodology page from the data files
 assets/styles.css
 data/assessments.csv    analyst scores: expectations, evidence, impact, reviewed, notes   ← edit by hand
 data/technologies.json  per-technology config: sensitivities, growth rate, watch signal, signal queries
