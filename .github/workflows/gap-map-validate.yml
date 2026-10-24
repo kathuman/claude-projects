@@ -1,12 +1,22 @@
-name: Validate
+name: AI Expectations Gap Map tests
 
+# Data files, the signal pipeline (offline fixture) and the projection model of ai-expectations-gap-map/.
 on:
+  push:
+    paths:
+      - 'ai-expectations-gap-map/**'
+      - '.github/workflows/gap-map-validate.yml'
   pull_request:
-    paths: ["data/**", "scripts/**", "assets/**", "tests/**", "index.html", "about.html"]
+    paths:
+      - 'ai-expectations-gap-map/**'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: ai-expectations-gap-map
 
 jobs:
   validate:

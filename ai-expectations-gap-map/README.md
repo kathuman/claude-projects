@@ -2,7 +2,7 @@
 
 An interactive board that replaces the hype-cycle curve with two measurable axes: **market expectations** (vertical) and **demonstrated value** (horizontal). The gap between them is the risk. Bubble size is business impact if the technology delivers. Five scenario drivers project the board forward with a small two-stock model.
 
-Static site, no build step, no runtime dependencies. Hosted on GitHub Pages. Data refreshed by GitHub Actions.
+Static site, no build step, no runtime dependencies. Part of [AI Projects](https://kathuman.github.io/claude-projects/), live at https://kathuman.github.io/claude-projects/ai-expectations-gap-map/. Data refreshed by GitHub Actions.
 
 ```
 index.html              the board
@@ -19,24 +19,20 @@ data/signals.json       generated monthly: latest collected signals             
 data/history.json       generated monthly: one snapshot per month (trend lines)          ← written by the job
 scripts/update_signals.py   collects signals, computes indices, writes summary (stdlib only)
 scripts/validate_data.py    blocks bad data from reaching the site
-.github/workflows/      deploy, monthly refresh, PR validation, quarterly review reminder
+(repository root) .github/workflows/gap-map-*.yml   monthly refresh, tests, quarterly review reminder
 ```
 
-## Set up (about 10 minutes)
+## Where it runs
 
-1. Create a new GitHub repository and push this folder to `main`.
-   ```bash
-   git init && git add . && git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin git@github.com:<you>/ai-expectations-gap-map.git
-   git push -u origin main
-   ```
-2. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
-3. **Settings → Actions → General → Workflow permissions:** select *Read and write permissions* and tick *Allow GitHub Actions to create and approve pull requests*. The monthly refresh needs this to open its pull request.
-4. **Actions → Deploy site → Run workflow** for the first deploy. The URL appears in the run summary (`https://<you>.github.io/ai-expectations-gap-map/`).
-5. **Actions → Monthly signal refresh → Run workflow** to collect the first signals now instead of waiting for the 3rd of next month. Review and merge the pull request it opens. "Blend" and "Signals only" become available after that.
+The board lives in the `claude-projects` repository, which GitHub Pages publishes from `main`: a change merged there
+is live within a minute or two, so there is no deploy job of its own. Its workflows sit at the repository root:
 
-Private repositories need a paid GitHub plan for Pages. For an internal-only board, use a private repo on GitHub Enterprise with Pages access control.
+- `gap-map-validate.yml`: data validation, the pipeline tests and the model tests on every change to this folder.
+- `gap-map-refresh.yml`: the monthly signal refresh (below). It opens a pull request, which needs **Settings →
+  Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests**, with read
+  and write permissions. Run it once by hand (**Actions → AI Expectations Gap Map signal refresh → Run workflow**) to
+  collect the first signals; "Blend" and "Signals only" become available once its pull request is merged.
+- `gap-map-review.yml`: the quarterly analyst-review issue.
 
 ## How the data stays current
 
@@ -50,7 +46,7 @@ There are two kinds of data, updated on different cycles, and they are kept sepa
 
 ### Monthly refresh (automatic, reviewed)
 
-`refresh-data.yml` runs `update_signals.py`, which collects for each technology, over the last three complete months and the three before:
+`gap-map-refresh.yml` runs `update_signals.py`, which collects for each technology, over the last three complete months and the three before:
 
 - **Wikipedia page views** (Wikimedia REST API): public attention.
 - **Hacker News stories** with the query in the title (Algolia HN API): practitioner attention.
@@ -62,13 +58,13 @@ It turns these into two relative indices (0 = least in the set, 100 = most):
 - **Attention index** = 0.4 · Wikipedia + 0.4 · Hacker News + 0.2 · momentum (each log-scaled and min-max normalised).
 - **Usage proxy index** = PyPI downloads, log-scaled and normalised, only for technologies with packages configured.
 
-The job validates the result and **opens a pull request** rather than publishing directly. The PR description lists the largest movers since last month and every technology where the signals disagree with your analyst score by more than `review_flag_gap` (default 15). Merge it as-is, or adjust `assessments.csv` in the same PR first. Merging to `main` redeploys the site.
+The job validates the result and **opens a pull request** rather than publishing directly. The PR description lists the largest movers since last month and every technology where the signals disagree with your analyst score by more than `review_flag_gap` (default 15). Merge it as-is, or adjust `assessments.csv` in the same PR first. Merging to `main` republishes the site.
 
 No API keys are needed. If more than half the requests fail (an API is down), the job aborts and opens nothing.
 
 ### Quarterly analyst review (manual, prompted)
 
-`review-reminder.yml` opens an issue on the first day of each quarter. The issue lists every assessment not reviewed in 120 days, plus a checklist. To update a score, edit `data/assessments.csv` directly on GitHub (pencil icon), change the numbers and the `reviewed` date, and commit through a pull request. `validate.yml` checks the file before you can merge.
+`gap-map-review.yml` opens an issue on the first day of each quarter. The issue lists every assessment not reviewed in 120 days, plus a checklist. To update a score, edit `data/assessments.csv` directly on GitHub (pencil icon), change the numbers and the `reviewed` date, and commit through a pull request. `gap-map-validate.yml` checks the file before you can merge.
 
 ### Adding a technology
 

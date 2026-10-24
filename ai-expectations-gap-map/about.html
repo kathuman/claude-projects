@@ -13,7 +13,7 @@
 <body class="doc">
 <div class="wrap">
   <nav class="topnav" aria-label="Site">
-    <a href="./">← Back to the board</a>
+    <span class="navl"><a href="../">← AI Projects</a><a href="./">← Back to the board</a></span>
     <span class="eyebrow" id="asOf">Methodology</span>
   </nav>
 
@@ -236,23 +236,23 @@ P = a·(impact − 50) + b·D<sub>capital</sub> + c·D<sub>capability</sub></pre
 
 <h3>Monthly signal refresh</h3>
 <ol class="steps">
-  <li><strong>Collect.</strong> The <code>Monthly signal refresh</code> workflow runs <code>scripts/update_signals.py</code>. It queries each source for every technology, with retries and the pacing each API asks for. It takes 5 to 10 minutes.</li>
+  <li><strong>Collect.</strong> The <code>AI Expectations Gap Map signal refresh</code> workflow runs <code>scripts/update_signals.py</code>. It queries each source for every technology, with retries and the pacing each API asks for. It takes 5 to 10 minutes.</li>
   <li><strong>Safeguard.</strong> If more than half of the requests fail, the job stops and changes nothing. Individual failures, such as a missing Wikipedia article, are recorded and the rest proceeds.</li>
   <li><strong>Compute.</strong> The script calculates the indices, writes <code>data/signals.json</code>, and adds a snapshot for the month to <code>data/history.json</code>. A rerun for the same month replaces that month's snapshot.</li>
   <li><strong>Validate.</strong> <code>scripts/validate_data.py</code> checks every data file.</li>
-  <li><strong>Propose.</strong> The workflow opens a pull request titled "Data: signal refresh for YYYY-MM". Its description lists the largest moves in the attention index, every technology where signals and the analyst score differ by more than <span data-k="flag"></span> points, and any failed requests.</li>
+  <li><strong>Propose.</strong> The workflow opens a pull request titled "AI Expectations Gap Map data: signal refresh for YYYY-MM". Its description lists the largest moves in the attention index, every technology where signals and the analyst score differ by more than <span data-k="flag"></span> points, and any failed requests.</li>
   <li><strong>Review.</strong> For each flagged technology, decide whether the signal reflects a real shift. If it does, edit <code>data/assessments.csv</code> on the pull request branch, update the score and set <code>reviewed</code> to today. If the signal is noise, leave the score and consider tuning the query.</li>
-  <li><strong>Publish.</strong> Merge the pull request. The <code>Deploy site</code> workflow validates the data again and publishes the board within a few minutes.</li>
+  <li><strong>Publish.</strong> Merge the pull request. The tests run again, and GitHub Pages publishes the board within a few minutes.</li>
 </ol>
-<p>To refresh outside the schedule, open <em>Actions → Monthly signal refresh → Run workflow</em>. You can enter a specific month (YYYY-MM) to backfill.</p>
+<p>To refresh outside the schedule, open <em>Actions → AI Expectations Gap Map signal refresh → Run workflow</em>. You can enter a specific month (YYYY-MM) to backfill.</p>
 
 <h3>Quarterly analyst review</h3>
 <ol class="steps">
-  <li>On the first day of each quarter, the <code>Quarterly analyst review</code> workflow opens an issue listing every technology whose score has not been reviewed in 120 days.</li>
+  <li>On the first day of each quarter, the <code>AI Expectations Gap Map quarterly review</code> workflow opens an issue listing every technology whose score has not been reviewed in 120 days.</li>
   <li>Read the last three refresh pull requests and their review flags.</li>
   <li>Re-score each technology against the <a href="#rubric">rubric</a>, using the evidence hierarchy. Record the main reason in <code>notes</code>.</li>
   <li>Set <code>reviewed</code> to today on every row you confirmed or changed, including rows that did not change. The date records that someone looked.</li>
-  <li>Open a pull request with the changes. The <code>Validate</code> workflow must pass before merging.</li>
+  <li>Open a pull request with the changes. The <code>AI Expectations Gap Map tests</code> workflow must pass before merging.</li>
   <li>Close the issue with a link to the merged pull request.</li>
 </ol>
 
@@ -319,6 +319,9 @@ ai-agents,82,35,90,2026-10-24,High cancellation risk; coding and service agents 
 
     </article>
   </div>
+<footer class="sitefoot">
+  AI Expectations Gap Map · by Daniel Alberto Sepulveda Estay, PhD · <a href="about.html">Methodology and data</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
+</footer>
 </div>
 <script type="module" src="assets/about.js"></script>
 </body>

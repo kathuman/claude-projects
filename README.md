@@ -8,6 +8,7 @@
 [![Lag Lab tests](https://github.com/kathuman/claude-projects/actions/workflows/lag-lab-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/lag-lab-ci.yml)
 [![Robot Configurator tests](https://github.com/kathuman/claude-projects/actions/workflows/robot-configurator-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/robot-configurator-ci.yml)
 [![Clockspeed Balancing tests](https://github.com/kathuman/claude-projects/actions/workflows/clockspeed-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/clockspeed-ci.yml)
+[![AI Expectations Gap Map tests](https://github.com/kathuman/claude-projects/actions/workflows/gap-map-validate.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/gap-map-validate.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
 Simulation and decision tools for engineering and supply chains, built with [Claude](https://claude.com) by
@@ -52,7 +53,7 @@ stress tests, time-to-survive / time-to-recover, and adversarial worst-case sear
 </tr>
 </table>
 
-Also here: a robot configurator that turns requirements into a buildable rover or arm from Nordic-market parts (budget, build guide, wiring and firmware, in five languages), Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
+Also here: a board of where AI expectations outrun the evidence (27 technologies, scenario drivers, signals refreshed monthly), a robot configurator that turns requirements into a buildable rover or arm from Nordic-market parts (budget, build guide, wiring and firmware, in five languages), Chess, Xiangqi, Go and Othello with computer opponents, a Rubik's cube solver, a two-wheeled balancing-robot
 simulator, a live view of every phone sensor (streamable to a computer), live face morphing, a simulator that shows how much of a post-step overshoot is really forecast error, a strategy flight simulator for commercial vs supply chain clock speeds, real options for network design, and a library of supply-chain visualisations.
 
 ## Tests
@@ -65,6 +66,7 @@ simulator, a live view of every phone sensor (streamable to a computer), live fa
 | balancebot-sim | dynamics derivation and energy conservation | CI |
 | Clockspeed Balancing | 34 checks: a 20-year steady state, exact accounting, the three clock speeds, the promise ratchet, unsupported push vs support and pacing, firefighting, complexity, resilience, scenarios | CI |
 | Robot Configurator | 63 checks: motor, slope, runtime and arm-torque models by hand; every tax/shipping mode; vendor optimiser vs brute force; pin assignment; proposals pass their checks and constraints; the most-headroom proposal lies on the cost–headroom frontier; part swaps change only their part; suggested relaxations really are feasible; firmware, wiring and guide agree with the design; every text in five languages; every price record checked or marked as an estimate, packs bought whole, built battery packs and chassis kits; ten known-answer cases on a live validation page; self-test results parsed and compared with the model. A weekly job follows every product link. Plus ~200 generated firmware variants built with arduino-cli for Uno, Nano and ESP32 | CI |
+| AI Expectations Gap Map | 14 checks: the data files are complete and consistent (blocks a bad refresh), the signal pipeline on an offline fixture, and the projection model (logistic evidence, expectations adjusting to evidence plus a premium, scenario drivers) | CI |
 | Lag Lab | 73 checks: delay and smoothing against exact solutions, exact conservation, the textbook stock-management and workforce results, a decomposition that adds up and vanishes when its cause is removed, and every published equation reproducing the model | CI |
 | Sensor Deck | 93 checks: step and shake detection, compass, FFT, GPS distance, altitude, dew point, CSV, phone-to-computer message checks; the USB bridge's WebSocket framing, relay, origin check and adb handling; the Android app's bridge timing (Flutter) | CI |
 
@@ -148,6 +150,7 @@ phone-sensors/index.html           — https://kathuman.github.io/claude-project
 lag-lab/index.html                 — https://kathuman.github.io/claude-projects/lag-lab/
 clockspeed/index.html              — https://kathuman.github.io/claude-projects/clockspeed/
 robot-configurator/index.html      — https://kathuman.github.io/claude-projects/robot-configurator/
+ai-expectations-gap-map/index.html — https://kathuman.github.io/claude-projects/ai-expectations-gap-map/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules

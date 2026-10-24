@@ -1,5 +1,7 @@
-name: Monthly signal refresh
+name: AI Expectations Gap Map signal refresh
 
+# Collects the month's attention and usage signals for ai-expectations-gap-map/ and opens a pull request to review.
+# Merging it to main republishes the site.
 on:
   schedule:
     - cron: "17 5 3 * *"   # 05:17 UTC on the 3rd of every month
@@ -13,6 +15,10 @@ on:
 permissions:
   contents: write
   pull-requests: write
+
+defaults:
+  run:
+    working-directory: ai-expectations-gap-map
 
 jobs:
   refresh:
@@ -38,12 +44,12 @@ jobs:
       - name: Open pull request for review
         uses: peter-evans/create-pull-request@v7
         with:
-          branch: data-refresh/${{ steps.period.outputs.label }}
+          branch: gap-map-data-refresh/${{ steps.period.outputs.label }}
           delete-branch: true
           add-paths: |
-            data/signals.json
-            data/history.json
-          commit-message: "Data: signal refresh for ${{ steps.period.outputs.label }}"
-          title: "Data: signal refresh for ${{ steps.period.outputs.label }}"
-          body-path: refresh-summary.md
+            ai-expectations-gap-map/data/signals.json
+            ai-expectations-gap-map/data/history.json
+          commit-message: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
+          title: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
+          body-path: ai-expectations-gap-map/refresh-summary.md
           labels: data-refresh
