@@ -20,5 +20,14 @@
     "correction_speed": 0.4,
     "scenario": "base"
   },
-  "review_flag_gap": 15
+  "review_flag_gap": 15,
+  "track": {
+    "_comment": "Forecasts frozen each month in data/ledger.json, months ahead; checked when they come due (track.html).",
+    "horizons_months": [
+      3,
+      6,
+      12,
+      24
+    ]
+  }
 }

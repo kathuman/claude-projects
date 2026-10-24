@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track record · AI Expectations Gap Map</title>
+<meta name="description" content="How accurate the AI Expectations Gap Map has been: every month's forecasts kept and checked against what followed, against a forecast that nothing moves.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav" aria-label="Site">
+    <span class="navl"><a href="../">← AI Projects</a><a href="./">← Back to the board</a></span>
+    <a href="about.html">Methodology and data updates →</a>
+  </nav>
+  <header>
+    <div>
+      <div class="eyebrow">Track record</div>
+      <h1>Has the board been right?</h1>
+      <p class="lede">Every month the board's forecasts are frozen: where it placed each technology, and where the model said it would be 3, 6, 12 and 24 months later under each scenario. When a forecast comes due, it is checked against where the board then placed it, and against the simplest rival, a forecast that nothing moves. The model earns its keep only where it beats standing still.</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="panel toolbar">
+    <div class="scen" role="group" aria-label="Scenario">
+      <span class="eyebrow">Scored scenario</span>
+      <div id="scenarios" class="chips"></div>
+    </div>
+    <p class="scen-note" id="scenNote"></p>
+  </div>
+
+  <div class="panel" id="summary"></div>
+  <div class="panel" id="scenarioPanel" hidden></div>
+  <div class="panel" id="detail" hidden></div>
+  <div class="panel" id="frozen"></div>
+
+  <div class="panel method">
+    <h2>How the score is kept</h2>
+    <p><b>Error</b> is the distance, in points on the 0–100 scale averaged over the two axes, between a forecast and the board's position for that technology in the month the forecast was aimed at. <b>Standing still</b> is the same error for a forecast that every technology stays where it was. <b>Skill</b> is 1 − error ÷ standing-still error: above zero the model did better than assuming nothing changes, below zero it did worse.</p>
+    <p><b>Right quadrant</b> is the share of forecasts that put a technology in the class (overheated, proven, underpriced, emerging) it was later in. <b>Right direction</b> checks the forecast move in expectations against the move in the collected attention signals, which do not depend on the analyst; moves under one point are not counted.</p>
+    <p>The board's later position mixes the analyst scores and the signals. A score not re-reviewed since the forecast was made carries over unchanged, which favours standing still; the "re-reviewed" count shows how many comparisons had a fresh analyst score. Records are kept in <a href="data/ledger.json">data/ledger.json</a>, one per month, never rewritten.</p>
+  </div>
+  <footer class="sitefoot">
+    AI Expectations Gap Map · by Daniel Alberto Sepulveda Estay, PhD · <a href="about.html">Methodology and data</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
+  </footer>
+</div>
+<script type="module" src="assets/track.js"></script>
+</body>
+</html>

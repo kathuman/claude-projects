@@ -4,6 +4,8 @@
     {
       "id": "ai-observability",
       "name": "AI Observability",
+      "description": "Tools that watch AI systems in production the way application monitoring watches software: they trace each request through models, prompts and tools, log inputs and outputs, measure quality with automated evaluations, and alert on drift, errors, latency and cost.",
+      "supply_chain_example": "A demand-forecasting model starts to miss after a promotion calendar changes. Observability flags the rising forecast error by product family and shows which input feature drifted, before planners have placed a quarter's orders on bad numbers.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.35,
       "sensitivities": {
@@ -33,6 +35,8 @@
     {
       "id": "ai-factories",
       "name": "AI Factories",
+      "description": "Large, purpose-built data centres (GPU clusters with their power, cooling and software stack) run as a production line for training and serving AI models, often backed by national programmes or hyperscaler capital spending.",
+      "supply_chain_example": "A logistics group rents capacity in a regional AI factory rather than buying GPUs, to retrain its network-wide routing and demand models every night on the full transaction history.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.25,
       "sensitivities": {
@@ -56,6 +60,8 @@
     {
       "id": "quantum-for-ai",
       "name": "Quantum for AI",
+      "description": "Using quantum computers to speed up machine learning or the optimisation problems around it. Today it is research: no practical machine-learning task has yet been shown to run better on quantum hardware than on classical computers.",
+      "supply_chain_example": "Vendors pitch quantum optimisers for vehicle routing and network design. A supply chain team runs a small benchmark against a classical mixed-integer solver on its own lanes and keeps the classical solver until a quantum method wins on a real instance.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.05,
       "sensitivities": {
@@ -82,6 +88,8 @@
     {
       "id": "agentic-commerce",
       "name": "Agentic Commerce",
+      "description": "AI agents that buy and sell on someone's behalf: searching for offers, negotiating terms and paying within limits set by a person or a company, using new agent payment and checkout protocols.",
+      "supply_chain_example": "A procurement agent re-orders indirect materials (packaging, spare parts) within a pre-approved catalogue and budget, compares supplier offers and lead times, and places the order, with a person approving anything outside its limits.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.3,
       "sensitivities": {
@@ -105,6 +113,8 @@
     {
       "id": "first-principles-ai",
       "name": "First-Principles AI",
+      "description": "Models that build physical laws into machine learning (physics-informed neural networks and neural surrogates of simulations), so they stay consistent with the physics and answer in seconds what a full simulation takes hours to compute.",
+      "supply_chain_example": "A cold-chain operator uses a neural surrogate of its warehouse's airflow and heat-transfer simulation to test, in seconds, how a new rack layout or door schedule changes the temperature at each pallet position.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.2,
       "sensitivities": {
@@ -131,6 +141,8 @@
     {
       "id": "ai-cybersecurity-governance",
       "name": "AI Cybersecurity Governance",
+      "description": "Security for AI systems and the attacks they open up, such as prompt injection, data poisoning and agents misusing tools, together with the policies, tests and controls that keep them in check.",
+      "supply_chain_example": "A supplier portal's AI assistant reads incoming documents. A malicious invoice hides instructions to change bank details; input filtering and a rule that payment data can only change through a verified workflow stop the fraud.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.25,
       "sensitivities": {
@@ -156,6 +168,8 @@
     {
       "id": "causal-ai",
       "name": "Causal AI",
+      "description": "Methods that estimate cause and effect, not just correlation: what happens to an outcome if you intervene, using causal graphs, experiments and counterfactual reasoning.",
+      "supply_chain_example": "A distributor asks whether faster delivery promises really raise repeat orders or only coincide with them. A causal model separates the effect of the promise from customer size and region before the company pays for a costlier carrier mix.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.12,
       "sensitivities": {
@@ -184,6 +198,8 @@
     {
       "id": "physical-ai",
       "name": "Physical AI",
+      "description": "AI that perceives and acts in the physical world through robots, including humanoid and mobile robots, trained to handle varied objects and environments rather than a single fixed task.",
+      "supply_chain_example": "Mobile robots with AI picking arms take mixed-SKU orders from shelves in a fulfilment centre, handling items they were not specifically programmed for, while people deal with the exceptions.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.2,
       "sensitivities": {
@@ -211,6 +227,8 @@
     {
       "id": "ai-agent-identity",
       "name": "AI Agent Identity",
+      "description": "Ways to identify, authenticate and authorise AI agents: who an agent acts for, what it may do and how its actions are traced, much as people and services have identities today.",
+      "supply_chain_example": "A buyer's purchasing agent connects to a supplier's ordering system. Agent identity proves which company it represents and what spending limit it carries, so the supplier can accept its orders without a person signing each one.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.35,
       "sensitivities": {
@@ -234,6 +252,8 @@
     {
       "id": "ai-simulation",
       "name": "AI Simulation",
+      "description": "Combining AI with simulation: simulated environments generate training data for AI (for example, reinforcement learning), and AI makes simulations faster, more realistic or easier to build.",
+      "supply_chain_example": "A warehouse trains its slotting and robot-dispatch policy in a digital twin of the building, running years of simulated order days, before deploying it on the real floor.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.2,
       "sensitivities": {
@@ -259,6 +279,8 @@
     {
       "id": "ai-governance-technologies",
       "name": "AI Governance Technologies",
+      "description": "Software for managing AI risk and compliance: inventories of models in use, risk classification, documentation, testing and audit trails, for example for the EU AI Act.",
+      "supply_chain_example": "A manufacturer registers every AI model used in planning and quality inspection, records its training data and tests, and can show an auditor how its supplier-risk scoring model was validated.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.3,
       "sensitivities": {
@@ -284,6 +306,8 @@
     {
       "id": "ai-native-software-engineering",
       "name": "AI-Native Software Engineering",
+      "description": "Building software with AI throughout: coding assistants and agents that write, test, review and maintain code, with developers directing and checking the work.",
+      "supply_chain_example": "An IT team uses coding agents to build and maintain the many integrations between its ERP, warehouse management and carrier systems, such as new EDI message formats and label APIs, in days instead of weeks.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.4,
       "sensitivities": {
@@ -311,6 +335,8 @@
     {
       "id": "agi",
       "name": "Artificial General Intelligence",
+      "description": "Artificial general intelligence: a hypothetical AI that matches or exceeds people across most intellectual tasks, including learning new ones without being trained for them. There is no agreed test, and it does not exist today.",
+      "supply_chain_example": "If it arrived, it could plan, negotiate and redesign a supply network end to end. Until then, supply chain plans should rest on the narrower tools that work today, with an eye on agents completing long, multi-day tasks without help.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.03,
       "sensitivities": {
@@ -335,6 +361,8 @@
     {
       "id": "composite-ai",
       "name": "Composite AI",
+      "description": "Combining several AI techniques in one solution, such as machine learning, optimisation, rules, knowledge graphs and language models, each used for what it does best.",
+      "supply_chain_example": "A planning system forecasts demand with machine learning, optimises inventory with a mathematical solver, applies business rules for allocation, and uses a language model to explain the plan to planners in plain words.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.2,
       "sensitivities": {
@@ -360,6 +388,8 @@
     {
       "id": "decision-intelligence",
       "name": "Decision Intelligence",
+      "description": "A discipline and tooling for designing, automating and auditing decisions: it ties the data, models and business rules behind a decision to its outcome, so decisions can be improved and explained.",
+      "supply_chain_example": "A safety-stock decision for each item is made by a documented model with recorded inputs and outcomes, so the team can see which policy caused last quarter's stock-outs and change it.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.15,
       "sensitivities": {
@@ -384,6 +414,8 @@
     {
       "id": "finops-for-ai",
       "name": "FinOps for AI",
+      "description": "Managing the cost of AI: measuring what each model, use case and team spends on compute and tokens, and keeping that cost in line with the value it delivers.",
+      "supply_chain_example": "A shipper finds its document-processing AI costs more per customs declaration than the manual work it replaced on simple shipments, and routes only the complex declarations to the expensive model.",
       "gartner_phase_2026": "Innovation Trigger",
       "base_rate": 0.4,
       "sensitivities": {
@@ -409,6 +441,8 @@
     {
       "id": "sovereign-ai",
       "name": "Sovereign AI",
+      "description": "AI that a country or region controls: models, data centres and data kept under national or regional jurisdiction, to reduce dependence on foreign providers.",
+      "supply_chain_example": "A European port authority runs its vessel-scheduling and customs AI on a model and cloud hosted inside the EU, so cargo and trade data stay under EU law.",
       "gartner_phase_2026": "Peak of Inflated Expectations",
       "base_rate": 0.15,
       "sensitivities": {
@@ -433,6 +467,8 @@
     {
       "id": "ai-engineering",
       "name": "AI Engineering",
+      "description": "The engineering practice that takes AI from pilot to dependable production: data pipelines, deployment, testing, monitoring and retraining, run like any other engineered system.",
+      "supply_chain_example": "A retailer's demand-forecasting pilot worked on one region. AI engineering turns it into a pipeline that retrains weekly for every store, tests each new model against the old, and rolls back automatically if accuracy drops.",
       "gartner_phase_2026": "Peak of Inflated Expectations",
       "base_rate": 0.3,
       "sensitivities": {
@@ -461,6 +497,8 @@
     {
       "id": "ai-agents",
       "name": "AI Agents",
+      "description": "AI systems that pursue a goal over several steps: planning, using tools and software, and acting with some autonomy, rather than answering one question at a time.",
+      "supply_chain_example": "An exception-handling agent watches shipment tracking, spots a delayed container, checks stock and alternative routes, proposes an expedite or a reallocation, and drafts the customer message for a planner to approve.",
       "gartner_phase_2026": "Sliding into Trough",
       "base_rate": 0.3,
       "sensitivities": {
@@ -489,6 +527,8 @@
     {
       "id": "multimodal-ai",
       "name": "Multimodal AI",
+      "description": "AI that works across text, images, documents, audio and video together, such as reading a scanned form, a photo and an email in one task.",
+      "supply_chain_example": "Receiving staff photograph damaged pallets. A multimodal model reads the photo, the delivery note and the purchase order together and files the claim with the carrier, attaching the evidence.",
       "gartner_phase_2026": "Sliding into Trough",
       "base_rate": 0.35,
       "sensitivities": {
@@ -513,6 +553,8 @@
     {
       "id": "world-models",
       "name": "World Models",
+      "description": "AI models that learn how an environment behaves and can predict what happens next when something acts in it, used to plan and to train robots and agents in imagined or simulated worlds.",
+      "supply_chain_example": "A robot-picking system learns from a world model of how boxes and bags shift, tip and deform, so it can plan grasps for packages it has never seen before trying them on the real line.",
       "gartner_phase_2026": "Sliding into Trough",
       "base_rate": 0.15,
       "sensitivities": {
@@ -536,6 +578,8 @@
     {
       "id": "ai-ready-data",
       "name": "AI-Ready Data",
+      "description": "Data that is fit for AI: owned, documented, of known quality, with lineage and access rules, and organised so models can use it reliably.",
+      "supply_chain_example": "Before automating replenishment, a company cleans and assigns owners to its item master, lead times and units of measure, because a model ordering from wrong pack sizes or stale lead times does damage at machine speed.",
       "gartner_phase_2026": "Sliding into Trough",
       "base_rate": 0.15,
       "sensitivities": {
@@ -563,6 +607,8 @@
     {
       "id": "foundation-models",
       "name": "Foundation Models",
+      "description": "Large models trained on broad data that can be adapted to many tasks: large language models and their image and multimodal relatives, used directly or fine-tuned.",
+      "supply_chain_example": "A foundation model reads supplier contracts and extracts lead times, penalties and force-majeure clauses into the procurement system, a task that used to take legal staff weeks per renewal round.",
       "gartner_phase_2026": "Trough of Disillusionment",
       "base_rate": 0.3,
       "sensitivities": {
@@ -592,6 +638,8 @@
     {
       "id": "synthetic-data",
       "name": "Synthetic Data",
+      "description": "Artificially generated data that mimics the statistics of real data, used where real data is scarce, sensitive or does not yet cover rare events.",
+      "supply_chain_example": "A risk team generates synthetic disruption scenarios (port closures, supplier failures) that respect real lead-time and demand patterns, to train and test a disruption-response model on events too rare in its own history.",
       "gartner_phase_2026": "Trough of Disillusionment",
       "base_rate": 0.2,
       "sensitivities": {
@@ -618,6 +666,8 @@
     {
       "id": "edge-ai",
       "name": "Edge AI",
+      "description": "Running AI on devices close to where the data is produced, such as cameras, scanners, vehicles and machines, rather than in a remote cloud, for speed, cost, reliability or privacy.",
+      "supply_chain_example": "Cameras on the inbound dock read labels and check carton damage on the device itself, so receiving keeps working when the warehouse network drops and no video leaves the site.",
       "gartner_phase_2026": "Trough of Disillusionment",
       "base_rate": 0.25,
       "sensitivities": {
@@ -645,6 +695,8 @@
     {
       "id": "generative-ai",
       "name": "Generative AI",
+      "description": "AI that creates new content, such as text, images, code or designs, from prompts and examples, usually built on foundation models.",
+      "supply_chain_example": "A planner asks in plain language why the European service level fell last month. Generative AI drafts the answer from the planning data and writes the supplier escalation emails for review.",
       "gartner_phase_2026": "Trough of Disillusionment",
       "base_rate": 0.3,
       "sensitivities": {
@@ -669,6 +721,8 @@
     {
       "id": "knowledge-graphs",
       "name": "Knowledge Graphs",
+      "description": "Networks of facts that connect entities (products, parts, suppliers, sites, regulations) through named relationships, so systems can reason over how things relate.",
+      "supply_chain_example": "A knowledge graph links every finished product to its components, their suppliers, the suppliers' sites and sub-suppliers. When a factory in one region shuts, the company sees within minutes which products and customers are exposed.",
       "gartner_phase_2026": "Slope of Enlightenment",
       "base_rate": 0.2,
       "sensitivities": {

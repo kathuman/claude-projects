@@ -29,6 +29,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - name: Collect signals
         env:
           SIGNALS_CONTACT: ${{ github.server_url }}/${{ github.repository }}
@@ -36,6 +39,8 @@ jobs:
           ARGS=""
           if [ -n "${{ inputs.end_month }}" ]; then ARGS="--end ${{ inputs.end_month }}"; fi
           python scripts/update_signals.py $ARGS --summary refresh-summary.md
+      - name: Freeze this month's forecasts (track record)
+        run: node scripts/record_forecast.mjs --summary refresh-summary.md
       - name: Validate data
         run: python scripts/validate_data.py
       - name: Read period
@@ -49,6 +54,7 @@ jobs:
           add-paths: |
             ai-expectations-gap-map/data/signals.json
             ai-expectations-gap-map/data/history.json
+            ai-expectations-gap-map/data/ledger.json
           commit-message: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
           title: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
           body-path: ai-expectations-gap-map/refresh-summary.md

@@ -20,6 +20,14 @@ function render({ cfg, scen, set, sig, hist, A }) {
   const lastReview = A.map(a => a.reviewed).sort().pop();
   $("asOf").textContent = `Scores reviewed ${lastReview}${sig.period ? ` · signals ${sig.period}` : ""}`;
 
+  const score = Object.fromEntries(A.map((a) => [a.id, a]));
+  $("techList").innerHTML = [...cfg.technologies].sort((x, y) => x.name.localeCompare(y.name)).map((tc) => `
+    <div class="tech" id="t-${esc(tc.id)}"><h3>${esc(tc.name)}</h3>
+      <p class="meta">Expectations ${esc(score[tc.id]?.expectations ?? "–")} · evidence ${esc(score[tc.id]?.evidence ?? "–")} · Gartner 2026: ${esc(tc.gartner_phase_2026)}</p>
+      <p>${esc(tc.description ?? "")}</p>
+      <p class="scm"><b>Supply chain example.</b> ${esc(tc.supply_chain_example ?? "")}</p>
+      <p class="meta" style="margin-top:8px">Watch: ${esc(tc.watch_signal)}</p></div>`).join("");
+
   $("classTable").innerHTML = [
     ["over", `Gap above +${t.overheated_gap}`, "Expectations exceed evidence. Fund small, staged options with explicit kill criteria; avoid multi-year commitments until the watch signal moves."],
     ["proven", `Gap within band, evidence ${t.proven_evidence} or more`, "Evidence supports expectations. Scale with standard business cases and clear operating ownership."],

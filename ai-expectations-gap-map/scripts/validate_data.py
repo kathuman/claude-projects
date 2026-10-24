@@ -20,6 +20,7 @@ def main() -> int:
         sets = json.loads((DATA / "settings.json").read_text(encoding="utf-8"))
         json.loads((DATA / "signals.json").read_text(encoding="utf-8"))
         json.loads((DATA / "history.json").read_text(encoding="utf-8"))
+        ledger = json.loads((DATA / "ledger.json").read_text(encoding="utf-8")) if (DATA / "ledger.json").exists() else {"records": []}
     except Exception as e:
         print(f"ERROR: could not parse a JSON file: {e}")
         return 1
@@ -29,7 +30,8 @@ def main() -> int:
         errs.append("technologies.json: duplicate ids")
     for t in cfg["technologies"]:
         tid = t.get("id", "?")
-        for f in ("id", "name", "gartner_phase_2026", "base_rate", "sensitivities", "watch_signal", "signals"):
+        for f in ("id", "name", "description", "supply_chain_example", "gartner_phase_2026", "base_rate", "sensitivities",
+                  "watch_signal", "signals"):
             if f not in t:
                 errs.append(f"technologies.json/{tid}: missing '{f}'")
         if not 0 <= t.get("base_rate", -1) <= 1:
@@ -87,9 +89,28 @@ def main() -> int:
         if not 0 <= sets.get("blend", {}).get(k, -1) <= 1:
             errs.append(f"settings.json: blend.{k} must be 0..1")
 
+    hz = sets.get("track", {}).get("horizons_months", [])
+    if not hz or any(not isinstance(h, int) or h <= 0 for h in hz):
+        errs.append("settings.json: track.horizons_months must be a list of whole months > 0")
+    periods = [r.get("period") for r in ledger.get("records", [])]
+    if periods != sorted(set(periods)):
+        errs.append("ledger.json: records must be in period order, one per period")
+    for r in ledger.get("records", []):
+        per = r.get("period", "?")
+        for f in ("period", "made", "mode", "horizons", "settings", "technologies"):
+            if f not in r:
+                errs.append(f"ledger.json/{per}: missing '{f}'")
+        for tid, t in r.get("technologies", {}).items():
+            for sid, fc in t.get("forecast", {}).items():
+                if len(fc) != len(r.get("horizons", [])) or any(not (0 <= v <= 100) for pair in fc for v in pair):
+                    errs.append(f"ledger.json/{per}/{tid}/{sid}: one H, E pair per horizon, each 0..100")
+            if len(t.get("start", [])) != 2:
+                errs.append(f"ledger.json/{per}/{tid}: start must be [H, E]")
+
     for e in errs:
         print("ERROR:", e)
-    print(f"{len(errs)} error(s); {len(rows)} assessments, {len(ids)} technologies, {len(pids)} scenarios")
+    print(f"{len(errs)} error(s); {len(rows)} assessments, {len(ids)} technologies, {len(pids)} scenarios, "
+          f"{len(periods)} ledger records")
     return 1 if errs else 0
 
 

@@ -9,6 +9,8 @@ index.html              the board
 about.html              methodology and update process (reads live values from data/)
 assets/app.js           UI (ES module)
 assets/model.js         pure model functions (tested in Node)
+assets/accuracy.js      scores the frozen forecasts as they come due (tested in Node)
+track.html, assets/track.js   the track record page
 assets/about.js         fills the methodology page from the data files
 assets/styles.css
 data/assessments.csv    analyst scores: expectations, evidence, impact, reviewed, notes   ← edit by hand
@@ -16,9 +18,11 @@ data/technologies.json  per-technology config: sensitivities, growth rate, watch
 data/scenarios.json     drivers and preset scenarios
 data/settings.json      blend weights, class thresholds, model constants, defaults
 data/signals.json       generated monthly: latest collected signals                      ← written by the job
-data/history.json       generated monthly: one snapshot per month (trend lines)          ← written by the job
+data/history.json       generated monthly: one snapshot per month, all kept              ← written by the job
+data/ledger.json        generated monthly: the board and its forecasts, frozen          ← written by the job
 scripts/update_signals.py   collects signals, computes indices, writes summary (stdlib only)
 scripts/validate_data.py    blocks bad data from reaching the site
+scripts/record_forecast.mjs freezes the month's forecasts in the ledger (Node, uses assets/model.js)
 (repository root) .github/workflows/gap-map-*.yml   monthly refresh, tests, quarterly review reminder
 ```
 
@@ -62,13 +66,26 @@ The job validates the result and **opens a pull request** rather than publishing
 
 No API keys are needed. If more than half the requests fail (an API is down), the job aborts and opens nothing.
 
+### Keeping score (automatic)
+
+After collecting the signals, the monthly job runs `scripts/record_forecast.mjs`, which adds one record to
+`data/ledger.json`: the analyst scores and signals as they stood, the board's starting positions, and the model's
+forecast for every preset scenario at the horizons in `settings.json` (`track.horizons_months`: 3, 6, 12 and 24).
+A record is never rewritten; a second run for the same month keeps the first (`--replace` overrides that by hand).
+
+`track.html` scores every forecast that has come due against the board's position in the month it was aimed at,
+and against a forecast that nothing moves (skill = 1 − error ÷ standing-still error). It also counts the right
+quadrant, the right direction of expectations against the measured attention signals, and which scenario came
+closest. The refresh pull request ends with a short track-record note. `data/history.json` now keeps every month.
+
 ### Quarterly analyst review (manual, prompted)
 
 `gap-map-review.yml` opens an issue on the first day of each quarter. The issue lists every assessment not reviewed in 120 days, plus a checklist. To update a score, edit `data/assessments.csv` directly on GitHub (pencil icon), change the numbers and the `reviewed` date, and commit through a pull request. `gap-map-validate.yml` checks the file before you can merge.
 
 ### Adding a technology
 
-1. Add an object to `data/technologies.json`: `id`, `name`, `gartner_phase_2026`, `base_rate`, `sensitivities` (all five drivers, −1 to 1), `watch_signal` and `signals` (Wikipedia article titles, Hacker News phrases, an arXiv phrase, PyPI packages; leave lists empty where nothing fits).
+1. Add an object to `data/technologies.json`: `id`, `name`, `description` (what it is, in a sentence or two),
+   `supply_chain_example` (one concrete use in supply chain management), `gartner_phase_2026`, `base_rate`, `sensitivities` (all five drivers, −1 to 1), `watch_signal` and `signals` (Wikipedia article titles, Hacker News phrases, an arXiv phrase, PyPI packages; leave lists empty where nothing fits).
 2. Add a row with the same `id` to `data/assessments.csv`.
 3. Open a pull request. Validation fails if either half is missing.
 

@@ -192,6 +192,9 @@ function renderDetail(d) {
   $("detail").innerHTML = `
     <div class="detail-top"><div><div class="eyebrow">Selected · Gartner 2026: ${esc(d.gartner_phase_2026)}</div><h2 style="font-size:22px">${esc(d.name)}</h2></div>
     <span class="pill p-${d.c}" style="font-size:13px;padding:4px 10px">${CLS[d.c]}${d.c !== d.c0 ? ` (today: ${CLS[d.c0]})` : ""}</span></div>
+    ${d.description ? `<p class="what">${esc(d.description)}</p>` : ""}
+    ${d.supply_chain_example ? `<div class="action scm"><b>In supply chain management.</b> ${esc(d.supply_chain_example)}</div>` : ""}
+    <p class="note"><a href="about.html#technologies">What every technology on the board is</a></p>
     <div class="kv">
       <div><span>Expectations</span><b>${d.H.toFixed(0)}</b> <em>today ${d.h0.toFixed(0)}</em></div>
       <div><span>Evidence</span><b>${d.E.toFixed(0)}</b> <em>today ${d.e0.toFixed(0)}</em></div>

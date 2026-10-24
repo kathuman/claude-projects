@@ -2,5 +2,5 @@
   "name": "ai-expectations-gap-map",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test tests/model.test.mjs" }
+  "scripts": { "test": "node --test tests/model.test.mjs tests/accuracy.test.mjs" }
 }

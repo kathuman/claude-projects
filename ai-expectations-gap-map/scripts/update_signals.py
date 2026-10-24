@@ -38,7 +38,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 UA = "ai-expectations-gap-map/1.0 (" + os.environ.get("SIGNALS_CONTACT", "https://github.com") + ")"
-HISTORY_LIMIT = 60  # months kept in history.json
+HISTORY_LIMIT = None  # months kept in history.json: all of them, for the track record
 
 
 # ---------------------------------------------------------------- periods
@@ -314,7 +314,7 @@ def main() -> int:
     snaps.append({"period": p["label"], "technologies": {
         k: {"expectations_index": v["expectations_index"], "evidence_index": v["evidence_index"]} for k, v in techs.items()}})
     snaps.sort(key=lambda s: s["period"])
-    hist["snapshots"] = snaps[-HISTORY_LIMIT:]
+    hist["snapshots"] = snaps[-HISTORY_LIMIT:] if HISTORY_LIMIT else snaps
     hist_path.write_text(json.dumps(hist, indent=1) + "\n", encoding="utf-8")
 
     write_summary(Path(args.summary), p["label"], techs, prev, f, settings, names)
