@@ -1,0 +1,895 @@
+{
+ "_comment": "Synthetic titles for tests/test_discovery.py, above the real thresholds in settings.json (min_count 6, min_months 2): neural operators rise over three months; big tech rises too, but its Wikipedia article is about companies.",
+ "hn": {
+  "L": [
+   {
+    "title": "Neural operators july for weather",
+    "url": "https://example.org/2026-07/0",
+    "month": "2026-07"
+   },
+   {
+    "title": "Neural operators july meet PDEs",
+    "url": "https://example.org/2026-07/1",
+    "month": "2026-07"
+   },
+   {
+    "title": "Neural operators july at scale",
+    "url": "https://example.org/2026-07/2",
+    "month": "2026-07"
+   },
+   {
+    "title": "Big tech july spends",
+    "url": "https://example.org/2026-07/3",
+    "month": "2026-07"
+   },
+   {
+    "title": "Big tech july earnings",
+    "url": "https://example.org/2026-07/4",
+    "month": "2026-07"
+   },
+   {
+    "title": "Big tech july power",
+    "url": "https://example.org/2026-07/5",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number a",
+    "url": "https://example.org/2026-07/6",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number b",
+    "url": "https://example.org/2026-07/7",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number c",
+    "url": "https://example.org/2026-07/8",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number d",
+    "url": "https://example.org/2026-07/9",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number e",
+    "url": "https://example.org/2026-07/10",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number f",
+    "url": "https://example.org/2026-07/11",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number g",
+    "url": "https://example.org/2026-07/12",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number h",
+    "url": "https://example.org/2026-07/13",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number i",
+    "url": "https://example.org/2026-07/14",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number j",
+    "url": "https://example.org/2026-07/15",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number k",
+    "url": "https://example.org/2026-07/16",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number l",
+    "url": "https://example.org/2026-07/17",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number m",
+    "url": "https://example.org/2026-07/18",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number n",
+    "url": "https://example.org/2026-07/19",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number o",
+    "url": "https://example.org/2026-07/20",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number p",
+    "url": "https://example.org/2026-07/21",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number q",
+    "url": "https://example.org/2026-07/22",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number r",
+    "url": "https://example.org/2026-07/23",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number s",
+    "url": "https://example.org/2026-07/24",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number t",
+    "url": "https://example.org/2026-07/25",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number u",
+    "url": "https://example.org/2026-07/26",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number v",
+    "url": "https://example.org/2026-07/27",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number w",
+    "url": "https://example.org/2026-07/28",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number x",
+    "url": "https://example.org/2026-07/29",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number y",
+    "url": "https://example.org/2026-07/30",
+    "month": "2026-07"
+   },
+   {
+    "title": "Unrelated story number z",
+    "url": "https://example.org/2026-07/31",
+    "month": "2026-07"
+   },
+   {
+    "title": "Neural operators august for weather",
+    "url": "https://example.org/2026-08/0",
+    "month": "2026-08"
+   },
+   {
+    "title": "Neural operators august meet PDEs",
+    "url": "https://example.org/2026-08/1",
+    "month": "2026-08"
+   },
+   {
+    "title": "Neural operators august at scale",
+    "url": "https://example.org/2026-08/2",
+    "month": "2026-08"
+   },
+   {
+    "title": "Big tech august spends",
+    "url": "https://example.org/2026-08/3",
+    "month": "2026-08"
+   },
+   {
+    "title": "Big tech august earnings",
+    "url": "https://example.org/2026-08/4",
+    "month": "2026-08"
+   },
+   {
+    "title": "Big tech august power",
+    "url": "https://example.org/2026-08/5",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number a",
+    "url": "https://example.org/2026-08/6",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number b",
+    "url": "https://example.org/2026-08/7",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number c",
+    "url": "https://example.org/2026-08/8",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number d",
+    "url": "https://example.org/2026-08/9",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number e",
+    "url": "https://example.org/2026-08/10",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number f",
+    "url": "https://example.org/2026-08/11",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number g",
+    "url": "https://example.org/2026-08/12",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number h",
+    "url": "https://example.org/2026-08/13",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number i",
+    "url": "https://example.org/2026-08/14",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number j",
+    "url": "https://example.org/2026-08/15",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number k",
+    "url": "https://example.org/2026-08/16",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number l",
+    "url": "https://example.org/2026-08/17",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number m",
+    "url": "https://example.org/2026-08/18",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number n",
+    "url": "https://example.org/2026-08/19",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number o",
+    "url": "https://example.org/2026-08/20",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number p",
+    "url": "https://example.org/2026-08/21",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number q",
+    "url": "https://example.org/2026-08/22",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number r",
+    "url": "https://example.org/2026-08/23",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number s",
+    "url": "https://example.org/2026-08/24",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number t",
+    "url": "https://example.org/2026-08/25",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number u",
+    "url": "https://example.org/2026-08/26",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number v",
+    "url": "https://example.org/2026-08/27",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number w",
+    "url": "https://example.org/2026-08/28",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number x",
+    "url": "https://example.org/2026-08/29",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number y",
+    "url": "https://example.org/2026-08/30",
+    "month": "2026-08"
+   },
+   {
+    "title": "Unrelated story number z",
+    "url": "https://example.org/2026-08/31",
+    "month": "2026-08"
+   },
+   {
+    "title": "Neural operators september for weather",
+    "url": "https://example.org/2026-09/0",
+    "month": "2026-09"
+   },
+   {
+    "title": "Neural operators september meet PDEs",
+    "url": "https://example.org/2026-09/1",
+    "month": "2026-09"
+   },
+   {
+    "title": "Neural operators september at scale",
+    "url": "https://example.org/2026-09/2",
+    "month": "2026-09"
+   },
+   {
+    "title": "Big tech september spends",
+    "url": "https://example.org/2026-09/3",
+    "month": "2026-09"
+   },
+   {
+    "title": "Big tech september earnings",
+    "url": "https://example.org/2026-09/4",
+    "month": "2026-09"
+   },
+   {
+    "title": "Big tech september power",
+    "url": "https://example.org/2026-09/5",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number a",
+    "url": "https://example.org/2026-09/6",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number b",
+    "url": "https://example.org/2026-09/7",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number c",
+    "url": "https://example.org/2026-09/8",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number d",
+    "url": "https://example.org/2026-09/9",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number e",
+    "url": "https://example.org/2026-09/10",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number f",
+    "url": "https://example.org/2026-09/11",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number g",
+    "url": "https://example.org/2026-09/12",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number h",
+    "url": "https://example.org/2026-09/13",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number i",
+    "url": "https://example.org/2026-09/14",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number j",
+    "url": "https://example.org/2026-09/15",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number k",
+    "url": "https://example.org/2026-09/16",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number l",
+    "url": "https://example.org/2026-09/17",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number m",
+    "url": "https://example.org/2026-09/18",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number n",
+    "url": "https://example.org/2026-09/19",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number o",
+    "url": "https://example.org/2026-09/20",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number p",
+    "url": "https://example.org/2026-09/21",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number q",
+    "url": "https://example.org/2026-09/22",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number r",
+    "url": "https://example.org/2026-09/23",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number s",
+    "url": "https://example.org/2026-09/24",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number t",
+    "url": "https://example.org/2026-09/25",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number u",
+    "url": "https://example.org/2026-09/26",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number v",
+    "url": "https://example.org/2026-09/27",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number w",
+    "url": "https://example.org/2026-09/28",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number x",
+    "url": "https://example.org/2026-09/29",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number y",
+    "url": "https://example.org/2026-09/30",
+    "month": "2026-09"
+   },
+   {
+    "title": "Unrelated story number z",
+    "url": "https://example.org/2026-09/31",
+    "month": "2026-09"
+   }
+  ],
+  "P": [
+   {
+    "title": "Neural operators intro",
+    "url": "https://example.org/2026-04/0",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number a",
+    "url": "https://example.org/2026-04/1",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number b",
+    "url": "https://example.org/2026-04/2",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number c",
+    "url": "https://example.org/2026-04/3",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number d",
+    "url": "https://example.org/2026-04/4",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number e",
+    "url": "https://example.org/2026-04/5",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number f",
+    "url": "https://example.org/2026-04/6",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number g",
+    "url": "https://example.org/2026-04/7",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number h",
+    "url": "https://example.org/2026-04/8",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number i",
+    "url": "https://example.org/2026-04/9",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number j",
+    "url": "https://example.org/2026-04/10",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number k",
+    "url": "https://example.org/2026-04/11",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number l",
+    "url": "https://example.org/2026-04/12",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number m",
+    "url": "https://example.org/2026-04/13",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number n",
+    "url": "https://example.org/2026-04/14",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number o",
+    "url": "https://example.org/2026-04/15",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number p",
+    "url": "https://example.org/2026-04/16",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number q",
+    "url": "https://example.org/2026-04/17",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number r",
+    "url": "https://example.org/2026-04/18",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number s",
+    "url": "https://example.org/2026-04/19",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number t",
+    "url": "https://example.org/2026-04/20",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number u",
+    "url": "https://example.org/2026-04/21",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number v",
+    "url": "https://example.org/2026-04/22",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number w",
+    "url": "https://example.org/2026-04/23",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number x",
+    "url": "https://example.org/2026-04/24",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number y",
+    "url": "https://example.org/2026-04/25",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number z",
+    "url": "https://example.org/2026-04/26",
+    "month": "2026-04"
+   },
+   {
+    "title": "Unrelated story number a",
+    "url": "https://example.org/2026-05/0",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number b",
+    "url": "https://example.org/2026-05/1",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number c",
+    "url": "https://example.org/2026-05/2",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number d",
+    "url": "https://example.org/2026-05/3",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number e",
+    "url": "https://example.org/2026-05/4",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number f",
+    "url": "https://example.org/2026-05/5",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number g",
+    "url": "https://example.org/2026-05/6",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number h",
+    "url": "https://example.org/2026-05/7",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number i",
+    "url": "https://example.org/2026-05/8",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number j",
+    "url": "https://example.org/2026-05/9",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number k",
+    "url": "https://example.org/2026-05/10",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number l",
+    "url": "https://example.org/2026-05/11",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number m",
+    "url": "https://example.org/2026-05/12",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number n",
+    "url": "https://example.org/2026-05/13",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number o",
+    "url": "https://example.org/2026-05/14",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number p",
+    "url": "https://example.org/2026-05/15",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number q",
+    "url": "https://example.org/2026-05/16",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number r",
+    "url": "https://example.org/2026-05/17",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number s",
+    "url": "https://example.org/2026-05/18",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number t",
+    "url": "https://example.org/2026-05/19",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number u",
+    "url": "https://example.org/2026-05/20",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number v",
+    "url": "https://example.org/2026-05/21",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number w",
+    "url": "https://example.org/2026-05/22",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number x",
+    "url": "https://example.org/2026-05/23",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number y",
+    "url": "https://example.org/2026-05/24",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number z",
+    "url": "https://example.org/2026-05/25",
+    "month": "2026-05"
+   },
+   {
+    "title": "Unrelated story number a",
+    "url": "https://example.org/2026-06/0",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number b",
+    "url": "https://example.org/2026-06/1",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number c",
+    "url": "https://example.org/2026-06/2",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number d",
+    "url": "https://example.org/2026-06/3",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number e",
+    "url": "https://example.org/2026-06/4",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number f",
+    "url": "https://example.org/2026-06/5",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number g",
+    "url": "https://example.org/2026-06/6",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number h",
+    "url": "https://example.org/2026-06/7",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number i",
+    "url": "https://example.org/2026-06/8",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number j",
+    "url": "https://example.org/2026-06/9",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number k",
+    "url": "https://example.org/2026-06/10",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number l",
+    "url": "https://example.org/2026-06/11",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number m",
+    "url": "https://example.org/2026-06/12",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number n",
+    "url": "https://example.org/2026-06/13",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number o",
+    "url": "https://example.org/2026-06/14",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number p",
+    "url": "https://example.org/2026-06/15",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number q",
+    "url": "https://example.org/2026-06/16",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number r",
+    "url": "https://example.org/2026-06/17",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number s",
+    "url": "https://example.org/2026-06/18",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number t",
+    "url": "https://example.org/2026-06/19",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number u",
+    "url": "https://example.org/2026-06/20",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number v",
+    "url": "https://example.org/2026-06/21",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number w",
+    "url": "https://example.org/2026-06/22",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number x",
+    "url": "https://example.org/2026-06/23",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number y",
+    "url": "https://example.org/2026-06/24",
+    "month": "2026-06"
+   },
+   {
+    "title": "Unrelated story number z",
+    "url": "https://example.org/2026-06/25",
+    "month": "2026-06"
+   }
+  ]
+ },
+ "wikipedia": {
+  "neural operators": {
+   "title": "Neural operators",
+   "extract": "Neural operators are a class of deep learning architectures designed to learn maps between infinite-dimensional function spaces.",
+   "description": "Machine learning architecture",
+   "url": "https://en.wikipedia.org/wiki/Neural_operators"
+  },
+  "big tech": {
+   "not_technology": "Largest information technology companies"
+  }
+ }
+}

@@ -41,6 +41,8 @@ jobs:
           python scripts/update_signals.py $ARGS --summary refresh-summary.md
       - name: Freeze this month's forecasts (track record)
         run: node scripts/record_forecast.mjs --summary refresh-summary.md
+      - name: Find rising terms not on the board (advisory, never fails the refresh)
+        run: python scripts/discover_candidates.py ${{ inputs.end_month && format('--end {0}', inputs.end_month) || '' }} --summary refresh-summary.md
       - name: Validate data
         run: python scripts/validate_data.py
       - name: Read period
@@ -55,6 +57,7 @@ jobs:
             ai-expectations-gap-map/data/signals.json
             ai-expectations-gap-map/data/history.json
             ai-expectations-gap-map/data/ledger.json
+            ai-expectations-gap-map/data/candidates.json
           commit-message: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
           title: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
           body-path: ai-expectations-gap-map/refresh-summary.md

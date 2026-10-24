@@ -8,10 +8,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="icon" href="assets/brand/favicon.ico" sizes="any">
+<link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body class="doc">
 <div class="wrap">
+  <div class="brandbar">
+    <a href="https://kathuman.github.io/estay-dynamics/" aria-label="Estay Dynamics: supply chain strategy and system dynamics">
+      <img class="lk lk-light" src="assets/brand/estay-lockup-light-tagline.svg" alt="Estay Dynamics. Supply chain strategy · System dynamics" width="285" height="72">
+      <img class="lk lk-dark" src="assets/brand/estay-lockup-dark-tagline.svg" alt="" width="285" height="72">
+    </a>
+  </div>
   <nav class="topnav" aria-label="Site">
     <span class="navl"><a href="../">← AI Projects</a><a href="./">← Back to the board</a></span>
     <span class="eyebrow" id="asOf">Methodology</span>
@@ -296,8 +304,14 @@ ai-agents,82,35,90,2026-10-24,High cancellation risk; coding and service agents 
 <p>A later position includes analyst scores that may not have been re-reviewed since the forecast was made; those carry over unchanged and favour standing still. The track record shows how many comparisons had a fresh analyst score.</p>
 </section>
 
+<section id="discovery">
+<h2>13. Finding new technologies</h2>
+<p>The board measures only the technologies it lists, so each monthly refresh also looks for what it is missing. It reads the titles of AI stories on Hacker News and of a sample of AI papers on arXiv, and keeps two- and three-word phrases that are rising, that appear in at least two of the last three months, and that the board does not already track. Names with version numbers, companies, products and headline phrasing are left out, and so is a phrase whose Wikipedia article describes an organisation, a person or a product.</p>
+<p>Candidates appear on the board under "Rising, not on the board yet", each with its Wikipedia description where one exists, or example titles where none does. Most are noise. A candidate joins the board only when an analyst adds it with scores, a description and a supply chain example; its track record starts then.</p>
+</section>
+
 <section id="files">
-<h2>13. Data files</h2>
+<h2>14. Data files</h2>
 <div class="tbl"><table>
 <thead><tr><th>File</th><th>Contents</th><th>Updated by</th></tr></thead>
 <tbody>
@@ -307,17 +321,18 @@ ai-agents,82,35,90,2026-10-24,High cancellation risk; coding and service agents 
 <tr><td><code>data/settings.json</code></td><td>Blend weights, thresholds, model constants, defaults</td><td>People, via pull request</td></tr>
 <tr><td><code>data/signals.json</code></td><td>Latest indices and raw counts per technology</td><td>Monthly workflow</td></tr>
 <tr><td><code>data/history.json</code></td><td>Monthly snapshots of indices, every month kept</td><td>Monthly workflow</td></tr>
+<tr><td><code>data/candidates.json</code></td><td>Rising terms not on the board, with descriptions, and every month each has been a candidate</td><td>Monthly workflow</td></tr>
 <tr><td><code>data/ledger.json</code></td><td>The board frozen each month: scores, signals, starting positions and every scenario's forecasts, never rewritten</td><td>Monthly workflow</td></tr>
 </tbody></table></div>
 </section>
 
 <section id="log">
-<h2>14. Update log</h2>
+<h2>15. Update log</h2>
 <div id="logBody"><p class="note">Loading.</p></div>
 </section>
 
 <section id="technologies">
-<h2>15. The technologies</h2>
+<h2>16. The technologies</h2>
 <p>What each technology on the board is, and an example of how it applies to supply chain management. The examples show what the technology does, not evidence that it delivers: that is what the evidence score is for.</p>
 <div class="techs" id="techList"><p class="note">Loading.</p></div>
 </section>
@@ -334,7 +349,7 @@ ai-agents,82,35,90,2026-10-24,High cancellation risk; coding and service agents 
     </article>
   </div>
 <footer class="sitefoot">
-  AI Expectations Gap Map · by Daniel Alberto Sepulveda Estay, PhD · <a href="about.html">Methodology and data</a> · <a href="track.html">Track record</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
+  AI Expectations Gap Map · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://kathuman.github.io/estay-dynamics/">Estay Dynamics</a> · <a href="about.html">Methodology and data</a> · <a href="track.html">Track record</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
 </footer>
 </div>
 <script type="module" src="assets/about.js"></script>

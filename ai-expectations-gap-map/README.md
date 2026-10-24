@@ -23,6 +23,9 @@ data/ledger.json        generated monthly: the board and its forecasts, frozen  
 scripts/update_signals.py   collects signals, computes indices, writes summary (stdlib only)
 scripts/validate_data.py    blocks bad data from reaching the site
 scripts/record_forecast.mjs freezes the month's forecasts in the ledger (Node, uses assets/model.js)
+scripts/discover_candidates.py  finds rising terms the board does not track yet (advisory)
+data/candidates.json    generated monthly: this month's candidates, and every month each was one  ← written by the job
+assets/brand/           Estay Dynamics lockups (light and dark) and favicon
 (repository root) .github/workflows/gap-map-*.yml   monthly refresh, tests, quarterly review reminder
 ```
 
@@ -77,6 +80,28 @@ A record is never rewritten; a second run for the same month keeps the first (`-
 and against a forecast that nothing moves (skill = 1 − error ÷ standing-still error). It also counts the right
 quadrant, the right direction of expectations against the measured attention signals, and which scenario came
 closest. The refresh pull request ends with a short track-record note. `data/history.json` now keeps every month.
+
+### Finding new technologies (automatic, advisory)
+
+The board only measures the technologies in `data/technologies.json`, so the monthly job also looks for what it is
+missing. `scripts/discover_candidates.py` reads the titles of AI stories on Hacker News (the queries in
+`settings.json` → `discovery.hn_queries`) and a sample of AI papers on arXiv for each month, counts the two- and
+three-word phrases, and keeps those that:
+
+- appear in at least `min_count` distinct titles (a repost counts once) in the last three months, in at least
+  `min_months` of those months (a one-week news story is not a trend);
+- rose at least `min_rise` times as a share of titles against the three months before;
+- are not already on the board (names and signal queries), not in `ignore` (whole phrases) and contain no word in
+  `ignore_words` (companies, products, countries);
+- are noun phrases: version-numbered names (GPT-6), possessives and headline verbs ("says", past tenses) are skipped.
+
+Each candidate gets a description from Wikipedia where an article is named by the phrase (an article about a company,
+person or product drops the candidate), or example titles where there is none. The board shows them under "Rising,
+not on the board yet", the refresh pull request lists them under "Candidates to consider", and
+`data/candidates.json` keeps every month each phrase has been a candidate, so a trend that persists stands out from
+a one-month blip. Nothing is added automatically: most candidates are noise. When one names a technology worth
+scoring, add it as below; when the same noise keeps returning, add it to `ignore` or `ignore_words`. This step never
+fails the refresh: if a source is down, it reports what it could.
 
 ### Quarterly analyst review (manual, prompted)
 

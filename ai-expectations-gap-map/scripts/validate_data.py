@@ -21,6 +21,7 @@ def main() -> int:
         json.loads((DATA / "signals.json").read_text(encoding="utf-8"))
         json.loads((DATA / "history.json").read_text(encoding="utf-8"))
         ledger = json.loads((DATA / "ledger.json").read_text(encoding="utf-8")) if (DATA / "ledger.json").exists() else {"records": []}
+        cands = json.loads((DATA / "candidates.json").read_text(encoding="utf-8")) if (DATA / "candidates.json").exists() else {}
     except Exception as e:
         print(f"ERROR: could not parse a JSON file: {e}")
         return 1
@@ -92,6 +93,14 @@ def main() -> int:
     hz = sets.get("track", {}).get("horizons_months", [])
     if not hz or any(not isinstance(h, int) or h <= 0 for h in hz):
         errs.append("settings.json: track.horizons_months must be a list of whole months > 0")
+    dsc = sets.get("discovery", {})
+    for k in ("hn_queries", "arxiv_categories", "arxiv_sample", "min_count", "min_rise", "max_candidates", "ignore"):
+        if k not in dsc:
+            errs.append(f"settings.json: discovery.{k} is missing")
+    for c in cands.get("candidates", []):
+        if not c.get("phrase") or not c.get("sources") or not c.get("seen"):
+            errs.append(f"candidates.json: candidate {c.get('phrase')!r} needs phrase, sources and seen")
+
     periods = [r.get("period") for r in ledger.get("records", [])]
     if periods != sorted(set(periods)):
         errs.append("ledger.json: records must be in period order, one per period")

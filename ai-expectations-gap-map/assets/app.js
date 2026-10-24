@@ -15,17 +15,18 @@ const fmtSigned = v => (v > 0 ? "+" : "") + v.toFixed(0);
 async function getJSON(p) { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.json(); }
 async function getText(p) { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.text(); }
 
-let CFG, SCEN, SET, SIG, HIST, ASSESS;
+let CFG, SCEN, SET, SIG, HIST, ASSESS, CAND;
 let overrides = {};   // local what-if edits, never saved
 const st = { drivers: {}, horizon: 3, correction_speed: 0.4, preset: "base", sel: "ai-agents", all: false, mode: "blend" };
 
 async function boot() {
   try {
-    [CFG, SCEN, SET, SIG, HIST, ASSESS] = await Promise.all([
+    [CFG, SCEN, SET, SIG, HIST, ASSESS, CAND] = await Promise.all([
       getJSON("data/technologies.json"), getJSON("data/scenarios.json"), getJSON("data/settings.json"),
       getJSON("data/signals.json").catch(() => ({ technologies: {} })),
       getJSON("data/history.json").catch(() => ({ snapshots: [] })),
       getText("data/assessments.csv").then(parseCSV),
+      getJSON("data/candidates.json").catch(() => null),
     ]);
   } catch (e) {
     document.querySelector(".wrap").insertAdjacentHTML("afterbegin",
@@ -42,6 +43,7 @@ async function boot() {
   drawFrame();
   syncControls();
   render();
+  renderCandidates();
 }
 
 const hasSignals = () => SIG && SIG.generated && Object.keys(SIG.technologies || {}).length > 0;
@@ -123,7 +125,11 @@ function render() {
     }
     const c = el("circle", { cx: X(d.E), cy: Y(d.H), r: rad, class: "bub", tabindex: 0, role: "button", "aria-label": d.name,
       style: `fill:var(--${d.c});fill-opacity:${sel ? 1 : .78};stroke:${sel ? "var(--ink)" : "var(--panel)"};stroke-width:${sel ? 2.5 : 1.2}` }, gBub);
-    el("title", {}, c).textContent = `${d.name}: expectations ${d.H.toFixed(0)}, evidence ${d.E.toFixed(0)}`;
+    const show = () => showTip(d, c);
+    c.addEventListener("pointerenter", show);
+    c.addEventListener("focus", show);
+    c.addEventListener("pointerleave", hideTip);
+    c.addEventListener("blur", hideTip);
     c.addEventListener("click", () => select(d.id));
     c.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(d.id); } });
     if (st.all || sel || d.impact >= 80 || Math.abs(d.gap) > 40) {
@@ -169,6 +175,40 @@ function sparkline(id) {
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Attention index trend, ${pts[0].p} to ${last.p}">
     <polygon class="ar" points="${xs(0)},${h} ${line} ${xs(n - 1)},${h}"/><polyline class="ln" points="${line}"/>
     <circle class="pt" cx="${xs(n - 1)}" cy="${ys(last.v)}" r="2.5"/></svg>`;
+}
+
+// ---------- what a technology is, on hover or focus ----------
+function showTip(d, node) {
+  const tip = $("tip"), box = tip.parentElement.getBoundingClientRect(), b = node.getBoundingClientRect();
+  tip.innerHTML = `<b>${esc(d.name)}</b> <span class="pill p-${d.c}">${CLS[d.c]}</span>
+    <span class="tip-n">Expectations ${d.H.toFixed(0)} · evidence ${d.E.toFixed(0)}</span>
+    <p>${esc(d.description ?? "")}</p><span class="tip-n">Select it for a supply chain example.</span>`;
+  tip.hidden = false;
+  const x = b.left - box.left + b.width / 2, y = b.top - box.top + b.height / 2;
+  const left = Math.min(Math.max(8, x - tip.offsetWidth / 2), box.width - tip.offsetWidth - 8);
+  const above = y - tip.offsetHeight - 14;
+  tip.style.left = `${left}px`;
+  tip.style.top = `${above >= 4 ? above : y + 14}px`;
+}
+function hideTip() { $("tip").hidden = true; }
+
+// ---------- candidates: rising terms the board does not track yet ----------
+function renderCandidates() {
+  const list = CAND?.candidates ?? [];
+  if (!list.length) return;
+  $("candidates").hidden = false;
+  const n = (s) => (s ? `${s.now} titles (${s.before} before)` : "–");
+  $("candNote").innerHTML = `Found automatically in AI story titles on Hacker News and paper titles on arXiv, ${esc(CAND.period)}: phrases that are rising and that the board does not track. Many are noise (product names, one-off news); a term earns a place on the board only when an analyst scores it. <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map#adding-a-technology">How to add a technology</a>.`;
+  $("candList").innerHTML = list.map((c) => {
+    const w = c.wikipedia;
+    const ACRO = /^(ai|llm|llms|gpu|gpus|ml|rl|rag|api|apis|ar|vr|iot)$/;
+    const title = c.phrase.split(" ").map((w, i) => (ACRO.test(w) ? w.toUpperCase().replace(/S$/, "s") : i ? w : w[0].toUpperCase() + w.slice(1))).join(" ");
+    const desc = w ? `<p>${esc(w.extract.length > 320 ? w.extract.slice(0, 317).replace(/\s+\S*$/, "") + "…" : w.extract)} <a href="${esc(w.url)}" target="_blank" rel="noopener">Wikipedia: ${esc(w.title)}</a></p>`
+      : `<p class="meta">No Wikipedia article yet. What people are writing:</p>`;
+    const ex = (w ? [] : c.examples).map((e) => `<li><a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a></li>`).join("");
+    return `<div class="tech"><h3>${esc(title)}</h3>${desc}${ex ? `<ul class="ex">${ex}</ul>` : ""}
+      <p class="meta">Hacker News ${n(c.sources.hn)} · arXiv ${n(c.sources.arxiv)} · candidate ${c.seen.length === 1 ? "for the first time" : `in ${c.seen.length} months since ${esc(c.seen[0])}`}</p></div>`;
+  }).join("");
 }
 
 function renderDetail(d) {

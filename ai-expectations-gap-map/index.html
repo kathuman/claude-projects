@@ -8,10 +8,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="icon" href="assets/brand/favicon.ico" sizes="any">
+<link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
 <div class="wrap">
+  <div class="brandbar">
+    <a href="https://kathuman.github.io/estay-dynamics/" aria-label="Estay Dynamics: supply chain strategy and system dynamics">
+      <img class="lk lk-light" src="assets/brand/estay-lockup-light-tagline.svg" alt="Estay Dynamics. Supply chain strategy · System dynamics" width="285" height="72">
+      <img class="lk lk-dark" src="assets/brand/estay-lockup-dark-tagline.svg" alt="" width="285" height="72">
+    </a>
+  </div>
   <nav class="topnav" aria-label="Site">
     <span class="navl"><a href="../">← AI Projects</a><span class="eyebrow">AI Expectations Gap Map</span></span>
     <span class="navl"><a href="track.html">Track record →</a><a href="about.html">Methodology and data updates →</a></span>
@@ -55,7 +63,8 @@
           <label class="toggle"><input type="checkbox" id="allLbl"> All labels</label>
         </div>
       </div>
-      <div class="svgbox"><svg id="map" viewBox="0 0 680 540" role="img" aria-label="Scatter of AI technologies by evidence and expectations"></svg></div>
+      <div class="svgbox"><svg id="map" viewBox="0 0 680 540" role="img" aria-label="Scatter of AI technologies by evidence and expectations"></svg><div class="tip" id="tip" role="tooltip" hidden></div></div>
+      <p class="note">Point at a bubble to see what the technology is; select it for a supply chain example.</p>
     </div>
 
     <aside class="panel side">
@@ -85,6 +94,12 @@
     <div class="panel" id="detail"></div>
   </div>
 
+  <div class="panel" id="candidates" hidden>
+    <h2>Rising, not on the board yet</h2>
+    <p class="note" id="candNote"></p>
+    <div class="techs" id="candList"></div>
+  </div>
+
   <div class="panel method">
     <h2>How to read this</h2>
     <p>Analyst scores (0–100) for expectations, evidence and impact live in <code>data/assessments.csv</code>. A monthly job collects public attention signals (Wikipedia page views, Hacker News stories, arXiv papers, PyPI downloads) into <code>data/signals.json</code>. "Blend" mixes the two using the weights in <code>data/settings.json</code>. Gartner's 2026 phase is shown in each detail card for comparison only.</p>
@@ -93,7 +108,7 @@
     <p>Attention is not adoption, and the thresholds and sensitivities are judgement calls. Use the board to structure the discussion, not to settle it. <a href="about.html" style="color:var(--accent)">Full methodology and update process</a>.</p>
   </div>
 <footer class="sitefoot">
-  AI Expectations Gap Map · by Daniel Alberto Sepulveda Estay, PhD · <a href="about.html">Methodology and data</a> · <a href="track.html">Track record</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
+  AI Expectations Gap Map · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://kathuman.github.io/estay-dynamics/">Estay Dynamics</a> · <a href="about.html">Methodology and data</a> · <a href="track.html">Track record</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
 </footer>
 </div>
 <script type="module" src="assets/app.js"></script>

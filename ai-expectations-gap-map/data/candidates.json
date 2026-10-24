@@ -1,0 +1,460 @@
+{
+ "generated": "2026-10-24T17:39:31+00:00",
+ "period": "2026-09",
+ "method": "Two- and three-word phrases in AI story titles (Hacker News) and AI paper titles (arXiv), last three months against the three before; kept when frequent and rising, and not already on the board.",
+ "documents": {
+  "hn": {
+   "now": 6796,
+   "before": 6776
+  },
+  "arxiv": {
+   "now": 1200,
+   "before": 1200
+  }
+ },
+ "candidates": [
+  {
+   "phrase": "flow matching",
+   "score": 14.0,
+   "examples": [
+    {
+     "title": "Safe Vision Language Action Models via Barrier Enhanced Flow Matching",
+     "url": "http://arxiv.org/abs/2607.29569v1",
+     "month": "2026-07"
+    },
+    {
+     "title": "A Lagrangian View of Flow Matching",
+     "url": "http://arxiv.org/abs/2609.00198v2",
+     "month": "2026-08"
+    },
+    {
+     "title": "Language-Informed Flow Matching for Trend-Guided Structure-Based 3D Molecular Generation",
+     "url": "http://arxiv.org/abs/2608.31009v1",
+     "month": "2026-08"
+    }
+   ],
+   "sources": {
+    "arxiv": {
+     "now": 6,
+     "before": 1,
+     "rise": 6.0
+    }
+   },
+   "wikipedia": {
+    "title": "Flow-based generative model",
+    "extract": "A flow-based generative model is a generative model used in machine learning that explicitly models a probability distribution by leveraging normalizing flow, which is a statistical method using the change-of-variable law of probabilities to transform a simple distribution into a complex one.",
+    "description": "Statistical model used in machine learning",
+    "url": "https://en.wikipedia.org/wiki/Flow-based_generative_model"
+   },
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "autonomous driving",
+   "score": 11.1,
+   "examples": [
+    {
+     "title": "WM-Cov: Test Adequacy for Interactive World-Model-Style Autonomous Driving Simulation",
+     "url": "http://arxiv.org/abs/2608.00298v1",
+     "month": "2026-07"
+    },
+    {
+     "title": "Latent-Centroid Steering: Single-Pass Classifier-Free Guidance for Command-Aligned Autonomous Driving",
+     "url": "http://arxiv.org/abs/2608.00237v3",
+     "month": "2026-07"
+    },
+    {
+     "title": "STAGE: STyle-controllable Action GEneration for personalized autonomous driving",
+     "url": "http://arxiv.org/abs/2607.29517v1",
+     "month": "2026-07"
+    }
+   ],
+   "sources": {
+    "arxiv": {
+     "now": 9,
+     "before": 5,
+     "rise": 1.8
+    }
+   },
+   "wikipedia": {
+    "title": "Vehicular automation",
+    "extract": "Vehicular automation is using technology to assist or replace the operator of a vehicle such as a car, truck, aircraft, rocket, military vehicle, or boat. Assisted vehicles are semi-autonomous, whereas vehicles that can travel without a human operator are autonomous. The degree of autonomy may be subject to various constraints such as conditions. Autonomy is enabled by advanced driver-assistance systems (ADAS) of varying capacity.",
+    "description": "Automation for various purposes of vehicles",
+    "url": "https://en.wikipedia.org/wiki/Vehicular_automation"
+   },
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "open models",
+   "score": 11.1,
+   "examples": [
+    {
+     "title": "Mark Zuckerberg attacks 'closed' AI rivals as Meta returns to open models",
+     "url": "https://news.ycombinator.com/item?id=49243880",
+     "month": "2026-08"
+    },
+    {
+     "title": "LM Studio Bionic: the AI agent for open models",
+     "url": "https://news.ycombinator.com/item?id=48939662",
+     "month": "2026-07"
+    },
+    {
+     "title": "Open-source AI and open models reading list",
+     "url": "https://news.ycombinator.com/item?id=49690260",
+     "month": "2026-09"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 36,
+     "before": 11,
+     "rise": 3.3
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "neural operators",
+   "score": 10.0,
+   "examples": [
+    {
+     "title": "Hypernetwork-Parameterized Spatially Adaptive Neural Operators for PDE Learning",
+     "url": "http://arxiv.org/abs/2609.20309v1",
+     "month": "2026-07"
+    },
+    {
+     "title": "HERO: History-Enriched Rollout Training for Long-Horizon Autoregressive Neural Operators",
+     "url": "http://arxiv.org/abs/2607.29135v1",
+     "month": "2026-07"
+    },
+    {
+     "title": "Fractional Laplace Neural Operators: Exact Architectures, an Expressivity Frontier at Criticality, and Certified Stability for Memory-Driven Network Dynamics",
+     "url": "http://arxiv.org/abs/2610.00515v1",
+     "month": "2026-09"
+    }
+   ],
+   "sources": {
+    "arxiv": {
+     "now": 6,
+     "before": 2,
+     "rise": 3.0
+    }
+   },
+   "wikipedia": {
+    "title": "Neural operators",
+    "extract": "Neural operators are a class of deep learning architectures designed to learn maps between infinite-dimensional function spaces. Neural operators represent an extension of traditional artificial neural networks, marking a departure from the typical focus on learning mappings between finite-dimensional Euclidean spaces or finite sets. Neural operators directly learn operators between function spaces; they can receive input functions, and the output function can be evaluated at any discretization.",
+    "description": "Machine learning framework",
+    "url": "https://en.wikipedia.org/wiki/Neural_operators"
+   },
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "diffusion language models",
+   "score": 10.0,
+   "examples": [
+    {
+     "title": "Faster but Different: Diagnosing and Controlling Content Drift in Accelerated Multimodal Diffusion Language Models",
+     "url": "http://arxiv.org/abs/2607.29079v1",
+     "month": "2026-07"
+    },
+    {
+     "title": "Beyond Token Positions: Safety Alignment Across Denoising Steps in Diffusion Language Models",
+     "url": "http://arxiv.org/abs/2609.00495v1",
+     "month": "2026-08"
+    },
+    {
+     "title": "CARVE: Verified Expansion for Variable-Length Generation in Diffusion Language Models",
+     "url": "http://arxiv.org/abs/2608.30922v1",
+     "month": "2026-08"
+    }
+   ],
+   "sources": {
+    "arxiv": {
+     "now": 6,
+     "before": 2,
+     "rise": 3.0
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "rogue ai",
+   "score": 8.2,
+   "examples": [
+    {
+     "title": "Early rogue AI agent activity and attempts to hack found on urlquery.net",
+     "url": "https://news.ycombinator.com/item?id=49826565",
+     "month": "2026-09"
+    },
+    {
+     "title": "How a Texas student blew the whistle on a rogue AI hacking attempt",
+     "url": "https://news.ycombinator.com/item?id=49387959",
+     "month": "2026-08"
+    },
+    {
+     "title": "OpenAI still doesn't seem to have a handle on all of its rogue AI activity",
+     "url": "https://news.ycombinator.com/item?id=49881484",
+     "month": "2026-09"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 12,
+     "before": 0,
+     "rise": 23.9
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "open weight",
+   "score": 8.0,
+   "examples": [
+    {
+     "title": "Startup founders urge U.S. government not to shut off Chinese open weight AI",
+     "url": "https://news.ycombinator.com/item?id=49023016",
+     "month": "2026-07"
+    },
+    {
+     "title": "End-to-end infrastructure for training and inferencing open weight models",
+     "url": "https://news.ycombinator.com/item?id=49570411",
+     "month": "2026-09"
+    },
+    {
+     "title": "Anthropic Doesn't Want Open Weight Models Banned. Just All That Makes Them Good",
+     "url": "https://news.ycombinator.com/item?id=49101364",
+     "month": "2026-07"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 14,
+     "before": 1,
+     "rise": 14.0
+    }
+   },
+   "wikipedia": {
+    "title": "Open weights",
+    "extract": "Open weights are the publicly released learned parameters of a trained artificial intelligence model, principally its weights and biases. In an artificial neural network, weights are numerical values that determine how strongly inputs contribute to the network's calculations. Publishing these values allows others to download and use the model, while permission to modify, fine-tune or redistribute it depends on its license. The term is commonly applied to large language models, diffusion models and other generative artificial intelligence. Open weights is contrasted to open-source artificial intelligence, which considers the public release of not only parameters but the model's source code, training data, evaluation results, intermediate checkpoints and technical documentation.",
+    "description": "Public availability of AI parameters",
+    "url": "https://en.wikipedia.org/wiki/Open_weights"
+   },
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "neural rendering",
+   "score": 4.0,
+   "examples": [
+    {
+     "title": "OpenDLSS: A Vulkan Reimplementation of Nvidia's DLSS 5 Neural Rendering Network",
+     "url": "https://news.ycombinator.com/item?id=49906100",
+     "month": "2026-09"
+    },
+    {
+     "title": "DLSS 5: Generative Neural Rendering",
+     "url": "https://news.ycombinator.com/item?id=49615920",
+     "month": "2026-09"
+    },
+    {
+     "title": "Renderformer V2 (Full neural rendering)",
+     "url": "https://news.ycombinator.com/item?id=49495484",
+     "month": "2026-08"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 7,
+     "before": 0,
+     "rise": 14.0
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "ai tokens",
+   "score": 3.3,
+   "examples": [
+    {
+     "title": "The ruble markup on AI tokens",
+     "url": "https://news.ycombinator.com/item?id=49809698",
+     "month": "2026-09"
+    },
+    {
+     "title": "Unlimited AI tokens aren't unlimited after all as US Army burns through supply",
+     "url": "https://news.ycombinator.com/item?id=49009062",
+     "month": "2026-07"
+    },
+    {
+     "title": "Free 100M AI tokens for Kimi and MiniMax models",
+     "url": "https://news.ycombinator.com/item?id=48825545",
+     "month": "2026-07"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 6,
+     "before": 0,
+     "rise": 12.0
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "usage in debian",
+   "score": 3.3,
+   "examples": [
+    {
+     "title": "LLM Usage in Debian: Three Proposals",
+     "url": "https://news.ycombinator.com/item?id=49050859",
+     "month": "2026-07"
+    },
+    {
+     "title": "Debian launches competing General Resolutions on LLM usage in Debian code",
+     "url": "https://news.ycombinator.com/item?id=49041395",
+     "month": "2026-07"
+    },
+    {
+     "title": "LLM usage in Debian neither endorsed nor prohibited",
+     "url": "https://news.ycombinator.com/item?id=49497883",
+     "month": "2026-08"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 6,
+     "before": 0,
+     "rise": 12.0
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "astra model",
+   "score": 3.3,
+   "examples": [
+    {
+     "title": "An internal OpenAI Astra model solved 10 major open math and CS problems",
+     "url": "https://news.ycombinator.com/item?id=49143688",
+     "month": "2026-08"
+    },
+    {
+     "title": "OpenAI to Restrict Astra Model After Rating It 'Critical' Cyber Risk",
+     "url": "https://news.ycombinator.com/item?id=49528347",
+     "month": "2026-09"
+    },
+    {
+     "title": "OpenAI slows release of Astra model, citing cyber capabilities",
+     "url": "https://news.ycombinator.com/item?id=49214610",
+     "month": "2026-08"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 6,
+     "before": 0,
+     "rise": 12.0
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  },
+  {
+   "phrase": "during testing",
+   "score": 3.3,
+   "examples": [
+    {
+     "title": "Meta says its AI model hacked into another company during testing",
+     "url": "https://news.ycombinator.com/item?id=49197867",
+     "month": "2026-08"
+    },
+    {
+     "title": "Anthropic finds that its models also compromised external systems during testing",
+     "url": "https://news.ycombinator.com/item?id=49118024",
+     "month": "2026-07"
+    },
+    {
+     "title": "Anthropic says its AI models hacked 3 organizations during testing",
+     "url": "https://news.ycombinator.com/item?id=49122395",
+     "month": "2026-07"
+    }
+   ],
+   "sources": {
+    "hn": {
+     "now": 6,
+     "before": 0,
+     "rise": 12.0
+    }
+   },
+   "wikipedia": null,
+   "seen": [
+    "2026-09"
+   ]
+  }
+ ],
+ "history": {
+  "flow matching": [
+   "2026-09"
+  ],
+  "autonomous driving": [
+   "2026-09"
+  ],
+  "open models": [
+   "2026-09"
+  ],
+  "neural operators": [
+   "2026-09"
+  ],
+  "diffusion language models": [
+   "2026-09"
+  ],
+  "rogue ai": [
+   "2026-09"
+  ],
+  "open weight": [
+   "2026-09"
+  ],
+  "neural rendering": [
+   "2026-09"
+  ],
+  "ai tokens": [
+   "2026-09"
+  ],
+  "usage in debian": [
+   "2026-09"
+  ],
+  "astra model": [
+   "2026-09"
+  ],
+  "during testing": [
+   "2026-09"
+  ]
+ },
+ "errors": []
+}
