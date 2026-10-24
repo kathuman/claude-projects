@@ -185,7 +185,7 @@ function showTip(d, node) {
   const tip = $("tip"), box = tip.parentElement.getBoundingClientRect(), b = node.getBoundingClientRect();
   tip.innerHTML = `<b>${esc(d.name)}</b> <span class="pill p-${d.c}">${CLS[d.c]}</span>
     <span class="tip-n">Expectations ${d.H.toFixed(0)} · evidence ${d.E.toFixed(0)}</span>
-    <p>${esc(d.description ?? "")}</p><span class="tip-n">Select it for a supply chain example.</span>`;
+    <p>${esc(d.description ?? "")}</p><span class="tip-n">Click for its card: evidence, expectations, outlook.</span>`;
   tip.hidden = false;
   const x = b.left - box.left + b.width / 2, y = b.top - box.top + b.height / 2;
   const left = Math.min(Math.max(8, x - tip.offsetWidth / 2), box.width - tip.offsetWidth - 8);
@@ -374,8 +374,13 @@ function renderDetail(d) {
   $("detail").innerHTML = `
     <div class="detail-top"><div><div class="eyebrow">Selected · Gartner 2026: ${esc(d.gartner_phase_2026)}</div><h2 style="font-size:22px">${esc(d.name)}</h2></div>
     <span class="pill p-${d.c}" style="font-size:13px;padding:4px 10px">${CLS[d.c]}${d.c !== d.c0 ? ` (today: ${CLS[d.c0]})` : ""}</span></div>
+    <a class="tomap" href="#map">↑ Back to the map</a>
     <div class="tabs" role="tablist" aria-label="About ${esc(d.name)}">${TABS.map(([k, l]) => `<button role="tab" id="tab-${k}" data-tab="${k}" aria-selected="${k === st.tab}" aria-controls="tabpanel" tabindex="${k === st.tab ? 0 : -1}">${l}</button>`).join("")}</div>
     <div class="tabpanel" id="tabpanel" role="tabpanel" aria-labelledby="tab-${st.tab}">${body}</div>`;
+  $("detail").querySelector(".tomap").addEventListener("click", ev => {
+    ev.preventDefault();
+    $("map").closest(".panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   $("detail").querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", ev => {
     ev.preventDefault();
     st.tab = b.dataset.tab;
@@ -398,7 +403,16 @@ function renderDetail(d) {
     $("reset").onclick = () => { delete overrides[d.id]; render(); };
   }
 }
-function select(id) { st.sel = id; render(); }
+// Selecting a technology opens its card; the card sits below the map, so bring it into view when it is off screen.
+function select(id) {
+  st.sel = id;
+  render();
+  const card = $("detail"), r = card.getBoundingClientRect();
+  if (r.top > innerHeight - 80 || r.bottom < 80) {
+    card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }
+  $(`tab-${st.tab}`)?.focus({ preventScroll: true });
+}
 
 // ---------- controls ----------
 const ctl = {};
