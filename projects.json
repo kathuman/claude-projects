@@ -1,5 +1,20 @@
 [
   {
+    "title": "Ripple — Supply Chain Distribution Game",
+    "description": "A supply chain ordering game for classes. A team runs a chain from store to plant on one device, turn by turn behind a hand-over screen so each stage sees only its own numbers (or at an open table), with simulated players for any stage nobody holds; orders and shipments take time to travel, so small changes in customer demand become large swings upstream. The debrief charts the bullwhip and the stock and backlog of every stage, compares the team with the same chain played by typical players and by the best simple rule, reads each player's decision rule from their orders (how much of what was already on order they counted, how fast they corrected, how they forecast), replays the game with every stage counting more of its supply line, and shows time used beside cost. Configurable chain length, delays, costs and four demand patterns; saved after every decision; CSV export.",
+    "date": "2026-10-24",
+    "tags": [
+      "javascript",
+      "supply-chain",
+      "game",
+      "system-dynamics",
+      "teaching",
+      "simulation"
+    ],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game",
+    "demoUrl": "https://kathuman.github.io/claude-projects/Beer-Distribution-Game/"
+  },
+  {
     "title": "AI Expectations Gap Map",
     "description": "A board that replaces the hype-cycle curve with two measurable axes: market expectations and demonstrated value, for 27 AI technologies. The gap between them is the risk, and bubble size is the business impact if the technology delivers. Five scenario drivers (capability progress, capital availability, regulatory pressure, inference cost decline and enterprise data readiness) and six preset scenarios project the board forward with a two-stock model: evidence grows logistically, expectations adjust toward evidence plus a narrative premium. Lists show where a correction is most likely and what is underpriced, each with the signal that would confirm or kill the bet. Starting positions come from analyst scores, from public attention signals collected monthly (Wikipedia page views, Hacker News, arXiv, PyPI downloads), or a blend; a monthly job opens a pull request with the new signals and flags every score they contradict, and a quarterly issue prompts the analyst review. Every technology comes with a plain description and a supply chain example. Each month the board's forecasts are frozen in a ledger that is never rewritten, and a track record scores them as they come due against a forecast that nothing moves. The same job looks for rising AI terms the board does not track yet (Hacker News stories and arXiv papers) and lists them with a Wikipedia description, for the analyst to decide. Any view can be shared as a link.",
     "date": "2026-10-24",

@@ -1,0 +1,31 @@
+name: Ripple tests
+
+# The supply chain game: units conserved, exact delays, costs, legal orders, reproducible demand and saved games; the
+# simulated players (calm stays calm, the bullwhip, the best rule beats typical play); rule fitting and the debrief.
+on:
+  push:
+    paths:
+      - 'Beer-Distribution-Game/**'
+      - '.github/workflows/ripple-ci.yml'
+  pull_request:
+    paths:
+      - 'Beer-Distribution-Game/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: Beer-Distribution-Game
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Syntax-check the page scripts
+        run: for f in app.js src/*.js tools/*.cjs; do node --check "$f"; done
+        shell: bash

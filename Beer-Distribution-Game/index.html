@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ripple · Supply Chain Distribution Game</title>
+  <meta name="description" content="A supply chain ordering game for classes: a team runs a chain from store to plant on one device, each stage seeing only its own numbers, and finds out how small changes in demand become large swings upstream. The debrief reads each player's decision rule from their orders and compares the team with typical players and the best simple rule.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230a2f52%22/><path d=%22M6 34 Q14 22 22 34 T38 34 T54 34%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%225%22 stroke-linecap=%22round%22/><path d=%22M6 46 Q14 40 22 46 T38 46 T54 46%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-opacity=%22.5%22 stroke-width=%224%22 stroke-linecap=%22round%22/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>try { const t = localStorage.getItem('ripple-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="mark" href="./">RIPPLE</a>
+      <span class="ver" id="ver"></span>
+      <span class="sub">Supply chain distribution game</span>
+    </div>
+    <div class="header-actions">
+      <span class="status" id="status" hidden></span>
+      <button id="theme" class="back-link" type="button" aria-label="Toggle colour theme">◐</button>
+      <a class="back-link" href="about.html">About</a>
+      <a class="back-link" href="../">← Projects</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- start: set up a team's game -->
+    <section id="start" class="screen">
+      <div class="hero">
+        <h1>Ripple</h1>
+        <p class="lede">A chain of companies brings one product from a plant to a store. Each orders from the one above it, and every order and shipment takes time to arrive. Your team runs the chain on this device, each stage seeing only its own numbers. The goal: the lowest total cost for the whole team, counting stock you hold and orders you cannot fill.</p>
+      </div>
+      <div id="resume" class="panel resume" hidden></div>
+      <form id="setup" class="panel setup" autocomplete="off">
+        <fieldset>
+          <legend>Team</legend>
+          <label>Team name<input id="team" name="team" type="text" maxlength="40" placeholder="Team 1"></label>
+        </fieldset>
+        <fieldset>
+          <legend>Who plays which stage</legend>
+          <p class="fine">Tick the stages a person plays. The others are played by simulated players.</p>
+          <div class="people" id="people"></div>
+          <label class="inline">Simulated players behave
+            <select id="botKind"><option value="typical">like typical players</option><option value="best">like the best simple rule</option></select></label>
+        </fieldset>
+        <fieldset>
+          <legend>How the team plays</legend>
+          <div class="cards2">
+            <label class="card"><input type="radio" name="mode" value="turn" checked><span><b>Turn by turn</b><small>Each stage decides in turn and sees only its own numbers. Pass the device between stages. Recommended.</small></span></label>
+            <label class="card"><input type="radio" name="mode" value="table"><span><b>Open table</b><small>All stages on one screen, decided together. Easier to discuss, weaker lesson.</small></span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Customer demand</legend>
+          <div class="cards2" id="scenarios"></div>
+          <p class="fine">Players should not know the pattern. "Surprise" picks one at random and reveals it only in the debrief.</p>
+        </fieldset>
+        <details class="advanced">
+          <summary>Game settings</summary>
+          <div class="grid3">
+            <label>Weeks<input id="weeks" type="number" min="6" max="60" value="30"></label>
+            <label>Stages<select id="stages"><option>2</option><option>3</option><option selected>4</option><option>5</option></select></label>
+            <label>Starting stock per stage<input id="initInv" type="number" min="0" max="200" value="15"></label>
+            <label>Order delay, weeks<input id="orderDelay" type="number" min="1" max="3" value="1"></label>
+            <label>Shipping delay, weeks<input id="shipDelay" type="number" min="1" max="4" value="2"></label>
+            <label>Production delay, weeks<input id="prodDelay" type="number" min="1" max="4" value="2"></label>
+            <label>Holding cost per unit per week<input id="holding" type="number" min="0" step="0.1" value="1"></label>
+            <label>Backlog cost per unit per week<input id="backlog" type="number" min="0" step="0.1" value="2.5"></label>
+            <label>Random seed<input id="seed" type="number" min="1" value="1"></label>
+          </div>
+        </details>
+        <div class="row"><button class="btn primary" type="submit">Start the briefing</button></div>
+      </form>
+    </section>
+
+    <!-- briefing: how the chain works, before week 1 -->
+    <section id="brief" class="screen" hidden>
+      <div class="panel">
+        <h2>How the chain works</h2>
+        <div id="chainDiagram"></div>
+        <div class="brief" id="briefText"></div>
+        <div class="row"><button class="btn primary" id="begin" type="button">Start week 1</button><button class="btn" id="backSetup" type="button">Back</button></div>
+      </div>
+    </section>
+
+    <!-- play: a cover between stages, a stage's own view, or the open table -->
+    <section id="play" class="screen" hidden>
+      <div class="playbar"><div id="chainMini"></div><div class="playmeta" id="playMeta"></div></div>
+      <div id="cover" class="panel cover" hidden></div>
+      <div id="stageView" hidden></div>
+      <div id="tableView" hidden></div>
+      <div class="row end"><button class="linkbtn" id="endEarly" type="button">End the game now</button></div>
+      <div id="endConfirm" class="panel confirm" hidden>
+        <p>End the game after week <b id="endWeek"></b>? The debrief uses the weeks played so far.</p>
+        <div class="row"><button class="btn primary" id="endYes" type="button">End and see the debrief</button><button class="btn" id="endNo" type="button">Keep playing</button></div>
+      </div>
+    </section>
+
+    <!-- debrief -->
+    <section id="debrief" class="screen" hidden></section>
+  </main>
+
+  <footer class="wrap foot">
+    Ripple <span id="verFoot"></span> · by Daniel Alberto Sepulveda Estay, PhD · <a href="about.html">About and method</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
+  </footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

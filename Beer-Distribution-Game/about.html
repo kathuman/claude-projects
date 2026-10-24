@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About · Ripple</title>
+  <meta name="description" content="How Ripple works, how to run it with a class, and the method behind its debrief: the decision rule read from each player's orders, the benchmarks and the supply-line curve.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230a2f52%22/><path d=%22M6 34 Q14 22 22 34 T38 34 T54 34%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%225%22 stroke-linecap=%22round%22/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .about { max-width: 900px; margin: 0 auto; }
+    .about .panel p, .about .panel li { line-height: 1.6; }
+    .about pre { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font: 13px var(--mono); }
+    .about table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+    .about td, .about th { border-bottom: 1px solid var(--line-soft); padding: 6px 8px; text-align: left; vertical-align: top; }
+    .about th { font-family: var(--head); text-transform: uppercase; letter-spacing: .05em; font-size: .8rem; color: var(--faint); }
+  </style>
+  <script>try { const t = localStorage.getItem('ripple-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><a class="mark" href="./">RIPPLE</a><span class="ver">v1.0.0</span><span class="sub">About and method</span></div>
+    <div class="header-actions"><a class="back-link" href="./">Play</a><a class="back-link" href="../">← Projects</a></div>
+  </header>
+  <main class="wrap about">
+    <section class="panel">
+      <h1>Ripple</h1>
+      <p>Ripple is a supply chain ordering game for classes. A team runs a chain of companies, from a store to a plant, on one device. Every stage orders from the one above it, and orders and shipments take time to travel. Small changes in what customers buy turn into large swings in orders further up the chain: the <b>bullwhip effect</b>. The game lets a team live through it and then shows them, with their own numbers, why it happened.</p>
+      <p>It is an original game in the tradition of the supply chain games used in management teaching since the 1960s (see the references). Its chain, numbers, demand patterns and debrief are its own.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Running it with a class</h2>
+      <ol>
+        <li>Split the class into teams of two to five, one device per team (a laptop or tablet works best; a phone works too).</li>
+        <li>Each team opens the game, enters its name and ticks the stages it has people for. Simulated players run the rest.</li>
+        <li>Keep <b>turn by turn</b> and <b>Surprise</b> demand: each player sees only their own stage, and nobody knows what customers will do. That is what makes the lesson.</li>
+        <li>Teams read the briefing and play at their own pace. Thirty weeks take most teams 30 to 60 minutes. The game saves after every decision; a closed tab resumes where it was.</li>
+        <li>Each team gets its own debrief at the end. Ask teams to compare: who spent least, whose swings grew most, and whose players counted their orders already on the way.</li>
+      </ol>
+      <p>A classroom version, with an instructor console that collects every team's results and compares cost against time used across teams, is the next release.</p>
+    </section>
+
+    <section class="panel">
+      <h2>How the chain works</h2>
+      <p>Each week, at every stage: the shipment that has reached it arrives; its customer's order arrives; it ships what it can, oldest debts first, and owes the rest; then it orders from its supplier. Orders take the order delay to reach the supplier (1 week by default), shipments the shipping delay (2 weeks), and the plant's production the production delay (2 weeks). Each unit in stock costs 1 a week and each unit owed costs 2.5 a week; the team's score is the total over all stages and weeks. The game starts calm: every stage holds 15 units and the base demand is flowing everywhere.</p>
+      <table><thead><tr><th>Demand</th><th>What happens</th></tr></thead><tbody>
+        <tr><td>Step up</td><td>6 units a week, then 10 from week 6 on.</td></tr>
+        <tr><td>Seasonal</td><td>Around 8, swinging ±3 over about 13 weeks.</td></tr>
+        <tr><td>Promotion</td><td>7, then 14 for two weeks, then 4 for three weeks while customers use up what they bought, then 7.</td></tr>
+        <tr><td>Unpredictable</td><td>Wanders around 8 with no pattern (reproducible from its seed).</td></tr>
+      </tbody></table>
+      <p>All of these, the chain length (2 to 5 stages), the delays, the costs and the starting stock can be changed under "Game settings".</p>
+    </section>
+
+    <section class="panel">
+      <h2>The debrief</h2>
+      <h3>Benchmarks</h3>
+      <p>The same chain, under the same customer demand, is replayed twice: by <b>typical players</b> and by the <b>best simple rule</b>. Both are explained below. A team learns from both comparisons: beating typical players is common; matching the best rule is not.</p>
+      <h3>The decision rule read from each player's orders</h3>
+      <p>Research on these games found that people order with a simple anchoring-and-adjustment rule (Sterman 1989):</p>
+      <pre>expected orders   L̂ = θ · this week's incoming order + (1 − θ) · last week's L̂
+order             O = max(0, L̂ + α · (S′ − S − β · SL))</pre>
+      <p>S is the effective stock (on hand minus owed), SL the supply line (ordered but not yet received), θ how quickly the forecast follows new orders, α the share of the stock gap corrected each week, β how much of the supply line is counted, and S′ the target. Ripple finds, for each stage, the θ, α, β and S′ that best reproduce the orders it actually placed (least squares; θ and β on a grid, α and S′ by a straight-line fit; α and β kept between 0 and 1), and says how much of the ups and downs the rule explains. Estimated from players of the classic game, the average player had θ ≈ 0.36, α ≈ 0.26 and β ≈ 0.34: <b>they counted only about a third of what they had already ordered</b>, so they kept ordering after enough was on its way, and the excess arrived later as a glut. The typical simulated player uses these average values.</p>
+      <p>The estimates are approximate. β, the share of the supply line counted, is recovered well; α and θ can trade off against each other, because different pairs reproduce the same orders almost equally well.</p>
+      <h3>The best simple rule</h3>
+      <p>It counts everything already on order and aims the supply line at the lead time's worth of expected orders:</p>
+      <pre>O = max(0, L̂ + α · (I* − S) + α · (L̂ · LT − SL))</pre>
+      <p>Its θ, α and safety stock I* are tuned once per chain setting, on six demand patterns (step, seasonal, promotion and three random series), never on the game being judged. It is a good rule, not the optimum: in a short game it can cost more than typical players while it settles to its own stock level.</p>
+      <h3>The orders already on their way</h3>
+      <p>The chart replays the team's game with every stage's fitted rule, changing only β: every stage counting 0 %, 10 % … 100 % of its supply line, everything else as it decided. The curve shows what counting the supply line was worth in that game. Fixing one habit at a time in other ways can mislead: correcting stock gaps faster while still ignoring the supply line makes the chain far worse, so the debrief does not split the cost into "causes" that do not add up.</p>
+      <h3>Time</h3>
+      <p>Ripple records the time from when a player's screen appears to when they place the order, and the time from the start of the game to the end. The debrief shows both beside the cost, not combined into one score: the question is whether thinking longer helped, not who finished first.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Privacy</h2>
+      <p>Everything stays in the browser on the team's device. Nothing is sent anywhere. The CSV download is the only copy that leaves it, and only when someone clicks it.</p>
+    </section>
+
+    <section class="panel">
+      <h2>References</h2>
+      <ul>
+        <li>Forrester, J. W. (1958). Industrial dynamics: a major breakthrough for decision makers. <i>Harvard Business Review</i>, 36(4), 37–66.</li>
+        <li>Sterman, J. D. (1989). Modeling managerial behavior: misperceptions of feedback in a dynamic decision making experiment. <i>Management Science</i>, 35(3), 321–339.</li>
+        <li>Lee, H. L., Padmanabhan, V. and Whang, S. (1997). Information distortion in a supply chain: the bullwhip effect. <i>Management Science</i>, 43(4), 546–558.</li>
+        <li>Croson, R. and Donohue, K. (2006). Behavioral causes of the bullwhip effect and the observed value of inventory information. <i>Management Science</i>, 52(3), 323–336.</li>
+      </ul>
+      <h3>Versions</h3>
+      <ul><li>1.0.0 (2026-10-24): the game for one team on one device, turn by turn or at an open table, with simulated players for any stage; four demand patterns and adjustable chain, delays and costs; a debrief with the bullwhip chart, stock and backlog, benchmarks against typical players and the best simple rule, each stage's decision rule read from its orders, the supply-line curve, and time used; saved after every decision; CSV export.</li></ul>
+      <h3>Cite</h3>
+      <p>Sepulveda Estay, D. A. (2026). <i>Ripple: a supply chain distribution game</i> (version 1.0.0). https://kathuman.github.io/claude-projects/Beer-Distribution-Game/</p>
+    </section>
+  </main>
+  <footer class="wrap foot">Ripple v1.0.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+</body>
+</html>
