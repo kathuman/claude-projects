@@ -1,0 +1,28 @@
+id,expectations,evidence,impact,reviewed,notes
+ai-observability,35,55,55,2026-10-24,Mainstream in engineering teams; Gartner places it too early.
+ai-factories,85,40,80,2026-10-24,Centre of national programmes and hyperscaler capex; overbuild debate.
+quantum-for-ai,30,3,40,2026-10-24,No demonstrated advantage on practical ML.
+agentic-commerce,55,10,60,2026-10-24,Payment protocols launched; trust and liability unresolved.
+first-principles-ai,25,25,60,2026-10-24,Real in engineering niches; little enterprise hype.
+ai-cybersecurity-governance,35,20,70,2026-10-24,Attack surface growing faster than controls.
+causal-ai,30,15,65,2026-10-24,Stuck on the trigger slope across several editions.
+physical-ai,85,25,85,2026-10-24,Humanoid hype near peak; industrial robotics already productive.
+ai-agent-identity,40,12,60,2026-10-24,Standards nascent; need is real.
+ai-simulation,35,20,60,2026-10-24,Surrogate modelling works in niches.
+ai-governance-technologies,50,30,60,2026-10-24,Demand pushed by regulation; mostly compliance workflow.
+ai-native-software-engineering,92,55,85,2026-10-24,Most hyped enterprise use case; early evidence mixed (METR 2025).
+agi,90,5,100,2026-10-24,"Capability threshold, not a technology; expectations high."
+composite-ai,40,70,60,2026-10-24,Standard practice rather than emerging technology.
+decision-intelligence,55,45,70,2026-10-24,"Umbrella label over OR, simulation and analytics."
+finops-for-ai,45,45,50,2026-10-24,Reaction to hype; real and rising need.
+sovereign-ai,85,25,60,2026-10-24,Policy-driven peak; outcomes unproven.
+ai-engineering,60,60,70,2026-10-24,Institutionalised discipline; should sit on the slope.
+ai-agents,82,35,90,2026-10-24,High cancellation risk; coding and service agents deliver.
+multimodal-ai,55,65,70,2026-10-24,Default capability of frontier models.
+world-models,60,8,75,2026-10-24,Research momentum; little enterprise deployment.
+ai-ready-data,55,35,90,2026-10-24,Most cited blocker to AI value.
+foundation-models,60,80,95,2026-10-24,"Commoditising, not disillusioned; spend still rising."
+synthetic-data,40,45,55,2026-10-24,Productive at the frontier; enterprise programmes underdeliver.
+edge-ai,40,45,55,2026-10-24,AI PC hype underperformed; industrial edge works.
+generative-ai,55,55,95,2026-10-24,Usage ubiquitous; audited enterprise P&L impact thin.
+knowledge-graphs,40,70,70,2026-10-24,Mature; revitalised by graph-based retrieval.

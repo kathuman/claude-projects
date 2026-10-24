@@ -1,0 +1,42 @@
+name: Quarterly analyst review
+
+on:
+  schedule:
+    - cron: "23 6 1 1,4,7,10 *"   # 06:23 UTC on the first day of each quarter
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Q="$(date -u +%Y)-Q$(( ($(date -u +%-m)-1)/3+1 ))"
+          STALE=$(python3 - <<'PY'
+          import csv, datetime as dt
+          cut = dt.date.today() - dt.timedelta(days=120)
+          rows = list(csv.DictReader(open("data/assessments.csv", encoding="utf-8")))
+          old = [r["id"] for r in rows if dt.date.fromisoformat(r["reviewed"]) < cut]
+          print("\n".join(f"- [ ] `{i}`" for i in old) or "- None older than 120 days")
+          PY
+          )
+          gh issue create --title "Analyst review $Q" --label analyst-review --body "$(cat <<BODY
+          Quarterly review of the expectation and evidence scores in \`data/assessments.csv\`.
+
+          **Checklist**
+          - [ ] Read the last three signal-refresh pull requests and their review flags
+          - [ ] Re-score technologies where the evidence has moved (production deployments, revenue, cancellation rates, regulation)
+          - [ ] Add technologies that have entered the conversation; remove ones that no longer matter
+          - [ ] Check the signal queries in \`data/technologies.json\` for noise
+          - [ ] Set \`reviewed\` to today on every row you confirmed or changed
+
+          **Rows not reviewed in 120 days**
+          $STALE
+          BODY
+          )" || gh issue create --title "Analyst review $Q" --body "Quarterly review of data/assessments.csv. Create the 'analyst-review' label to tag these issues."

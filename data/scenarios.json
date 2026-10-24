@@ -1,0 +1,103 @@
+{
+  "drivers": [
+    {
+      "key": "capability",
+      "name": "Capability progress",
+      "description": "Pace of model and reasoning improvements"
+    },
+    {
+      "key": "capital",
+      "name": "Capital availability",
+      "description": "Investor and hyperscaler appetite to keep funding AI"
+    },
+    {
+      "key": "regulation",
+      "name": "Regulatory pressure",
+      "description": "Strictness and enforcement of AI rules"
+    },
+    {
+      "key": "cost",
+      "name": "Inference cost decline",
+      "description": "How fast the cost per unit of capability falls"
+    },
+    {
+      "key": "data",
+      "name": "Enterprise data readiness",
+      "description": "How fast firms fix ownership, quality and access of data"
+    }
+  ],
+  "presets": [
+    {
+      "id": "base",
+      "name": "Base case",
+      "values": {
+        "capability": 0,
+        "capital": 0,
+        "regulation": 0,
+        "cost": 0,
+        "data": 0
+      },
+      "note": "Current trends continue. No major shocks."
+    },
+    {
+      "id": "capex-correction",
+      "name": "Capex correction",
+      "values": {
+        "capability": -0.2,
+        "capital": -0.8,
+        "regulation": 0,
+        "cost": 0.2,
+        "data": 0
+      },
+      "note": "Funding tightens after infrastructure overbuild. Narrative premium collapses; cheap compute follows."
+    },
+    {
+      "id": "capability-surge",
+      "name": "Capability surge",
+      "values": {
+        "capability": 0.9,
+        "capital": 0.5,
+        "regulation": 0,
+        "cost": 0.5,
+        "data": 0.1
+      },
+      "note": "A step change in model capability and falling costs. Agents and physical AI accelerate."
+    },
+    {
+      "id": "regulatory-clampdown",
+      "name": "Regulatory clampdown",
+      "values": {
+        "capability": 0,
+        "capital": -0.2,
+        "regulation": 0.9,
+        "cost": 0,
+        "data": 0.2
+      },
+      "note": "Strict enforcement and liability rules. Governance tooling wins; autonomous use cases slow."
+    },
+    {
+      "id": "data-reckoning",
+      "name": "Data reckoning",
+      "values": {
+        "capability": 0.1,
+        "capital": 0,
+        "regulation": 0.2,
+        "cost": 0.2,
+        "data": 0.9
+      },
+      "note": "Enterprises finally invest in data foundations. Value catches up across the board."
+    },
+    {
+      "id": "fragmented-world",
+      "name": "Fragmented world",
+      "values": {
+        "capability": -0.1,
+        "capital": 0.3,
+        "regulation": 0.5,
+        "cost": -0.3,
+        "data": 0
+      },
+      "note": "Sovereign stacks and export controls split the market; compute becomes more expensive."
+    }
+  ]
+}

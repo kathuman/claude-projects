@@ -1,0 +1,219 @@
+{
+ "_comment": "Synthetic test data only. Not real measurements.",
+ "ai-observability": {
+  "wikipedia_views": 341563,
+  "wikipedia_views_prior": 312823,
+  "hn_stories": 77,
+  "hn_stories_prior": 42,
+  "arxiv_papers": 2199,
+  "pypi_downloads": 12634920
+ },
+ "ai-factories": {
+  "wikipedia_views": null,
+  "wikipedia_views_prior": null,
+  "hn_stories": 187,
+  "hn_stories_prior": 202,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "quantum-for-ai": {
+  "wikipedia_views": 534084,
+  "wikipedia_views_prior": 336471,
+  "hn_stories": 109,
+  "hn_stories_prior": 101,
+  "arxiv_papers": 291,
+  "pypi_downloads": 32302241
+ },
+ "agentic-commerce": {
+  "wikipedia_views": null,
+  "wikipedia_views_prior": null,
+  "hn_stories": 46,
+  "hn_stories_prior": 48,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "first-principles-ai": {
+  "wikipedia_views": 63981,
+  "wikipedia_views_prior": 44725,
+  "hn_stories": 289,
+  "hn_stories_prior": 209,
+  "arxiv_papers": 2574,
+  "pypi_downloads": 78249519
+ },
+ "ai-cybersecurity-governance": {
+  "wikipedia_views": 66867,
+  "wikipedia_views_prior": 71442,
+  "hn_stories": 295,
+  "hn_stories_prior": 162,
+  "arxiv_papers": 910,
+  "pypi_downloads": null
+ },
+ "causal-ai": {
+  "wikipedia_views": 50845,
+  "wikipedia_views_prior": 65426,
+  "hn_stories": 285,
+  "hn_stories_prior": 225,
+  "arxiv_papers": 595,
+  "pypi_downloads": 72570631
+ },
+ "physical-ai": {
+  "wikipedia_views": 125514,
+  "wikipedia_views_prior": 106283,
+  "hn_stories": 292,
+  "hn_stories_prior": 384,
+  "arxiv_papers": 745,
+  "pypi_downloads": 13832903
+ },
+ "ai-agent-identity": {
+  "wikipedia_views": null,
+  "wikipedia_views_prior": null,
+  "hn_stories": 297,
+  "hn_stories_prior": 318,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "ai-simulation": {
+  "wikipedia_views": 198997,
+  "wikipedia_views_prior": 134908,
+  "hn_stories": 190,
+  "hn_stories_prior": 230,
+  "arxiv_papers": 2316,
+  "pypi_downloads": null
+ },
+ "ai-governance-technologies": {
+  "wikipedia_views": 64496,
+  "wikipedia_views_prior": 49324,
+  "hn_stories": 316,
+  "hn_stories_prior": 373,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "ai-native-software-engineering": {
+  "wikipedia_views": 450363,
+  "wikipedia_views_prior": 383402,
+  "hn_stories": 397,
+  "hn_stories_prior": 430,
+  "arxiv_papers": 1861,
+  "pypi_downloads": 48531762
+ },
+ "agi": {
+  "wikipedia_views": 316328,
+  "wikipedia_views_prior": 390824,
+  "hn_stories": 127,
+  "hn_stories_prior": 152,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "composite-ai": {
+  "wikipedia_views": 257953,
+  "wikipedia_views_prior": 273311,
+  "hn_stories": 41,
+  "hn_stories_prior": 42,
+  "arxiv_papers": 1411,
+  "pypi_downloads": null
+ },
+ "decision-intelligence": {
+  "wikipedia_views": 766878,
+  "wikipedia_views_prior": 636777,
+  "hn_stories": 229,
+  "hn_stories_prior": 338,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "finops-for-ai": {
+  "wikipedia_views": null,
+  "wikipedia_views_prior": null,
+  "hn_stories": 60,
+  "hn_stories_prior": 60,
+  "arxiv_papers": null,
+  "pypi_downloads": 22141838
+ },
+ "sovereign-ai": {
+  "wikipedia_views": 795919,
+  "wikipedia_views_prior": 574325,
+  "hn_stories": 175,
+  "hn_stories_prior": 173,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "ai-engineering": {
+  "wikipedia_views": 43111,
+  "wikipedia_views_prior": 28543,
+  "hn_stories": 342,
+  "hn_stories_prior": 361,
+  "arxiv_papers": null,
+  "pypi_downloads": 42111478
+ },
+ "ai-agents": {
+  "wikipedia_views": 358644,
+  "wikipedia_views_prior": 315657,
+  "hn_stories": 355,
+  "hn_stories_prior": 353,
+  "arxiv_papers": 1873,
+  "pypi_downloads": 9230206
+ },
+ "multimodal-ai": {
+  "wikipedia_views": 882770,
+  "wikipedia_views_prior": 1196810,
+  "hn_stories": 47,
+  "hn_stories_prior": 45,
+  "arxiv_papers": 2725,
+  "pypi_downloads": null
+ },
+ "world-models": {
+  "wikipedia_views": null,
+  "wikipedia_views_prior": null,
+  "hn_stories": 33,
+  "hn_stories_prior": 18,
+  "arxiv_papers": 2878,
+  "pypi_downloads": null
+ },
+ "ai-ready-data": {
+  "wikipedia_views": 326646,
+  "wikipedia_views_prior": 347014,
+  "hn_stories": 331,
+  "hn_stories_prior": 390,
+  "arxiv_papers": null,
+  "pypi_downloads": 59813891
+ },
+ "foundation-models": {
+  "wikipedia_views": 300420,
+  "wikipedia_views_prior": 272971,
+  "hn_stories": 366,
+  "hn_stories_prior": 427,
+  "arxiv_papers": 97,
+  "pypi_downloads": 61968692
+ },
+ "synthetic-data": {
+  "wikipedia_views": 374731,
+  "wikipedia_views_prior": 407982,
+  "hn_stories": 86,
+  "hn_stories_prior": 85,
+  "arxiv_papers": 898,
+  "pypi_downloads": 38579460
+ },
+ "edge-ai": {
+  "wikipedia_views": 137623,
+  "wikipedia_views_prior": 109835,
+  "hn_stories": 378,
+  "hn_stories_prior": 336,
+  "arxiv_papers": null,
+  "pypi_downloads": 66641001
+ },
+ "generative-ai": {
+  "wikipedia_views": 86495,
+  "wikipedia_views_prior": 82978,
+  "hn_stories": 85,
+  "hn_stories_prior": 89,
+  "arxiv_papers": null,
+  "pypi_downloads": null
+ },
+ "knowledge-graphs": {
+  "wikipedia_views": 145577,
+  "wikipedia_views_prior": 187967,
+  "hn_stories": 220,
+  "hn_stories_prior": 171,
+  "arxiv_papers": 1706,
+  "pypi_downloads": 48154450
+ }
+}

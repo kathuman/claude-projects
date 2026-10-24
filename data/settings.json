@@ -1,0 +1,24 @@
+{
+  "_comment": "Model and blending settings. Change here, not in code.",
+  "blend": {
+    "expectations_signal_weight": 0.4,
+    "evidence_signal_weight": 0.2
+  },
+  "thresholds": {
+    "overheated_gap": 20,
+    "underpriced_gap": -15,
+    "proven_evidence": 50
+  },
+  "model": {
+    "premium_impact": 0.2,
+    "premium_capital": 12,
+    "premium_capability": 10,
+    "steps_per_year": 4
+  },
+  "defaults": {
+    "horizon": 1,
+    "correction_speed": 0.4,
+    "scenario": "base"
+  },
+  "review_flag_gap": 15
+}

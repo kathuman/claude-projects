@@ -1,0 +1,697 @@
+{
+  "_comment": "Static configuration per technology. sensitivities: capability, capital, regulation, cost, data (-1..1). base_rate: evidence growth per year. signals: queries used by scripts/update_signals.py. Scores live in assessments.csv.",
+  "technologies": [
+    {
+      "id": "ai-observability",
+      "name": "AI Observability",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.35,
+      "sensitivities": {
+        "capability": 0.2,
+        "capital": 0.1,
+        "regulation": 0.3,
+        "cost": 0.1,
+        "data": 0.2
+      },
+      "watch_signal": "Share of production AI systems with tracing and evaluations in place",
+      "signals": {
+        "wikipedia": [
+          "Observability (software)"
+        ],
+        "hn": [
+          "LLM observability",
+          "AI observability"
+        ],
+        "arxiv": "LLM evaluation",
+        "pypi": [
+          "langfuse",
+          "arize-phoenix",
+          "langsmith"
+        ]
+      }
+    },
+    {
+      "id": "ai-factories",
+      "name": "AI Factories",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.25,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0.8,
+        "regulation": -0.1,
+        "cost": 0.3,
+        "data": 0
+      },
+      "watch_signal": "GPU utilisation, rental prices and capex guidance revisions",
+      "signals": {
+        "wikipedia": [],
+        "hn": [
+          "AI factory",
+          "AI factories"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "quantum-for-ai",
+      "name": "Quantum for AI",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.05,
+      "sensitivities": {
+        "capability": 0.1,
+        "capital": 0.3,
+        "regulation": 0,
+        "cost": 0,
+        "data": 0
+      },
+      "watch_signal": "A peer-reviewed quantum advantage on a real ML task",
+      "signals": {
+        "wikipedia": [
+          "Quantum machine learning"
+        ],
+        "hn": [
+          "quantum machine learning"
+        ],
+        "arxiv": "quantum machine learning",
+        "pypi": [
+          "pennylane"
+        ]
+      }
+    },
+    {
+      "id": "agentic-commerce",
+      "name": "Agentic Commerce",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.3,
+      "sensitivities": {
+        "capability": 0.5,
+        "capital": 0.3,
+        "regulation": -0.4,
+        "cost": 0.2,
+        "data": 0.1
+      },
+      "watch_signal": "Agent-initiated transaction volume and settled liability rules",
+      "signals": {
+        "wikipedia": [],
+        "hn": [
+          "agentic commerce",
+          "agent payments"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "first-principles-ai",
+      "name": "First-Principles AI",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.2,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0.1,
+        "regulation": 0,
+        "cost": 0.1,
+        "data": 0.4
+      },
+      "watch_signal": "Surrogate models accepted in regulated design and validation",
+      "signals": {
+        "wikipedia": [
+          "Physics-informed neural networks"
+        ],
+        "hn": [
+          "physics-informed"
+        ],
+        "arxiv": "physics-informed neural network",
+        "pypi": [
+          "deepxde"
+        ]
+      }
+    },
+    {
+      "id": "ai-cybersecurity-governance",
+      "name": "AI Cybersecurity Governance",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.25,
+      "sensitivities": {
+        "capability": 0.2,
+        "capital": 0,
+        "regulation": 0.6,
+        "cost": 0,
+        "data": 0.1
+      },
+      "watch_signal": "Major agent or prompt-injection incidents; insurer requirements",
+      "signals": {
+        "wikipedia": [
+          "Prompt injection"
+        ],
+        "hn": [
+          "prompt injection",
+          "AI security"
+        ],
+        "arxiv": "prompt injection",
+        "pypi": []
+      }
+    },
+    {
+      "id": "causal-ai",
+      "name": "Causal AI",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.12,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0,
+        "regulation": 0.1,
+        "cost": 0,
+        "data": 0.5
+      },
+      "watch_signal": "Causal methods embedded in mainstream analytics platforms",
+      "signals": {
+        "wikipedia": [
+          "Causal inference"
+        ],
+        "hn": [
+          "causal AI",
+          "causal inference"
+        ],
+        "arxiv": "causal machine learning",
+        "pypi": [
+          "dowhy",
+          "econml"
+        ]
+      }
+    },
+    {
+      "id": "physical-ai",
+      "name": "Physical AI",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.2,
+      "sensitivities": {
+        "capability": 0.7,
+        "capital": 0.6,
+        "regulation": -0.2,
+        "cost": 0.3,
+        "data": 0.1
+      },
+      "watch_signal": "Humanoid units at paying customers versus pilots",
+      "signals": {
+        "wikipedia": [
+          "Humanoid robot"
+        ],
+        "hn": [
+          "humanoid robot",
+          "physical AI"
+        ],
+        "arxiv": "robot foundation model",
+        "pypi": [
+          "lerobot"
+        ]
+      }
+    },
+    {
+      "id": "ai-agent-identity",
+      "name": "AI Agent Identity",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.35,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0.1,
+        "regulation": 0.5,
+        "cost": 0,
+        "data": 0
+      },
+      "watch_signal": "Agent authentication standards adopted by major identity providers",
+      "signals": {
+        "wikipedia": [],
+        "hn": [
+          "agent identity",
+          "agent authentication"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "ai-simulation",
+      "name": "AI Simulation",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.2,
+      "sensitivities": {
+        "capability": 0.4,
+        "capital": 0.2,
+        "regulation": 0,
+        "cost": 0.3,
+        "data": 0.3
+      },
+      "watch_signal": "Simulation-trained policies running in production",
+      "signals": {
+        "wikipedia": [
+          "Surrogate model"
+        ],
+        "hn": [
+          "AI simulation",
+          "surrogate model"
+        ],
+        "arxiv": "neural surrogate model",
+        "pypi": []
+      }
+    },
+    {
+      "id": "ai-governance-technologies",
+      "name": "AI Governance Technologies",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.3,
+      "sensitivities": {
+        "capability": 0,
+        "capital": 0,
+        "regulation": 0.8,
+        "cost": 0,
+        "data": 0.2
+      },
+      "watch_signal": "High-risk AI enforcement milestones and audit findings",
+      "signals": {
+        "wikipedia": [
+          "Artificial Intelligence Act"
+        ],
+        "hn": [
+          "AI governance",
+          "AI Act"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "ai-native-software-engineering",
+      "name": "AI-Native Software Engineering",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.4,
+      "sensitivities": {
+        "capability": 0.6,
+        "capital": 0.3,
+        "regulation": 0,
+        "cost": 0.4,
+        "data": 0
+      },
+      "watch_signal": "Measured cycle time and defect rates, not seat counts",
+      "signals": {
+        "wikipedia": [
+          "Vibe coding"
+        ],
+        "hn": [
+          "coding agent",
+          "vibe coding"
+        ],
+        "arxiv": "code generation agent",
+        "pypi": [
+          "aider-chat"
+        ]
+      }
+    },
+    {
+      "id": "agi",
+      "name": "Artificial General Intelligence",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.03,
+      "sensitivities": {
+        "capability": 1,
+        "capital": 0.5,
+        "regulation": -0.2,
+        "cost": 0,
+        "data": 0
+      },
+      "watch_signal": "Unassisted completion of long-horizon, multi-day tasks",
+      "signals": {
+        "wikipedia": [
+          "Artificial general intelligence"
+        ],
+        "hn": [
+          "AGI"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "composite-ai",
+      "name": "Composite AI",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.2,
+      "sensitivities": {
+        "capability": 0.2,
+        "capital": 0,
+        "regulation": 0,
+        "cost": 0,
+        "data": 0.3
+      },
+      "watch_signal": "None needed; treat as standard engineering practice",
+      "signals": {
+        "wikipedia": [
+          "Neuro-symbolic AI"
+        ],
+        "hn": [
+          "neurosymbolic",
+          "neuro-symbolic"
+        ],
+        "arxiv": "neurosymbolic",
+        "pypi": []
+      }
+    },
+    {
+      "id": "decision-intelligence",
+      "name": "Decision Intelligence",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.15,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0,
+        "regulation": 0,
+        "cost": 0,
+        "data": 0.5
+      },
+      "watch_signal": "Decisions with documented, model-backed audit trails",
+      "signals": {
+        "wikipedia": [
+          "Decision intelligence"
+        ],
+        "hn": [
+          "decision intelligence"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "finops-for-ai",
+      "name": "FinOps for AI",
+      "gartner_phase_2026": "Innovation Trigger",
+      "base_rate": 0.4,
+      "sensitivities": {
+        "capability": 0,
+        "capital": -0.3,
+        "regulation": 0,
+        "cost": 0.3,
+        "data": 0.2
+      },
+      "watch_signal": "AI cost per transaction tracked at business-unit level",
+      "signals": {
+        "wikipedia": [],
+        "hn": [
+          "LLM cost",
+          "inference cost"
+        ],
+        "arxiv": "",
+        "pypi": [
+          "litellm"
+        ]
+      }
+    },
+    {
+      "id": "sovereign-ai",
+      "name": "Sovereign AI",
+      "gartner_phase_2026": "Peak of Inflated Expectations",
+      "base_rate": 0.15,
+      "sensitivities": {
+        "capability": 0.1,
+        "capital": 0.6,
+        "regulation": 0.5,
+        "cost": 0,
+        "data": 0
+      },
+      "watch_signal": "Domestic model usage versus hyperscaler APIs in the public sector",
+      "signals": {
+        "wikipedia": [
+          "Sovereign AI"
+        ],
+        "hn": [
+          "sovereign AI"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "ai-engineering",
+      "name": "AI Engineering",
+      "gartner_phase_2026": "Peak of Inflated Expectations",
+      "base_rate": 0.3,
+      "sensitivities": {
+        "capability": 0.2,
+        "capital": 0.1,
+        "regulation": 0.1,
+        "cost": 0.1,
+        "data": 0.3
+      },
+      "watch_signal": "Share of AI pilots that reach production",
+      "signals": {
+        "wikipedia": [
+          "MLOps"
+        ],
+        "hn": [
+          "AI engineering",
+          "LLMOps",
+          "MLOps"
+        ],
+        "arxiv": "",
+        "pypi": [
+          "mlflow"
+        ]
+      }
+    },
+    {
+      "id": "ai-agents",
+      "name": "AI Agents",
+      "gartner_phase_2026": "Sliding into Trough",
+      "base_rate": 0.3,
+      "sensitivities": {
+        "capability": 0.7,
+        "capital": 0.3,
+        "regulation": -0.2,
+        "cost": 0.3,
+        "data": 0.5
+      },
+      "watch_signal": "Agent project cancellation rate; tasks run without human review",
+      "signals": {
+        "wikipedia": [
+          "AI agent"
+        ],
+        "hn": [
+          "AI agent",
+          "AI agents"
+        ],
+        "arxiv": "LLM agent",
+        "pypi": [
+          "langgraph",
+          "crewai"
+        ]
+      }
+    },
+    {
+      "id": "multimodal-ai",
+      "name": "Multimodal AI",
+      "gartner_phase_2026": "Sliding into Trough",
+      "base_rate": 0.35,
+      "sensitivities": {
+        "capability": 0.5,
+        "capital": 0.2,
+        "regulation": 0,
+        "cost": 0.4,
+        "data": 0.1
+      },
+      "watch_signal": "Document and image workflows replacing manual review",
+      "signals": {
+        "wikipedia": [
+          "Multimodal learning"
+        ],
+        "hn": [
+          "multimodal"
+        ],
+        "arxiv": "multimodal large language model",
+        "pypi": []
+      }
+    },
+    {
+      "id": "world-models",
+      "name": "World Models",
+      "gartner_phase_2026": "Sliding into Trough",
+      "base_rate": 0.15,
+      "sensitivities": {
+        "capability": 0.8,
+        "capital": 0.4,
+        "regulation": 0,
+        "cost": 0.2,
+        "data": 0
+      },
+      "watch_signal": "World-model-trained robots on production lines",
+      "signals": {
+        "wikipedia": [],
+        "hn": [
+          "world model",
+          "world models"
+        ],
+        "arxiv": "world model",
+        "pypi": []
+      }
+    },
+    {
+      "id": "ai-ready-data",
+      "name": "AI-Ready Data",
+      "gartner_phase_2026": "Sliding into Trough",
+      "base_rate": 0.15,
+      "sensitivities": {
+        "capability": 0,
+        "capital": 0,
+        "regulation": 0.2,
+        "cost": 0,
+        "data": 1
+      },
+      "watch_signal": "Share of critical data with owners, lineage and quality targets",
+      "signals": {
+        "wikipedia": [
+          "Data quality"
+        ],
+        "hn": [
+          "AI-ready data",
+          "data quality"
+        ],
+        "arxiv": "",
+        "pypi": [
+          "great-expectations"
+        ]
+      }
+    },
+    {
+      "id": "foundation-models",
+      "name": "Foundation Models",
+      "gartner_phase_2026": "Trough of Disillusionment",
+      "base_rate": 0.3,
+      "sensitivities": {
+        "capability": 0.6,
+        "capital": 0.3,
+        "regulation": -0.2,
+        "cost": 0.5,
+        "data": 0
+      },
+      "watch_signal": "Price per unit of capability; enterprise API spend growth",
+      "signals": {
+        "wikipedia": [
+          "Foundation model",
+          "Large language model"
+        ],
+        "hn": [
+          "foundation model",
+          "LLM"
+        ],
+        "arxiv": "large language model",
+        "pypi": [
+          "openai",
+          "anthropic"
+        ]
+      }
+    },
+    {
+      "id": "synthetic-data",
+      "name": "Synthetic Data",
+      "gartner_phase_2026": "Trough of Disillusionment",
+      "base_rate": 0.2,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0,
+        "regulation": 0.3,
+        "cost": 0.2,
+        "data": 0.2
+      },
+      "watch_signal": "Regulator acceptance of synthetic data in validation",
+      "signals": {
+        "wikipedia": [
+          "Synthetic data"
+        ],
+        "hn": [
+          "synthetic data"
+        ],
+        "arxiv": "synthetic data",
+        "pypi": [
+          "sdv"
+        ]
+      }
+    },
+    {
+      "id": "edge-ai",
+      "name": "Edge AI",
+      "gartner_phase_2026": "Trough of Disillusionment",
+      "base_rate": 0.25,
+      "sensitivities": {
+        "capability": 0.3,
+        "capital": 0,
+        "regulation": 0.2,
+        "cost": 0.6,
+        "data": 0
+      },
+      "watch_signal": "On-device share of inference in shipped products",
+      "signals": {
+        "wikipedia": [
+          "Edge computing"
+        ],
+        "hn": [
+          "on-device AI",
+          "edge AI"
+        ],
+        "arxiv": "",
+        "pypi": [
+          "onnxruntime"
+        ]
+      }
+    },
+    {
+      "id": "generative-ai",
+      "name": "Generative AI",
+      "gartner_phase_2026": "Trough of Disillusionment",
+      "base_rate": 0.3,
+      "sensitivities": {
+        "capability": 0.5,
+        "capital": 0.3,
+        "regulation": -0.1,
+        "cost": 0.4,
+        "data": 0.4
+      },
+      "watch_signal": "Use cases with audited P&L impact",
+      "signals": {
+        "wikipedia": [
+          "Generative artificial intelligence"
+        ],
+        "hn": [
+          "generative AI"
+        ],
+        "arxiv": "",
+        "pypi": []
+      }
+    },
+    {
+      "id": "knowledge-graphs",
+      "name": "Knowledge Graphs",
+      "gartner_phase_2026": "Slope of Enlightenment",
+      "base_rate": 0.2,
+      "sensitivities": {
+        "capability": 0.2,
+        "capital": 0,
+        "regulation": 0,
+        "cost": 0,
+        "data": 0.6
+      },
+      "watch_signal": "Graph-backed retrieval in production agent stacks",
+      "signals": {
+        "wikipedia": [
+          "Knowledge graph"
+        ],
+        "hn": [
+          "knowledge graph",
+          "GraphRAG"
+        ],
+        "arxiv": "knowledge graph",
+        "pypi": [
+          "graphrag"
+        ]
+      }
+    }
+  ]
+}
