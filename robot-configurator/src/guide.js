@@ -14,6 +14,7 @@ export function buildGuide(design, req) {
   const step = (title, minutes, body, extra = {}) => steps.push({ title, minutes, body, ...extra });
   const solderParts = design.items.map((i) => part(i.id)).filter((x) => x.solder && x.cat !== 'tool');
   const isRover = design.type !== 'arm';
+  const kind = design.ev?.kind ?? 'wheels';
   const lipo = p.battery?.chem === 'lipo';
   const { dividers } = wiring(design);
 
@@ -83,12 +84,34 @@ export function buildGuide(design, req) {
       jga25: t('Screw each 25 mm gearmotor to its bracket with the M3 screws into the gearbox face; do not use screws longer than 6 mm or they hit the gears.'),
       '37mm': t('Screw each 37 mm gearmotor to its bracket with the M3 screws into the gearbox face (max 6 mm into the gearbox).'),
     }[c.mount];
-    step(t('Mount the motors and wheels'), 30 + 5 * c.driven, [
-      mountHow,
-      t('Fit the {wheel} wheels: push-fit on the D-shaft or tighten the grub screw on the flat of the shaft.', { wheel: p.wheel.name.split(' ').slice(0, 2).join(' ').toLowerCase() }),
-      c.driven === 2 ? t('Fit the ball caster at the opposite end from the drive wheels.') : t('Check that all four wheels touch the ground on a flat table.'),
-      t('Route the motor leads towards the middle of the chassis; leave some slack for the wheels to turn.'),
-    ], { check: t('Every wheel spins freely by hand without rubbing on the chassis.') });
+    if (kind === 'tracks') {
+      step(t('Mount the motors and the tracks'), 45, [
+        c.includes?.motor ? t('Assemble the chassis plates and bolt the two gearmotors into their mounts, shafts pointing outwards.') : mountHow,
+        t('Fit the drive sprockets on the motor shafts and the idler sprockets on their axles, then stretch each track over its pair.'),
+        t('A track should sag about 5 mm between the sprockets: too tight wastes power, too loose and it jumps off in a turn.'),
+        t('Route the motor leads towards the middle of the chassis, clear of the tracks.'),
+      ], { check: t('Both tracks run freely by hand without rubbing on the chassis.') });
+    } else if (kind === 'mecanum') {
+      step(t('Mount the motors and the mecanum wheels'), 50, [
+        mountHow,
+        t('The set has two left-handed and two right-handed wheels: put one kind at front left and rear right, the other at front right and rear left, so diagonal wheels match.'),
+        t('Fit each wheel on its shaft coupling and tighten the grub screw on the flat of the shaft.'),
+        t('Route each motor\'s leads towards the middle; four motors means four pairs of leads, keep them labelled.'),
+      ], { check: t('Every wheel spins freely by hand, and all four rollers that touch the table touch it at once.') });
+    } else if (kind === 'balance') {
+      step(t('Mount the motors, wheels and frame'), 40, [
+        mountHow,
+        t('Fit the {wheel} wheels: push-fit on the D-shaft or tighten the grub screw on the flat of the shaft.', { wheel: p.wheel.name.split(' ').slice(0, 2).join(' ').toLowerCase() }),
+        t('Stack the decks on their standoffs. The two wheels must sit on one straight axle line, square to the frame.'),
+      ], { check: t('Held upright on a table, the frame stands square and both wheels touch the table.') });
+    } else {
+      step(t('Mount the motors and wheels'), 30 + 5 * c.driven, [
+        mountHow,
+        t('Fit the {wheel} wheels: push-fit on the D-shaft or tighten the grub screw on the flat of the shaft.', { wheel: p.wheel.name.split(' ').slice(0, 2).join(' ').toLowerCase() }),
+        c.driven === 2 ? t('Fit the ball caster at the opposite end from the drive wheels.') : t('Check that all four wheels touch the ground on a flat table.'),
+        t('Route the motor leads towards the middle of the chassis; leave some slack for the wheels to turn.'),
+      ], { check: t('Every wheel spins freely by hand without rubbing on the chassis.') });
+    }
 
     step(t('Mount the electronics and the battery'), 40, [
       t(c.id.includes('alu')
@@ -96,7 +119,8 @@ export function buildGuide(design, req) {
         : 'Mount the {board}, the {driver} motor driver and the {reg} regulator on nylon standoffs; nothing conductive may touch the chassis.',
       { board: board.name, driver: p.driver.name.split(' ')[0], reg: p.reg.name.split(' ')[0] }),
       t('Stick the mini breadboard where the wires from all boards can reach it: its two rails become the battery rail and the 5 V rail; the ground rails join both.'),
-      t('Fix the battery low and central with a velcro strap so it cannot slide; keep its leads away from the wheels.'),
+      kind === 'balance' ? t('Fix the battery on the top deck with a velcro strap, centred over the axle: a high centre of mass falls more slowly and is easier to balance.')
+        : t('Fix the battery low and central with a velcro strap so it cannot slide; keep its leads away from the wheels.'),
       t('Mount the switch where you can reach it, and the fuse holder in the battery + lead right after the battery.'),
     ]);
 
@@ -111,7 +135,8 @@ export function buildGuide(design, req) {
     });
 
     step(t('Wire the motors'), 15, [
-      t('Connect each motor (or each pair of same-side motors on 4WD) to its driver output as in the Motors rows.'),
+      kind === 'mecanum' ? t('Connect each of the four motors to its own driver output as in the Motors rows: the wheels turn separately.')
+        : t('Connect each motor (or each pair of same-side motors on 4WD) to its driver output as in the Motors rows.'),
       t('Polarity does not matter yet: the self-test tells you which ones to swap.'),
     ]);
 
@@ -119,7 +144,11 @@ export function buildGuide(design, req) {
     const sensorNotes = [];
     if (sens.includes('hcsr04')) sensorNotes.push(t('Mount the HC-SR04 at the front, level, 5–15 cm above the floor, with nothing in front of its two "eyes".'));
     if (sens.includes('line-5ch')) sensorNotes.push(t('Mount the line sensor at the front underneath, 5–10 mm above the floor, the sensors across the direction of travel; set each potentiometer so its LED switches between floor and line.'));
-    if (sens.includes('mpu6050')) sensorNotes.push(t('Mount the MPU-6050 flat near the middle of the robot with a dab of foam tape, away from the motors.'));
+    if (sens.includes('mpu6050')) {
+      sensorNotes.push(kind === 'balance'
+        ? t('Mount the MPU-6050 flat on the bottom deck, close above the axle, with the X arrow printed on it pointing forward; fix it firmly with screws, not foam: it must tilt exactly with the frame.')
+        : t('Mount the MPU-6050 flat near the middle of the robot with a dab of foam tape, away from the motors.'));
+    }
     if (design.bt) sensorNotes.push(t('Place the HC-05 away from the motors and the battery.'));
     step(sensorNotes.length ? t('Wire the signals and mount the sensors') : t('Wire the signals'), 30 + 10 * sens.length, [
       ...sensorNotes,
@@ -168,7 +197,28 @@ export function buildGuide(design, req) {
       : t('Plug in the servo power and follow the steps it prints.'),
   ], { check: t('The self-test runs to the end. Write down every setting it asks you to change.') });
 
-  if (isRover) {
+  if (isRover && kind === 'mecanum') {
+    step(t('Calibrate the drive'), 25, [
+      t('In robot/robot.ino set INVERT[0] to INVERT[3] as the self-test told you, measure WHEEL_DIAMETER, TRACK_WIDTH and WHEEL_BASE, and upload it.'),
+      p.motor.cpr ? t('Set MAX_WHEEL_SPEED to about 90 % of the slowest wheel\'s measured speed.') : null,
+      t('On the floor, send "D 0 0 0.15": the robot must slide to its left without turning.'),
+      t('If it slides to the right, swap the left and right wheels (front left with front right, rear left with rear right). If it turns or crabs diagonally, a diagonal pair does not match.'),
+    ].filter(Boolean), { check: t('"D 0 0 0.15" slides it left, "D 0 0 -0.15" right, and "D 0.15 0 0" drives it straight ahead.') });
+  } else if (isRover && kind === 'balance') {
+    step(t('Calibrate the drive'), 20, [
+      t('In robot/robot.ino set INVERT_LEFT / INVERT_RIGHT, INVERT_ENC_LEFT / INVERT_ENC_RIGHT as the self-test told you.'),
+      t('Put the angle the self-test measured at the balance point in BALANCE_ZERO, and set IMU_FLIP = true if it told you to.'),
+      t('Measure the wheel diameter and the distance between the wheel centres; update WHEEL_DIAMETER and TRACK_WIDTH.'),
+    ]);
+    step(t('Make it balance'), 45, [
+      t('Upload robot/robot.ino with the robot lying down and keep it still for two seconds while it measures the gyro.'),
+      t('Stand it up slowly and let go at the balance point: it starts balancing within 3° of it, and stops the motors past 45°.'),
+      t('If it falls over slowly, the lean gain is too low: send "K p d" with a higher p (for example 1.3 times). If it shakes fast, raise d or lower p.'),
+      t('If it balances but drifts away, send "K p d sp si" with a higher sp; if it rocks back and forth slowly, lower si.'),
+      t('When it stands still for a minute, write the gains the K command printed into robot.ino.'),
+    ], { warn: t('Hold a hand ready: a robot that loses balance at full power can run off a table.'),
+      check: t('It stands on its own for a minute and recovers from a light push.') });
+  } else if (isRover) {
     step(t('Calibrate the drive'), 20, [
       p.motor.cpr ? t('In robot/robot.ino set INVERT_LEFT / INVERT_RIGHT, INVERT_ENC_LEFT / INVERT_ENC_RIGHT as the self-test told you.')
         : t('In robot/robot.ino set INVERT_LEFT / INVERT_RIGHT as the self-test told you.'),
@@ -193,8 +243,11 @@ export function buildGuide(design, req) {
     if (b.includes('remote')) tries.push(design.wireless && board.arch === 'esp32'
       ? t('Join the robot\'s Wi-Fi from a phone and open http://192.168.4.1: drag the joystick to drive.')
       : t('Pair the phone with HC-05 (PIN 1234), connect a serial terminal app and send "D 0.2 0" to drive.'));
+    if (b.includes('remote') && kind === 'mecanum') tries.push(design.wireless && board.arch === 'esp32'
+      ? t('Tick "joystick slides sideways" on the phone page and the joystick moves it sideways instead of turning.')
+      : t('"D 0 0 0.2" slides it sideways to the left.'));
     if (b.includes('obstacle')) tries.push(t('Send "M 2" to start obstacle avoidance; "S" stops.'));
-    if (b.includes('line')) tries.push(t('Put the robot on a black tape line on a light floor and send "M {n}".', { n: b.includes('obstacle') ? 3 : 2 }));
+    if (b.includes('line') && kind !== 'balance') tries.push(t('Put the robot on a black tape line on a light floor and send "M {n}".', { n: b.includes('obstacle') ? 3 : 2 }));
     if (b.includes('odometry')) tries.push(t('Send "F 1" to drive one metre and "T 90" to turn a quarter turn left; correct WHEEL_DIAMETER and TRACK_WIDTH until they are accurate.'));
   }
   if (design.arm) tries.push(t('Move the arm to a few poses, save each with W, then send R to replay the sequence.'));

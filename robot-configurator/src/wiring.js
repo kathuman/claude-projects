@@ -3,6 +3,7 @@
 
 import { part } from './catalog.js';
 import { BOARDS } from './pins.js';
+import { driverChannels } from './solver.js';
 import { t, num } from './i18n.js';
 
 const DRIVER_TERMINALS = {
@@ -54,33 +55,38 @@ export function wiring(design) {
   if (isRover) {
     const d = p.driver;
     const term = DRIVER_TERMINALS[d.id];
-    const units = d.channels === 1 ? 2 : 1;
     const n = p.chassis.driven;
-    const dname = (s) => (units === 2 ? `BTS7960 ${s === 'L' ? t('left') : t('right')}` : d.name.split(' ')[0]);
-    for (const s of units === 2 ? ['L', 'R'] : ['']) {
-      add('Power', t('Battery rail +'), `${dname(s || 'L')} ${term.vm}`, 'red', design.ev?.peakBatt > 2 ? t('20 AWG silicone wire') : '');
-      add('Power', t('Ground rail'), `${dname(s || 'L')} ${term.gnd}`, 'black');
-    }
-    if (term.logic) {
-      for (const s of units === 2 ? ['L', 'R'] : ['']) {
-        add('Power', d.id === 'tb6612' ? logicRail : t('5 V rail'), `${dname(s || 'L')} ${term.logic}`, 'red',
-          d.id === 'l298n' ? t(term.note) : '');
+    const motors = design.ev?.motors ?? ['L', 'R'];
+    const chans = driverChannels(d, motors);
+    // each driver board by its short name: "TB6612FNG", or "BTS7960 (left)" when there are several
+    const dname = (dev) => dev.replace(d.name, d.name.split(' ')[0]);
+    const boards = [...new Set(chans.map((c) => c.dev))];
+    for (const b of boards) {
+      add('Power', t('Battery rail +'), `${dname(b)} ${term.vm}`, 'red', design.ev?.peakBatt > 2 ? t('20 AWG silicone wire') : '');
+      add('Power', t('Ground rail'), `${dname(b)} ${term.gnd}`, 'black');
+      if (term.logic) {
+        add('Power', d.id === 'tb6612' ? logicRail : t('5 V rail'), `${dname(b)} ${term.logic}`, 'red', d.id === 'l298n' ? t(term.note) : '');
       }
+      if (term.standby) add('Power', logicRail, `${dname(b)} ${term.standby}`, 'red', t('holds the driver awake'));
+      if (term.enables) add('Power', t('5 V rail'), `${dname(b)} ${term.enables}`, 'red', t('both enables high'));
+      if (term.sigGnd) add('Power', t('Ground rail'), t('{pin} (signal header)', { pin: `${dname(b)} ${term.sigGnd}` }), 'black');
     }
-    if (term.standby) add('Power', logicRail, `${dname('L')} ${term.standby}`, 'red', t('holds the driver awake'));
-    if (term.enables) for (const s of ['L', 'R']) add('Power', t('5 V rail'), `${dname(s)} ${term.enables}`, 'red', t('both enables high'));
-    if (term.sigGnd) add('Power', t('Ground rail'), t('{pin} (signal header)', { pin: `${dname('L')} ${term.sigGnd}` }), 'black');
-    for (const s of ['L', 'R']) {
-      const outs = s === 'L' ? term.outL : term.outR;
-      const motors = n === 4 ? t(s === 'L' ? 'both left motors (in parallel)' : 'both right motors (in parallel)')
-        : t(s === 'L' ? 'Left motor' : 'Right motor');
-      add('Motors', t('{motors}, red lead', { motors }), `${dname(s)} ${outs[0]}`, 'red', t('swap the two leads if it turns backwards'));
-      add('Motors', t('{motors}, black lead', { motors }), `${dname(s)} ${outs[1]}`, 'black');
+    const MOTOR_NAME = { FL: 'Front-left motor', RL: 'Rear-left motor', FR: 'Front-right motor', RR: 'Rear-right motor' };
+    for (const c of chans) {
+      const outs = c.ch === 'A' ? term.outL : term.outR;
+      const what = MOTOR_NAME[c.motor] ? t(MOTOR_NAME[c.motor])
+        : n === 4 ? t(c.motor === 'L' ? 'both left motors (in parallel)' : 'both right motors (in parallel)')
+          : t(c.motor === 'L' ? 'Left motor' : 'Right motor');
+      add('Motors', t('{motors}, red lead', { motors: what }), `${dname(c.dev)} ${outs[0]}`, 'red', t('swap the two leads if it turns backwards'));
+      add('Motors', t('{motors}, black lead', { motors: what }), `${dname(c.dev)} ${outs[1]}`, 'black');
     }
     if (p.motor.cpr) {
-      for (const side of [t('Left encoder'), t('Right encoder')]) {
+      const ENC_NAME = { L: 'Left encoder', R: 'Right encoder', FL: 'Front-left encoder', RL: 'Rear-left encoder',
+        FR: 'Front-right encoder', RR: 'Rear-right encoder' };
+      for (const m of motors) {
+        const side = t(ENC_NAME[m]);
         add('Power', logicRail, `${side} VCC`, 'red', board.logicV < 5 ? t('encoders at 3.3 V keep their outputs safe for the ESP32') : '');
-        add('Power', t('Ground rail'), `${side} GND`, 'black');
+        add('Power', t('Ground rail'), `${side} GND`, 'black', motors.length === 4 ? t('channel B stays unconnected: the program knows the direction') : '');
       }
     }
   }
