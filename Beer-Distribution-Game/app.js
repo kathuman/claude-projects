@@ -9,7 +9,7 @@ import { summary, benchmarks, fits, causes } from './src/debrief.js';
 import { lineChart, curveChart, wire } from './src/charts.js';
 import { structureSvg } from './src/diagram.js';
 
-const VERSION = '1.0.1';
+const VERSION = '1.0.2';
 const KEY = 'ripple-game';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -81,17 +81,57 @@ function readSetup() {
     shipDelay: num('shipDelay'), prodDelay: num('prodDelay'), holding: num('holding'), backlog: num('backlog'), seed: num('seed'), scenario };
   const people = [...f.querySelectorAll('input[name=person]:checked')].map((x) => Number(x.value));
   return { team: $('team').value.trim() || 'Team 1', input, people, surprise, mode: f.elements.mode.value, botKind: $('botKind').value,
-    limit: whole('limit', 15, 600), defaultOrder: whole('defaultOrder', 4, 999) };
+    limit: whole('limit', 15, 600), defaultOrder: whole('defaultOrder', 4, 999), visibility: f.elements.visibility.value };
 }
 
 // ---------------------------------------------------------------- briefing
 
 // The structure of the chain at the top of every screen: the game being played, or the settings being chosen.
-function drawStructure({ cfg, people, now = -1, done = [] } = {}) {
+function drawStructure({ cfg, people, now = -1, done = [], live = null } = {}) {
   const c = cfg ?? config(formInput());
   const ppl = people ?? formPeople();
-  $('structure').innerHTML = `<div class="structure-head"><h2>The chain</h2><span class="fine">${c.stages} stages · orders take ${c.orderDelay} wk · goods ${c.shipDelay} wk · production ${c.prodDelay} wk</span></div>
-    <div class="structure-scroll">${structureSvg(c, { now, done, simulated: c.names.map((_, i) => i).filter((i) => !ppl.includes(i)) })}</div>`;
+  const hidden = live && !live.visible.every(Boolean);
+  $('structure').innerHTML = `<div class="structure-head"><h2>The chain</h2><span class="fine">${c.stages} stages · orders take ${c.orderDelay} wk · goods ${c.shipDelay} wk · production ${c.prodDelay} wk${hidden ? ' · other stages\' numbers hidden' : ''}</span></div>
+    <div class="structure-scroll">${structureSvg(c, { now, done, simulated: c.names.map((_, i) => i).filter((i) => !ppl.includes(i)) }, live)}</div>`;
+}
+
+// Which stages' numbers may show: every stage, unless the team chose that players see only their own (then only the
+// stage deciding now; on the hand-over screen, none). An open table shows everything.
+function visibleStages(viewer) {
+  const all = S.visibility !== 'own' || S.mode === 'table';
+  return S.game.stages.map((_, i) => all || i === viewer);
+}
+
+// The live numbers for the diagram: stock, owed, goods and orders on their way, this week's orders placed so far.
+function liveState(viewer) {
+  const g = S.game;
+  return {
+    stages: g.stages.map((s) => ({ inv: s.inv, backlog: s.backlog, inbound: s.inbound, outbound: s.outbound })),
+    deciding: g.phase === 'decide', orders: S.orders ?? [], demand: g.pending?.demand, toCustomers: g.pending?.stages[0].shipped,
+    visible: visibleStages(viewer),
+  };
+}
+
+// The history charts beside the game: stock (or owed) and orders, week by week, for the stages that may be seen.
+function renderPlayCharts(viewer) {
+  const g = S.game;
+  const cfg = g.cfg;
+  const box = $('playCharts');
+  const vis = visibleStages(viewer);
+  if (!g.history.length) { box.innerHTML = '<h3>Stock and orders</h3><p class="fine">The charts fill in as the weeks are played.</p>'; return; }
+  if (!vis.some(Boolean)) { box.innerHTML = '<h3>Stock and orders</h3><p class="fine">Hidden until the next player opens their own screen.</p>'; return; }
+  const idx = cfg.names.map((_, i) => i).filter((i) => vis[i]);
+  const own = idx.length === 1 && cfg.stages > 1;
+  const series = (i, f, name = cfg.names[i]) => ({ name, color: color(i), values: g.history.map((h) => f(h.stages[i])) });
+  const net = idx.map((i) => series(i, (r) => r.inv - r.backlog));
+  const ord = own
+    ? [{ name: idx[0] === 0 ? 'Customers' : 'Ordered from you', color: 'var(--demand)', dashed: true, values: g.history.map((h) => h.stages[idx[0]].incoming) },
+      series(idx[0], (r) => r.order, 'You ordered')]
+    : [{ name: 'Customers', color: 'var(--demand)', dashed: true, values: g.history.map((h) => h.demand) }, ...idx.map((i) => series(i, (r) => r.order))];
+  const opt = { W: 560, H: 250, right: 112 };
+  box.innerHTML = `<h3>Stock (+) or owed (−)</h3>${lineChart(net, { ...opt, yLabel: 'Units', id: 'pcNet' })}
+    <h3>Orders placed</h3>${lineChart(ord, { ...opt, yLabel: 'Units a week', id: 'pcOrd' })}`;
+  wire(box);
 }
 
 function renderBrief() {
@@ -103,7 +143,9 @@ function renderBrief() {
     <p><b>Your goal.</b> The lowest total cost for the whole team over ${cfg.weeks} weeks. Every unit in stock costs ${fmt(cfg.holding, 2)} a week; every unit you owe your customer costs ${fmt(cfg.backlog, 2)} a week. Running out costs more than holding stock, but holding too much adds up.</p>
     <p><b>Each week.</b> Goods arrive from your supplier, an order arrives from your customer, and you ship what you can. What you cannot ship is owed and shipped as soon as you have stock. Then you place an order with your supplier.</p>
     <p><b>The delays.</b> An order takes ${cfg.orderDelay} week${cfg.orderDelay > 1 ? 's' : ''} to reach your supplier and goods take ${cfg.shipDelay} weeks to arrive, so what you order now arrives in about ${lt} weeks, if your supplier has it. The ${esc(cfg.names.at(-1))} produces instead of ordering; production takes ${cfg.prodDelay} weeks.</p>
-    <p><b>What you see.</b> Only your own stage: your stock, what you owe, what arrived, what was ordered from you, and what you have on order. The ${esc(cfg.names[0])} sees what customers order; nobody else does.</p>
+    ${S.visibility === 'own' && S.mode !== 'table'
+    ? `<p><b>What you see.</b> Only your own stage: your stock, what you owe, what arrived, what was ordered from you, and what you have on order, in the diagram, the numbers on the left and the charts on the right. The ${esc(cfg.names[0])} sees what customers order; nobody else does.</p>`
+    : `<p><b>What you see.</b> The whole chain: the diagram shows every stage's stock and what it owes, and every order and shipment on its way; the charts show every stage's stock and orders week by week. Your own numbers are on the left when it's your turn.</p>`}
     ${S.mode === 'turn' ? `<p><b>Turn by turn.</b> Each week the device goes from the ${esc(cfg.names[0])} up the chain. When it's your turn, look only at your own screen, and don't tell the others your numbers: in a real chain you wouldn't know them.</p>` : `<p><b>Open table.</b> Everyone sees every stage and the team decides together.</p>`}
     ${sims.length ? `<p><b>Simulated players</b> run the ${sims.map(esc).join(', ')}, behaving ${S.botKind === 'best' ? 'like the best simple rule' : 'like typical players'}.</p>` : ''}
     <p><b>The start.</b> Every stage holds ${cfg.initInv} units, and ${cfg.base} units a week are flowing through the chain.</p>
@@ -163,7 +205,8 @@ function showCover(i) {
   const g = S.game;
   meta();
   const done = humans().filter((k) => S.orders[k] != null);
-  drawStructure({ cfg: g.cfg, people: S.people, now: i, done });
+  drawStructure({ cfg: g.cfg, people: S.people, now: i, done, live: liveState(-1) });
+  renderPlayCharts(-1);
   $('stageView').hidden = true;
   $('stageView').innerHTML = '';
   $('tableView').hidden = true;
@@ -176,25 +219,43 @@ function showCover(i) {
   $('reveal').focus();
 }
 
+// A stage's own numbers: last week against this week, what is on its way and when, and its costs.
+function statsHtml(i) {
+  const g = S.game;
+  const v = view(g, i);
+  const n = g.stages.length;
+  const up = i === n - 1 ? null : g.cfg.names[i + 1];
+  const last = g.history.at(-1)?.stages[i];
+  const L = (k) => (last ? fmt(last[k]) : '–');
+  const row = (label, lw, tw, cls = '') => `<tr class="${cls}"><th>${label}</th><td class="num">${lw}</td><td class="num"><b>${tw}</b></td></tr>`;
+  const inb = g.stages[i].inbound;
+  const travelling = up ? g.stages[i].outbound.reduce((a, b) => a + b, 0) : 0;
+  const owedToYou = up ? g.stages[i + 1].backlog : 0;
+  return `<table class="statt"><thead><tr><th></th><th class="num">Last week</th><th class="num">This week</th></tr></thead><tbody>
+      ${row('In stock', L('inv'), fmt(v.inventory))}
+      ${row('You owe', L('backlog'), fmt(v.backlog), v.backlog > 0 ? 'bad' : '')}
+      ${row(up ? 'Arrived' : 'Production finished', L('arrived'), fmt(v.arrived))}
+      ${row(i === 0 ? 'Customers ordered' : 'Ordered from you', L('incoming'), fmt(v.incoming))}
+      ${row('You shipped', L('shipped'), fmt(v.shipped))}
+      ${row(up ? 'You ordered' : 'You started producing', L('order'), 'now')}
+      ${row('Cost of the week', last ? fmt(last.cost, 2) : '–', fmt(v.weekCost, 2))}
+    </tbody></table>
+    <div class="onway"><h4>${up ? 'On its way to you' : 'In production'}: ${fmt(v.supplyLine)} units</h4>
+      <div class="pipe">${inb.map((q, k) => `<span><b>${fmt(q)}</b><small>${k === 0 ? 'next week' : `in ${k + 1} weeks`}</small></span>`).join('')}</div>
+      ${up ? `<p class="fine">Plus ${fmt(travelling)} in orders not yet at the ${esc(up)}, and ${fmt(owedToYou)} the ${esc(up)} owes you.</p>` : ''}</div>
+    <p class="fine">Your cost so far, this week included: <b>${fmt(v.cost + v.weekCost, 2)}</b></p>`;
+}
+
 function stageHtml(i, { compact = false } = {}) {
   const g = S.game;
   const v = view(g, i);
   const n = g.stages.length;
   const up = i === n - 1 ? null : g.cfg.names[i + 1];
-  const down = i === 0 ? 'Customers' : `The ${g.cfg.names[i - 1]}`;
   const lt = leadTime(g.cfg, i);
   const ask = up ? `How many units do you order from the ${esc(up)}?` : 'How many units do you start producing?';
   const past = v.past.slice(-8).reverse();
   return `
-    <div class="tiles">
-      <div class="tile"><span>${i === n - 1 ? 'Finished production' : 'Arrived'}</span><b>${fmt(v.arrived)}</b><small>${up ? `from the ${esc(up)}` : 'this week'}</small></div>
-      <div class="tile"><span>Ordered from you</span><b>${fmt(v.incoming)}</b><small>${esc(down)}${i === 0 ? ' ordered this week' : ''}</small></div>
-      <div class="tile"><span>Shipped</span><b>${fmt(v.shipped)}</b><small>${i === 0 ? 'to customers' : `to the ${esc(g.cfg.names[i - 1])}`}</small></div>
-      <div class="tile"><span>In stock</span><b>${fmt(v.inventory)}</b><small>after shipping</small></div>
-      <div class="tile${v.backlog > 0 ? ' bad' : ''}"><span>You owe</span><b>${fmt(v.backlog)}</b><small>units not yet shipped</small></div>
-      <div class="tile"><span>${up ? 'On order' : 'In production'}</span><b>${fmt(v.supplyLine)}</b><small>not yet arrived</small></div>
-    </div>
-    <p class="fine">Your cost this week ${fmt(v.weekCost, 2)} · your total so far ${fmt(v.cost + v.weekCost, 2)}</p>
+    ${statsHtml(i)}
     <form class="order" data-stage="${i}" autocomplete="off" novalidate>
       <label for="ord${i}">${ask}</label>
       <div class="stepper"><button type="button" data-d="-1" aria-label="One less">−</button>
@@ -255,6 +316,8 @@ function wireOrder(form, onValue) {
 
 function showStage(i) {
   const g = S.game;
+  drawStructure({ cfg: g.cfg, people: S.people, now: i, done: humans().filter((k) => S.orders[k] != null), live: liveState(i) });
+  renderPlayCharts(i);
   $('cover').hidden = true;
   $('tableView').innerHTML = '';
   $('stageView').hidden = false;
@@ -278,7 +341,8 @@ function showStage(i) {
 function showTable() {
   const g = S.game;
   meta();
-  drawStructure({ cfg: g.cfg, people: S.people });
+  drawStructure({ cfg: g.cfg, people: S.people, live: liveState(-1) });
+  renderPlayCharts(-1);
   $('cover').hidden = true;
   $('stageView').hidden = true;
   $('stageView').innerHTML = '';
@@ -349,7 +413,7 @@ function renderDebrief() {
   $('status').hidden = true;
   const g = S.game;
   const cfg = g.cfg;
-  drawStructure({ cfg, people: S.people });
+  drawStructure({ cfg, people: S.people, live: { stages: g.stages, deciding: false, orders: [], visible: g.stages.map(() => true) } });
   const sm = summary(g, S.people);
   const played = g.history.length;
   const bm = benchmarks(g);

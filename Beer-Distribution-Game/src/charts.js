@@ -13,11 +13,12 @@ function niceMax(v) {
 
 /**
  * A line chart over weeks.
- * series: [{ name, color (CSS colour or var), values: [...], dashed? }]; opts: { yLabel, zero (draw y = 0), id }
+ * series: [{ name, color (CSS colour or var), values: [...], dashed? }]; opts: { yLabel, id, unit, min, W, H, right
+ * (room for the line-end labels) }
  * Returns HTML: the figure (SVG + legend) and a hidden table; wire() adds the hover read-out and the table toggle.
  */
-export function lineChart(series, { yLabel = '', id, unit = '', min } = {}) {
-  const W = 760, H = 300, M = { l: 52, r: 120, t: 14, b: 34 };
+export function lineChart(series, { yLabel = '', id, unit = '', min, W = 760, H = 300, right = 120 } = {}) {
+  const M = { l: 52, r: right, t: 14, b: 34 };
   const n = Math.max(...series.map((s) => s.values.length));
   const all = series.flatMap((s) => s.values.filter((v) => v != null));
   const lo = min ?? Math.min(0, ...all);

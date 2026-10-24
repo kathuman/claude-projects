@@ -218,3 +218,30 @@ figure.chart { margin: 8px 0 0; }
   body { background: #fff; color: #000; }
   .panel, .kpi, .scard { break-inside: avoid; }
 }
+
+/* play: the stage's numbers and order on the left, the history charts on the right */
+.playgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.playleft > .panel, .playleft .tablegrid .panel { margin-top: 0; }
+.playcharts { margin: 0; }
+.playcharts h3 { font-size: .95rem; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 4px 0 2px; }
+.playcharts h3 + figure { margin-bottom: 10px; }
+@media (max-width: 1000px) { .playgrid { grid-template-columns: minmax(0, 1fr); } }
+.tablegrid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+table.statt { border-collapse: collapse; width: 100%; margin: 6px 0 12px; font-size: .95rem; }
+table.statt th, table.statt td { padding: 5px 8px; border-bottom: 1px solid var(--line-soft); }
+table.statt thead th { font-family: var(--head); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: .76rem; color: var(--faint); }
+table.statt tbody th { text-align: left; font-weight: 500; color: var(--muted); }
+table.statt td b { font-size: 1.15rem; color: var(--ink); }
+table.statt tr.bad td b { color: var(--bad); }
+.onway { background: var(--soft); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+.onway h4 { margin: 0 0 8px; font-family: var(--head); font-size: 1rem; letter-spacing: .03em; }
+.onway .pipe { display: flex; gap: 8px; flex-wrap: wrap; }
+.onway .pipe span { border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; text-align: center; min-width: 74px; background: var(--panel); }
+.onway .pipe b { display: block; font: 500 1.2rem var(--mono); }
+.onway .pipe small { font-size: .78rem; }
+.onway .fine { margin: 8px 0 0; }
+.structure-svg .qty { fill: var(--ink); font: 600 11px var(--mono); }
+.structure-svg .stock { fill: var(--ink); font: 600 17px var(--mono); }
+.structure-svg .stock .unit { font: 11px var(--sans); fill: var(--muted); }
+.structure-svg .owed { fill: var(--muted); font: 12px var(--sans); }
+.structure-svg .owed.bad { fill: var(--bad); font-weight: 600; }

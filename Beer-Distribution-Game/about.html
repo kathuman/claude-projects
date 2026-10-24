@@ -22,7 +22,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><a class="mark" href="./">RIPPLE</a><span class="ver">v1.0.1</span><span class="sub">About and method</span></div>
+    <div class="brand"><a class="mark" href="./">RIPPLE</a><span class="ver">v1.0.2</span><span class="sub">About and method</span></div>
     <div class="header-actions"><a class="back-link" href="./">Play</a><a class="back-link" href="../">← Projects</a></div>
   </header>
   <main class="wrap about">
@@ -37,7 +37,7 @@
       <ol>
         <li>Split the class into teams of two to five, one device per team (a laptop or tablet works best; a phone works too).</li>
         <li>Each team opens the game, enters its name and ticks the stages it has people for. Simulated players run the rest.</li>
-        <li>Keep <b>turn by turn</b> and <b>Surprise</b> demand: each player sees only their own stage, and nobody knows what customers will do. That is what makes the lesson.</li>
+        <li>Choose <b>what players see</b>. "The whole chain" (the default) shows every stage's stock, shipments and orders in the diagram and the charts: easier to follow, and good for a first game. "Only their own stage" hides everyone else's numbers, as in a real chain: harder, and the stronger lesson. Keep <b>Surprise</b> demand so nobody knows what customers will do.</li>
         <li>Set the <b>seconds to answer each round</b> (15 by default; 0 for no limit) and the <b>order placed when nothing is entered</b> (4 by default). When a player's time runs out, the order is placed for them: what they typed, or the default if nothing. Time pressure is part of the lesson: real buyers order without the full picture.</li>
         <li>Teams read the briefing and play at their own pace. Thirty weeks take most teams 30 to 60 minutes. The game saves after every decision; a closed tab resumes where it was.</li>
         <li>Each team gets its own debrief at the end. Ask teams to compare: who spent least, whose swings grew most, and whose players counted their orders already on the way.</li>
@@ -54,7 +54,7 @@
         <tr><td>Promotion</td><td>7, then 14 for two weeks, then 4 for three weeks while customers use up what they bought, then 7.</td></tr>
         <tr><td>Unpredictable</td><td>Wanders around 8 with no pattern (reproducible from its seed).</td></tr>
       </tbody></table>
-      <p>The diagram at the top of every screen shows this structure: every stage, the orders travelling up the chain and the goods travelling down it with one box per week in transit, the plant's production line, and the costs. It shows structure only, never stock or quantities, so it stays on screen while each stage keeps its numbers to itself.</p>
+      <p>The diagram at the top of every screen shows this structure: every stage, the orders travelling up the chain and the goods travelling down it with one box per week in transit, the plant's production line, and the costs. During the game it carries the live numbers: each stage's stock and what it owes, the quantity in every box on the way, and this week's customer orders. Beside the game, two charts show every stage's stock (or what it owes) and its orders week by week, and the player deciding sees their own numbers on the left: last week against this week, and what is on its way to them, week by week. When players see only their own stage, all three show only the stage deciding, and nothing on the hand-over screen.</p>
       <p>All of these, the chain length (2 to 5 stages), the delays, the costs and the starting stock can be changed under "Game settings".</p>
     </section>
 
@@ -92,12 +92,13 @@ order             O = max(0, L̂ + α · (S′ − S − β · SL))</pre>
         <li>Croson, R. and Donohue, K. (2006). Behavioral causes of the bullwhip effect and the observed value of inventory information. <i>Management Science</i>, 52(3), 323–336.</li>
       </ul>
       <h3>Versions</h3>
-      <ul><li>1.0.1 (2026-10-24): the full structure of the chain on every screen; a time to answer each round (15 seconds unless set otherwise), with a countdown and the order placed when time runs out; an empty answer orders 4 units (adjustable); the debrief counts the orders placed by default.</li>
+      <ul><li>1.0.2 (2026-10-24): the diagram carries the live numbers (stock, owed, every order and shipment on its way); stock and order charts beside the game at all times; the deciding stage's numbers on the left, last week against this week, with what is on its way to it; a choice of what players see, the whole chain (default) or only their own stage.</li>
+        <li>1.0.1 (2026-10-24): the full structure of the chain on every screen; a time to answer each round (15 seconds unless set otherwise), with a countdown and the order placed when time runs out; an empty answer orders 4 units (adjustable); the debrief counts the orders placed by default.</li>
         <li>1.0.0 (2026-10-24): the game for one team on one device, turn by turn or at an open table, with simulated players for any stage; four demand patterns and adjustable chain, delays and costs; a debrief with the bullwhip chart, stock and backlog, benchmarks against typical players and the best simple rule, each stage's decision rule read from its orders, the supply-line curve, and time used; saved after every decision; CSV export.</li></ul>
       <h3>Cite</h3>
-      <p>Sepulveda Estay, D. A. (2026). <i>Ripple: a supply chain distribution game</i> (version 1.0.1). https://kathuman.github.io/claude-projects/Beer-Distribution-Game/</p>
+      <p>Sepulveda Estay, D. A. (2026). <i>Ripple: a supply chain distribution game</i> (version 1.0.2). https://kathuman.github.io/claude-projects/Beer-Distribution-Game/</p>
     </section>
   </main>
-  <footer class="wrap foot">Ripple v1.0.1 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="wrap foot">Ripple v1.0.2 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
 </body>
 </html>

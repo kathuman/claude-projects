@@ -5,7 +5,7 @@ Every stage orders from the one above it, and orders and shipments take time to 
 customers buy become large swings further up the chain: the bullwhip effect. The debrief shows each team, with its own
 numbers, why it happened.
 
-**Live:** https://kathuman.github.io/claude-projects/Beer-Distribution-Game/ · version 1.0.1 · method and references
+**Live:** https://kathuman.github.io/claude-projects/Beer-Distribution-Game/ · version 1.0.2 · method and references
 in [about.html](about.html)
 
 Ripple is an original game in the tradition of the supply chain games used in management teaching (Forrester 1958;
@@ -13,8 +13,13 @@ Sterman 1989). Its chain, numbers, demand patterns and debrief are its own; it i
 
 ## What it does
 
-- **The chain's structure on every screen**: every stage, orders travelling up and goods travelling down with one box
-  per week in transit, the plant's production line and the costs; structure only, never a stage's numbers.
+- **The chain on every screen**: every stage, orders travelling up and goods travelling down with one box per week in
+  transit, the plant's production line and the costs. During play it carries the live numbers: each stage's stock and
+  what it owes, and the quantity in every box on the way.
+- **During play**: the deciding stage's numbers on the left (last week against this week, what is on its way to it
+  week by week, its costs, the order), and stock and order charts for the chain on the right, every week.
+- **What players see**: the whole chain (default), or only their own stage, as in a real chain; then the diagram, the
+  numbers and the charts show only the stage deciding, and nothing on the hand-over screen.
 - **Time to answer each round** (15 seconds unless set otherwise), with a countdown; when time runs out the order is
   placed for the player (what they typed, or the default). An empty answer orders 4 units (adjustable). The debrief
   counts the orders placed by default, and the CSV marks each one.
@@ -74,7 +79,8 @@ calm and amplify a step up the chain; the best rule beats typical play on every 
 the game; counting more of the supply line damps the swings; rules decide from what a stage can see; fitting
 recovers known rules; the summary, the supply-line curve and the benchmarks add up.
 
-A browser check plays the game (62 checks: the diagram on every screen and following the settings, set-up,
+A browser check plays the game (71 checks: the diagram on every screen, following the settings and carrying the
+live numbers, the charts beside the game, a game where players see only their own stage, set-up,
 briefing, the hand-over screen hiding every number, a reload mid-week, an empty answer, an answer left unsent and no
 answer when time runs out, an open table that times out, the debrief's charts, hover, table and CSV, an open-table game, the theme and phone width):
 

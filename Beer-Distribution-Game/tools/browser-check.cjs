@@ -52,12 +52,18 @@ const shot = (p, name, full = false) => (OUT ? p.screenshot({ path: `${OUT}/${na
     for (const who of ['Store', 'Plant']) {
       await p.waitForSelector('#cover:not([hidden]) #reveal');
       order = order && (await p.textContent('#cover h2')) === who;
-      check(!(await p.$('#stageView .tile')), `week ${w}: nothing of the ${who}'s numbers shows on the hand-over screen`);
+      check(!(await p.$('#stageView table.statt')), `week ${w}: the ${who}'s own table is not on the hand-over screen`);
       if (w === 1) check((await p.$$('#structure .stage.now')).length === 1 && await p.isVisible('#structure svg'), 'the diagram marks the stage deciding now');
       await p.click('#reveal');
       await p.waitForSelector('#stageView:not([hidden]) form');
       if (w === 3 && who === 'Store') await shot(p, 'stage', true);
-      const incoming = Number((await p.textContent('#stageView .tile:nth-child(2) b')).replace(/,/g, ''));
+      const incoming = Number((await p.textContent('#stageView table.statt tbody tr:nth-child(4) td:nth-child(3)')).replace(/,/g, ''));
+      if (w === 3 && who === 'Store') {
+        check((await p.$$('#structure .qty')).length > 6 && (await p.$$('#structure .stock')).length === 4, 'the diagram shows the stock of every stage and what is on its way');
+        check(!!(await p.$('#playCharts #pcNet svg path.ln')) && !!(await p.$('#playCharts #pcOrd svg path.ln')), 'stock and order charts beside the game');
+        check((await p.$$('#playCharts #pcNet path.ln')).length === 4, 'the charts show every stage when the whole chain is visible');
+        check(/Last week/.test(await p.textContent('#stageView table.statt')) && /On its way to you/.test(await p.textContent('#stageView .onway')), 'last week, this week and what is on its way');
+      }
       if (w === 2 && who === 'Store') {
         await p.fill('#stageView input', '-3');
         await p.click('#stageView form button[type=submit]');
@@ -104,7 +110,7 @@ const shot = (p, name, full = false) => (OUT ? p.screenshot({ path: `${OUT}/${na
   check(/Orders placed by default\s*2 \(2 when time ran out\)/.test(await p.textContent('.scard:nth-child(4)')), 'debrief counts the plant orders placed by default');
   check(/Orders placed by default\s*1/.test(await p.textContent('.scard:nth-child(1)')), 'debrief counts the store empty answer');
   check(await p.isVisible('#structure svg'), 'the diagram stays on the debrief');
-  check(!/In stock|You owe/.test(await p.textContent('#structure')), 'the diagram shows structure, never the numbers of a stage');
+  check((await p.$$('#structure .stock')).length === 4, 'the debrief diagram shows where the game ended');
   await p.hover('#chOrders rect.hit', { position: { x: 300, y: 100 } });
   check(/Week \d+/.test(await p.textContent('#chOrders .tip')), 'hover read-out names the week');
   await p.click('#chOrders [data-table]');
@@ -138,6 +144,35 @@ const shot = (p, name, full = false) => (OUT ? p.screenshot({ path: `${OUT}/${na
   check(th.join(',') === '4:timeout,8:timeout,4:timeout,4:timeout', `the open table times out as a whole (${th})`);
   await p.waitForSelector('#debrief:not([hidden]) .kpis');
   check((await p.textContent('.scard .rule')).includes('Too few weeks'), 'a short game says it is too short to read a rule');
+
+  // ---- only their own stage: the hand-over screen hides every number; a stage sees only its own
+  await p.click('#newGame');
+  await p.click('input[name=visibility][value=own]');
+  await p.click('input[name=mode][value=turn]');
+  await p.evaluate(() => { document.querySelector('details.advanced').open = true; });
+  await p.fill('#weeks', '6');
+  await p.fill('#limit', '0');
+  await p.click('#setup button[type=submit]');
+  check(/Only your own stage/.test(await p.textContent('#briefText')), 'the briefing says players see only their own stage');
+  await p.click('#begin');
+  for (let w = 1; w <= 2; w++) {
+    for (let k = 0; k < 4; k++) {
+      await p.waitForSelector('#cover:not([hidden]) #reveal');
+      if (w === 2 && k === 1) {
+        check((await p.$$('#structure .qty')).length === 0 && (await p.$$('#structure .stock')).length === 0, 'own stage: the hand-over diagram shows no numbers');
+        check(/Hidden until/.test(await p.textContent('#playCharts')), 'own stage: the charts hide on the hand-over screen');
+      }
+      await p.click('#reveal');
+      await p.waitForSelector('#stageView:not([hidden]) form');
+      if (w === 2 && k === 1) {
+        check((await p.$$('#structure .stock')).length === 1, 'own stage: the diagram shows only the stock of the deciding stage');
+        check((await p.$$('#playCharts #pcNet path.ln')).length === 1, 'own stage: the charts show only the deciding stage');
+      }
+      await p.fill('#stageView input', '6');
+      await p.click('#stageView form button[type=submit]');
+    }
+  }
+  await p.evaluate(() => localStorage.removeItem('ripple-game'));
 
   // ---- theme and phone
   const before = await p.evaluate(() => document.documentElement.dataset.theme || 'dark');

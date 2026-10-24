@@ -53,8 +53,15 @@
         <fieldset>
           <legend>How the team plays</legend>
           <div class="cards2">
-            <label class="card"><input type="radio" name="mode" value="turn" checked><span><b>Turn by turn</b><small>Each stage decides in turn and sees only its own numbers. Pass the device between stages. Recommended.</small></span></label>
+            <label class="card"><input type="radio" name="mode" value="turn" checked><span><b>Turn by turn</b><small>Each stage decides in turn. Pass the device between stages.</small></span></label>
             <label class="card"><input type="radio" name="mode" value="table"><span><b>Open table</b><small>All stages on one screen, decided together. Easier to discuss, weaker lesson.</small></span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>What players see</legend>
+          <div class="cards2">
+            <label class="card"><input type="radio" name="visibility" value="all" checked><span><b>The whole chain</b><small>The diagram and the charts show every stage's stock, shipments and orders.</small></span></label>
+            <label class="card"><input type="radio" name="visibility" value="own"><span><b>Only their own stage</b><small>Each player sees only their own numbers, as in a real chain. Harder, and the stronger lesson.</small></span></label>
           </div>
         </fieldset>
         <fieldset>
@@ -99,9 +106,14 @@
     <!-- play: a cover between stages, a stage's own view, or the open table -->
     <section id="play" class="screen" hidden>
       <div class="playbar"><div class="playmeta" id="playMeta"></div></div>
-      <div id="cover" class="panel cover" hidden></div>
-      <div id="stageView" hidden></div>
-      <div id="tableView" hidden></div>
+      <div class="playgrid">
+        <div class="playleft">
+          <div id="cover" class="panel cover" hidden></div>
+          <div id="stageView" hidden></div>
+          <div id="tableView" hidden></div>
+        </div>
+        <aside class="playcharts panel" id="playCharts" aria-label="Stock and orders, week by week"></aside>
+      </div>
       <div class="row end"><button class="linkbtn" id="endEarly" type="button">End the game now</button></div>
       <div id="endConfirm" class="panel confirm" hidden>
         <p>End the game after week <b id="endWeek"></b>? The debrief uses the weeks played so far.</p>
