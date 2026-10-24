@@ -10,6 +10,7 @@ about.html              methodology and update process (reads live values from d
 assets/app.js           UI (ES module)
 assets/model.js         pure model functions (tested in Node)
 assets/accuracy.js      scores the frozen forecasts as they come due (tested in Node)
+assets/explain.js       the selected technology's tabs: rubric band, how each number is built, signals in plain words, the outlook (tested in Node)
 track.html, assets/track.js   the track record page
 assets/about.js         fills the methodology page from the data files
 assets/styles.css
@@ -128,6 +129,22 @@ python3 scripts/update_signals.py --fixture tests/fixtures/raw_sample.json --end
 Opening `index.html` directly from disk will not work: browsers block `fetch` from `file://`.
 
 The offline fixture is synthetic test data. Don't commit the `data/signals.json` it produces.
+
+## Reading a technology
+
+Selecting a bubble opens its card with four tabs:
+
+- **Overview**: what it is, a supply chain example, the numbers now and at the horizon, what to do, and the what-if
+  inputs.
+- **Expectations** and **Evidence**: where the score sits on the rubric scale and what that level typically looks
+  like; how the board's number is built (analyst score × weight + signal index × weight, adding up to the position on
+  the map); the analyst's rationale; and each collected signal in plain words with its change on the quarter before
+  and its rank among the technologies. Evidence says so plainly when no usage signal exists, and names the next band
+  and the watch signal.
+- **Where it's heading**: under the chosen scenario and horizon, the evidence growth rate and which drivers change
+  it, the premium that keeps expectations above evidence and how fast they converge, and the path step by step.
+
+The open tab is part of the shared link.
 
 ## Sharing a view
 

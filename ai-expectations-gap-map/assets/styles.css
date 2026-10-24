@@ -201,3 +201,39 @@ header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content
 :root[data-theme="dark"] .lk-light{display:none}
 :root[data-theme="dark"] .lk-dark{display:inline}
 @media (max-width:520px){.brandbar .lk{height:44px}}
+
+/* the selected technology: tabs, rubric scale, how a number is built, signals in plain words */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin:12px 0 14px}
+.tabs button{font:600 13px var(--f-body);background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:8px 10px;cursor:pointer;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:hover{color:var(--ink)}
+.tabpanel h3{font-family:var(--f-display);font-size:15px;margin:18px 0 6px}
+.tabpanel .lead{margin:0 0 10px;line-height:1.5}
+.scale{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin:8px 0 4px;padding-top:8px}
+.scale .seg{background:var(--bg);border-radius:3px;padding:5px 6px;font-size:11px;line-height:1.25;min-width:0}
+.scale .seg span{display:block;font-family:var(--f-mono);color:var(--muted);font-size:10px}
+.scale .seg b{font-weight:500;color:var(--muted)}
+.scale .seg.on{background:var(--accent);color:var(--panel)}
+.scale .seg.on span,.scale .seg.on b{color:var(--panel);font-weight:600}
+.scale .mark{position:absolute;top:0;width:0;height:0;border:6px solid transparent;border-top:8px solid var(--ink);transform:translateX(-6px)}
+.band{font-size:13px;margin:6px 0 4px;line-height:1.45}
+.built .bbar{display:flex;height:12px;background:var(--bg);border-radius:3px;overflow:hidden;margin:6px 0}
+.built .bbar i{display:block;height:100%}
+.built .bbar i.analyst{background:var(--muted)}
+.built .bbar i.signal{background:var(--accent)}
+.built p{margin:0 0 4px;font-size:13px;font-family:var(--f-mono)}
+.srow{border-top:1px solid var(--line);padding:8px 0}
+.srow .shead{display:flex;justify-content:space-between;gap:10px;font-size:13.5px}
+.srow .shead span{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.srow p{margin:4px 0 0;font-size:13px;line-height:1.45}
+.srow .note{margin:2px 0 0}
+.srow .rk{color:var(--muted)}
+.rank{position:relative;height:6px;border-radius:3px;margin:6px 0 2px;background:linear-gradient(90deg,var(--bg),var(--accent))}
+.rank i{position:absolute;top:-3px;width:4px;height:12px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
+.flagged{background:var(--bg);border-left:3px solid var(--emerg);padding:8px 10px;font-size:13px;border-radius:0 6px 6px 0}
+.trend{display:flex;align-items:center;gap:12px;margin:10px 0}
+.tight{margin:0 0 10px;padding-left:20px;font-size:13px;line-height:1.5}
+.sens2 div{grid-template-columns:150px minmax(0,1fr) 36px 46px}
+.sens2 .shd{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+table.path td .pill{font-size:11px}
+@media (max-width:560px){.scale .seg b{font-size:10px}.sens div,.sens2 div{grid-template-columns:110px minmax(0,1fr) 34px 40px}}

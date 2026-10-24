@@ -34,4 +34,4 @@ jobs:
       - name: Pipeline tests
         run: python -m unittest discover -s tests -v
       - name: Model tests
-        run: node --test tests/model.test.mjs tests/accuracy.test.mjs
+        run: node --test tests/model.test.mjs tests/accuracy.test.mjs tests/explain.test.mjs

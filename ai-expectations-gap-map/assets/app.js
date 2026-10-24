@@ -1,4 +1,5 @@
 import { clamp, startingPoint, simulate, classify, parseCSV } from "./model.js";
+import { RUBRIC, band, rankOf, change, composition, outlook } from "./explain.js";
 
 const CLS = { over: "Overheated", under: "Underpriced", proven: "Proven", emerg: "Emerging" };
 const ACT = {
@@ -17,7 +18,7 @@ async function getText(p) { const r = await fetch(p, { cache: "no-cache" }); if 
 
 let CFG, SCEN, SET, SIG, HIST, ASSESS, CAND;
 let overrides = {};   // local what-if edits, never saved
-const st = { drivers: {}, horizon: 3, correction_speed: 0.4, preset: "base", sel: "ai-agents", all: false, mode: "blend" };
+const st = { drivers: {}, horizon: 3, correction_speed: 0.4, preset: "base", sel: "ai-agents", all: false, mode: "blend", tab: "overview" };
 
 async function boot() {
   try {
@@ -70,11 +71,13 @@ function readHash() {
   if (p.has("k")) st.correction_speed = clamp(+p.get("k") || .4, .1, 1);
   if (p.has("m") && ["analyst", "blend", "signals"].includes(p.get("m")) && (p.get("m") === "analyst" || hasSignals())) st.mode = p.get("m");
   if (p.has("sel") && CFG.technologies.some(t => t.id === p.get("sel"))) st.sel = p.get("sel");
+  if (p.has("tab") && TABS.some(([k]) => k === p.get("tab"))) st.tab = p.get("tab");
 }
 function writeHash() {
   const p = new URLSearchParams();
   if (st.preset) p.set("s", st.preset); else SCEN.drivers.forEach(d => p.set(d.key, st.drivers[d.key]));
   p.set("t", st.horizon); p.set("k", st.correction_speed); p.set("m", st.mode); p.set("sel", st.sel);
+  if (st.tab !== "overview") p.set("tab", st.tab);
   history.replaceState(null, "", "#" + p.toString());
 }
 
@@ -211,51 +214,189 @@ function renderCandidates() {
   }).join("");
 }
 
-function renderDetail(d) {
-  const sens = SCEN.drivers.map(dr => {
-    const v = d.sensitivities[dr.key] || 0, w = Math.abs(v) * 50;
-    return `<div><span>${esc(dr.name)}</span><span class="bar"><i style="left:${v >= 0 ? 50 : 50 - w}%;width:${w}%;background:${v >= 0 ? "var(--accent)" : "var(--over)"}"></i><i style="left:50%;width:1px;background:var(--muted)"></i></span><output>${v > 0 ? "+" : ""}${v.toFixed(1)}</output></div>`;
+// ---------- the selected technology: an overview, and the evidence behind each number ----------
+const TABS = [["overview", "Overview"], ["expectations", "Expectations"], ["evidence", "Evidence"], ["outlook", "Where it's heading"]];
+const fmtN = v => (v == null || !Number.isFinite(v) ? "n/a" : Math.round(v).toLocaleString("en-GB"));
+const fmtPct = x => `${x > 0 ? "+" : ""}${Math.round(x * 100)} %`;
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+const monthsOf = w => {
+  if (!w) return "the last three months";
+  const m = d => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
+  return `${m(w[0])}–${m(w[1])} ${w[1].slice(0, 4)}`;
+};
+const horizonWord = t => (t === 0 ? "Now" : t < 1 ? `${Math.round(t * 12)} months` : `${+t.toFixed(2)} year${t === 1 ? "" : "s"}`);
+
+// Where a score sits on its rubric scale: five labelled bands and a marker.
+function scale(axis, v) {
+  const b = band(axis, v);
+  return `<div class="scale" role="img" aria-label="${esc(axis)} ${v.toFixed(0)} of 100, ${esc(b.anchor)}">
+    ${RUBRIC[axis].map(([lo, hi, a], i) => `<div class="seg${i === b.index ? " on" : ""}"><span>${lo}–${hi}</span><b>${esc(a)}</b></div>`).join("")}
+    <i class="mark" style="left:${clamp(v, 0, 100)}%"></i></div>
+    <p class="band"><b>${v.toFixed(0)} · ${esc(b.anchor)}.</b> Typically: ${esc(b.signs)}</p>`;
+}
+
+// How the board's number is built: the analyst score and the signal index, with their weights.
+function built(c, word, signalName, why) {
+  const label = { analyst: "Analyst score", signal: signalName };
+  const bar = c.parts.map(x => `<i class="${x.source}" style="width:${x.contribution}%" title="${esc(label[x.source])}"></i>`).join("");
+  const sum = c.parts.map(x => c.parts.length > 1 ? `${esc(label[x.source])} ${x.value.toFixed(0)} × ${Math.round(x.weight * 100)} % = ${x.contribution.toFixed(1)}`
+    : `${esc(label[x.source])} ${x.value.toFixed(0)}`).join(" + ");
+  return `<div class="built"><div class="bbar">${bar}</div>
+    <p>${sum}${c.parts.length > 1 ? ` → <b>${c.total.toFixed(0)}</b>` : ""}.</p>
+    ${c.missing ? `<p class="note">${esc(why)}</p>` : ""}</div>`;
+}
+
+// One signal in plain words, with where it ranks on the board.
+function signalRow(name, valueText, detail, rk, explain) {
+  const pos = rk ? (rk.of > 1 ? (rk.of - rk.rank) / (rk.of - 1) : 1) : null;
+  return `<div class="srow"><div class="shead"><b>${esc(name)}</b><span>${valueText}</span></div>
+    ${rk ? `<div class="rank" aria-hidden="true"><i style="left:${(pos * 100).toFixed(1)}%"></i></div>
+      <p>${detail} <span class="rk">${ordinal(rk.rank)} of ${rk.of} on the board.</span></p>` : `<p>${detail}</p>`}
+    <p class="note">${explain}</p></div>`;
+}
+
+function measure(field) {
+  return Object.fromEntries(Object.entries(SIG.technologies || {}).map(([k, v]) => [k, v?.raw?.[field] ?? null]));
+}
+
+function tabExpectations(d, aH) {
+  const s = d.sig, raw = s?.raw || {}, when = monthsOf(SIG.window?.current);
+  const c = composition(aH, s?.expectations_index, SET.blend.expectations_signal_weight, st.mode);
+  const wikiCh = change(raw.wikipedia_views, raw.wikipedia_views_prior), hnCh = change(raw.hn_stories, raw.hn_stories_prior);
+  const flag = s && Number.isFinite(s.expectations_index) && Math.abs(s.expectations_index - aH) > SET.review_flag_gap;
+  const rows = s ? [
+    signalRow("Attention index", `${fmtN(s.expectations_index)} of 100`, `Combines the three signals below: 40 % Wikipedia, 40 % Hacker News, 20 % momentum.`,
+      rankOf(d.id, Object.fromEntries(Object.entries(SIG.technologies).map(([k, v]) => [k, v.expectations_index]))),
+      "Relative to the other technologies: 0 is the least attention on the board, 100 the most."),
+    signalRow("Wikipedia readers", fmtN(raw.wikipedia_views), `Page views of its Wikipedia article${(d.signals?.wikipedia || []).length > 1 ? "s" : ""} in ${when}${wikiCh != null ? `, ${fmtPct(wikiCh)} on the three months before` : ""}.`,
+      rankOf(d.id, measure("wikipedia_views")), "How many people look the technology up: broad public and business attention."),
+    signalRow("Hacker News stories", fmtN(raw.hn_stories), `Stories with ${(d.signals?.hn || []).map(q => `"${esc(q)}"`).join(" or ") || "its name"} in the title, ${when}${hnCh != null ? `, ${fmtPct(hnCh)} on the three months before` : ""}.`,
+      rankOf(d.id, measure("hn_stories")), "How much practitioners and the technology press talk about it."),
+    signalRow("Momentum", raw.momentum != null ? fmtPct(raw.momentum) : "n/a",
+      raw.momentum == null ? "Not enough data for a trend." : raw.momentum > 0.1 ? "Attention is rising." : raw.momentum < -0.1 ? "Attention is falling." : "Attention is roughly steady.",
+      null, "The average change of the two signals above against the three months before."),
+    signalRow("Research papers (arXiv)", fmtN(raw.arxiv_papers), raw.arxiv_papers == null ? "Not collected this month." : `Papers matching "${esc(d.signals?.arxiv || "")}" in ${when}.`,
+      rankOf(d.id, measure("arxiv_papers")), "Research activity. Shown for context, not part of the score."),
+  ].join("") : `<p class="note">No signals collected yet; the first monthly refresh fills this in.</p>`;
+  return `<p class="lead">Expectations: how much the market believes the technology will deliver, and how soon. It shows up as attention, investment, valuations and executive agendas.</p>
+    ${scale("expectations", d.h0)}
+    <h3>How the board arrives at ${d.h0.toFixed(0)}</h3>
+    ${built(c, "expectations", "Attention index", "The collected signals have no attention index for this technology, so the analyst score is used alone.")}
+    <h3>The analyst's reading</h3>
+    <p>Scored <b>${aH.toFixed(0)}</b>${overrides[d.id]?.h != null ? " (your what-if value)" : ""}, reviewed ${esc(d.reviewed)}: ${esc(d.notes)}</p>
+    ${flag ? `<p class="flagged">The signals put expectations at ${s.expectations_index.toFixed(0)}, ${Math.abs(s.expectations_index - aH).toFixed(0)} points ${s.expectations_index > aH ? "above" : "below"} the analyst. Either attention has moved, or the search terms catch noise: a prompt for the next review.</p>` : ""}
+    <h3>What the public signals show</h3>
+    ${rows}
+    ${s ? `<div class="trend"><span class="eyebrow">Attention index, month by month</span>${sparkline(d.id)}</div>` : ""}
+    <p class="note">Attention is not adoption: these signals measure how much people look and talk, which is a sign of expectations, not of value delivered.</p>`;
+}
+
+function tabEvidence(d, aE) {
+  const s = d.sig, raw = s?.raw || {};
+  const c = composition(aE, s?.evidence_index, SET.blend.evidence_signal_weight, st.mode);
+  const pk = d.signals?.pypi || [];
+  const usage = s && Number.isFinite(s.evidence_index) ? [
+    signalRow("Usage index", `${fmtN(s.evidence_index)} of 100`, "Relative downloads of the open-source packages that implement it.",
+      rankOf(d.id, Object.fromEntries(Object.entries(SIG.technologies).map(([k, v]) => [k, v.evidence_index]))),
+      "0 is the least used of the technologies with packages, 100 the most."),
+    signalRow("Package downloads (PyPI)", fmtN(raw.pypi_downloads), `Last month, for ${pk.map(x => `<code>${esc(x)}</code>`).join(", ")}.`,
+      rankOf(d.id, measure("pypi_downloads")), "Developers installing the software is a sign of real use, though it favours open-source Python tools."),
+  ].join("") : `<p>No usage signal: the technology has no package that maps cleanly to it, so evidence rests on the analyst's judgement alone. Page views and news stories are not used here, because attention is not adoption.</p>`;
+  return `<p class="lead">Evidence: how much value the technology has demonstrably delivered in production, outside the vendors selling it.</p>
+    ${scale("evidence", d.e0)}
+    <h3>How the board arrives at ${d.e0.toFixed(0)}</h3>
+    ${built(c, "evidence", "Usage index", "There is no usage signal for this technology, so the analyst score is used alone.")}
+    <h3>The analyst's reading</h3>
+    <p>Scored <b>${aE.toFixed(0)}</b>${overrides[d.id]?.e != null ? " (your what-if value)" : ""}, reviewed ${esc(d.reviewed)}: ${esc(d.notes)}</p>
+    <h3>Measured use</h3>
+    ${usage}
+    <h3>What counts as evidence</h3>
+    <ol class="tight"><li>Independent measurement: controlled studies, audited financial results, regulator data.</li>
+      <li>Observed behaviour: production deployments, renewal and cancellation rates, spend.</li>
+      <li>Practitioner reports with numbers: baseline, intervention and result.</li>
+      <li>Surveys of intent or satisfaction count least; vendor claims and demonstrations hardly at all.</li></ol>
+    <div class="action"><b>What would move it.</b> ${esc(d.watch_signal)}.</div>
+    <p class="note">To reach the next band (${esc(RUBRIC.evidence[Math.min(4, band("evidence", d.e0).index + 1)][2])}): ${esc(RUBRIC.evidence[Math.min(4, band("evidence", d.e0).index + 1)][3])}</p>`;
+}
+
+function tabOutlook(d) {
+  const pr = SCEN.presets.find(p => p.id === st.preset);
+  if (st.horizon === 0) return `<p class="lead">Set the time horizon above zero (Drivers of the future) to see where the model takes ${esc(d.name)} and why.</p>`;
+  const o = outlook(d, st, SET.model, SET.thresholds, SCEN.drivers.map(x => x.key));
+  const name = k => SCEN.drivers.find(x => x.key === k)?.name ?? k;
+  const moved = o.drivers.filter(x => Math.abs(x.effect) > 1e-9);
+  const drv = SCEN.drivers.map(dr => {
+    const x = o.drivers.find(y => y.key === dr.key), v = x.sensitivity, w = Math.abs(v) * 50;
+    return `<div><span>${esc(dr.name)}</span><span class="bar"><i style="left:${v >= 0 ? 50 : 50 - w}%;width:${w}%;background:${v >= 0 ? "var(--accent)" : "var(--over)"}"></i><i style="left:50%;width:1px;background:var(--muted)"></i></span><output>${v > 0 ? "+" : ""}${v.toFixed(1)}</output><output>${x.setting ? (x.setting > 0 ? "+" : "") + x.setting.toFixed(1) : "0"}</output></div>`;
   }).join("");
-  const s = d.sig;
-  const raw = s?.raw || {};
-  const sigBlock = s ? `
-    <div class="eyebrow">Collected signals · ${esc(SIG.period || "")}</div>
-    <div class="sig"><table>
-      <tr><td>Attention index (expectations)</td><td>${Number.isFinite(s.expectations_index) ? s.expectations_index.toFixed(0) : "n/a"}</td></tr>
-      <tr><td>Usage proxy index (evidence)</td><td>${Number.isFinite(s.evidence_index) ? s.evidence_index.toFixed(0) : "n/a"}</td></tr>
-      <tr><td>Wikipedia views, last 3 months</td><td>${raw.wikipedia_views?.toLocaleString() ?? "n/a"}</td></tr>
-      <tr><td>Hacker News stories, last 3 months</td><td>${raw.hn_stories?.toLocaleString() ?? "n/a"}</td></tr>
-      <tr><td>Momentum vs prior 3 months</td><td>${Number.isFinite(raw.momentum) ? (raw.momentum > 0 ? "+" : "") + (raw.momentum * 100).toFixed(0) + "%" : "n/a"}</td></tr>
-      <tr><td>arXiv papers, last 3 months</td><td>${raw.arxiv_papers?.toLocaleString() ?? "n/a"}</td></tr>
-      <tr><td>PyPI downloads, last month</td><td>${raw.pypi_downloads?.toLocaleString() ?? "n/a"}</td></tr>
-    </table>${sparkline(d.id)}</div>` : `<p class="note">No collected signals yet. The first monthly refresh fills this in.</p>`;
-  $("detail").innerHTML = `
-    <div class="detail-top"><div><div class="eyebrow">Selected · Gartner 2026: ${esc(d.gartner_phase_2026)}</div><h2 style="font-size:22px">${esc(d.name)}</h2></div>
-    <span class="pill p-${d.c}" style="font-size:13px;padding:4px 10px">${CLS[d.c]}${d.c !== d.c0 ? ` (today: ${CLS[d.c0]})` : ""}</span></div>
-    ${d.description ? `<p class="what">${esc(d.description)}</p>` : ""}
+  const prem = [
+    [o.premium.impact, `${o.premium.impact >= 0 ? "+" : ""}${o.premium.impact.toFixed(0)} for an impact of ${d.impact.toFixed(0)}, since big promises keep expectations up`],
+    [o.premium.capital, `${o.premium.capital >= 0 ? "+" : ""}${o.premium.capital.toFixed(0)} from capital availability`],
+    [o.premium.capability, `${o.premium.capability >= 0 ? "+" : ""}${o.premium.capability.toFixed(0)} from capability progress`],
+  ].filter(([v], i) => i === 0 || Math.abs(v) > 0.05).map(([, t]) => t).join(", ");
+  const end = o.path.at(-1);
+  return `<p class="lead">Under <b>${esc(pr ? pr.name : "your custom scenario")}</b>, ${horizonWord(st.horizon).toLowerCase()} ahead: expectations ${d.h0.toFixed(0)} → <b>${end.H.toFixed(0)}</b>, evidence ${d.e0.toFixed(0)} → <b>${end.E.toFixed(0)}</b>, gap ${fmtSigned(d.h0 - d.e0)} → <b>${fmtSigned(end.gap)}</b>${end.cls !== d.c0 ? `, from ${CLS[d.c0]} to ${CLS[end.cls]}` : ""}.</p>
+    <h3>Why evidence moves</h3>
+    <p>Evidence grows like adoption: slowly while little is proven, fastest in the middle, then levelling off as it nears 100. For ${esc(d.name)} the growth rate is <b>${Math.round(o.rate * 100)} % a year</b>, which from today's ${d.e0.toFixed(0)} adds ${(end.E - d.e0).toFixed(0)} points by the horizon: a base rate of ${Math.round(o.baseRate * 100)} %${moved.length ? `, ${o.multiplier >= 1 ? "raised" : "lowered"} by ${Math.round(Math.abs(o.multiplier - 1) * 100)} % because of ${moved.map(x => `${name(x.key).toLowerCase()} (${x.setting > 0 ? "+" : ""}${x.setting.toFixed(1)})`).join(", ")}` : " (this scenario moves no driver it is sensitive to)"}.</p>
+    <div class="sens sens2"><div class="shd"><span>Driver</span><span>How sensitive ${esc(d.name)} is</span><output>Sens.</output><output>Setting</output></div>${drv}</div>
+    <h3>Why expectations move</h3>
+    <p>Expectations drift toward the evidence plus a premium: today that target is ${d.e0.toFixed(0)} ${o.premium.total >= 0 ? "+" : "−"} ${Math.abs(o.premium.total).toFixed(0)} = <b>${o.target.toFixed(0)}</b> (${prem}). With a hype correction speed of ${o.speed.toFixed(2)}, they close about ${Math.round((1 - Math.pow(1 - o.speed / SET.model.steps_per_year, SET.model.steps_per_year)) * 100)} % of the distance to the target each year, and the target rises as evidence does.</p>
+    <h3>The path</h3>
+    <div class="tbl"><table class="path"><thead><tr><th>When</th><th class="num">Expectations</th><th class="num">Evidence</th><th class="num">Gap</th><th>Class</th></tr></thead><tbody>
+    ${o.path.map(x => `<tr><td>${horizonWord(x.t)}</td><td class="num">${x.H.toFixed(0)}</td><td class="num">${x.E.toFixed(0)}</td><td class="num">${fmtSigned(x.gap)}</td><td><span class="pill p-${x.cls}">${CLS[x.cls]}</span></td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="note">A thinking tool, not a forecast of record: the rates, sensitivities and premium are judgement calls kept in the data files. The <a href="track.html">track record</a> checks how such forecasts have done.</p>`;
+}
+
+function tabOverview(d) {
+  return `${d.description ? `<p class="what">${esc(d.description)}</p>` : ""}
     ${d.supply_chain_example ? `<div class="action scm"><b>In supply chain management.</b> ${esc(d.supply_chain_example)}</div>` : ""}
-    <p class="note"><a href="about.html#technologies">What every technology on the board is</a></p>
     <div class="kv">
-      <div><span>Expectations</span><b>${d.H.toFixed(0)}</b> <em>today ${d.h0.toFixed(0)}</em></div>
-      <div><span>Evidence</span><b>${d.E.toFixed(0)}</b> <em>today ${d.e0.toFixed(0)}</em></div>
+      <div><span>Expectations</span><b>${d.H.toFixed(0)}</b> <em>today ${d.h0.toFixed(0)} · ${esc(band("expectations", d.h0).anchor)}</em></div>
+      <div><span>Evidence</span><b>${d.E.toFixed(0)}</b> <em>today ${d.e0.toFixed(0)} · ${esc(band("evidence", d.e0).anchor)}</em></div>
       <div><span>Gap</span><b style="color:var(--${d.c})">${fmtSigned(d.gap)}</b> <em>today ${fmtSigned(d.h0 - d.e0)}</em></div>
     </div>
+    <p class="note">The tabs above show what each number rests on: <a href="#" data-tab="expectations">expectations</a>, <a href="#" data-tab="evidence">evidence</a>, and <a href="#" data-tab="outlook">where it's heading</a>.</p>
     <div class="action"><b>What to do.</b> ${ACT[d.c]}<br><b>Signal to watch.</b> ${esc(d.watch_signal)}.</div>
-    <p class="note">Analyst view (reviewed ${esc(d.reviewed)}): ${esc(d.notes)}</p>
-    <div class="eyebrow" style="margin-top:14px">Sensitivity to drivers</div>
-    <div class="sens">${sens}</div>
-    ${sigBlock}
-    <div class="eyebrow">What-if: adjust the analyst scores (this browser only, not saved)</div>
+    <p class="note">Analyst view (reviewed ${esc(d.reviewed)}): ${esc(d.notes)} <a href="about.html#technologies">What every technology on the board is</a>.</p>
+    <div class="eyebrow" style="margin-top:14px">What-if: adjust the analyst scores (this browser only, not saved)</div>
     <div class="edit">
       <label for="eh">Expectations<input id="eh" type="number" min="0" max="100" value="${overrides[d.id]?.h ?? d.analyst.expectations}"></label>
       <label for="ee">Evidence<input id="ee" type="number" min="0" max="100" value="${overrides[d.id]?.e ?? d.analyst.evidence}"></label>
       <label for="ei">Impact<input id="ei" type="number" min="0" max="100" value="${d.impact}"></label>
       <button class="btn" id="reset" ${d.edited ? "" : "hidden"}>Restore assessment</button>
     </div>`;
-  [["eh", "h"], ["ee", "e"], ["ei", "i"]].forEach(([id, f]) => $(id).addEventListener("change", ev => {
-    overrides[d.id] = { ...(overrides[d.id] || {}), [f]: clamp(+ev.target.value || 0, 0, 100) }; render();
+}
+
+function renderDetail(d) {
+  const aH = overrides[d.id]?.h ?? d.analyst.expectations, aE = overrides[d.id]?.e ?? d.analyst.evidence;
+  const body = { overview: () => tabOverview(d), expectations: () => tabExpectations(d, aH), evidence: () => tabEvidence(d, aE), outlook: () => tabOutlook(d) }[st.tab]();
+  $("detail").innerHTML = `
+    <div class="detail-top"><div><div class="eyebrow">Selected · Gartner 2026: ${esc(d.gartner_phase_2026)}</div><h2 style="font-size:22px">${esc(d.name)}</h2></div>
+    <span class="pill p-${d.c}" style="font-size:13px;padding:4px 10px">${CLS[d.c]}${d.c !== d.c0 ? ` (today: ${CLS[d.c0]})` : ""}</span></div>
+    <div class="tabs" role="tablist" aria-label="About ${esc(d.name)}">${TABS.map(([k, l]) => `<button role="tab" id="tab-${k}" data-tab="${k}" aria-selected="${k === st.tab}" aria-controls="tabpanel" tabindex="${k === st.tab ? 0 : -1}">${l}</button>`).join("")}</div>
+    <div class="tabpanel" id="tabpanel" role="tabpanel" aria-labelledby="tab-${st.tab}">${body}</div>`;
+  $("detail").querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", ev => {
+    ev.preventDefault();
+    st.tab = b.dataset.tab;
+    render();
+    $(`tab-${st.tab}`).focus();
   }));
-  $("reset").onclick = () => { delete overrides[d.id]; render(); };
+  $("detail").querySelector('[role="tablist"]').addEventListener("keydown", ev => {
+    const i = TABS.findIndex(([k]) => k === st.tab);
+    const j = ev.key === "ArrowRight" ? (i + 1) % TABS.length : ev.key === "ArrowLeft" ? (i + TABS.length - 1) % TABS.length : -1;
+    if (j < 0) return;
+    ev.preventDefault();
+    st.tab = TABS[j][0];
+    render();
+    $(`tab-${st.tab}`).focus();
+  });
+  if (st.tab === "overview") {
+    [["eh", "h"], ["ee", "e"], ["ei", "i"]].forEach(([id, f]) => $(id).addEventListener("change", ev => {
+      overrides[d.id] = { ...(overrides[d.id] || {}), [f]: clamp(+ev.target.value || 0, 0, 100) }; render();
+    }));
+    $("reset").onclick = () => { delete overrides[d.id]; render(); };
+  }
 }
 function select(id) { st.sel = id; render(); }
 
