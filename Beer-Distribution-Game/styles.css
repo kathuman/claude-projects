@@ -245,3 +245,18 @@ table.statt tr.bad td b { color: var(--bad); }
 .structure-svg .stock .unit { font: 11px var(--sans); fill: var(--muted); }
 .structure-svg .owed { fill: var(--muted); font: 12px var(--sans); }
 .structure-svg .owed.bad { fill: var(--bad); font-weight: 600; }
+
+/* AI players page */
+.structure.static { position: static; box-shadow: none; }
+pre.prompt { background: var(--soft); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; font: 12.5px/1.5 var(--mono); max-height: 420px; overflow: auto; }
+.warn { color: var(--warn); }
+.scrollx { overflow-x: auto; }
+table.cmp th, table.cmp td { white-space: nowrap; }
+table.cmp tr.yard th, table.cmp tr.yard td { color: var(--muted); }
+.cmp2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cmp2 > .panel { margin: 0 0 12px; }
+@media (max-width: 1000px) { .cmp2 { grid-template-columns: minmax(0, 1fr); } }
+ul.reasons { margin: 6px 0 14px; padding-left: 18px; font-size: .92rem; }
+ul.reasons li { margin: 3px 0; }
+label.wide { grid-column: span 2; }
+@media (max-width: 520px) { label.wide { grid-column: auto; } }

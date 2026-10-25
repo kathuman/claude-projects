@@ -59,7 +59,7 @@ const cache = new Map();
 // patterns, every stage using the rule.
 export function bestRule(c) {
   const cfg = config(c);
-  const key = [cfg.stages, cfg.orderDelay, cfg.shipDelay, cfg.prodDelay, cfg.holding, cfg.backlog, cfg.initInv, cfg.weeks].join('|');
+  const key = [cfg.stages, cfg.orderDelay, cfg.shipDelay, cfg.prodDelay, cfg.holding, cfg.backlog, cfg.initInv, cfg.initPipeline, cfg.weeks].join('|');
   if (cache.has(key)) return cache.get(key);
   let best = null;
   for (const theta of [0.1, 0.2, 0.3, 0.45, 0.6, 0.8]) {

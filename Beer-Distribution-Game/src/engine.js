@@ -23,6 +23,9 @@ export function stageNames(n) {
 export const DEFAULTS = {
   stages: 4, orderDelay: 1, shipDelay: 2, prodDelay: 2, holding: 1, backlog: 2.5, initInv: 15, weeks: 30,
   scenario: 'step', seed: 1,
+  // initPipeline: units in every order, shipping and production slot at the start (null: the base demand)
+  // custom demand (scenario 'custom'): demandFrom a week until week stepWeek − 1, then demandTo every week
+  initPipeline: null, demandFrom: 4, demandTo: 8, stepWeek: 6,
 };
 
 // Check and complete a configuration.
@@ -31,19 +34,23 @@ export function config(c = {}) {
   const int = (k, lo, hi) => { cfg[k] = Math.min(hi, Math.max(lo, Math.round(Number(cfg[k])))); };
   int('stages', 2, 5); int('orderDelay', 1, 3); int('shipDelay', 1, 4); int('prodDelay', 1, 4); int('weeks', 6, 60);
   int('initInv', 0, 200);
+  int('demandFrom', 0, 200); int('demandTo', 0, 200); int('stepWeek', 2, 60);
   cfg.holding = Math.max(0, Number(cfg.holding));
   cfg.backlog = Math.max(0, Number(cfg.backlog));
   cfg.names = stageNames(cfg.stages);
-  cfg.demand = demandSeries(cfg.scenario, cfg.weeks, cfg.seed);
+  cfg.demand = demandSeries(cfg.scenario, cfg.weeks, cfg.seed, cfg);
   cfg.base = cfg.demand.base;
+  cfg.initPipeline = cfg.initPipeline == null || cfg.initPipeline === '' ? cfg.base
+    : Math.min(200, Math.max(0, Math.round(Number(cfg.initPipeline))));
   return cfg;
 }
 
-// A new game in steady state: every pipeline holds the base demand, every stage the initial inventory.
+// A new game: every pipeline slot holds the initial pipeline quantity (by default the base demand, a steady state),
+// every stage the initial inventory.
 export function newGame(c) {
   const cfg = config(c);
   const n = cfg.stages;
-  const d0 = cfg.base;
+  const d0 = cfg.initPipeline;
   const stages = cfg.names.map((name, i) => ({
     name,
     inv: cfg.initInv,

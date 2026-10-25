@@ -5,7 +5,7 @@ Every stage orders from the one above it, and orders and shipments take time to 
 customers buy become large swings further up the chain: the bullwhip effect. The debrief shows each team, with its own
 numbers, why it happened.
 
-**Live:** https://kathuman.github.io/claude-projects/Beer-Distribution-Game/ · version 1.0.2 · method and references
+**Live:** https://kathuman.github.io/claude-projects/Beer-Distribution-Game/ · version 1.0.3 · method and references
 in [about.html](about.html)
 
 Ripple is an original game in the tradition of the supply chain games used in management teaching (Forrester 1958;
@@ -29,6 +29,12 @@ Sterman 1989). Its chain, numbers, demand patterns and debrief are its own; it i
 - **A configurable chain.** 2 to 5 stages; order, shipping and production delays; holding and backlog costs; starting
   stock; game length; four demand patterns (step up, seasonal, promotion, unpredictable), with "Surprise" picking one
   at random and revealing it only in the debrief.
+- **AI players** ([ai.html](ai.html)): every stage run by its own AI (Claude Opus 5.5), each deciding its order every
+  week on its own, in two games: each AI seeing only its own stage, or the whole chain. Both are compared after the
+  chosen number of weeks (33 to start with: 12 units in each warehouse, 4 in every week of ordering, shipping and
+  production, customers ordering 4 a week and then 8 from week 6), with typical players and the best simple rule as
+  yardsticks, every order's reason, and a CSV. Every AI is told the game never ends. It runs in the browser with the
+  visitor's own Anthropic API key, with a cost estimate first and the running cost shown.
 - **The debrief.**
   - the orders each stage placed against customer demand, and stock (+) or owed (−) by stage, each chart with a
     legend, line labels, a hover read-out per week and a table view;
@@ -53,6 +59,7 @@ Details in [about.html](about.html).
 
 ```
 index.html, styles.css, app.js   the page: set-up, briefing, play (hand-over screen, stage view, open table), debrief
+ai.html, ai-page.js              AI players: two games played by AIs, compared
 about.html                       how to run it with a class, how the chain works, the method, references
 src/engine.js                    the chain: weeks, delays, shipping, backlog, costs (pure, saved as JSON)
 src/scenarios.js                 customer demand patterns, seeded
@@ -61,8 +68,10 @@ src/fit.js                       reading a stage's decision rule from its orders
 src/debrief.js                   summary, benchmarks, fitted rules, the supply-line curve
 src/charts.js                    the debrief's SVG charts (legend, line labels, hover, table view)
 src/diagram.js                   the structure diagram shown on every screen
+src/ai.js                        AI players: what each AI is told, the request to Claude, a week of decisions
 tests/                           node --test suites
 tools/browser-check.cjs          plays the game in a real browser
+tools/ai-check.cjs               runs the AI players page against a stand-in for Claude
 ```
 
 ## Tests
@@ -71,13 +80,13 @@ tools/browser-check.cjs          plays the game in a real browser
 npm test
 ```
 
-22 checks: units are conserved in every chain length and pattern; orders and shipments arrive exactly after their
+31 checks: units are conserved in every chain length and pattern; orders and shipments arrive exactly after their
 delays; the plant's production delay; backlog and oldest-debt-first shipping; costs add up; the supply line is
 everything ordered and not received; only whole, non-negative orders, weeks in order; settings within range and
 reproducible demand; a saved game resumes exactly; typical players use the published parameters, keep a calm chain
 calm and amplify a step up the chain; the best rule beats typical play on every pattern and is tuned without seeing
 the game; counting more of the supply line damps the swings; rules decide from what a stage can see; fitting
-recovers known rules; the summary, the supply-line curve and the benchmarks add up.
+recovers known rules; the summary, the supply-line curve and the benchmarks add up; the AI experiment starts from its settings, tells every AI the game never ends (and never its length), shows customer orders only to the store unless the AIs see the whole chain, plays 33 weeks against a stand-in, and survives refusals and errors (a rejected key stops it, resumable).
 
 A browser check plays the game (71 checks: the diagram on every screen, following the settings and carrying the
 live numbers, the charts beside the game, a game where players see only their own stage, set-up,
@@ -87,6 +96,7 @@ answer when time runs out, an open table that times out, the debrief's charts, h
 ```bash
 python -m http.server 8766          # from the repository root
 PW=<path to playwright or playwright-core> CHROME=<chrome.exe> node Beer-Distribution-Game/tools/browser-check.cjs
+PW=<…> CHROME=<…> node Beer-Distribution-Game/tools/ai-check.cjs   # 30 checks, no API key needed
 ```
 
 ## Roadmap

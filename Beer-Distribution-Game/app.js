@@ -9,7 +9,7 @@ import { summary, benchmarks, fits, causes } from './src/debrief.js';
 import { lineChart, curveChart, wire } from './src/charts.js';
 import { structureSvg } from './src/diagram.js';
 
-const VERSION = '1.0.2';
+const VERSION = '1.0.3';
 const KEY = 'ripple-game';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

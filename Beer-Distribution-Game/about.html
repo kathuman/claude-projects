@@ -22,8 +22,8 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><a class="mark" href="./">RIPPLE</a><span class="ver">v1.0.2</span><span class="sub">About and method</span></div>
-    <div class="header-actions"><a class="back-link" href="./">Play</a><a class="back-link" href="../">← Projects</a></div>
+    <div class="brand"><a class="mark" href="./">RIPPLE</a><span class="ver">v1.0.3</span><span class="sub">About and method</span></div>
+    <div class="header-actions"><a class="back-link" href="./">Play</a><a class="back-link" href="ai.html">AI players</a><a class="back-link" href="../">← Projects</a></div>
   </header>
   <main class="wrap about">
     <section class="panel">
@@ -78,9 +78,20 @@ order             O = max(0, L̂ + α · (S′ − S − β · SL))</pre>
       <p>Each player has the round's time limit to answer, shown as a countdown. An empty answer, and an answer still missing when time runs out, become the default order; the debrief counts these for every stage, and the CSV marks each one ("empty" or "timeout"). Ripple records the time from when a player's screen appears to when they place the order, and the time from the start of the game to the end. The debrief shows both beside the cost, not combined into one score: the question is whether thinking longer helped, not who finished first.</p>
     </section>
 
+    <section class="panel" id="ai">
+      <h2>AI players</h2>
+      <p>The <a href="ai.html">AI players</a> page plays the chain with no people: every stage is run by its own AI (Claude Opus 5.5), one call per stage per week. The AIs cannot talk to each other. Each one's only memory is its own history, given back to it every week, and the short reason it wrote with last week's order. The game is played twice and the two games are compared:</p>
+      <ul>
+        <li><b>Own stage only.</b> Each AI sees its own stock, what it owes, the orders and goods it receives and its own past orders. Only the store sees what customers order.</li>
+        <li><b>Whole chain.</b> Each AI sees every stage's stock and debts, the orders and goods on their way, every stage's past orders, and the customer orders so far. Nobody sees future demand.</li>
+      </ul>
+      <p>Every AI is told that the game never ends and that there is no last week, so none of them runs its stock down for an ending; they are not told how many weeks will be played. The page starts from 33 weeks, 12 units in each warehouse, 4 units in every week of ordering, shipping and production, and customers ordering 4 units a week, then 8 a week from week 6. All of these can be changed. Each AI answers with a whole number and a short reason, in a fixed format; a refused or failed decision passes on the order the stage received and is counted in the results. The comparison shows the team cost and each stage's cost, how much each stage swung its orders against customer demand, and, as yardsticks, typical players and the best simple rule on the same chain, with every order and reason in a table and a CSV.</p>
+      <p>The page calls Claude from the browser with the visitor's own Anthropic API key, sent only to api.anthropic.com and remembered on the device only if asked. A full experiment of two games makes 264 calls and costs a few dollars to a few tens of dollars depending on the effort chosen; the page shows an estimate first and the running cost as it plays. Requests opt into Anthropic's server-side fallbacks, so a request the model declines can be answered by a fallback model, billed at that model's rates. The experiment is saved after every week and can be resumed.</p>
+    </section>
+
     <section class="panel">
       <h2>Privacy</h2>
-      <p>Everything stays in the browser on the team's device. Nothing is sent anywhere. The CSV download is the only copy that leaves it, and only when someone clicks it.</p>
+      <p>Everything stays in the browser on the team's device. The game sends nothing anywhere; only the AI players page sends each AI's view of the chain to Claude, with the key its user provides. The CSV download is the only copy that leaves it, and only when someone clicks it.</p>
     </section>
 
     <section class="panel">
@@ -92,13 +103,14 @@ order             O = max(0, L̂ + α · (S′ − S − β · SL))</pre>
         <li>Croson, R. and Donohue, K. (2006). Behavioral causes of the bullwhip effect and the observed value of inventory information. <i>Management Science</i>, 52(3), 323–336.</li>
       </ul>
       <h3>Versions</h3>
-      <ul><li>1.0.2 (2026-10-24): the diagram carries the live numbers (stock, owed, every order and shipment on its way); stock and order charts beside the game at all times; the deciding stage's numbers on the left, last week against this week, with what is on its way to it; a choice of what players see, the whole chain (default) or only their own stage.</li>
+      <ul><li>1.0.3 (2026-10-25): AI players: every stage run by its own AI, in two games (each AI seeing only its own stage, or the whole chain), compared with each other and with typical players and the best simple rule; each AI told the game never ends; settings for the starting pipeline and for a demand step of your own.</li>
+        <li>1.0.2 (2026-10-24): the diagram carries the live numbers (stock, owed, every order and shipment on its way); stock and order charts beside the game at all times; the deciding stage's numbers on the left, last week against this week, with what is on its way to it; a choice of what players see, the whole chain (default) or only their own stage.</li>
         <li>1.0.1 (2026-10-24): the full structure of the chain on every screen; a time to answer each round (15 seconds unless set otherwise), with a countdown and the order placed when time runs out; an empty answer orders 4 units (adjustable); the debrief counts the orders placed by default.</li>
         <li>1.0.0 (2026-10-24): the game for one team on one device, turn by turn or at an open table, with simulated players for any stage; four demand patterns and adjustable chain, delays and costs; a debrief with the bullwhip chart, stock and backlog, benchmarks against typical players and the best simple rule, each stage's decision rule read from its orders, the supply-line curve, and time used; saved after every decision; CSV export.</li></ul>
       <h3>Cite</h3>
-      <p>Sepulveda Estay, D. A. (2026). <i>Ripple: a supply chain distribution game</i> (version 1.0.2). https://kathuman.github.io/claude-projects/Beer-Distribution-Game/</p>
+      <p>Sepulveda Estay, D. A. (2026). <i>Ripple: a supply chain distribution game</i> (version 1.0.3). https://kathuman.github.io/claude-projects/Beer-Distribution-Game/</p>
     </section>
   </main>
-  <footer class="wrap foot">Ripple v1.0.2 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="wrap foot">Ripple v1.0.3 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
 </body>
 </html>

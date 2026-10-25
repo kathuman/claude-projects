@@ -33,6 +33,11 @@ export const SCENARIOS = {
     base: 7,
     at: (t) => (t < 8 ? 7 : t < 10 ? 14 : t < 13 ? 4 : 7),
   },
+  custom: {
+    label: 'Your own step',
+    blurb: 'Steady demand that changes once, to the level and in the week you set.',
+    custom: true,
+  },
   random: {
     label: 'Unpredictable',
     blurb: 'Demand wanders around its average from week to week, with no pattern to learn.',
@@ -41,10 +46,16 @@ export const SCENARIOS = {
   },
 };
 
-// The demand for a game: { values: [week 1 … week n], base, label }.
-export function demandSeries(type, weeks, seed = 1) {
+// The demand for a game: { values: [week 1 … week n], base, label }. A custom step takes { demandFrom, demandTo,
+// stepWeek } from `opts`.
+export function demandSeries(type, weeks, seed = 1, opts = {}) {
   const s = SCENARIOS[type] ?? SCENARIOS.step;
   let values;
+  if (s.custom) {
+    const from = opts.demandFrom ?? 4, to = opts.demandTo ?? 8, at = opts.stepWeek ?? 6;
+    values = Array.from({ length: weeks }, (_, k) => (k + 1 < at ? from : to));
+    return { type, label: s.label, blurb: `${from} a week, then ${to} a week from week ${at} on.`, base: from, values };
+  }
   if (s.random) {
     const r = rng(seed * 7919 + 17);
     // a slow wander (mean-reverting) plus week-to-week noise, never below 1
