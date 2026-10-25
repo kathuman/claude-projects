@@ -25,13 +25,17 @@ const READ = () => {
 (async () => {
   const b = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : {});
   const errors = [];
-  const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] });
+  const p = await ctx.newPage();
   p.on('pageerror', (e) => errors.push(String(e)));
   p.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await p.goto(BASE);
   await p.evaluate(() => localStorage.clear());
   await p.reload();
   const model = `${BASE}src/model.js`;
+  await p.click('#spinToggle'); // keep the view still, so drags land where expected
+  const after = (alg, from) => p.evaluate(async ([m, a, f]) => { const M = await import(m); return M.applyAlg(f || M.SOLVED, a); }, [model, alg, from]);
+  const settled = () => p.waitForFunction(() => !document.getElementById('btnReset').disabled && !document.querySelector('.cubie.move'));
 
   // ---- look and facts
   check(/^v\d+\.\d+\.\d+$/.test(await p.textContent('#ver')), 'version badge');
@@ -53,7 +57,7 @@ const READ = () => {
   check(!(await p.isDisabled('#btnScramble')), 'scramble is available once the solver is ready');
   check(await p.isDisabled('#btnSolve'), 'solve is off for a solved cube');
   await p.click('#btnScramble');
-  await p.waitForFunction(() => document.getElementById('rState').textContent === 'scrambled', null, { timeout: 15000 });
+  await p.waitForFunction(() => document.getElementById('rState').textContent === 'not solved', null, { timeout: 15000 });
   const scramble = await p.textContent('#rScramble');
   check(scramble.split(' ').length >= 15, `a scramble of a random position (${scramble.split(' ').length} moves)`);
   const view = await p.evaluate(READ);
@@ -95,9 +99,84 @@ const READ = () => {
   await p.click('#labelsToggle');
   check((await p.textContent('#net .slot-F .cell')) === 'F', 'labels show the face letters');
   await p.click('#view3d');
-  await p.keyboard.press('s');
-  await p.waitForFunction(() => document.getElementById('rState').textContent === 'scrambled', null, { timeout: 15000 });
-  check(true, 'the S key scrambles');
+  await p.click('#labelsToggle');
+
+  // ---- 1.1: turning by hand
+  await p.click('#btnReset');
+  await p.click('[data-move="R"]');
+  await settled();
+  check((await p.evaluate(READ)).net === await after('R'), 'the R button turns R');
+  await p.keyboard.press('u');
+  await settled();
+  await p.keyboard.press('Shift+U');
+  await settled();
+  check((await p.evaluate(READ)).net === await after('R'), "keys: u then Shift+U (U then U') cancel");
+  check((await p.$$('.move-token')).length === 3, 'every move made by hand is in the move list');
+  await p.keyboard.press('Control+z');
+  await settled();
+  check((await p.evaluate(READ)).net === await after('R U'), 'Ctrl+Z undoes the last move');
+  await p.click('#btnRedo');
+  await settled();
+  check((await p.evaluate(READ)).net === await after('R'), 'Redo makes it again');
+  await p.click('#btnUndo'); await settled();
+  await p.click('[data-move="F2"]'); await settled();
+  check((await p.$$('.move-token')).length === 3 && (await p.evaluate(READ)).net === await after('R U F2'), 'a new move after an undo replaces what came after');
+
+  // ---- typed moves, set-up
+  await p.fill('#algInput', 'R Q');
+  await p.click('#algForm button[type=submit]');
+  check(/Not a move/.test(await p.textContent('#algMsg')), 'a mistyped move is explained');
+  await p.click('#btnReset');
+  await p.fill('#algInput', "R U R' U'");
+  await p.click('#algForm button[type=submit]');
+  await settled();
+  check((await p.evaluate(READ)).net === await after("R U R' U'"), 'typed moves play');
+  await p.fill('#algInput', 'F2 B2 x');
+  await p.click('#algSetup');
+  check((await p.evaluate(READ)).net === await after('F2 B2 x') && (await p.$$('.move-token')).length === 0, 'Set up starts from those moves already made');
+
+  // ---- a link round trip
+  await p.fill('#algInput', "R U' M2");
+  await p.click('#algForm button[type=submit]');
+  await settled();
+  await p.click('#btnLink');
+  const url = await p.evaluate(() => navigator.clipboard.readText());
+  check(/setup=F2\+B2\+x/.test(url) && /alg=R\+U%27\+M2/.test(url), `the link carries the set-up and the moves (${url})`);
+  await p.goto(url);
+  check((await p.evaluate(READ)).net === await after('F2 B2 x') && (await p.$$('.move-token')).length === 3, 'the link opens that cube with that move list');
+  await p.click('#tpEnd');
+  check((await p.evaluate(READ)).net === await after("F2 B2 x R U' M2"), 'and its moves play to the same cube');
+  await p.goto(BASE);
+  await p.click('#spinToggle');
+
+  // ---- dragging stickers
+  const sticker = (pos, dir) => p.evaluate(([pos, dir]) => {
+    const el = [...document.querySelectorAll('.cubie')].find((c) => c.style.getPropertyValue('--tx') === `${pos[0] * 64}px` && c.style.getPropertyValue('--ty') === `${pos[1] * 64}px` && c.style.getPropertyValue('--tz') === `${pos[2] * 64}px`).querySelector(`.face.${dir}`);
+    const r = el.getBoundingClientRect();
+    return [r.left + r.width / 2, r.top + r.height / 2];
+  }, [pos, dir]);
+  const drag = async (pos, dir, dx, dy) => {
+    const [x, y] = await sticker(pos, dir);
+    await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.move(x + dx / 2, y + dy / 2); await p.mouse.move(x + dx, y + dy); await p.mouse.up();
+    await settled();
+  };
+  await drag([1, -1, 1], 'pz', -80, 0); // front face, top-right sticker (CSS y is down), dragged left
+  check((await p.evaluate(READ)).net === await after('U'), 'dragging the front top row to the left turns U');
+  await drag([1, 0, 1], 'pz', 0, -80); // front face, right column, dragged up
+  check((await p.evaluate(READ)).net === await after('U R'), 'dragging the right column up turns R');
+  await drag([0, 0, 1], 'pz', 0, 80); // front face, middle column, dragged down
+  check((await p.evaluate(READ)).net === await after('U R M'), 'dragging the middle column down turns M');
+
+  // ---- solving a cube that was turned as a whole
+  await p.click('#btnReset');
+  await p.fill('#speed', '100');
+  await p.fill('#algInput', "x y R U F'");
+  await p.click('#algForm button[type=submit]');
+  await settled();
+  await p.click('#btnSolve');
+  await p.waitForFunction(() => document.getElementById('tlPhase').textContent === 'solved', null, { timeout: 60000 });
+  check(/^[xyz]/.test(await p.textContent('#rSolution')), 'the solution first turns the cube back to the standard hold');
+  await shot(p, 'hands-on');
 
   // ---- about page and phone
   await p.goto(`${BASE}about.html`);

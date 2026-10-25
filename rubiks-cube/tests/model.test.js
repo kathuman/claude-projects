@@ -75,3 +75,41 @@ test('notation: reading, inverting, tidying and counting', () => {
   assert.deepEqual(metrics("R U2 M x F'"), { htm: 5, qtm: 6, stm: 4 });
   assert.deepEqual(turnOf("U'"), { axis: 'y', layers: [1], degrees: 90 });
 });
+
+test('every way of holding the cube is found and undone', async () => {
+  const { ROTATIONS, orientation } = await import('../src/model.js');
+  assert.equal(new Set(ROTATIONS.map((r) => applyAlg(SOLVED, r))).size, 24);
+  for (const r of ROTATIONS) {
+    const held = applyAlg(applyAlg(SOLVED, randomAlg(15)), r);
+    const back = applyAlg(held, orientation(held));
+    assert.equal(back[4], 'U'); assert.equal(back[22], 'F');
+  }
+});
+
+test('dragging a sticker turns the layer it is dragged along', async () => {
+  const { dragMove } = await import('../src/model.js');
+  // front face, top row, dragged right: the top layer turns anticlockwise seen from above
+  assert.equal(dragMove([0, 1, 1], [0, 0, 1], [1, 0, 0]), "U'");
+  assert.equal(dragMove([1, 1, 1], [0, 0, 1], [-1, 0, 0]), 'U');
+  // front face, right column, dragged up: R
+  assert.equal(dragMove([1, 0, 1], [0, 0, 1], [0, 1, 0]), 'R');
+  // front face, middle column, dragged down: M (follows L)
+  assert.equal(dragMove([0, 0, 1], [0, 0, 1], [0, -1, 0]), 'M');
+  // top face, front row, dragged right: F
+  assert.equal(dragMove([0, 1, 1], [0, 1, 0], [1, 0, 0]), 'F');
+  // every drag of every sticker: a quarter turn about n × d carries the sticker's face direction n onto d, so after
+  // the move the grabbed sticker faces the way it was dragged
+  const { STICKERS, stickerAt } = await import('../src/model.js');
+  let n = 0;
+  for (const s of STICKERS) {
+    for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+      if (d.some((v, i) => v !== 0 && s.n[i] !== 0)) continue;
+      const mv = dragMove(s.p, s.n, d);
+      const marked = STICKERS.map((_, i) => (i === stickerAt(s.p, s.n) ? '*' : '.')).join('');
+      const q = STICKERS[applyMove(marked, mv).indexOf('*')];
+      assert.deepEqual(q.n, d, `${mv} from ${s.p}/${s.n} along ${d}`);
+      n++;
+    }
+  }
+  assert.equal(n, 54 * 4);
+});

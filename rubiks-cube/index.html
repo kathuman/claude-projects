@@ -51,6 +51,22 @@
           </div>
           <div class="net" id="net" role="img" aria-label="The cube unfolded: up, left, front, right, back and down faces"></div>
         </div>
+        <div class="panel turnpanel">
+          <div class="panel-label"><span>Turn the cube</span><span class="hint">drag a sticker, press a key, or tap</span></div>
+          <div class="turn-grid" id="turnGrid" role="group" aria-label="Moves"></div>
+          <form class="algrow" id="algForm" novalidate>
+            <label class="sr" for="algInput">Moves to play</label>
+            <input id="algInput" type="text" spellcheck="false" autocomplete="off" placeholder="Type moves, e.g. R U R' U'" />
+            <button class="btn primary" type="submit">Play</button>
+            <button class="btn" id="algSetup" type="button" title="Start from a solved cube with these moves already made">Set up</button>
+          </form>
+          <p class="algmsg" id="algMsg" role="alert" hidden></p>
+          <div class="btn-row editrow">
+            <button class="btn" id="btnUndo" type="button" disabled>↶ Undo</button>
+            <button class="btn" id="btnRedo" type="button" disabled>Redo ↷</button>
+            <button class="btn" id="btnLink" type="button">Copy link</button>
+          </div>
+        </div>
       </section>
 
       <aside class="rail">
@@ -106,7 +122,7 @@
   </main>
 
   <footer class="wrap foot">
-    Cube Studio <span id="verFoot"></span> · keys: Space play/pause · ← → step · S scramble · <a href="about.html">About and method</a> ·
+    Cube Studio <span id="verFoot"></span> · keys: U R F D L B M E S X Y Z turn (with Shift: the other way) · Space play/pause · ← → step · Ctrl+Z undo · <a href="about.html">About and method</a> ·
     solver: <a href="https://github.com/ldez/cubejs" target="_blank" rel="noopener">cubejs</a> (MIT) · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> ·
     <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>
   </footer>

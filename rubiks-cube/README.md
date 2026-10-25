@@ -3,7 +3,7 @@
 A 3×3 cube in the browser: scramble it from a truly random position, then watch a short solution play out move by
 move, found by Kociemba's two-phase algorithm and checked by an independent model of the cube.
 
-**Live:** https://kathuman.github.io/claude-projects/rubiks-cube/ · version 1.0.0 · method in [about.html](about.html)
+**Live:** https://kathuman.github.io/claude-projects/rubiks-cube/ · version 1.1.0 · method in [about.html](about.html)
 
 ## What it does
 
@@ -15,7 +15,15 @@ move, found by Kociemba's two-phase algorithm and checked by an independent mode
   milliseconds. The length is given in face turns and in quarter turns.
 - **The move sequence** plays like a video: play and pause, step, jump to either end, drag the scrubber, or click
   any move. The speed can be set; reduced-motion settings are respected.
-- **Keys:** Space plays or pauses, ← and → step, S scrambles.
+- **Turn it yourself:**
+  - drag a sticker to turn its layer the way you drag it, or drag the background to look around;
+  - keys: U R F D L B, M E S and X Y Z, with Shift for the other way;
+  - buttons for every face, slice and rotation.
+- **Type moves** to play them or to set up a cube (spaces and brackets optional; wide turns as `Rw` or `r`).
+- **Undo and redo** (also Ctrl+Z, Ctrl+Y). The move list is the history.
+- **Copy link** opens the same cube with the same move list (`?setup=…&alg=…`).
+- Cubes turned as a whole are solved too: the solution starts by turning them back to the standard hold.
+- **Other keys:** Space plays or pauses, ← and → step.
 - The AI Projects blueprint look, dark by default, with a light theme.
 
 ## How it works
@@ -54,12 +62,16 @@ rotations equal the face turns they stand for. The model agrees with the solver 
 The solver, checked by the model: 1,000 random positions are solved in at most 22 moves, every random-position
 scramble makes exactly its position, and the superflip is solved.
 
-The browser check (27 checks) covers:
+The browser check (42 checks) covers:
 - the theme and the facts;
 - a scramble whose net and 3D stickers match the model exactly;
 - stepping and keys;
 - a solution played to a solved cube;
 - the views and the labels;
+- turning by buttons, keys and sticker drags;
+- undo, redo, and a new move after an undo;
+- typed moves and a mistyped one;
+- set-up, a link round trip, and solving a cube turned as a whole;
 - phone width.
 
 ```bash
@@ -69,7 +81,7 @@ PW=<path to playwright or playwright-core> CHROME=<chrome.exe> node rubiks-cube/
 
 ## Roadmap
 
-1.1 turn the cube yourself and type any sequence, with shareable links · 1.2 your own cube, painted on the net or
+1.2 your own cube, painted on the net or
 scanned with the camera · 1.3 the shortest possible solutions · 1.4 a LEGO MINDSTORMS Robot Inventor solving robot:
 a turntable and two tilting arms, colour-sensor scanning, an animated plan and a Pybricks program · 2.0 learn to
 solve it: the beginner's method and CFOP.

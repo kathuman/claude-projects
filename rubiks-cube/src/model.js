@@ -97,3 +97,25 @@ export function normalise(state) {
   for (let f = 0; f < 6; f++) map[state[f * 9 + 4]] = FACES[f];
   return state.split('').map((ch) => map[ch]).join('');
 }
+
+// The 24 ways to hold the cube, as rotations from the standard hold.
+export const ROTATIONS = ['', 'x', "x'", 'x2', 'z', "z'"].flatMap((a) => ['', 'y', "y'", 'y2'].map((b) => [a, b].filter(Boolean).join(' ')));
+
+// The rotation that brings a cube held any way back to the standard hold (white centre up, green centre in front),
+// so the solver, which expects that hold, can solve it.
+export function orientation(state) {
+  return ROTATIONS.find((r) => { const s = applyAlg(state, r); return s[4] === 'U' && s[22] === 'F'; });
+}
+
+// The move a drag makes: a sticker at cubie position p with outward direction n, dragged along d (one of the two
+// axes lying in the sticker's face, with a sign), turns the layer through p about n × d. Returns a move token.
+export function dragMove(p, n, d) {
+  const r = [n[1] * d[2] - n[2] * d[1], n[2] * d[0] - n[0] * d[2], n[0] * d[1] - n[1] * d[0]];
+  const k = r.findIndex((v) => v !== 0);
+  if (k < 0) return null;
+  const axis = 'xyz'[k];
+  const want = Math.sign(r[k]); // +1: a quarter turn by +90° about +axis
+  const layer = p[k];
+  const base = Object.keys(MOVES).find((b) => MOVES[b][0] === axis && MOVES[b][1].length === 1 && MOVES[b][1][0] === layer);
+  return want === MOVES[base][2] ? base : `${base}'`;
+}

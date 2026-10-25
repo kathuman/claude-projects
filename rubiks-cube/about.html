@@ -14,7 +14,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.0.0</span><span class="sub">About and method</span></div>
+    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.1.0</span><span class="sub">About and method</span></div>
     <div class="header-actions"><a class="back-link" href="./">The cube</a><a class="back-link" href="../">← Projects</a></div>
   </header>
   <main class="wrap about">
@@ -27,6 +27,19 @@
       <h2>Reading the moves</h2>
       <p>Each letter names a face as you hold the cube: <b>U</b>p, <b>D</b>own, <b>R</b>ight, <b>L</b>eft, <b>F</b>ront, <b>B</b>ack. A letter alone turns that face a quarter turn clockwise, as you look at that face; with ′ (written <code>'</code>) it turns anticlockwise, and with 2 a half turn. So <code>R U R' U'</code> is right face clockwise, top clockwise, right face back, top back.</p>
       <p>The colours follow the usual scheme: white opposite yellow, green opposite blue, red opposite orange. The app holds the cube with white up and green in front.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Turning it yourself</h2>
+      <ul>
+        <li><b>Drag a sticker</b> to turn its layer the way you drag it (a middle row or column turns a slice). Drag the background to look around.</li>
+        <li><b>Keys:</b> U R F D L B turn a face, M E S a slice, X Y Z the whole cube; with Shift they turn the other way. Ctrl+Z undoes, Ctrl+Y (or Ctrl+Shift+Z) redoes.</li>
+        <li><b>Buttons</b> for every face, slice and rotation: clockwise, anticlockwise and twice.</li>
+        <li><b>Type moves</b> and press Play to play them, or Set up to start from a solved cube with them already made. Spaces and brackets are optional: <code>(R U R' U')</code> and <code>RUR'U'</code> both work. Wide turns are written <code>Rw</code> or <code>r</code>.</li>
+        <li><b>Undo and redo:</b> the move list is the history. A move made after stepping back replaces what came after.</li>
+        <li><b>Copy link</b> gives an address that opens this cube with this move list (<code>?setup=…&amp;alg=…</code>).</li>
+      </ul>
+      <p>A cube turned as a whole (x, y, z) can still be solved: the solution starts by turning it back to the standard hold (white up, green in front).</p>
     </section>
 
     <section class="panel">
@@ -58,11 +71,12 @@
 
     <section class="panel">
       <h2>What's next</h2>
-      <p>Turning the cube yourself and typing any sequence; entering your own cube by painting the net or with the camera; the shortest possible solutions; a LEGO solving robot, animated, with a program you can run; and a guided way to learn to solve it yourself.</p>
+      <p>Entering your own cube by painting the net or with the camera; the shortest possible solutions; a LEGO solving robot, animated, with a program you can run; and a guided way to learn to solve it yourself.</p>
       <h3>Versions</h3>
-      <ul><li>1.0.0 (2026-10-25): the AI Projects look with a dark theme; scrambles from a truly random position; God's number stated correctly (20 face turns, 26 quarter turns); move counts in both metrics; the cube model, notation and tests in their own modules.</li></ul>
+      <ul><li>1.1.0 (2026-10-25): turn the cube yourself, by dragging stickers, with keys or with buttons; type any sequence to play or to set up; undo and redo; links that open a cube and its moves; cubes turned as a whole are solved too.</li>
+        <li>1.0.0 (2026-10-25): the AI Projects look with a dark theme; scrambles from a truly random position; God's number stated correctly (20 face turns, 26 quarter turns); move counts in both metrics; the cube model, notation and tests in their own modules.</li></ul>
     </section>
   </main>
-  <footer class="wrap foot">Cube Studio v1.0.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="wrap foot">Cube Studio v1.1.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
 </body>
 </html>
