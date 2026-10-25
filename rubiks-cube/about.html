@@ -14,7 +14,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.1.0</span><span class="sub">About and method</span></div>
+    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.2.0</span><span class="sub">About and method</span></div>
     <div class="header-actions"><a class="back-link" href="./">The cube</a><a class="back-link" href="../">← Projects</a></div>
   </header>
   <main class="wrap about">
@@ -40,6 +40,24 @@
         <li><b>Copy link</b> gives an address that opens this cube with this move list (<code>?setup=…&amp;alg=…</code>).</li>
       </ul>
       <p>A cube turned as a whole (x, y, z) can still be solved: the solution starts by turning it back to the standard hold (white up, green in front).</p>
+    </section>
+
+    <section class="panel">
+      <h2>Your own cube</h2>
+      <p>Press <b>Enter your own cube</b>, then either paint it or scan it.</p>
+      <ul>
+        <li><b>Paint:</b> hold your cube with the white centre up and the green centre facing you, pick a colour, and click the stickers on the net. Each face is drawn as you look straight at it, and the cube on the stage follows as you paint.</li>
+        <li><b>Scan:</b> the camera reads the faces one at a time, with the app saying how to hold the cube each time.</li>
+      </ul>
+      <p>The scan copes with uneven light. The page compares colours the way people see them (CIELAB), learns how each face was lit, and takes exactly nine stickers of each colour. The picture never leaves your device: nine colours are read from it and the frame is dropped.</p>
+      <p>Before your cube is used, it is checked. A cube taken apart and put back together at random can be solved only one time in twelve, so a real cube passes four tests:</p>
+      <ul>
+        <li>nine stickers of each colour;</li>
+        <li>every piece one that exists, and only once;</li>
+        <li>the corners' twists add up, and so do the edges' flips;</li>
+        <li>the pieces' swaps pair up between corners and edges.</li>
+      </ul>
+      <p>Each failure is explained, with the stickers involved marked. A twisted corner or a flipped edge can't be fixed by turning: take it out and put it back the right way. After a scan, a misreading always fails these checks, so it is never silently solved as the wrong cube. When a reading is impossible, the least certain stickers are marked to look at first.</p>
     </section>
 
     <section class="panel">
@@ -71,12 +89,13 @@
 
     <section class="panel">
       <h2>What's next</h2>
-      <p>Entering your own cube by painting the net or with the camera; the shortest possible solutions; a LEGO solving robot, animated, with a program you can run; and a guided way to learn to solve it yourself.</p>
+      <p>The shortest possible solutions; a LEGO solving robot, animated, with a program you can run; and a guided way to learn to solve it yourself.</p>
       <h3>Versions</h3>
-      <ul><li>1.1.0 (2026-10-25): turn the cube yourself, by dragging stickers, with keys or with buttons; type any sequence to play or to set up; undo and redo; links that open a cube and its moves; cubes turned as a whole are solved too.</li>
+      <ul><li>1.2.0 (2026-10-25): enter your own cube by painting it or scanning it with the camera, checked for the four conditions a real cube meets, with every problem explained; links can carry a cube entered by hand.</li>
+        <li>1.1.0 (2026-10-25): turn the cube yourself, by dragging stickers, with keys or with buttons; type any sequence to play or to set up; undo and redo; links that open a cube and its moves; cubes turned as a whole are solved too.</li>
         <li>1.0.0 (2026-10-25): the AI Projects look with a dark theme; scrambles from a truly random position; God's number stated correctly (20 face turns, 26 quarter turns); move counts in both metrics; the cube model, notation and tests in their own modules.</li></ul>
     </section>
   </main>
-  <footer class="wrap foot">Cube Studio v1.1.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="wrap foot">Cube Studio v1.2.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
 </body>
 </html>

@@ -178,6 +178,88 @@ const READ = () => {
   check(/^[xyz]/.test(await p.textContent('#rSolution')), 'the solution first turns the cube back to the standard hold');
   await shot(p, 'hands-on');
 
+  // ---- 1.2: your own cube, painted
+  await p.click('#btnReset');
+  await p.click('#btnEdit');
+  check(!(await p.isHidden('#editPanel')) && await p.isHidden('.turnpanel'), 'the editor opens in place of the turn panel');
+  check(await p.isDisabled('#btnSolve') && await p.isDisabled('#btnScramble'), 'solving and scrambling wait while editing');
+  await p.click('#editBlank');
+  check(/48 stickers left/.test(await p.textContent('#editCount')), 'clearing leaves the 48 non-centre stickers to paint');
+  await p.click('#editUse');
+  check(/48 stickers are not filled in/.test(await p.textContent('#editProblems')), 'an unfinished cube is explained');
+  const paint = async (target) => {
+    const order = [...Array(54).keys()].filter((i) => i % 9 !== 4).sort((a, b) => target[a].localeCompare(target[b]));
+    let cur = null;
+    for (const i of order) {
+      if (target[i] !== cur) { cur = target[i]; await p.click(`#palette [data-colour="${cur}"]`); }
+      await p.click(`#paintNet .cell[data-i="${i}"]`);
+    }
+  };
+  const target = await after("R U F' L2 D B'");
+  await paint(target);
+  check(/every sticker painted/.test(await p.textContent('#editCount')), 'all painted');
+  check((await p.evaluate(READ)).net === target, 'the cube on the stage follows the painting');
+  // a twisted corner: rotate the three stickers of one corner
+  const twisted = await p.evaluate(async ([v, t]) => { const V = await import(v); const [a, b, c] = V.CORNERS[0]; const s = t.split(''); [s[a], s[b], s[c]] = [t[c], t[a], t[b]]; return s.join(''); }, [`${BASE}src/validate.js`, target]);
+  await paint(twisted);
+  await p.click('#editUse');
+  check(/twisted/.test(await p.textContent('#editProblems')), 'a twisted corner is caught and explained');
+  await paint(target);
+  await p.click('#editUse');
+  check(await p.isHidden('#editPanel') && (await p.evaluate(READ)).net === target, 'a good cube is taken as the cube to solve');
+  await p.click('#btnLink');
+  const url2 = await p.evaluate(() => navigator.clipboard.readText());
+  check(url2.includes(`state=${target}`), 'a link to a cube entered by hand carries its stickers');
+  await p.click('#btnSolve');
+  await p.waitForFunction(() => document.getElementById('tlPhase').textContent === 'solved', null, { timeout: 60000 });
+  check((await p.evaluate(READ)).net === 'UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB', 'the painted cube is solved');
+  await p.goto(url2);
+  check((await p.evaluate(READ)).net === target, 'the link opens the cube entered by hand');
+  await p.goto(`${BASE}?state=${target.replace('U', 'R')}`);
+  check(/could not be read/.test(await p.textContent('#algMsg')), 'a link to an impossible cube is refused with a reason');
+
+  // ---- 1.2: your own cube, scanned (a stand-in camera that shows each face as asked)
+  const cam = await ctx.newPage();
+  cam.on('pageerror', (e) => errors.push(String(e)));
+  const scanned = await after("F2 L' U R2 B D'");
+  await cam.addInitScript((state) => {
+    const PAINT = { U: [222, 224, 216], D: [236, 206, 30], F: [24, 160, 76], B: [26, 92, 196], L: [238, 120, 22], R: [196, 30, 46] };
+    window.__face = 0;
+    navigator.mediaDevices.getUserMedia = async () => {
+      const c = document.createElement('canvas'); c.width = 640; c.height = 480;
+      const g = c.getContext('2d');
+      const draw = () => {
+        g.fillStyle = '#333'; g.fillRect(0, 0, 640, 480);
+        const size = 480 * 0.62, x0 = (640 - size) / 2, y0 = (480 - size) / 2, cell = size / 3;
+        const shade = [1, 0.85, 1.1, 0.9, 1.05, 0.8][window.__face];
+        for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) {
+          const rgb = PAINT[state[window.__face * 9 + r * 3 + col]].map((v) => Math.min(255, Math.round(v * shade)));
+          g.fillStyle = `rgb(${rgb})`; g.fillRect(x0 + col * cell + 4, y0 + r * cell + 4, cell - 8, cell - 8);
+        }
+        requestAnimationFrame(draw);
+      };
+      draw();
+      return c.captureStream(30);
+    };
+  }, scanned);
+  await cam.goto(BASE);
+  await cam.click('#btnEdit');
+  await cam.click('#camOpen');
+  await cam.waitForFunction(() => document.getElementById('camVideo').videoWidth > 0);
+  check(/white<\/b> centre facing the camera and the <b>blue/.test(await cam.innerHTML('#camHint')), 'the scan says how to hold the cube');
+  for (let f = 0; f < 6; f++) {
+    await cam.evaluate((k) => { window.__face = k; }, f);
+    await cam.waitForTimeout(150);
+    await cam.click('#camShoot');
+  }
+  check(await cam.isHidden('#camera'), 'after six faces the camera closes');
+  check((await cam.evaluate(READ)).net === scanned, 'the scanned cube is read exactly');
+  check(/^Read\./.test(await cam.textContent('#editProblems')), 'and the reading is offered for checking');
+  await cam.click('#editUse');
+  check(await cam.isHidden('#editPanel'), 'the scanned cube is taken');
+  await shot(cam, 'scanned');
+  await cam.close();
+
   // ---- about page and phone
   await p.goto(`${BASE}about.html`);
   check(/Rokicki/.test(await p.textContent('body')), 'the about page cites the God\'s number proofs');

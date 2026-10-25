@@ -4,11 +4,13 @@
 
 import { SOLVED, applyMove, applyAlg, isSolved, stickerAt, turnOf, orientation, dragMove } from './src/model.js';
 import { parseAlg, invert, tidy, metrics } from './src/notation.js';
+import { validate } from './src/validate.js';
+import { createEditor } from './src/editor.js';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const $ = (id) => document.getElementById(id);
 
-const COLOR = { U: '--cube-W', D: '--cube-Y', F: '--cube-G', B: '--cube-B', L: '--cube-O', R: '--cube-R' };
+const COLOR = { U: '--cube-W', D: '--cube-Y', F: '--cube-G', B: '--cube-B', L: '--cube-O', R: '--cube-R', '?': '--unknown' };
 const STEP = 64; // px between cubie centres (60 face + 4 gap)
 const BASE = { U: 0, R: 9, F: 18, D: 27, L: 36, B: 45 };
 
@@ -68,12 +70,13 @@ for (const f of ['U', 'L', 'F', 'R', 'B', 'D']) {
 const state = {
   cube: SOLVED,
   base: SOLVED,      // the cube before the loaded sequence
-  baseAlg: [],       // the moves that make `base` from a solved cube (for links)
+  baseAlg: [],       // the moves that make `base` from a solved cube (for links); null for a cube entered by hand
   seq: [],           // [{ move, kind: 'scramble' | 'solution' | 'manual' | 'alg' }]
   pos: 0,            // moves applied from base
   playing: false,
 };
 const queue = [];    // moves made while another was still turning
+let editing = false; // while someone paints or scans their own cube
 let animating = false;
 let showLabels = false;
 
@@ -162,9 +165,9 @@ function renderMoveTokens() {
 
 function updateTransport() {
   const n = state.seq.length;
-  for (const el of Object.values(tp)) el.disabled = !n || animating;
-  scrub.disabled = !n;
-  if (n) {
+  for (const el of Object.values(tp)) el.disabled = !n || animating || editing;
+  scrub.disabled = !n || editing;
+  if (n && !editing) {
     tp.start.disabled = tp.back.disabled = animating || state.pos === 0;
     tp.fwd.disabled = tp.end.disabled = animating || state.pos === n;
     tp.play.disabled = state.pos === n && !state.playing;
@@ -177,9 +180,10 @@ function updateTransport() {
     el.classList.toggle('done', i < state.pos);
     el.classList.toggle('current', i === state.pos && state.playing);
   });
-  $('btnSolve').disabled = !solverReady || busy || animating || state.playing || isSolved(state.cube);
-  $('btnScramble').disabled = !solverReady || busy || animating || state.playing;
-  $('btnReset').disabled = animating || state.playing;
+  $('btnSolve').disabled = editing || !solverReady || busy || animating || state.playing || isSolved(state.cube);
+  $('btnScramble').disabled = editing || !solverReady || busy || animating || state.playing;
+  $('btnReset').disabled = editing || animating || state.playing;
+  $('btnEdit').disabled = editing || animating || state.playing;
   $('btnUndo').disabled = animating || state.playing || state.pos === 0;
   $('btnRedo').disabled = animating || state.playing || state.pos === n;
 }
@@ -253,7 +257,7 @@ function loadSequence(items, base, baseAlg = []) {
 
 // Moves made by hand or typed: they replace whatever came after the current point and play at once.
 function makeMoves(moves, kind) {
-  if (!moves.length) return;
+  if (!moves.length || editing) return;
   if (animating || state.playing) { state.playing = false; queue.push(...moves); return; }
   setSpin(false);
   state.seq = state.seq.slice(0, state.pos).concat(moves.map((move) => ({ move, kind })));
@@ -297,20 +301,29 @@ function flash(text) {
 // A link that opens this cube and this move list: ?setup=<moves from solved to the start>&alg=<the moves>.
 function link() {
   const u = new URL(location.href.split(/[?#]/)[0]);
-  const setup = tidy(state.baseAlg);
-  if (setup.length) u.searchParams.set('setup', setup.join(' '));
+  if (state.baseAlg) {
+    const setup = tidy(state.baseAlg);
+    if (setup.length) u.searchParams.set('setup', setup.join(' '));
+  } else u.searchParams.set('state', state.base);
   if (state.seq.length) u.searchParams.set('alg', state.seq.map((s) => s.move).join(' '));
   return u.toString();
 }
 
 function openLink() {
   const q = new URLSearchParams(location.search);
-  if (!q.has('setup') && !q.has('alg')) return false;
+  if (!q.has('setup') && !q.has('alg') && !q.has('state')) return false;
   try {
     const setup = parseAlg(q.get('setup') ?? '');
     const alg = parseAlg(q.get('alg') ?? '');
     setUp(setup);
-    if (alg.length) { loadSequence(alg.map((move) => ({ move, kind: 'alg' })), state.base, setup); }
+    if (q.has('state')) {
+      const st = q.get('state');
+      const r = validate(st);
+      if (!r.ok) throw new Error(r.problems[0].text);
+      loadSequence([], st, null);
+      $('rScramble').textContent = 'your own cube';
+    }
+    if (alg.length) { loadSequence(alg.map((move) => ({ move, kind: 'alg' })), state.base, state.baseAlg); }
     flash(`Opened from a link: ${setup.length} set-up moves${alg.length ? `, then ${alg.length} moves to play` : ''}.`);
   } catch (e) {
     $('algMsg').className = 'algmsg';
@@ -356,7 +369,7 @@ let holdBack = [];
 function onSolved(alg, ms) {
   const moves = holdBack.concat(tidy(parseAlg(alg)));
   const m = metrics(moves);
-  const baseAlg = tidy(state.baseAlg.concat(state.seq.slice(0, state.pos).map((s) => s.move)));
+  const baseAlg = state.baseAlg && tidy(state.baseAlg.concat(state.seq.slice(0, state.pos).map((s) => s.move)));
   loadSequence(moves.map((move) => ({ move, kind: 'solution' })), state.cube, baseAlg);
   $('rSolution').textContent = moves.join(' ');
   $('rLen').textContent = `${m.htm} moves (${m.qtm} quarter turns)`;
@@ -524,7 +537,7 @@ $('btnLink').addEventListener('click', async () => {
 // Keys: a face, slice or rotation letter turns it (Shift: the other way); Space, arrows; Ctrl+Z / Ctrl+Y.
 const KEYS = { u: 'U', r: 'R', f: 'F', d: 'D', l: 'L', b: 'B', m: 'M', e: 'E', s: 'S', x: 'x', y: 'y', z: 'z' };
 document.addEventListener('keydown', (e) => {
-  if (e.target.closest('input, select, textarea')) return;
+  if (e.target.closest('input, select, textarea') || editing) return;
   const k = e.key.toLowerCase();
   if ((e.ctrlKey || e.metaKey) && !e.altKey) {
     if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
@@ -544,6 +557,36 @@ $('theme').addEventListener('click', () => {
   const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem('cube-theme', next); } catch { /* ignore */ }
+});
+
+// ---------------------------------------------------------------- your own cube
+let beforeEdit = SOLVED;
+const editor = createEditor({
+  onChange(painted) { state.cube = painted; render(); },
+  onUse(painted) {
+    editing = false;
+    document.querySelector('.turnpanel').hidden = false;
+    loadSequence([], painted, null);
+    $('rScramble').textContent = 'your own cube';
+    for (const id of ['rSolution', 'rLen', 'rTime']) $(id).textContent = '—';
+    announce('Your cube is ready. Press Solve to solve it.');
+  },
+  onClose() {
+    editing = false;
+    document.querySelector('.turnpanel').hidden = false;
+    state.cube = beforeEdit;
+    render();
+  },
+});
+$('btnEdit').addEventListener('click', () => {
+  if (animating || state.playing) return;
+  pause();
+  editing = true;
+  beforeEdit = state.cube;
+  document.querySelector('.turnpanel').hidden = true;
+  editor.open(state.cube);
+  updateTransport();
+  $('editPanel').scrollIntoView({ block: 'nearest' });
 });
 
 applyView();
