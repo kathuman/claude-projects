@@ -9,6 +9,7 @@
 [![Robot Configurator tests](https://github.com/kathuman/claude-projects/actions/workflows/robot-configurator-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/robot-configurator-ci.yml)
 [![Clockspeed Balancing tests](https://github.com/kathuman/claude-projects/actions/workflows/clockspeed-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/clockspeed-ci.yml)
 [![Ripple tests](https://github.com/kathuman/claude-projects/actions/workflows/ripple-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/ripple-ci.yml)
+[![Cube Studio tests](https://github.com/kathuman/claude-projects/actions/workflows/cube-studio-ci.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/cube-studio-ci.yml)
 [![AI Expectations Gap Map tests](https://github.com/kathuman/claude-projects/actions/workflows/gap-map-validate.yml/badge.svg)](https://github.com/kathuman/claude-projects/actions/workflows/gap-map-validate.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 

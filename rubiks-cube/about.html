@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About · Cube Studio</title>
+  <meta name="description" content="How Cube Studio works: the cube model, move notation, random-position scrambles, Kociemba's two-phase solver and how the answers are checked." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230a2f52%22/><g stroke=%22%230a2f52%22 stroke-width=%222%22><rect x=%2214%22 y=%2214%22 width=%2212%22 height=%2212%22 fill=%22%237dd3fc%22/><rect x=%2226%22 y=%2214%22 width=%2212%22 height=%2212%22 fill=%22%23f3c200%22/><rect x=%2238%22 y=%2214%22 width=%2212%22 height=%2212%22 fill=%22%231f9d4d%22/><rect x=%2214%22 y=%2226%22 width=%2212%22 height=%2212%22 fill=%22%23e7750f%22/><rect x=%2226%22 y=%2226%22 width=%2212%22 height=%2212%22 fill=%22%23f6f6f3%22/><rect x=%2238%22 y=%2226%22 width=%2212%22 height=%2212%22 fill=%22%23c62436%22/><rect x=%2214%22 y=%2238%22 width=%2212%22 height=%2212%22 fill=%22%231a63c0%22/><rect x=%2226%22 y=%2238%22 width=%2212%22 height=%2212%22 fill=%22%237dd3fc%22/><rect x=%2238%22 y=%2238%22 width=%2212%22 height=%2212%22 fill=%22%23f3c200%22/></g></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script>try { const t = localStorage.getItem('cube-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.0.0</span><span class="sub">About and method</span></div>
+    <div class="header-actions"><a class="back-link" href="./">The cube</a><a class="back-link" href="../">← Projects</a></div>
+  </header>
+  <main class="wrap about">
+    <section class="panel">
+      <h1>Cube Studio</h1>
+      <p>A 3×3 cube in the browser. Scramble it from a truly random position, then watch a short solution play out move by move, in 3D or on a flat net of the six faces. Everything runs on your device.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Reading the moves</h2>
+      <p>Each letter names a face as you hold the cube: <b>U</b>p, <b>D</b>own, <b>R</b>ight, <b>L</b>eft, <b>F</b>ront, <b>B</b>ack. A letter alone turns that face a quarter turn clockwise, as you look at that face; with ′ (written <code>'</code>) it turns anticlockwise, and with 2 a half turn. So <code>R U R' U'</code> is right face clockwise, top clockwise, right face back, top back.</p>
+      <p>The colours follow the usual scheme: white opposite yellow, green opposite blue, red opposite orange. The app holds the cube with white up and green in front.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Some numbers</h2>
+      <table><tbody>
+        <tr><td>Positions</td><td>43,252,003,274,489,856,000 (about 4.3 × 10¹⁹) that can be reached by turning.</td></tr>
+        <tr><td>God's number</td><td>Every position can be solved in 20 moves or fewer when a half turn counts as one move (the face-turn, or half-turn, metric), and in 26 or fewer when it counts as two (the quarter-turn metric). Proved for face turns by Rokicki, Kociemba, Davidson and Dethridge (2010), and for quarter turns by Rokicki and Davidson (2014).</td></tr>
+        <tr><td>The superflip</td><td>Every edge flipped in its place, everything else solved: one of the positions that need the full 20 face turns.</td></tr>
+      </tbody></table>
+    </section>
+
+    <section class="panel">
+      <h2>How it works</h2>
+      <h3>The model</h3>
+      <p>The cube is 54 stickers in a fixed order (up, right, front, down, left, back faces, nine each). Every sticker has a position and an outward direction in space, and a move turns the stickers in its layers a quarter turn about its axis. The moves are worked out from that geometry, not typed in as tables, so the same code handles face turns, slices (M, E, S), wide turns and whole-cube rotations (x, y, z).</p>
+      <h3>Scrambles from a random position</h3>
+      <p>A scramble of random moves does not make every position equally likely. Cube Studio draws a position uniformly at random from all 43 quintillion, asks the solver how to solve it, and plays that solution backwards: the scramble makes exactly the drawn position. This is how competition scrambles are made.</p>
+      <h3>The solver</h3>
+      <p>Kociemba's two-phase algorithm: first bring the cube into a subgroup that can be finished with half turns of the front, back, left and right faces and any turns of the top and bottom, then finish it within that subgroup. It finds solutions of about 20 to 22 moves in a few tens of milliseconds. They are short, but not always the shortest possible. The implementation is <a href="https://github.com/ldez/cubejs">cubejs</a> (MIT), run in a background worker so the page never freezes.</p>
+      <h3>Checked twice</h3>
+      <p>The tests check the model on its own:</p>
+      <ul>
+        <li>every move four times is no move;</li>
+        <li>R U repeated 105 times comes back to the start;</li>
+        <li>the superflip sequence gives the superflip.</li>
+      </ul>
+      <p>The model also agrees with the solver library on 300 random move sequences. The independent model then checks the solver: it plays 1,000 solutions of random positions, and every one must solve the cube.</p>
+    </section>
+
+    <section class="panel">
+      <h2>What's next</h2>
+      <p>Turning the cube yourself and typing any sequence; entering your own cube by painting the net or with the camera; the shortest possible solutions; a LEGO solving robot, animated, with a program you can run; and a guided way to learn to solve it yourself.</p>
+      <h3>Versions</h3>
+      <ul><li>1.0.0 (2026-10-25): the AI Projects look with a dark theme; scrambles from a truly random position; God's number stated correctly (20 face turns, 26 quarter turns); move counts in both metrics; the cube model, notation and tests in their own modules.</li></ul>
+    </section>
+  </main>
+  <footer class="wrap foot">Cube Studio v1.0.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+</body>
+</html>

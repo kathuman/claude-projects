@@ -217,7 +217,7 @@
   },
   {
     "title": "Cube Studio",
-    "description": "View a Rubik's Cube in 3D (drag to orbit) and as a 2D unfolded schematic, scramble it, then watch a near-optimal Kociemba two-phase solution play out move by move with full transport controls.",
+    "description": "A 3×3 cube in 3D and as a 2D net: scramble it from a truly random position and watch a short Kociemba two-phase solution play out move by move. Solutions are checked by an independent cube model; 1,000-position test suite.",
     "date": "2026-08-31",
     "tags": ["javascript", "web", "3d", "puzzle"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/rubiks-cube",

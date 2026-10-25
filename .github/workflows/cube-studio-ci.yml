@@ -1,0 +1,31 @@
+name: Cube Studio tests
+
+# The cube model (moves from geometry, agreement with the solver library, known facts like the superflip and the
+# order of R U) and the solver checked by the model on 1,000 random positions.
+on:
+  push:
+    paths:
+      - 'rubiks-cube/**'
+      - '.github/workflows/cube-studio-ci.yml'
+  pull_request:
+    paths:
+      - 'rubiks-cube/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: rubiks-cube
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Syntax-check the page scripts
+        run: for f in app.js src/*.js vendor/solver-worker.js tools/*.cjs; do node --check "$f"; done
+        shell: bash
