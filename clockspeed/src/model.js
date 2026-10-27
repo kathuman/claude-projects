@@ -13,7 +13,7 @@
   else root.Clockspeed = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
-  var VERSION = "0.1.0";
+  var VERSION = "1.1.0";
   var SEG = ["F", "I"], REG = ["EU", "AM", "AS"];
   var SEG_NAME = { F: "Functional", I: "Innovative" }, REG_NAME = { EU: "Europe", AM: "Americas", AS: "Asia" };
 
@@ -323,10 +323,18 @@
     "rangeF", "rangeI", "covF", "covI", "flexF", "flexI", "dualF", "dualI", "capacity", "pipeline", "utilisation", "expPromiseF", "expPromiseI", "perceivedF", "perceivedI",
     "fitProduct", "fitNetwork", "fitCommercial", "imports", "expediting", "capex", "lost", "complexity", "book"];
 
+  // the settled starting state depends only on the parameters, so it is computed once per parameter set and copied
+  var spunCache = {};
+  function spunUp(p) {
+    var key = JSON.stringify(p);
+    if (!spunCache[key]) spunCache[key] = JSON.stringify(spinUp(p, newState(p)));
+    return JSON.parse(spunCache[key]);
+  }
+
   // the simulator: create it, then call quarter(decisions) up to p.quarters times
   function create(params, scenario) {
     var p = Object.assign(defaults(), params || {});
-    var st = spinUp(p, newState(p)), prev = null, hist = { months: [], quarters: [] }, sc = scenario || "calm";
+    var st = spunUp(p), prev = null, hist = { months: [], quarters: [] }, sc = scenario || "calm";
     var totals = { launches: { F: 0, I: 0 }, retirements: { F: 0, I: 0 }, completed: 0, closed: 0, ordered: 0, profit: 0, capex: 0, demand: 0, served: 0 };
     var rangeStart = clone(st.range), Kstart = REG.reduce(function (a, r) { return a + st.K[r]; }, 0);
     function record(o, w) {
@@ -387,6 +395,61 @@
     return sim;
   }
 
-  return { VERSION: VERSION, SEG: SEG, REG: REG, SEG_NAME: SEG_NAME, REG_NAME: REG_NAME, defaults: defaults, decisions0: decisions0, LIMITS: LIMITS, clampDecisions: clampDecisions,
+  // ---- the debrief. Which clock made or cost the money? Every flight is replayed with only some of its three strategy
+  // levels moving (the others held at the starting course), and the 20-year profit gap against holding the starting
+  // course is split between the three levels by their Shapley values: each level's average marginal contribution over
+  // every order in which the levels could have been added. The three parts add up exactly to the gap.
+  var GROUPS = ["commercial", "product", "network"];
+  var CLOCK_MONTHS = { commercial: 4, product: 10, network: 33 };   // time to 63% of the effect, as tested
+  function mask(p, d, keep) {
+    var d0 = decisions0(p), out = clone(d0);
+    GROUPS.forEach(function (g) { if (keep[g]) out[g] = clone(d[g]); });
+    if (!keep.network) REG.forEach(function (r) { out.network.expand[r] = 0; out.network.close[r] = 0; });
+    return out;
+  }
+  function replay(params, scenario, decisions, keep) {
+    var sim = create(params, scenario), n = Math.min(decisions.length, sim.params.quarters);
+    for (var q = 0; q < n; q++) sim.quarter(mask(sim.params, decisions[q], keep));
+    return sim;
+  }
+  function changed(a, b) { return JSON.stringify(a) !== JSON.stringify(b); }
+  function debrief(params, scenario, decisions) {
+    var v = {}, sims = {};
+    for (var m = 0; m < 8; m++) {
+      var keep = { commercial: !!(m & 1), product: !!(m & 2), network: !!(m & 4) };
+      sims[m] = replay(params, scenario, decisions, keep);
+      v[m] = sims[m].totals.profit;
+    }
+    var bit = { commercial: 1, product: 2, network: 4 }, wt = [1 / 3, 1 / 6, 1 / 3], shap = {};
+    GROUPS.forEach(function (g) {
+      var s = 0;
+      for (var S = 0; S < 8; S++) {
+        if (S & bit[g]) continue;
+        var size = (S & 1 ? 1 : 0) + (S & 2 ? 1 : 0) + (S & 4 ? 1 : 0);
+        s += wt[size] * (v[S | bit[g]] - v[S]);
+      }
+      shap[g] = s;
+    });
+    // each level alone, and the levels' interaction (what they add together beyond the sum of each alone)
+    var alone = { commercial: v[1] - v[0], product: v[2] - v[0], network: v[4] - v[0] };
+    // the decision timeline: every quarter a level's decisions changed, and when most of that change was in effect
+    var p = sims[7].params, d0 = decisions0(p), timeline = [];
+    decisions.slice(0, p.quarters).forEach(function (d, q) {
+      var prev = q ? decisions[q - 1] : d0;
+      GROUPS.forEach(function (g) {
+        var a = clone(d[g]), b = clone(prev[g]);
+        if (g === "network") {
+          var acts = REG.some(function (r) { return d.network.expand[r] > 0 || d.network.close[r] > 0; });
+          a.expand = b.expand = a.close = b.close = 0;
+          if (!acts && !changed(a, b)) return;
+        } else if (!changed(a, b)) return;
+        timeline.push({ q: q, level: g, landsQ: Math.min(p.quarters, q + Math.ceil(CLOCK_MONTHS[g] / 3)) });
+      });
+    });
+    return { gap: v[7] - v[0], profit: v[7], startingCourse: v[0], shapley: shap, alone: alone,
+      interaction: (v[7] - v[0]) - (alone.commercial + alone.product + alone.network), values: v, timeline: timeline, clockMonths: CLOCK_MONTHS };
+  }
+
+  return { VERSION: VERSION, SEG: SEG, REG: REG, debrief: debrief, CLOCK_MONTHS: CLOCK_MONTHS, GROUPS: GROUPS, SEG_NAME: SEG_NAME, REG_NAME: REG_NAME, defaults: defaults, decisions0: decisions0, LIMITS: LIMITS, clampDecisions: clampDecisions,
     SCENARIOS: SCENARIOS, weather: weather, create: create, run: run, SERIES: SERIES, clone: clone, _aux: aux };
 });

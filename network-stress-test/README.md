@@ -137,7 +137,16 @@ chase to zero.
 
 ## Verification
 
-**Node-level (pure algorithm) tests**, run directly against each module with no browser:
+**In CI** ([`tests/engine.test.js`](tests/engine.test.js), run on every change by
+`.github/workflows/network-stress-test-ci.yml`, `node network-stress-test/tests/engine.test.js`): 40 checks. The
+solver is checked against certificates that do not depend on how it computed its answer: on 100 random graphs no
+augmenting path remains (maximum flow), no negative-cost cycle remains in the residual graph (minimum cost, also for
+flows capped below the maximum), and the flow equals an independent Edmonds–Karp maximum flow. The N-1 scan is
+checked against a brute-force scan of every node and edge, including on generated networks where the active-element
+filter skips most elements. Also covered: node capacities, product priority, disable and derate, the adversarial
+search, Monte Carlo limits and seeding, the TTS/TTR arithmetic and the generator.
+
+**Development-time tests** (not in the repository), run directly against each module with no browser:
 
 - `flowSolver.js` — 7 tests: bottleneck capacity, cost-based path selection with overflow
   spillover, infeasible-demand capping, flow conservation, disconnected-graph handling,

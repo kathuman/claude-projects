@@ -5,9 +5,12 @@
 //          (each showing what is already in effect), quarterly and yearly advance, undo, autosave, save/load files;
 //          gauges, fit bars, advisories, a lag radar of decisions still in flight, the regions, six history charts
 //          with hover read-outs, and an end-of-flight comparison with holding the starting course
+//   1.1.0  debrief at landing: the flight replayed with one level moving at a time, what each clock made or cost alone,
+//          what moving them together added (alignment), fair Shapley shares, and a timeline of each decision against
+//          when it took effect; the settled starting state is computed once, so undo and replay are about 8× faster
 (function () {
   "use strict";
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.0";
   var C = window.Clockspeed, $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION; $("ver-foot").textContent = "v" + VERSION;
   var SAVE = "clockspeed-save-v1";
@@ -72,7 +75,8 @@
   });
   $("in-load").addEventListener("change", function () {
     var f = this.files[0]; if (!f) return;
-    f.text().then(function (t) {
+    // FileReader rather than Blob.text(): it works in every browser that runs the cockpit, including older Safari
+    new Promise(function (ok, no) { var r = new FileReader(); r.onload = function () { ok(String(r.result)); }; r.onerror = function () { no(new Error("the file could not be read")); }; r.readAsText(f); }).then(function (t) {
       var o = JSON.parse(t);
       if (!o || !C.SCENARIOS[o.scenario] || !Array.isArray(o.decisions)) throw new Error("not a Clockspeed flight file");
       start(o.scenario, o.decisions.map(function (d) { return C.clampDecisions(merge(C.decisions0(P), d)); }));
@@ -329,6 +333,41 @@
   }
   window.addEventListener("resize", function () { Object.keys(charts).forEach(function (k) { charts[k].draw(); }); });
 
+  // ---- the debrief: replays the flight with only some strategy levels moving, to show which clock made or cost the
+  // money and whether the levels pulled together; then a timeline of each decision against when most of it took effect
+  var LEVEL = { commercial: ["Commercial", "var(--com)"], product: ["Product supply chain", "var(--psc)"], network: ["Network", "var(--net)"] };
+  function debriefHtml() {
+    var b = C.debrief({}, game.scenario, game.decisions);
+    if (!b.timeline.length) return '<div class="debrief"><h3>Debrief</h3><p class="dim">You held the starting course, so there is nothing to attribute.</p></div>';
+    var rows = C.GROUPS.map(function (g) { return { name: LEVEL[g][0] + " alone", v: b.alone[g], col: LEVEL[g][1] }; });
+    rows.push({ name: "Moving together", v: b.interaction, col: "var(--accent)" });
+    rows.push({ name: "Your flight vs starting course", v: b.gap, col: "var(--ink)", total: true });
+    var mx = Math.max.apply(null, rows.map(function (r) { return Math.abs(r.v); }).concat([1]));
+    var bars = rows.map(function (r) {
+      var w = Math.abs(r.v) / mx * 50;
+      return '<div class="db-row' + (r.total ? " total" : "") + '"><span class="db-name">' + esc(r.name) + '</span><span class="db-track"><i style="' + (r.v < 0 ? "right:50%" : "left:50%") + "; width:" + w.toFixed(2) + "%; background:" + r.col + '"></i></span><b class="' + (r.v < 0 ? "neg" : "pos") + '">' + (r.v >= 0 ? "+" : "") + fmtK(r.v) + "</b></div>";
+    }).join("");
+    var together = b.interaction, verdict = Math.abs(together) < 0.05 * Math.max(1, Math.abs(b.gap)) ? "Your levels moved mostly independently: the result is close to the sum of each level alone." :
+      together > 0 ? "Your levels pulled together: moving them in step was worth " + fmtK(together) + " more than the sum of each move on its own." :
+      "Your levels pulled against each other: moving them together cost " + fmtK(-together) + " compared with the sum of each move on its own.";
+    // the timeline: one lane per clock, a dot when a decision was taken, a line to when most of it was in effect
+    var W = 800, H = 118, x = function (q) { return 120 + (q / P.quarters) * (W - 136); }, lane = { commercial: 30, product: 60, network: 90 };
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="When each decision was taken and when most of it was in effect">';
+    for (var y = 0; y <= 20; y += 5) svg += '<line x1="' + x(y * 4) + '" y1="14" x2="' + x(y * 4) + '" y2="104" stroke="var(--line-soft)"/><text x="' + x(y * 4) + '" y="116" text-anchor="middle" fill="var(--ink-faint)" font-size="10" font-family="var(--mono)">Y' + y + "</text>";
+    C.GROUPS.forEach(function (g) { svg += '<text x="0" y="' + (lane[g] + 4) + '" fill="var(--ink-dim)" font-size="11.5" font-family="var(--body)">' + LEVEL[g][0] + " · " + C.CLOCK_MONTHS[g] + ' mo</text><line x1="' + x(0) + '" y1="' + lane[g] + '" x2="' + x(P.quarters) + '" y2="' + lane[g] + '" stroke="var(--line)"/>'; });
+    b.timeline.forEach(function (e) {
+      var yy = lane[e.level], c = LEVEL[e.level][1];
+      svg += '<line x1="' + x(e.q) + '" y1="' + yy + '" x2="' + x(e.landsQ) + '" y2="' + yy + '" stroke="' + c + '" stroke-width="5" stroke-linecap="round" opacity=".55"><title>' + LEVEL[e.level][0] + ": decided " + when(e.q) + ", mostly in effect by " + when(Math.min(e.landsQ, P.quarters - 1)) + "</title></line>" +
+        '<circle cx="' + x(e.q) + '" cy="' + yy + '" r="4" fill="' + c + '"/>';
+    });
+    svg += "</svg>";
+    return '<div class="debrief"><h3>Debrief: which clock made or cost the money</h3>' +
+      '<p class="dim">Your flight replayed with only one level moving at a time, the others held at the starting course. 20-year profit against holding the starting course in the same weather.</p>' +
+      '<div class="db-bars">' + bars + "</div><p>" + esc(verdict) + "</p>" +
+      '<p class="dim small">Fair shares (Shapley): commercial ' + fmtK(b.shapley.commercial) + " · product supply chain " + fmtK(b.shapley.product) + " · network " + fmtK(b.shapley.network) + ".</p>" +
+      '<h3>When your decisions landed</h3><p class="dim">A dot when you decided, a bar to when about two-thirds of the change was in effect at that level\'s tested clock speed.</p><div class="db-timeline">' + svg + "</div></div>";
+  }
+
   // ---- landing: how the flight compares with holding the starting course in the same weather
   function renderEnd() {
     var box = $("endcard");
@@ -343,7 +382,7 @@
       "<div><b>" + last.demand.toFixed(0) + "</b><span>demand per month · starting course " + rl.demand.toFixed(0) + "</span></div>" +
       "<div><b>" + pct(last.reliability, 1) + "</b><span>reliability · starting course " + pct(rl.reliability, 1) + "</span></div>" +
       "<div><b>" + pct(last.capability) + "</b><span>capability · starting course " + pct(rl.capability) + "</span></div>" +
-      "</div><div class=\"flightbar\"><button class=\"btn\" id=\"btn-again\" type=\"button\">Fly again in this weather</button><button class=\"btn\" id=\"btn-other\" type=\"button\">Choose other weather</button></div>";
+      "</div>" + debriefHtml() + "<div class=\"flightbar\"><button class=\"btn\" id=\"btn-again\" type=\"button\">Fly again in this weather</button><button class=\"btn\" id=\"btn-other\" type=\"button\">Choose other weather</button></div>";
     $("btn-again").addEventListener("click", function () { start(game.scenario, []); });
     $("btn-other").addEventListener("click", function () { $("btn-newgame").click(); });
   }

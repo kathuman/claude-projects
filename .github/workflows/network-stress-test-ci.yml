@@ -1,0 +1,28 @@
+name: Network Stress Test tests
+
+# The engine: the min-cost-flow solver against optimality certificates (no augmenting path, no negative residual
+# cycle) and an independent Edmonds–Karp maximum flow; node capacities, product priority, disable and derate; the
+# N-1 scan against a brute-force scan; the adversarial search; Monte Carlo; the TTS/TTR arithmetic; the generator.
+on:
+  push:
+    paths:
+      - 'network-stress-test/**'
+      - '.github/workflows/network-stress-test-ci.yml'
+  pull_request:
+    paths:
+      - 'network-stress-test/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node network-stress-test/tests/engine.test.js
+      - name: Syntax-check the page scripts
+        run: for f in network-stress-test/web/src/*.js; do node --check "$f"; done
+        shell: bash

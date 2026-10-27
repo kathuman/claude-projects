@@ -131,6 +131,23 @@ table.regions td{font-family:var(--mono); font-size:12.5px;}
 .endcard .score div{background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:10px 12px;}
 .endcard .score b{display:block; font-family:var(--mono); font-size:22px;}
 .endcard .score span{font-size:12.5px; color:var(--ink-dim);}
+.debrief{border-top:1px solid var(--line-soft); margin-top:6px; padding-top:12px; display:flex; flex-direction:column; gap:8px;}
+.debrief h3{font-family:var(--head); font-weight:700; font-size:20px; margin:4px 0 0;}
+.debrief p{margin:0; max-width:75ch;}
+.debrief .dim{color:var(--ink-dim); font-size:13.5px;}
+.debrief .small{font-size:12.5px; color:var(--ink-faint);}
+.db-bars{display:flex; flex-direction:column; gap:6px; margin:4px 0;}
+.db-row{display:grid; grid-template-columns:minmax(120px,210px) minmax(0,1fr) 84px; gap:10px; align-items:center;}
+.db-row.total{border-top:1px solid var(--line-soft); padding-top:6px;}
+.db-name{font-size:13.5px; color:var(--ink-dim);}
+.db-row.total .db-name{color:var(--ink); font-weight:600;}
+.db-track{position:relative; height:14px; background:var(--panel-2); border-radius:3px;}
+.db-track::after{content:""; position:absolute; left:50%; top:-3px; bottom:-3px; width:1px; background:var(--ink-faint);}
+.db-track i{position:absolute; top:0; bottom:0; border-radius:2px;}
+.db-row b{font-family:var(--mono); font-size:13.5px; text-align:right; font-variant-numeric:tabular-nums;}
+.db-row b.neg{color:var(--bad);} .db-row b.pos{color:var(--good);}
+.db-timeline{overflow-x:auto;} .db-timeline svg{min-width:560px; width:100%; height:auto; display:block;}
+@media (max-width:520px){.db-row{grid-template-columns:minmax(0,1fr) 76px;} .db-track{grid-column:1 / -1; grid-row:2;}}
 .foot{border-top:1px solid var(--line-soft); padding:16px 22px 28px; font-size:12.5px; color:var(--ink-faint); line-height:1.7;}
 .foot .consult{display:block; color:var(--ink); font-weight:600;}
 .foot a{color:var(--accent);}

@@ -1,6 +1,6 @@
 # Clockspeed Balancing — a management flight simulator for strategy misalignment
 
-**Live: https://kathuman.github.io/claude-projects/clockspeed/ · version 1.0.0 (phases 1–2 of 6).**
+**Live: https://kathuman.github.io/claude-projects/clockspeed/ · version 1.1.0 (phases 1–3 of 6).**
 
 Three strategies steer the same company, at different speeds:
 - **commercial strategy** changes in quarters;
@@ -20,7 +20,7 @@ The name follows Charles Fine's *Clockspeed* (1998). The approach follows Sterma
 |---|---|---|
 | 1 | Model core and validation | done |
 | 2 | Cockpit: quarterly decisions, instruments, 20-year run, scenarios, save and replay, About page, AI Projects entry | done, 1.0.0 |
-| 3 | Debrief: the misalignment decomposition, and a timeline of each decision against when it took effect | 1.1 |
+| 3 | Debrief: the misalignment decomposition, and a timeline of each decision against when it took effect | done, 1.1.0 |
 | 4 | Model tab: stock-and-flow diagram and every equation, tested against the model | 1.2 |
 | 5 | Autopilots (sales-led, operations-led, aligned), more scenarios, a scored challenge | 1.3 |
 | 6 | Role mode: Commercial, Product SC and Network each control only their own levers | 1.4 |
@@ -49,8 +49,16 @@ The name follows Charles Fine's *Clockspeed* (1998). The approach follows Sterma
 - **Landing:** a comparison with holding the starting course in the same weather.
 - **About:** `about.html`, with the author.
 
-Browser checks (26) cover the briefing, flying, the levers, one-off orders, undo and replay, autosave and resume,
-flight files (including refusing a bad one), landing, phone width, and the About page.
+- **Debrief** (1.1.0), on the landing card: the flight is replayed with only one strategy level moving at a time, the
+  others held at the starting course. It shows what each clock made or cost on its own, what moving them together
+  added (positive when they pulled together, negative when they pulled against each other), fair Shapley shares that
+  add up exactly to the gap against the starting course, and a timeline of every decision against when about
+  two-thirds of it was in effect at that level's tested clock speed.
+
+The cockpit checks (`tests/cockpit.test.js`, 19, in CI) run the page in a simulated DOM: briefing, take-off, advance a
+quarter and a year, undo, a whole flight through the cockpit's own decisions, the landing card and its debrief
+(figures checked against the model), refusing a bad flight file, resuming an autosaved flight, and no script errors.
+The simulated DOM has no layout, so drawing and phone width are not covered there.
 
 ## The model (`src/model.js`)
 
@@ -111,7 +119,7 @@ first, and the requirement is calibrated so that the starting configuration fits
 
 ## Tests
 
-`node clockspeed/tests/model.test.js` runs 34 checks:
+`node clockspeed/tests/model.test.js` runs 42 checks:
 - **Set-up:**
   - the company starts as designed: demand of 1,000 a month, utilisation about 0.87, fitted on every level, and the
     organisation in equilibrium;
@@ -143,6 +151,14 @@ first, and the requirement is calibrated so that the starting configuration fits
   - in the innovation wave, product supply chain fit falls to 0.90;
   - in Eastern growth, network fit falls to 0.85 and imports grow;
   - in the promise war, demand falls to 897. Preparing the supply chain and then matching the competitors keeps 974.
+- **Debrief:**
+  - holding the course has no gap and an empty timeline;
+  - replaying every level reproduces the flight's own profit exactly;
+  - the Shapley parts, and each level alone plus the interaction, both add up exactly to the gap;
+  - in the promise war, matching alone loses 62k, preparing alone gains 65k, and preparing then matching gains 161k:
+    159k of it comes from moving the two clocks together;
+  - a flight that moves only one clock is charged entirely to it;
+  - decisions taken in the same quarter land commercial first, then product supply chain, then network.
 - **Numerics:**
   - halving the time step changes 20-year profit by 0.02%;
   - decisions are clamped to their limits;

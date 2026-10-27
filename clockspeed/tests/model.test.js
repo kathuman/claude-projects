@@ -143,5 +143,32 @@ const base = C.run({}, "calm");
   check("extreme strategies (price war with every promise, closing everything, leaving every market) stay finite and non-negative", !bad);
 }
 
+// ---- the debrief: which clock made or cost the money
+{
+  const flown = (scenario, fn) => { const sim = C.create({}, scenario), ds = []; while (!sim.done()) { const d = sim.decisions(); fn(d, sim.state.q); ds.push(C.clone(d)); sim.quarter(d); } return { ds, profit: sim.totals.profit }; };
+  const prep = (d) => { d.product.coverage.I = 5.5; d.product.flex.I = 0.18; d.product.coverage.F = 3.6; };
+  const match = (d) => { d.commercial.promise.I = 1.25; d.commercial.promise.F = 1.25; };
+  const still = flown("promisewar", () => {});
+  const b0 = C.debrief({}, "promisewar", still.ds);
+  check("debrief: holding the starting course has no gap, no contributions and an empty timeline", b0.gap === 0 && C.GROUPS.every((g) => b0.shapley[g] === 0) && b0.timeline.length === 0);
+  const paced = flown("promisewar", (d, q) => { if (q === 12) prep(d); if (q === 16) match(d); });
+  const t0 = Date.now(), b = C.debrief({}, "promisewar", paced.ds), ms = Date.now() - t0;
+  check("debrief: replaying every level reproduces the flight's own profit exactly", b.profit === paced.profit, k(b.profit));
+  check("debrief: the three Shapley parts add up exactly to the gap against the starting course", near(b.shapley.commercial + b.shapley.product + b.shapley.network, b.gap, 1e-6 * Math.abs(b.gap)), k(b.gap));
+  check("debrief: each level alone plus the interaction adds up exactly to the gap", near(b.alone.commercial + b.alone.product + b.alone.network + b.interaction, b.gap, 1e-6));
+  check("promise war debrief: matching the promise alone loses money, preparing alone gains a little, together they gain most (alignment)",
+    b.alone.commercial < 0 && b.alone.product > 0 && b.interaction > b.alone.product && b.gap > 0,
+    "match alone " + k(b.alone.commercial) + ", prepare alone " + k(b.alone.product) + ", together " + k(b.gap) + " (interaction " + k(b.interaction) + ")");
+  const rushed = flown("promisewar", (d, q) => { if (q === 16) match(d); });
+  const br = C.debrief({}, "promisewar", rushed.ds);
+  check("debrief: a flight that moves only the commercial clock is charged entirely to it", br.shapley.product === 0 && br.shapley.network === 0 && near(br.shapley.commercial, br.gap, 1e-9) && br.gap < 0, k(br.gap));
+  const one = flown("calm", (d, q) => { if (q === 8) { d.commercial.price.F = 0.95; d.product.coverage.F = 4; d.network.expand.AS = 40; } });
+  const tl = C.debrief({}, "calm", one.ds).timeline;
+  const lands = (lv) => (tl.find((e) => e.level === lv) || {}).landsQ;
+  check("debrief timeline: decisions taken in the same quarter land commercial first, then product supply chain, then network",
+    tl.length === 3 && tl.every((e) => e.q === 8) && lands("commercial") < lands("product") && lands("product") < lands("network"), tl.map((e) => e.level + " Q" + e.landsQ).join(", "));
+  check("debrief: a full 20-year debrief takes under 5 seconds", ms < 5000, ms + " ms");
+}
+
 console.log(pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail ? 1 : 0);
