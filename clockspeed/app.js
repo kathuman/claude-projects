@@ -8,9 +8,13 @@
 //   1.1.0  debrief at landing: the flight replayed with one level moving at a time, what each clock made or cost alone,
 //          what moving them together added (alignment), fair Shapley shares, and a timeline of each decision against
 //          when it took effect; the settled starting state is computed once, so undo and replay are about 8× faster
+//   1.2.0  the tension made real (model 1.2): uncertain weather drawn from a seed (or the exact central path), the
+//          improvement programme lever, advisories for matched price cuts, stalled improvement and interest, and a
+//          landing scored on NPV against both holding course and the aligned autopilot in the same weather;
+//          the debrief flies the flight's own weather and measures NPV
 (function () {
   "use strict";
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
   var C = window.Clockspeed, $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION; $("ver-foot").textContent = "v" + VERSION;
   var SAVE = "clockspeed-save-v1";
@@ -22,26 +26,28 @@
   function fmtK(x) { var a = Math.abs(x); return (x < 0 ? "−" : "") + (a >= 1e6 ? (a / 1e6).toFixed(2) + "M" : a >= 1e3 ? (a / 1e3).toFixed(a >= 1e5 ? 0 : 1) + "k" : a.toFixed(0)); }
   function pct(x, d) { return (x * 100).toFixed(d == null ? 0 : d) + "%"; }
   function when(q) { var y = Math.floor(q / 4) + 1, qq = q % 4 + 1; return "Y" + y + " Q" + qq; }
-  function save() { try { localStorage.setItem(SAVE, JSON.stringify({ scenario: game.scenario, decisions: game.decisions })); } catch (e) { /* private mode */ } }
+  function save() { try { localStorage.setItem(SAVE, JSON.stringify({ scenario: game.scenario, seed: game.seed, decisions: game.decisions })); } catch (e) { /* private mode */ } }
+  function seedOf(x) { return x != null && isFinite(+x) ? Math.floor(Math.abs(+x)) % 2147483647 : null; }
+  function newSeed() { return 1 + Math.floor(Math.random() * 2147483646); }
   function loadSaved() { try { var s = JSON.parse(localStorage.getItem(SAVE) || "null"); return s && C.SCENARIOS[s.scenario] && Array.isArray(s.decisions) ? s : null; } catch (e) { return null; } }
 
   // ---- briefing
   $("scenarios").innerHTML = Object.keys(C.SCENARIOS).map(function (k) { var s = C.SCENARIOS[k]; return '<button type="button" class="scn" data-k="' + k + '" aria-pressed="' + (k === chosen) + '"><b>' + esc(s.name) + "</b><span>" + esc(s.about) + "</span></button>"; }).join("");
   $("scenarios").addEventListener("click", function (e) { var b = e.target.closest(".scn"); if (!b) return; chosen = b.dataset.k; document.querySelectorAll(".scn").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); }); });
-  $("btn-takeoff").addEventListener("click", function () { start(chosen, []); });
+  $("btn-takeoff").addEventListener("click", function () { start(chosen, [], $("in-uncertain").checked ? newSeed() : null); });
   var saved = loadSaved();
   if (saved && saved.decisions.length) {
     $("resume").hidden = false;
     $("resume").innerHTML = 'or <button class="btn small" id="btn-resume" type="button">Resume your flight</button> (' + esc(C.SCENARIOS[saved.scenario].name) + ", " + when(saved.decisions.length) + ")";
-    $("btn-resume").addEventListener("click", function () { start(saved.scenario, saved.decisions); });
+    $("btn-resume").addEventListener("click", function () { start(saved.scenario, saved.decisions, seedOf(saved.seed)); });
   }
   $("btn-newgame").addEventListener("click", function () { $("cockpit").hidden = true; $("briefing").hidden = false; $("btn-newgame").hidden = true; window.scrollTo(0, 0); });
 
   // ---- a flight: rebuild by replaying its decisions (the model is deterministic)
-  function start(scenario, decisions) {
-    game = { scenario: scenario, decisions: [] }; log = []; active = {}; arrived = {};
-    sim = C.create({}, scenario);
-    startRow = null;
+  function start(scenario, decisions, seed) {
+    game = { scenario: scenario, seed: seed == null ? null : seed, decisions: [] }; log = []; active = {}; arrived = {}; landing = null;
+    sim = C.create({}, scenario, game.seed);
+    startRow = preview();   // the gauges' "start": the starting strategy's first month, in the same weather
     decisions.slice(0, P.quarters).forEach(function (d) { stepQuarter(d, true); });
     cur = sim.decisions();
     $("briefing").hidden = true; $("cockpit").hidden = false; $("btn-newgame").hidden = false;
@@ -51,7 +57,6 @@
     var prevRow = sim.history.months.length ? sim.history.months[sim.history.months.length - 1] : null, q = sim.state.q;
     var prevState = { K: C.clone(sim.state.K), pipe: C.clone(sim.state.pipe) };
     var row = sim.quarter(d);
-    if (!startRow) startRow = sim.history.months[0];
     game.decisions.push(C.clone(d));
     advise(q, prevRow, row, prevState, d);
     return row;
@@ -66,10 +71,10 @@
   $("btn-undo").addEventListener("click", function () {
     if (!game.decisions.length) return;
     var ds = game.decisions.slice(0, -1), last = game.decisions[game.decisions.length - 1];
-    start(game.scenario, ds); cur = C.clone(last); syncYoke(); render();
+    start(game.scenario, ds, game.seed); cur = C.clone(last); syncYoke(); render();
   });
   $("btn-export").addEventListener("click", function () {
-    var blob = new Blob([JSON.stringify({ app: "Clockspeed Balancing", version: VERSION, scenario: game.scenario, decisions: game.decisions }, null, 1)], { type: "application/json" });
+    var blob = new Blob([JSON.stringify({ app: "Clockspeed Balancing", version: VERSION, scenario: game.scenario, seed: game.seed, decisions: game.decisions }, null, 1)], { type: "application/json" });
     var a = document.createElement("a"), url = URL.createObjectURL(blob); a.href = url; a.download = "clockspeed-" + game.scenario + "-" + when(game.decisions.length).replace(" ", "") + ".json";
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
   });
@@ -79,13 +84,13 @@
     new Promise(function (ok, no) { var r = new FileReader(); r.onload = function () { ok(String(r.result)); }; r.onerror = function () { no(new Error("the file could not be read")); }; r.readAsText(f); }).then(function (t) {
       var o = JSON.parse(t);
       if (!o || !C.SCENARIOS[o.scenario] || !Array.isArray(o.decisions)) throw new Error("not a Clockspeed flight file");
-      start(o.scenario, o.decisions.map(function (d) { return C.clampDecisions(merge(C.decisions0(P), d)); }));
+      start(o.scenario, o.decisions.map(function (d) { return C.clampDecisions(merge(C.decisions0(P), d)); }), seedOf(o.seed));
     }).catch(function (e) { addLog(sim ? sim.state.q : 0, "bad", "Could not load that file: " + e.message); renderAdvice(); });
     this.value = "";
   });
   // only known fields, as numbers, are taken from a loaded file
   function merge(base, d) {
-    ["commercial", "product", "network"].forEach(function (g) { var a = base[g], b = d && d[g]; if (!b) return; Object.keys(a).forEach(function (k) { if (typeof a[k] === "object") { Object.keys(a[k]).forEach(function (j) { if (b[k] && isFinite(+b[k][j])) a[k][j] = +b[k][j]; }); } else if (isFinite(+b[k])) a[k] = +b[k]; }); });
+    ["commercial", "product", "network"].forEach(function (g) { var a = base[g], b = d && d[g]; if (!b) return; Object.keys(a).forEach(function (k) { if (a[k] !== null && typeof a[k] === "object") { Object.keys(a[k]).forEach(function (j) { if (b[k] && isFinite(+b[k][j])) a[k][j] = +b[k][j]; }); } else if (isFinite(+b[k])) a[k] = +b[k]; }); });
     return base;
   }
 
@@ -115,7 +120,8 @@
         var lab = { coverage: "Inventory cover", flex: "Flexible capacity", dual: "Dual sourcing" }[lv], f = lv === "coverage" ? function (v) { return (+v).toFixed(1) + " wk"; } : function (v) { return pct(v); };
         var mx = { coverage: 12, flex: 0.5, dual: 1 }[lv], mn = { coverage: 0.5, flex: 0, dual: 0 }[lv], stp = { coverage: 0.5, flex: 0.01, dual: 0.05 }[lv];
         return pairRow(lab, "product." + lv, mn, mx, stp, f, function (s) { return "in effect: " + f(sim.state[lv === "coverage" ? "cov" : lv][s]); });
-      }).join("") + "</div>";
+      }).join("") +
+      slider("product.improve", "Improvement programme", 0, 1, 0.05, function (v) { return pct(v); }, function () { return "costs up to " + fmtK(P.improveCost) + "/month and " + pct(P.improveCapacity) + " of capacity; protects time to rebuild capability"; }) + "</div>";
     h += '<div class="lever-group" style="border-color:var(--net)"><h3>Network</h3><div class="speed">takes effect in years · build 30 months, close 12</div>' +
       '<table class="net"><thead><tr><th>Region</th><th>Capacity</th><th>Building</th><th>Order</th><th>Close</th></tr></thead><tbody>' +
       C.REG.map(function (r) { return '<tr><td>' + C.REG_NAME[r] + '</td><td id="k-' + r + '"></td><td id="b-' + r + '"></td><td><input type="number" min="0" max="400" step="10" data-net="expand" data-r="' + r + '" aria-label="Order new capacity in ' + C.REG_NAME[r] + '" /></td><td><input type="number" min="0" max="400" step="10" data-net="close" data-r="' + r + '" aria-label="Close capacity in ' + C.REG_NAME[r] + '" /></td></tr>'; }).join("") +
@@ -124,7 +130,7 @@
       '<div class="actual">Lowers unit cost, raises fixed cost; takes about 18 months.</div></div>';
     h += '<div class="flightbar"><button class="btn small" id="btn-steady" type="button" title="Back to the starting strategy">Reset levers to the start</button></div>';
     y.innerHTML = h;
-    y.querySelectorAll('input[type=range]').forEach(function (inp) { inp.addEventListener("input", function () { setPath(inp.dataset.path, +inp.value); paintOutputs(); }); });
+    y.querySelectorAll('input[type=range]').forEach(function (inp) { inp.addEventListener("input", function () { setPath(inp.dataset.path, +inp.value); paintOutputs(); renderRadar(); }); });
     y.querySelectorAll("#presence button").forEach(function (b) { b.addEventListener("click", function () { cur.commercial.presence[b.dataset.r] = cur.commercial.presence[b.dataset.r] > 0.5 ? 0 : 1; paintOutputs(); }); });
     y.querySelectorAll("input[data-net]").forEach(function (inp) { inp.addEventListener("input", function () { var v = +inp.value || 0; cur.network[inp.dataset.net][inp.dataset.r] = inp.dataset.net === "automate" ? v / 100 : v; renderRadar(); }); });
     $("btn-steady").addEventListener("click", function () { var keepNet = cur.network; cur = C.decisions0(P); cur.network.expand = { EU: 0, AM: 0, AS: 0 }; cur.network.close = { EU: 0, AM: 0, AS: 0 }; cur.network.automate = keepNet.automate; syncYoke(); renderRadar(); });
@@ -153,23 +159,17 @@
   }
 
   // ---- advisories: what changed this quarter, in plain words
-  var EVENTS = {
-    innovation: [[24, "info", "The market begins to shift toward innovative products."]],
-    asia: [[36, "info", "Asian demand starts to grow fast."]],
-    promisewar: [[48, "warn", "Competitors start promising faster delivery. Customers will come to expect it."]],
-    storm: [[48, "bad", "A supply disruption hits Europe: 40% of its supply is lost for ten months."], [58, "good", "The European disruption is over."], [72, "warn", "Import tariffs double the cost of moving goods between regions."]]
-  };
-  EVENTS.perfect = [].concat(EVENTS.innovation, EVENTS.asia, EVENTS.promisewar, EVENTS.storm).sort(function (a, b) { return a[0] - b[0]; });
-  var active = {}, arrived = {};
+  var active = {}, arrived = {}, landing = null;
   // a condition is reported when it starts and, for the important ones, when it ends
   function onset(key, cond, q, kind, text, endText) {
     if (cond && !active[key]) { active[key] = true; addLog(q, kind, text); }
     else if (!cond && active[key]) { active[key] = false; if (endText) addLog(q, "good", endText); }
   }
-  function addLog(q, kind, text) { log.unshift({ q: q, kind: kind, text: text }); if (log.length > 60) log.pop(); }
+  // the whole flight's log is kept (the debrief will read it); the cockpit shows the latest 60
+  function addLog(q, kind, text) { log.unshift({ q: q, kind: kind, text: text }); }
   function advise(q, prev, row, prevState, d) {
     var m0 = q * 3, m1 = m0 + 3;
-    (EVENTS[game.scenario] || []).forEach(function (e) { if (e[0] >= m0 && e[0] < m1) addLog(q, e[1], e[2]); });
+    sim.events.forEach(function (e) { if (e[0] >= m0 && e[0] < m1) addLog(q, e[1], e[2]); });
     if (!prev) return;
     var st = sim.state;
     C.REG.forEach(function (r) {
@@ -190,7 +190,11 @@
     onset("fitP", row.fitProduct < 0.9, q, "warn", "The product supply chain no longer delivers what the commercial strategy needs (fit " + pct(row.fitProduct) + ").", "The product supply chain fits the commercial strategy again.");
     onset("fitN", row.fitNetwork < 0.9, q, "warn", "The network no longer matches where demand is (fit " + pct(row.fitNetwork) + ").", "The network matches demand again.");
     onset("trust", row.trust < 0.6, q, "bad", "Trust between functions is low: changes now take longer to implement.", "Trust between functions has recovered above 60%.");
-    onset("cash", row.cash < 0, q, "bad", "Cash is negative.", "Cash is positive again.");
+    onset("cash", row.cash < 0, q, "bad", "Cash is negative, and the debt pays " + pct(P.borrowRate) + " interest a year.", "Cash is positive again.");
+    ["F", "I"].forEach(function (s) {
+      onset("comp" + s, st.compPrice[s] < 0.98 && st.compPrice[s] < 1 - 0.5 * (1 - d.commercial.price[s]), q, "warn", "Competitors have matched your " + C.SEG_NAME[s].toLowerCase() + " price cut (their price ×" + st.compPrice[s].toFixed(2) + "). The extra demand fades; the lower margin stays.", "Competitors' " + C.SEG_NAME[s].toLowerCase() + " prices have recovered.");
+    });
+    onset("stall", row.firefight * (1 - P.improveShield * d.product.improve) > 0.8 * P.stallAt, q, "bad", "Firefighting leaves no time to improve: capability has almost stopped rebuilding. Relieve the pressure or start an improvement programme.", "There is time to improve again.");
     onset("lost", row.lost > 0.02 * row.demand, q, "bad", pct(row.lost / row.demand) + " of demand cannot be served at all.", "All demand can be served again.");
   }
 
@@ -206,7 +210,7 @@
   }
   function render() {
     var q = sim.state.q, last = sim.history.months[sim.history.months.length - 1] || null, qrow = sim.history.quarters[sim.history.quarters.length - 1];
-    $("clockface").innerHTML = sim.done() ? "Landed · 20 years" : "Year " + (Math.floor(q / 4) + 1) + ", quarter " + (q % 4 + 1) + "<small>" + q + " of 80 quarters flown</small>";
+    $("clockface").innerHTML = sim.done() ? "Landed · 20 years" : "Year " + (Math.floor(q / 4) + 1) + ", quarter " + (q % 4 + 1) + "<small>" + q + " of 80 quarters flown · " + (game.seed == null ? "central weather" : "weather #" + game.seed) + "</small>";
     $("progress").style.width = (q / P.quarters * 100) + "%";
     $("btn-advance").disabled = $("btn-advance4").disabled = $("btn-toend").disabled = sim.done(); $("btn-undo").disabled = q === 0;
     paintOutputs();
@@ -227,9 +231,9 @@
       fit("Network fit", r.fitNetwork, COL.net, "capacity where the demand is, without imports");
     renderAdvice(); renderRadar(); renderRegions(r); renderCharts(); renderEnd();
   }
-  function preview() { var s = C.create({}, game.scenario); s.quarter(C.decisions0(P)); return s.history.months[0]; }
+  function preview() { var s = C.create({}, game.scenario, game.seed); s.quarter(C.decisions0(P)); return s.history.months[0]; }
   function renderAdvice() {
-    $("advisories").innerHTML = log.length ? log.map(function (l) { var ic = { bad: "▲", warn: "●", good: "✓", info: "ℹ" }[l.kind]; return '<li class="' + l.kind + '"><span class="ic" aria-label="' + l.kind + '">' + ic + '</span><span class="when">' + when(l.q) + "</span><span>" + esc(l.text) + "</span></li>"; }).join("")
+    $("advisories").innerHTML = log.length ? log.slice(0, 60).map(function (l) { var ic = { bad: "▲", warn: "●", good: "✓", info: "ℹ" }[l.kind]; return '<li class="' + l.kind + '"><span class="ic" aria-label="' + l.kind + '">' + ic + '</span><span class="when">' + when(l.q) + "</span><span>" + esc(l.text) + "</span></li>"; }).join("")
       : '<li class="info"><span class="ic">ℹ</span><span>Set your levers and advance the clock. Advisories appear here as things change.</span></li>';
   }
   function renderRadar() {
@@ -251,6 +255,7 @@
       var ranget = cur.commercial.launches[s] / 3 / (1 / P.rangeLife + cur.commercial.rationalize[s] / 12);
       if (Math.abs(ranget - st.range[s]) > 0.05 * st.range[s]) rows.push([COL.com, "Product range, " + name, st.range[s].toFixed(0) + " → " + ranget.toFixed(0) + " SKUs"]);
     });
+    if (cur.product.improve > 0) rows.push([COL.psc, "Improvement programme", pct(cur.product.improve) + " intensity · capability " + pct(st.capability)]);
     C.REG.forEach(function (r) { if (Math.abs(cur.commercial.presence[r] - st.presence[r]) > 0.02) rows.push([COL.com, "Presence in " + C.REG_NAME[r], pct(st.presence[r]) + " → " + pct(cur.commercial.presence[r])]); });
     $("radar").innerHTML = rows.length ? "<table>" + rows.map(function (x) { return '<tr><td><span class="lane" style="background:' + x[0] + '"></span>' + esc(x[1]) + "</td><td>" + esc(x[2]) + "</td></tr>"; }).join("") + "</table>"
       : '<p style="font-size:13px; color:var(--ink-dim); margin:0;">Nothing in flight: every decision has fully taken effect.</p>';
@@ -337,7 +342,8 @@
   // money and whether the levels pulled together; then a timeline of each decision against when most of it took effect
   var LEVEL = { commercial: ["Commercial", "var(--com)"], product: ["Product supply chain", "var(--psc)"], network: ["Network", "var(--net)"] };
   function debriefHtml() {
-    var b = C.debrief({}, game.scenario, game.decisions);
+    if (!landing.debrief) landing.debrief = C.debrief({}, game.scenario, game.decisions, game.seed);
+    var b = landing.debrief;
     if (!b.timeline.length) return '<div class="debrief"><h3>Debrief</h3><p class="dim">You held the starting course, so there is nothing to attribute.</p></div>';
     var rows = C.GROUPS.map(function (g) { return { name: LEVEL[g][0] + " alone", v: b.alone[g], col: LEVEL[g][1] }; });
     rows.push({ name: "Moving together", v: b.interaction, col: "var(--accent)" });
@@ -362,7 +368,7 @@
     });
     svg += "</svg>";
     return '<div class="debrief"><h3>Debrief: which clock made or cost the money</h3>' +
-      '<p class="dim">Your flight replayed with only one level moving at a time, the others held at the starting course. 20-year profit against holding the starting course in the same weather.</p>' +
+      '<p class="dim">Your flight replayed with only one level moving at a time, the others held at the starting course. Net present value against holding the starting course in the same weather.</p>' +
       '<div class="db-bars">' + bars + "</div><p>" + esc(verdict) + "</p>" +
       '<p class="dim small">Fair shares (Shapley): commercial ' + fmtK(b.shapley.commercial) + " · product supply chain " + fmtK(b.shapley.product) + " · network " + fmtK(b.shapley.network) + ".</p>" +
       '<h3>When your decisions landed</h3><p class="dim">A dot when you decided, a bar to when about two-thirds of the change was in effect at that level\'s tested clock speed.</p><div class="db-timeline">' + svg + "</div></div>";
@@ -372,18 +378,22 @@
   function renderEnd() {
     var box = $("endcard");
     if (!sim.done()) { box.hidden = true; return; }
-    var ref = C.run({}, game.scenario), you = sim, last = you.history.months[239], rl = ref.history.months[239];
-    var better = you.totals.profit >= ref.totals.profit;
+    // the references fly the same weather (the same seed), so the difference is the steering
+    if (!landing) landing = { hold: C.run({}, game.scenario, null, game.seed), auto: C.run({}, game.scenario, C.aligned, game.seed) };
+    var ref = landing.hold, ap = landing.auto, you = sim, last = you.history.months[239], rl = ref.history.months[239], al = ap.history.months[239];
+    var sgn = function (x) { return (x >= 0 ? "+" : "") + fmtK(x); };
+    var verdict = you.totals.npv >= ap.totals.npv ? "You out-flew the aligned autopilot." : you.totals.npv >= ref.totals.npv ? "You beat holding course, but the aligned autopilot did better." : "Holding the starting course would have done better.";
     box.hidden = false;
-    box.innerHTML = "<h2>Landed after 20 years</h2><p style=\"color:var(--ink-dim); margin:0;\">" + esc(C.SCENARIOS[game.scenario].name) + ". Compared with holding the starting course in the same weather:</p>" +
+    box.innerHTML = "<h2>Landed after 20 years</h2><p style=\"color:var(--ink-dim); margin:0;\">" + esc(C.SCENARIOS[game.scenario].name) + (game.seed == null ? ", central path" : ", weather #" + game.seed) + ". " + verdict + " Both references flew the same weather:</p>" +
       '<div class="score">' +
-      "<div><b>" + fmtK(you.totals.profit) + "</b><span>your 20-year profit · starting course " + fmtK(ref.totals.profit) + " (" + (better ? "+" : "") + fmtK(you.totals.profit - ref.totals.profit) + ")</span></div>" +
-      "<div><b>" + fmtK(you.state.cash) + "</b><span>cash at landing · starting course " + fmtK(ref.state.cash) + "</span></div>" +
-      "<div><b>" + last.demand.toFixed(0) + "</b><span>demand per month · starting course " + rl.demand.toFixed(0) + "</span></div>" +
-      "<div><b>" + pct(last.reliability, 1) + "</b><span>reliability · starting course " + pct(rl.reliability, 1) + "</span></div>" +
-      "<div><b>" + pct(last.capability) + "</b><span>capability · starting course " + pct(rl.capability) + "</span></div>" +
-      "</div>" + debriefHtml() + "<div class=\"flightbar\"><button class=\"btn\" id=\"btn-again\" type=\"button\">Fly again in this weather</button><button class=\"btn\" id=\"btn-other\" type=\"button\">Choose other weather</button></div>";
-    $("btn-again").addEventListener("click", function () { start(game.scenario, []); });
+      "<div><b>" + fmtK(you.totals.npv) + "</b><span>your net present value (8% a year) · holding course " + fmtK(ref.totals.npv) + " (" + sgn(you.totals.npv - ref.totals.npv) + ") · aligned autopilot " + fmtK(ap.totals.npv) + " (" + sgn(you.totals.npv - ap.totals.npv) + ")</span></div>" +
+      "<div><b>" + fmtK(you.totals.profit) + "</b><span>20-year profit, undiscounted · holding course " + fmtK(ref.totals.profit) + " · autopilot " + fmtK(ap.totals.profit) + "</span></div>" +
+      "<div><b>" + fmtK(you.state.cash) + "</b><span>cash at landing · holding course " + fmtK(ref.state.cash) + " · autopilot " + fmtK(ap.state.cash) + "</span></div>" +
+      "<div><b>" + last.demand.toFixed(0) + "</b><span>demand per month · holding course " + rl.demand.toFixed(0) + " · autopilot " + al.demand.toFixed(0) + "</span></div>" +
+      "<div><b>" + pct(last.reliability, 1) + "</b><span>reliability · holding course " + pct(rl.reliability, 1) + " · autopilot " + pct(al.reliability, 1) + "</span></div>" +
+      "<div><b>" + pct(last.capability) + "</b><span>capability · holding course " + pct(rl.capability) + " · autopilot " + pct(al.capability) + "</span></div>" +
+      "</div>" + debriefHtml() + "<div class=\"flightbar\"><button class=\"btn\" id=\"btn-again\" type=\"button\">Fly this same weather again</button><button class=\"btn\" id=\"btn-other\" type=\"button\">Choose other weather</button></div>";
+    $("btn-again").addEventListener("click", function () { start(game.scenario, [], game.seed); });
     $("btn-other").addEventListener("click", function () { $("btn-newgame").click(); });
   }
 

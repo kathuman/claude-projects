@@ -1,8 +1,9 @@
 name: Clockspeed Balancing tests
 
 # The strategy-misalignment model: steady state, exact accounting, the three clock speeds, the promise ratchet, the
-# cost of an unsupported push and the value of pacing, firefighting, complexity, resilience, the scenarios and the
-# debrief; then the cockpit page itself in a simulated DOM: take-off, advance, undo, landing, debrief, files, resume.
+# cost of an unsupported push and the value of pacing, firefighting and the capability trap, complexity, resilience,
+# the scenarios, the debrief, and the no-free-lunch search (no strategy set once may beat steering); then the cockpit
+# page itself in a simulated DOM: take-off, advance, undo, landing, debrief, files, resume.
 on:
   push:
     paths:

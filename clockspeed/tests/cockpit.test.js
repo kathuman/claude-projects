@@ -56,7 +56,7 @@ const landMs = Date.now() - t0;
 check("fly to the end reaches quarter 80", w.clockspeed.sim().done());
 const card = $(w, "endcard");
 check("the landing card shows, with its comparison to the starting course", !card.hidden && /Landed after 20 years/.test(card.textContent));
-const b = C.debrief({}, "promisewar", w.clockspeed.game().decisions);
+const b = C.debrief({}, "promisewar", w.clockspeed.game().decisions, w.clockspeed.game().seed);   // the same decisions in the same (seeded) weather
 check("the cockpit's flight matches the same decisions run in the model", Math.abs(b.profit - w.clockspeed.sim().totals.profit) < 1e-6, Math.round(b.profit));
 const rows = card.querySelectorAll(".db-row");
 check("the debrief shows each level alone, moving together, and the total", rows.length === 5);
