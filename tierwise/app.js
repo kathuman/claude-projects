@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.3.2";
+  var VERSION = "2.3.3";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -468,6 +468,8 @@
   var ivWorker = null, ivId = 0;
   function renderInvest() {
     $("ivPackValue").value = state.net.config.packValue || "";
+    $("ivUnitCost").value = state.net.config.unitCost || "";
+    $("ivHolding").value = state.net.config.holdingRate || "";
     $("ivDiscount").value = state.net.config.discountRate != null ? state.net.config.discountRate : "";
     $("ivTerminal").value = state.net.config.terminalYears != null ? state.net.config.terminalYears : 5;
     var has = hasCandidates();
@@ -784,6 +786,9 @@
   // what reaches the shelves: delivered and unmet demand per period, and per market
   function renderService() {
     var box = $("servicePanel"); box.hidden = !CAP(); if (!CAP()) return;
+    // without real costs the plan treats stock as almost free, and its fill rate is an upper limit, not an economic plan
+    var mc = state.net.config;
+    $("moneyNote").hidden = mc.packValue > 0 && mc.unitCost > 0 && mc.holdingRate > 0;
     var cr = state.cres, per = state.res.periods, mk = sitesOf("market"), unit = tierUnit("market");
     var del = per.map(function (p, i) { return mk.reduce(function (a, s) { return a + cr.sites[s.id].periods[i].delivered; }, 0); });
     var un = per.map(function (p, i) { return mk.reduce(function (a, s) { return a + cr.sites[s.id].periods[i].unmet; }, 0); });
@@ -1152,7 +1157,9 @@
     $("saveJson").addEventListener("click", function () { download(fileBase() + ".json", IO.toJSON(state.net), "application/json"); });
     $("shareBtn").addEventListener("click", copyLink);
     $("applyAll").addEventListener("click", function () { applyAdds(state.net.sites.filter(function (s) { return s.tier !== "market"; }).map(function (s) { return s.id; })); });
-    $("ivPackValue").addEventListener("change", function () { var v = num(this.value); state.net.config.packValue = isFinite(v) ? v : 0; });
+    // these three price stock and lost sales in the monthly plan too, so a change re-plans
+    var moneySetting = function (id, key) { $(id).addEventListener("change", function () { var v = num(this.value); state.net.config[key] = isFinite(v) && v > 0 ? v : 0; state.iv.res = null; render(); }); };
+    moneySetting("ivPackValue", "packValue"); moneySetting("ivUnitCost", "unitCost"); moneySetting("ivHolding", "holdingRate");
     $("ivDiscount").addEventListener("change", function () { var v = num(this.value); state.net.config.discountRate = isFinite(v) ? v : 0; });
     $("ivTerminal").addEventListener("change", function () { var v = num(this.value); state.net.config.terminalYears = isFinite(v) && v >= 0 ? Math.round(v) : 5; this.value = state.net.config.terminalYears; });
     $("ivRun").addEventListener("click", runInvest);

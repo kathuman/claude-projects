@@ -122,7 +122,7 @@
       { id: "x-prebuild", title: "Building stock ahead", target: "#capOpts", setup: { scenario: "base", cap: { mode: "fixed", hold: 0 } },
         body: "Here sourcing shares are fixed and no stock may be built ahead of a peak (only a month's working stock). The chain serves {{fill}}.",
         quiz: { q: "Allow stock to be built up to 6 months ahead. What happens?", options: ["More demand is served, and the first unmet month comes later", "Nothing: capacity is capacity", "Less is served, because building stock uses capacity"], answer: 0, claim: "c-prebuild",
-          explain: "Spare capacity in the quiet months is made into stock that covers the peak months, so seasonal shortfalls shrink and come later. Food sets the limit: stock must stay within its shelf life, which is why the hold is capped." } },
+          explain: "Spare capacity in the quiet months is made into stock that covers the peak months, so seasonal shortfalls shrink and come later. The gain here is small, because stock has a real cost. Food sets the limit: stock must stay within its shelf life, which is why the hold is capped." } },
       { id: "x-flex", title: "Sourcing flexibility", target: "#capOpts", setup: { scenario: "base", cap: { mode: "any", hold: 6 } },
         body: "Now any site of the tier above may supply any site below it, not only the qualified lanes. The chain serves <b>{{fill}}</b>, and the first unmet demand moves to <b>{{firstUnmet}}</b>; {{rerouted}} of the volume moves off its planned share.",
         quiz: { q: "Which sourcing rule serves the most demand?", options: ["Any site of the tier above", "Re-sourcing among qualified lanes", "Fixed shares"], answer: 0, claim: "c-flex",

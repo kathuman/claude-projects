@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.3.2 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.3.3 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -43,11 +43,11 @@ server, but the code is layered so that a server can slot in behind the same int
 ## Roadmap
 
 Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 (world map), 2.3 (capacity investment),
-2.3.1 (investment economics), 2.3.2 (every optimiser result verified, the first part of 2.4).
+2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4: every optimiser result verified, the monthly plan priced in money).
 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
-| 2.4 | Honest numbers | Every optimiser result priced by the monthly plan (**done**); the monthly objective in money; the value of capacity by site and month; first receipts | No unverified NPV on screen |
+| 2.4 | Honest numbers | Every optimiser result priced by the monthly plan (**done**); the monthly objective in money (**done**); the value of capacity by site and month; first receipts | No unverified NPV on screen |
 | 2.5 | Architecture and memory | The application API, a versioned data layer, a job runner; autosave, named scenarios with a diff, a decision ledger, offline use; the browser suite in CI; a three-step front door (network, where it breaks, what to do) | A reload loses nothing |
 | 2.6 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
 | 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
@@ -79,20 +79,19 @@ Data              versioned networks, scenarios, results, receipts, decisions
 The boundary between the layers comes first (2.5). Records carry an owner and a schema version from the start, so
 accounts and a server don't force a migration.
 
-### What the monthly plan is doing today
+### Why the monthly plan is priced in money
 
-Found while preparing 2.4, and the reason its objective has to be in money. On the example (qualified lanes, 6 months
-of stock ahead), the monthly plan runs all three dosing sites at 100% from the first month to the last, and carries up
-to 15.6M packs of stock across the chain, because stock costs almost nothing in the penalty weights. The six-month
-limit keeps each unit young, but the stock level itself can roll forward for years. The 90.1% fill is therefore the most
-that can be delivered with stock nearly free, not an economic plan.
+Until the objective was in money, stock cost almost nothing in the plan's penalty weights. It ran all three dosing sites
+at 100% from the first month to the last and carried up to 15.6M packs across the chain, to deliver 90.1%. That was an
+upper limit, not an economic plan. Nearly free stock also made new capacity look worthless: the monthly plan priced the
+optimiser's package at −$4.0M against the yearly model's +$16.1M. With a real holding cost the two agree in sign, and the
+plan serves 86.8%.
 
-"First bottleneck" is the first month a site's unconstrained need passes its capacity (February 2030 at Valencia). The
-same site is at 100% well before that, by choice, to build stock.
+The unit cost ($3 a pack) and the holding cost (1.5% a month) of the example are illustrative assumptions. A network
+without them keeps the penalty weights, and the page says so.
 
 Shadow prices from the interior-point solve are reliable: adding one unit of Valencia's capacity in a single month
-changed the objective exactly as its dual predicted, in each of the three months tested. Nearly all of the value of
-production capacity sits at the dosing sites.
+changed the objective exactly as its dual predicted, in each of the three months tested.
 
 ## How it plans (`src/plan.js`)
 
@@ -160,17 +159,29 @@ shipments oscillate.
 - re-source among the existing (qualified) lanes, at a cost per pack moved;
 - open every lane from the tier above.
 
-**Objective**, in pack-equivalents (×1,000 for unmet demand, scaled by the market's priority of 1–3):
+**Objective.** With a pack value, a unit cost and a holding cost (`packValue`, `unitCost`, `holdingRate`), it is in money,
+and lost sales, stock and safety stock are discounted at the `discountRate`:
 
 | Item | Cost |
 |---|---|
-| Unmet demand | 1,000 |
+| Unmet demand | the pack value |
+| Holding a pack for a month | unit cost × holding rate |
+| Safety stock below target | 1.5 × the holding cost, so it is kept normally and drawn in a crunch |
+| Re-sourcing, transport, making | small tie-breaking weights, as the example has no cost data for them |
+
+Market priority is a tie-breaker (0.1% per level), as in the investment model. Stock at every tier is costed at the same
+unit cost for now.
+
+Without those settings it uses the earlier penalty weights, in pack-equivalents, and a note on the page says that stock
+is almost free:
+
+| Item | Weight |
+|---|---|
+| Unmet demand | 1,000, scaled by the market's priority of 1–3 |
 | Safety stock below target | 1 a month |
 | Re-sourcing | 0.5 |
 | Holding stock | 0.02 a month |
 | Transport | 0.0005 a transit day |
-
-Safety stock is cheap enough that a long crunch draws on it rather than losing sales.
 
 **Horizon.** The model runs over a warm-up before the first month and a run-out after the last. The warm-up has the
 first month's demand and fills the slowest pipeline, step by step. The run-out has the last month's demand and weighs
@@ -193,18 +204,20 @@ what the first month needs, so the plan does not start with stock built in advan
   the plan.
 - **Plan CSV:** the within-capacity columns.
 
-**Example results:**
+**Example results** ($3 unit cost, 1.5% a month):
 
 | Configuration | Fill rate | First unmet demand |
 |---|---|---|
-| Fixed shares, no stock ahead | 88.1% | |
-| Fixed shares, 6 months of stock ahead | 88.7% | |
-| Qualified lanes | 90.1% | December 2032 |
-| Any supplier | 90.5% | |
-| Expansion programme | 99.4% | |
+| Fixed shares, no stock ahead | 85.8% | August 2032 |
+| Fixed shares, 6 months of stock ahead | 85.9% | September 2032 |
+| Qualified lanes | 86.8% | December 2032 |
+| Any supplier | 87.8% | February 2034 |
+| Expansion programme | 99.4% | October 2037 |
 
 With qualified lanes, the first bottleneck (Valencia Dosing) comes in February 2030, but the first unmet demand only in
-December 2032. Within capacity, the New Zealand drought costs nothing: stock built ahead and re-sourcing absorb it.
+December 2032. Stock ahead of a peak now adds little, and the limit on it (6 or 12 months) changes nothing in the
+qualified case: holding a pack costs 1.8% of its margin a month, so stock is built close to the sale. Within capacity, the
+New Zealand drought costs almost nothing: the chain has room in those years.
 
 ## Capacity investment (`src/invest.js`, `src/invest-worker.js`)
 
@@ -270,15 +283,15 @@ chooses Valencia's fourth dosing line, ready December 2031, and Cape Town's seco
 $6.7M of capex, $4.6M present value. The screening model estimates fill rising from 86.3% to 89.6%, and an NPV of
 $16.1M.
 
-**The month-by-month plan disagrees.** Priced there (qualified lanes, 6 months of stock ahead), the same package lifts
-fill only from 90.1% to 90.2%, and recovers $0.6M present value of margin: an NPV of −$4.0M. Every figure in this
-paragraph and the one before is checked by `tests/invest.test.js`. The yearly model does not see the monthly
-bottlenecks. (2.3.0 also chose Jebel Ali's bay, but on an undiscounted lost margin, so its answer was no more
+**The month-by-month plan agrees on the decision, and cuts the value.** Priced there (qualified lanes, 6 months of stock
+ahead), the same package lifts fill from 86.8% to 89.9%, recovers $14.0M present value of margin and saves $1.8M of
+stock: an NPV of +$11.2M. Every figure in this
+paragraph and the one before is checked by `tests/invest.test.js`. (2.3.0 also chose Jebel Ali's bay, but on an undiscounted lost margin, so its answer was no more
 trustworthy.)
 
 **Every package is verified.** `TWInvest.verify` prices each chosen package in the monthly plan, at the sourcing and
 stock settings on screen, with the same discounting, and the worker runs it after every solve (about 10 s on the
-example). The panel leads with the month-by-month figures and shows the screening NPV as an estimate. If the two
+example). The verified NPV also counts the stock the package saves or adds. The panel leads with the month-by-month figures and shows the screening NPV as an estimate. If the two
 disagree it says so, and the button becomes **Add them anyway**. A package that could not be checked cannot be applied.
 The optimiser still searches on the yearly model, so it can recommend a package the monthly plan rejects. 3.0 closes that
 gap by making the search itself answer to the monthly plan.
@@ -379,7 +392,7 @@ Since 2.1, routes and parameters have their own place in the file:
   - the calendar (`startYear`, `startMonth` 1–12);
   - the bill of materials (`packPerUnit`, `kgPerSachet`, `rawPerProduct`);
   - the seasons;
-  - the investment optimiser's `packValue`, `discountRate`, `terminalYears` (default 5) and `currency`;
+  - the money settings: `packValue`, `unitCost`, `holdingRate` (% a month), `discountRate`, `terminalYears` (default 5) and `currency`;
   - the tiers' own names and units (`tier.dosing.name`, `tier.dosing.unit`, …), for a chain that isn't milk powder.
 - **Separators.** Files can be comma, semicolon or tab separated. In a semicolon file, decimal commas and point
   thousands are read (1.000,5).
@@ -459,8 +472,8 @@ node tierwise/tests/io.test.js     # 59: CSV / Excel / JSON round trips, routes 
 node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
 node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
-                                   # 41: the plan within capacity on chains with known answers, and the example
-node tierwise/tests/invest.test.js # 54: the investment optimiser on chains with known answers, and the example,
+                                   # 46: the plan within capacity on chains with known answers, and the example
+node tierwise/tests/invest.test.js # 55: the investment optimiser on chains with known answers, and the example,
                                    # priced again in the month-by-month plan
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json

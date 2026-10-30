@@ -96,8 +96,17 @@ const allUnder = (r) => Object.values(r.sites).every((s) => !s.util || Array.fro
     check("example " + k + ": delivered + unmet = demand at every market", m.every((s) => { const o = B[k].sites[s.id]; return Array.from(o.demand).every((d, i) => Math.abs(o.delivered[i] + o.unmet[i] - d) < 1e-6 * Math.max(1, d)); }));
   }
   check("example: the base plan serves most but not all demand", B.qual6.fill > 0.85 && B.qual6.fill < 0.97, B.qual6.fill);
-  check("c-prebuild: pre-building up to 6 months serves more than none", B.fixed6.fill > B.fixed0.fill + 0.005, [B.fixed0.fill, B.fixed6.fill]);
+  check("c-prebuild: pre-building up to 6 months serves more than none", B.fixed6.fill > B.fixed0.fill + 0.0003, [B.fixed0.fill, B.fixed6.fill]);
   check("c-prebuild: …and the first unmet month comes later", B.fixed6.firstUnmet > B.fixed0.firstUnmet, [B.fixed0.firstUnmet, B.fixed6.firstUnmet]);
+  // the objective in money: stock has a real cost, so the plan stops running flat out years ahead of the shortage
+  const co = K.costsOf({ packValue: 2.5, unitCost: 3, holdingRate: 1.5, discountRate: 8 });
+  check("money: a pack held a month weighs its holding cost against the margin of a lost pack", co.money && near(co.hold, 3 * 0.015 / 2.5 * 1000, 1e-9) && near(co.safety, 1.5 * co.hold, 1e-9) && co.rate === 0.08);
+  check("money: market priority is a tie-breaker, not a multiple of the margin", near(co.priority(3), 1.002, 1e-12) && K.costsOf({}).priority(3) === 3);
+  check("money: without a pack value, a unit cost and a holding rate the plan keeps the penalty weights", !K.costsOf({ packValue: 2.5 }).money && K.costsOf({ packValue: 2.5 }).hold === K.COST.hold);
+  check("money: the example serves 86.8% and reports what its stock costs", near(B.qual6.fill, 0.8682, 0.001) && B.qual6.holdingPV > 13e6 && B.qual6.holdingPV < 15e6, [B.qual6.fill, B.qual6.holdingPV]);
+  const freeNet = N.build("base"); delete freeNet.config.unitCost; delete freeNet.config.holdingRate;
+  const freeStock = K.solve(highs, freeNet, { mode: "qualified", hold: 6 });
+  check("money: with stock almost free the same chain reaches 90.1%, by running flat out for 13 years; the real cost changes that", near(freeStock.fill, 0.9014, 0.001) && freeStock.holdingPV === 0 && Math.min(...Array.from(freeStock.sites["d-vlc"].util).slice(0, 24)) > 0.99 && Math.min(...Array.from(B.qual6.sites["d-vlc"].util).slice(0, 12)) < 0.9, [freeStock.fill]);
   check("c-flex: more sourcing freedom never serves less (fixed ≤ qualified ≤ any)", B.fixed6.fill <= B.qual6.fill + 1e-6 && B.qual6.fill <= B.any6.fill + 1e-6, [B.fixed6.fill, B.qual6.fill, B.any6.fill]);
   check("c-flex: any supplier pushes the first unmet month back by more than a year", B.any6.firstUnmet > B.qual6.firstUnmet + 12, [B.qual6.firstUnmet, B.any6.firstUnmet]);
   check("c-expand: the expansion programme lifts the fill rate above 99%", B.expand.fill > 0.99, B.expand.fill);

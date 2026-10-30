@@ -1,6 +1,6 @@
 {
- "app": "Tierwise v2.3.1",
- "date": "2026-10-22",
+ "app": "Tierwise v2.3.3",
+ "date": "2026-10-30",
  "runtime": "Node v24.19.0",
  "results": [
   {
@@ -9,7 +9,7 @@
    "title": "Ample capacity: the constrained plan matches the unconstrained one",
    "cite": "sanity check",
    "what": "When no site's capacity ever binds, solving the LP should change nothing: every pack is delivered, and every site's load matches the lot-for-lot requirement plan exactly.",
-   "seconds": 0.267,
+   "seconds": 0.273,
    "pass": true,
    "checks": [
     {
@@ -41,7 +41,7 @@
    "title": "A hard bottleneck: unmet demand equals the shortfall, exactly",
    "cite": "conservation of pack-equivalents",
    "what": "Packaging capped at 800 of a 1,000-pack-a-month demand, with no stock, re-sourcing or other relief: delivered plus unmet must equal demand in every month, and delivered can never exceed capacity by even a rounding error.",
-   "seconds": 0.131,
+   "seconds": 0.133,
    "pass": true,
    "checks": [
     {
@@ -72,27 +72,27 @@
    "group": "The example network",
    "title": "Stock built ahead of a peak measurably improves service, as published",
    "cite": "README, “Example results”",
-   "what": "The README states two fill rates for the example network with fixed sourcing shares: 88.1% with no stock built ahead of a peak, 88.7% allowing up to 6 months. Reproducing both from the same network confirms pre-building is doing real, bounded work — a modest, plausible gain, not a rounding artefact.",
-   "seconds": 7.836,
+   "what": "The README states two fill rates for the example network with fixed sourcing shares: 85.8% with no stock built ahead of a peak, 85.9% allowing up to 6 months. At a real holding cost the gain is small. Reproducing both from the same network confirms pre-building is doing real, bounded work — a modest, plausible gain, not a rounding artefact.",
+   "seconds": 5.084,
    "pass": true,
    "checks": [
     {
      "name": "no stock ahead (hold 0)",
-     "value": 88.07454417750486,
+     "value": 85.78752070492742,
      "unit": "%",
      "tol": 0.2,
      "pass": true
     },
     {
      "name": "6 months of stock ahead (hold 6)",
-     "value": 88.67142842261329,
+     "value": 85.849743625566,
      "unit": "%",
      "tol": 0.2,
      "pass": true
     },
     {
      "name": "hold 6 strictly beats hold 0",
-     "value": 0.59688424510842,
+     "value": 0.062222920638599355,
      "unit": "pts",
      "tol": "> 0",
      "pass": true
@@ -105,7 +105,7 @@
    "title": "Priorities: a higher-priority market is protected first when capacity is short",
    "cite": "objective weighting",
    "what": "Two markets share a capped warehouse; demand together exceeds capacity. Giving one market priority 3 against the other's 1 should concentrate the shortfall on the low-priority market.",
-   "seconds": 0.168,
+   "seconds": 0.148,
    "pass": true,
    "checks": [
     {
@@ -129,13 +129,13 @@
    "group": "The example network",
    "title": "The published example reproduces its stated fill rate",
    "cite": "README, “Example results”",
-   "what": "The shipped example network (19 sites, 13-year horizon), solved within capacity with qualified-lane re-sourcing and 6 months of stock ahead allowed: the README states a 90.1% fill rate with the first unmet demand in December 2032.",
-   "seconds": 6.066,
+   "what": "The shipped example network (19 sites, 13-year horizon), solved within capacity with qualified-lane re-sourcing and 6 months of stock ahead allowed: the README states an 86.8% fill rate with the first unmet demand in December 2032.",
+   "seconds": 4.95,
    "pass": true,
    "checks": [
     {
      "name": "fill rate, 13 years",
-     "value": 90.14177959404672,
+     "value": 86.81854995477353,
      "unit": "%",
      "tol": 0.2,
      "pass": true
@@ -149,7 +149,7 @@
     },
     {
      "name": "solved",
-     "value": 5.93,
+     "value": 4.811,
      "unit": "s",
      "tol": "< 60 s",
      "pass": true
@@ -162,7 +162,7 @@
    "title": "Builds when the margin saved clearly beats the capex",
    "cite": "NPV sanity check",
    "what": "A warehouse short by 300 packs/month at a $10/pack margin loses $3,000/mo in margin, every month, forever. A $1,000 candidate that closes the gap should obviously be built, immediately.",
-   "seconds": 0.027,
+   "seconds": 0.023,
    "pass": true,
    "checks": [
     {
@@ -194,7 +194,7 @@
    "title": "A budget cap picks the affordable option, not just the best one",
    "cite": "a binding resource constraint",
    "what": "Two candidates would each be worth building on their own; a budget too small for both should pick the cheaper one and stay under the cap, not round up and overspend.",
-   "seconds": 0.008,
+   "seconds": 0.019,
    "pass": true,
    "checks": [
     {
@@ -219,7 +219,7 @@
    "title": "The example network's investment decision is reproducible and proven optimal",
    "cite": "the shipped example's four candidates",
    "what": "The example network's four illustrative candidates (Jebel Ali, Cape Town Packaging, Valencia Dosing, Hamilton Nutrition), at the default pack value and discount rate: the optimiser should reach a provably optimal answer — not a timed-out guess — within well under a minute.",
-   "seconds": 1.328,
+   "seconds": 0.913,
    "pass": true,
    "checks": [
     {
@@ -231,7 +231,7 @@
     },
     {
      "name": "solved well under a minute",
-     "value": 1.319,
+     "value": 0.901,
      "unit": "s",
      "tol": "< 45 s",
      "pass": true

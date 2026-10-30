@@ -42,7 +42,7 @@
     product: "product", manufacturing: "product", productmanufacturing: "product", productcmo: "product",
     raw: "raw", rawingredient: "raw", rawingredients: "raw", ingredient: "raw", ingredients: "raw", rawcmo: "raw"
   };
-  var SETTINGS = ["product", "startYear", "startMonth", "cover", "demandPeak", "rawPeak", "rawSeasonMax", "demandScale", "packPerUnit", "kgPerSachet", "rawPerProduct", "packValue", "discountRate", "terminalYears", "currency"];
+  var SETTINGS = ["product", "startYear", "startMonth", "cover", "demandPeak", "rawPeak", "rawSeasonMax", "demandScale", "packPerUnit", "kgPerSachet", "rawPerProduct", "packValue", "unitCost", "holdingRate", "discountRate", "terminalYears", "currency"];
   var TIER_KEYS = ["name", "one", "unit"];
   function key(s) { return String(s == null ? "" : s).toLowerCase().replace(/[\s_\-.()%]/g, ""); }
 
@@ -344,7 +344,7 @@
     var settings = [["setting", "value"], ["product", net.product || ""], ["startYear", cfg.startYear], ["startMonth", cfg.startMonth + 1], ["cover", clean(cfg.cover)],
       ["demandPeak", cfg.demandPeak + 1], ["rawPeak", cfg.rawPeak + 1], ["rawSeasonMax", clean(cfg.rawSeasonMax)], ["demandScale", clean(cfg.demandScale != null ? cfg.demandScale : 1)],
       ["packPerUnit", clean(net.bom.packPerUnit)], ["kgPerSachet", clean(net.bom.kgPerSachet)], ["rawPerProduct", clean(net.bom.rawPerProduct)],
-      ["packValue", clean(cfg.packValue || 0)], ["discountRate", clean(cfg.discountRate || 0)],
+      ["packValue", clean(cfg.packValue || 0)], ["unitCost", clean(cfg.unitCost || 0)], ["holdingRate", clean(cfg.holdingRate || 0)], ["discountRate", clean(cfg.discountRate || 0)],
       ["terminalYears", clean(cfg.terminalYears != null ? cfg.terminalYears : 5)], ["currency", cfg.currency || "$"]];
     P.TIERS.forEach(function (t) { var o = (net.tiers || {})[t.id] || {}; TIER_KEYS.forEach(function (k) { settings.push(["tier." + t.id + "." + k, o[k] || ""]); }); });
     (net.params || []).forEach(function (d) {

@@ -193,9 +193,12 @@ function chain(o) {
     // package recovers almost nothing, because the yearly model cannot see the monthly bottlenecks. Pinned here so the
     // README states it honestly; TWInvest.verify runs this check on every optimiser result; 3.0 is meant to close the gap itself.
     const v = K.verify(highs, net, r, { mode: "qualified", hold: 6 });
-    check("example network, monthly plan: fill 90.1% → 90.2% with the package", v.ok && Math.abs(v.fillBefore - 0.901) < 0.0005 && Math.abs(v.fillAfter - 0.902) < 0.0005, v);
-    check("example network, monthly plan: recovers $0.6M PV, NPV −$4.0M", Math.abs(v.recoveredPV - 0.57e6) < 0.05e6 && Math.abs(v.npv + 4.03e6) < 0.05e6, v);
-    check("verification: flags that the monthly plan disagrees with the screening model", v.pays === false && v.agrees === false && v.screeningNpv === r.npv, v);
+    check("example network, monthly plan: fill 86.8% → 89.9% with the package", v.ok && Math.abs(v.fillBefore - 0.868) < 0.0005 && Math.abs(v.fillAfter - 0.899) < 0.0005, v);
+    check("example network, monthly plan: recovers $14.0M PV, saves $1.8M of stock, NPV +$11.2M", Math.abs(v.recoveredPV - 14.0e6) < 0.05e6 && Math.abs(v.holdingSavedPV - 1.83e6) < 0.05e6 && Math.abs(v.npv - 11.24e6) < 0.05e6, v);
+    check("verification: the monthly plan and the screening model agree in sign once stock has a real cost", v.pays === true && v.agrees === true && v.screeningNpv === r.npv, v);
+    const free = N.build("base"); delete free.config.unitCost; delete free.config.holdingRate;
+    const vf = K.verify(highs, free, r, { mode: "qualified", hold: 6 });
+    check("verification: with stock almost free the same package looks like a loss (−$4.0M), and is reported as a disagreement", vf.ok && Math.abs(vf.npv + 4.03e6) < 0.05e6 && vf.pays === false && vf.agrees === false, vf);
     check("verification: nothing chosen, nothing to check", K.verify(highs, net, { investments: [] }, {}).nothingToCheck === true);
     r.investments.forEach((inv) => {
       const site = net.sites.find((s) => s.id === inv.site), cand = site && (site.candidates || []).find((c) => c.id === inv.id);

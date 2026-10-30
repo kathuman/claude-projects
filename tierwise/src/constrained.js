@@ -19,12 +19,27 @@
 // at least two months for safety stock). Warehouse safety stock is a soft target: it can be drawn in a crunch.
 // Objective, in pack-equivalents: unmet demand 1000 (× the market's priority) ≫ safety stock below target 1 a month
 // (so a long crunch draws it rather than lose sales) > re-routing 0.5 ≫ holding 0.02 a month > transport 0.0005 a transit day > making 0.001.
+// With a pack value, a unit cost and a holding rate, the objective is in money instead (see costsOf): a pack in stock costs
+// what it really costs against the margin a lost pack loses, and both are discounted, so stock is built only where it pays.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory(require("./plan.js"));
   else root.TWConstrained = factory(root.TWPlan);
 })(typeof self !== "undefined" ? self : this, function (P) {
   "use strict";
   var COST = { unmet: 1000, safety: 1, reroute: 0.5, hold: 0.02, transport: 0.0005, make: 0.001 };
+  // the objective's weights for a network. A lost pack still weighs COST.unmet, which is `packValue` in money, so holding a
+  // pack for a month weighs what `unitCost` × `holdingRate` is worth against it. Safety stock below target costs half as
+  // much again as holding it, so it is kept in normal times and drawn in a crunch. Re-routing, transport and making stay
+  // small tie-breaking weights: the example has no cost data for them.
+  function costsOf(cfg) {
+    var c = Object.assign({ money: false, rate: 0, priority: function (p) { return p; } }, COST);
+    if (!(cfg.packValue > 0 && cfg.unitCost > 0 && cfg.holdingRate > 0)) return c;
+    c.money = true; c.rate = (cfg.discountRate || 0) / 100;
+    c.hold = cfg.unitCost * cfg.holdingRate / 100 / cfg.packValue * COST.unmet;
+    c.safety = Math.max(COST.safety, 1.5 * c.hold);
+    c.priority = function (p) { return 1 + 1e-3 * (p - 1); };   // not a currency: it only decides which market goes short
+    return c;
+  }
   var MODES = ["fixed", "qualified", "any"];
   // the interior-point method, without crossover: an exact basis is not needed for a plan, and it is several times faster
   var SOLVER = { output_flag: false, solver: "ipm", run_crossover: "off" };
@@ -75,7 +90,8 @@
       if (s.tier === "warehouse") { var q = new Float64Array(Tn); for (t = 0; t < Tn; t++) q[t] = r.ss[Math.min(M - 1, Math.max(0, t - W))] / SC; ss[s.id] = q; }
     });
     // ---- LP text, written row by row
-    var obj = [], rows = [], bounds = [], nRows = 0;
+    var obj = [], rows = [], bounds = [], nRows = 0, W0 = W;
+    var CO = costsOf(cfg), disc = function (t) { return CO.rate ? Math.pow(1 + CO.rate, -Math.max(0, Math.min(t - W0, M - 1)) / 12) : 1; };
     function term(c, v) { return (c >= 0 ? " + " : " - ") + fmt(Math.abs(c)) + " " + v; }
     function fmt(c) { return c === 1 ? "1" : +c.toPrecision(12) + ""; }
     function row(terms, op, rhs) { if (!terms.length) { return; } var parts = []; for (var q = 0; q < terms.length; q += 8) parts.push(terms.slice(q, q + 8).join("")); rows.push(" r" + (nRows++) + ":" + parts.join("\n  ") + " " + op + " " + fmt(rhs)); }
@@ -109,10 +125,10 @@
           // would without a horizon; only the 156 months count in the results
           // (a warm-up month weighs a little more than a planned one, so stock is not built before the plan starts; a run-out
           // month much less, so the planned months come first)
-          tm.push([Uv(i, t), -1]); obj.push(term(COST.unmet * (s.priority > 0 ? s.priority : 1) * (t < W ? 1.001 : t < W + M ? 1 : 0.2), Uv(i, t)));
+          tm.push([Uv(i, t), -1]); obj.push(term(CO.unmet * CO.priority(s.priority > 0 ? s.priority : 1) * (t < W ? 1.001 : t < W + M ? 1 : 0.2) * disc(t), Uv(i, t)));
           var rhs = -dem[s.id][t];
           row(merge(tm).map(function (a) { return term(a[1], a[0]); }), "=", rhs);
-          obj.push(term(COST.hold, Bv(i, t)));
+          obj.push(term(CO.hold * disc(t), Bv(i, t)));
           lim(function (k) { return Bv(i, k); }, t, function (k) { return arrAll(s, k); }, 1);
         }
         return;
@@ -121,7 +137,7 @@
       for (t = 0; t < Tn; t++) {
         // finished stock: I[t] = I[t−1] + what comes in − what is shipped
         var tm2 = [[Iv(i, t), 1]]; if (t > 0) tm2.push([Iv(i, t - 1), -1]);
-        obj.push(term(COST.hold, Iv(i, t)));
+        obj.push(term(CO.hold * disc(t), Iv(i, t)));
         var incF = isW ? function (k) { return avail(s, k); } : function (k) { return released(s, k); };
         incF(t).forEach(function (a) { tm2.push([a[0], -a[1]]); });
         (outL[s.id] || []).forEach(function (l) { tm2.push([Xv(l.i, t), 1]); });
@@ -130,7 +146,7 @@
         if (isW) {
           var o = (outL[s.id] || []).map(function (l) { return term(1, Xv(l.i, t)); });
           if (o.length) row(o, "<=", cap[s.id][t]);
-          if (ss[s.id][t] > 0) { row([term(1, Iv(i, t)), term(1, Sv(i, t))], ">=", ss[s.id][t] * pe.warehouse); obj.push(term(COST.safety, Sv(i, t))); }
+          if (ss[s.id][t] > 0) { row([term(1, Iv(i, t)), term(1, Sv(i, t))], ">=", ss[s.id][t] * pe.warehouse); obj.push(term(CO.safety * disc(t), Sv(i, t))); }
         } else {
           bounds.push(" " + Pv(i, t) + " <= " + fmt(Math.max(0, cap[s.id][t])));
           obj.push(term(COST.make, Pv(i, t)));
@@ -140,7 +156,7 @@
             arrAll(s, t).forEach(function (a) { a2.push([a[0], -a[1]]); });
             consumes(s, t).forEach(function (c) { a2.push([c[0], c[1]]); });
             row(merge(a2).map(function (a) { return term(a[1], a[0]); }), "=", 0);
-            obj.push(term(COST.hold, Jv(i, t)));
+            obj.push(term(CO.hold * disc(t), Jv(i, t)));
             lim(function (k) { return Jv(i, k); }, t, function (k) { return arrAll(s, k); }, L);
           }
         }
@@ -172,6 +188,13 @@
       var a = new Float64Array(M), sh = split(l.days / P.DAYS_PER_MONTH);
       for (var m = 0; m < M; m++) { var k = m + W, s = 0; sh.forEach(function (sp) { var t = k - sp[0]; if (t >= 0) s += v("x" + l.i + "_" + t) * sp[1]; }); a[m] = s / pe[net.sites[sIdx[l.to]].tier === "market" ? "market" : net.sites[sIdx[l.from]].tier]; }
       laneFlow[l.from + ">" + l.to] = a;
+    });
+    // what the stock costs: every stock in the chain, month by month, at the holding cost, discounted (a money objective only)
+    var CO = costsOf(net.config), holdingPV = 0;
+    if (CO.money) Object.keys(cols).forEach(function (n) {
+      var h = /^[ijb]\d+_(\d+)$/.exec(n); if (!h) return;
+      var m = +h[1] - W; if (m < 0 || m >= M) return;
+      holdingPV += cols[n].Primal * meta.scale * net.config.unitCost * net.config.holdingRate / 100 * Math.pow(1 + CO.rate, -Math.floor(m / 12));
     });
     var totD = 0, totU = 0, firstU = -1, reroute = 0, flowAll = 0;
     net.sites.forEach(function (s) {
@@ -211,7 +234,7 @@
     var shares = {}; lanesOut.forEach(function (l) { (shares[l.to] = shares[l.to] || { tot: 0, lanes: [] }).tot += l.total; shares[l.to].lanes.push(l); });
     Object.keys(shares).forEach(function (k) { shares[k].lanes.forEach(function (l) { l.actual = shares[k].tot > 0 ? l.total / shares[k].tot : 0; }); });
     return { ok: true, constrained: true, mode: meta.mode, hold: meta.hold, months: M, periods: Pr, sites: out, markets: base.markets, transit: base.transit, tiers: base.tiers, leadChain: base.leadChain, lanes: lanesOut,
-      fill: totD > 0 ? 1 - totU / totD : 1, unmet: totU, demand: totD, firstUnmet: firstU, rerouted: flowAll > 0 ? reroute / flowAll : 0 };
+      fill: totD > 0 ? 1 - totU / totD : 1, unmet: totU, demand: totD, firstUnmet: firstU, rerouted: flowAll > 0 ? reroute / flowAll : 0, holdingPV: holdingPV };
   }
   function byTier(net, id) { for (var i = 0; i < net.sites.length; i++) if (net.sites[i].id === id) return net.sites[i].tier; return "market"; }
   function sumA(s, a, b) { var t = 0; for (var i = a; i < b; i++) t += s[i]; return t; }
@@ -228,6 +251,6 @@
     var out = read(net, b.meta, r.Columns); out.seconds = (Date.now() - t0) / 1000; out.size = { rows: b.meta.rows, cols: Object.keys(r.Columns).length }; out.attempts = k;
     return out;
   }
-  var API = { WARMUP: 1.1, COST: COST, MODES: MODES, split: split, packEq: packEq, lanesOf: lanesOf, build: build, read: read, solve: solve };
+  var API = { WARMUP: 1.1, COST: COST, costsOf: costsOf, MODES: MODES, split: split, packEq: packEq, lanesOf: lanesOf, build: build, read: read, solve: solve };
   return API;
 });

@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.3.2</span>
+    <span class="ver" id="ver">v2.3.3</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -124,6 +124,7 @@
   <section class="panel" id="servicePanel" hidden>
     <h2 data-i18n="sv.h">What reaches the shelves · within capacity</h2>
     <p class="panel-note" data-i18n="sv.note">The plan within capacity: no site makes or ships more than it can, so some demand may go unsupplied. Sites build stock ahead of a peak (up to the limit you set), re-source to suppliers with room, and draw safety stock in a crunch; what still cannot be made is lost. Every consumption point counts the same unless you give it a priority in the editor.</p>
+    <p class="iv-verdict bad" id="moneyNote" hidden data-i18n="sv.money">This plan has no real stock cost: set a pack value, unit cost and holding cost under Capacity investment. Until then stock is almost free, so the fill rate is an upper limit, not an economic plan.</p>
     <div class="chart" id="serviceChart"></div>
     <div class="legend" id="serviceLegend"></div>
     <div class="table-scroll" id="serviceTable" style="margin-top:10px"></div>
@@ -261,12 +262,15 @@
     <p class="panel-note" data-i18n="iv.note">Which candidate expansions are worth building, and about when. A year-resolution screening model, separate from the month-by-month plan above: it finds the candidates and a rough timing. Every package it chooses is then priced again by the month-by-month plan, and that price is the one to trust. Capex, running costs and the margin lost on unmet demand are all discounted alike, and capacity is credited for a number of years after the horizon. Define candidates (capacity added, capex, build and qualification time, and an optional running cost a year) on a site in the Network Studio inspector.</p>
     <div class="iv-ctl">
       <label class="ctl inline"><span data-i18n="iv.packValue">Pack value (margin per pack)</span><input id="ivPackValue" class="num" inputmode="decimal" style="width:90px"></label>
+      <label class="ctl inline"><span data-i18n="iv.unit">Unit cost (per pack)</span><input id="ivUnitCost" class="num" inputmode="decimal" style="width:80px"></label>
+      <label class="ctl inline"><span data-i18n="iv.holding">Holding cost (% of unit cost a month)</span><input id="ivHolding" class="num" inputmode="decimal" style="width:70px"></label>
       <label class="ctl inline"><span data-i18n="iv.discount">Discount rate (% a year)</span><input id="ivDiscount" class="num" inputmode="decimal" style="width:70px"></label>
       <label class="ctl inline"><span data-i18n="iv.terminal">Years credited after the horizon</span><input id="ivTerminal" class="num" inputmode="numeric" style="width:60px"></label>
       <label class="ctl inline"><span data-i18n="iv.budget">Budget cap (optional)</span><input id="ivBudget" class="num" inputmode="decimal" style="width:110px" placeholder="—"></label>
       <button class="btn" type="button" id="ivRun" data-i18n="iv.run">Run the investment optimiser</button>
       <span class="solve-status" id="ivStatus" aria-live="polite"></span>
     </div>
+    <p class="panel-note" data-i18n="iv.assume">Pack value, unit cost and holding cost also set what stock and lost sales cost in the month-by-month plan. The example's figures are illustrative assumptions.</p>
     <div id="ivResults" hidden>
       <p class="iv-verdict" id="ivVerdict" role="status" hidden></p>
       <div class="kpis" id="ivKpis"></div>
@@ -310,12 +314,12 @@
       <p><b>Limits.</b> The requirement plan assumes unlimited capacity (lot-for-lot): it shows where and when capacity is short, and how much to add. Inventory is held only at warehouses, as safety stock. There is one product. Sourcing shares are fixed over the horizon. All figures in the example are illustrative.</p>
     </div>
     <div data-i18n="x.cap">
-      <p><b>Within capacity.</b> Switched on, a linear program solves the whole 13-year horizon at once, month by month, with no site above its capacity. It decides what each site makes or ships, which lane carries it, how much stock to build ahead of a peak (stock may be held up to the months you choose; warehouses keep at least two months for safety stock) and what demand cannot be supplied. Unmet demand costs far more than anything else; then safety stock below its target, re-sourcing away from the planned shares, holding stock and transport. Sourcing can keep the planned shares, re-source among the existing (qualified) lanes, or open every lane from the tier above. The model runs over a warm-up before the first month and a run-out after the last, so the edges of the horizon are not distorted. It is solved by <a href="https://highs.dev/" target="_blank" rel="noopener">HiGHS</a> in your browser, in a few seconds.</p>
+      <p><b>Within capacity.</b> Switched on, a linear program solves the whole 13-year horizon at once, month by month, with no site above its capacity. It decides what each site makes or ships, which lane carries it, how much stock to build ahead of a peak (stock may be held up to the months you choose; warehouses keep at least two months for safety stock) and what demand cannot be supplied. The objective is in money: a lost pack costs the pack value, and a pack in stock costs the unit cost × the holding cost each month, both discounted. A network without those settings uses fixed penalty weights, in which stock is almost free. Sourcing can keep the planned shares, re-source among the existing (qualified) lanes, or open every lane from the tier above. The model runs over a warm-up before the first month and a run-out after the last, so the edges of the horizon are not distorted. It is solved by <a href="https://highs.dev/" target="_blank" rel="noopener">HiGHS</a> in your browser, in a few seconds.</p>
     </div>
   </details>
 
   <footer class="foot">
-    Tierwise v<span id="ver2">2.3.2</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.3.3</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
