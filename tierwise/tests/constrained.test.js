@@ -107,6 +107,24 @@ const allUnder = (r) => Object.values(r.sites).every((s) => !s.util || Array.fro
   const freeNet = N.build("base"); delete freeNet.config.unitCost; delete freeNet.config.holdingRate;
   const freeStock = K.solve(highs, freeNet, { mode: "qualified", hold: 6 });
   check("money: with stock almost free the same chain reaches 90.1%, by running flat out for 13 years; the real cost changes that", near(freeStock.fill, 0.9014, 0.001) && freeStock.holdingPV === 0 && Math.min(...Array.from(freeStock.sites["d-vlc"].util).slice(0, 24)) > 0.99 && Math.min(...Array.from(B.qual6.sites["d-vlc"].util).slice(0, 12)) < 0.9, [freeStock.fill]);
+  // the proof: weak duality, from the duals alone, on a problem small enough to do by hand (min 2x + 3y, x ≤ 4, x + y ≥ 10)
+  const toy = { Status: "Optimal", ObjectiveValue: 26, Rows: [{ Dual: -1, Lower: null, Upper: 4 }, { Dual: 3, Lower: 10, Upper: null }], Columns: { x: { Dual: 0, Lower: 0, Upper: null }, y: { Dual: 0, Lower: 0, Upper: null } } };
+  check("proof: the bound from the duals meets the optimum by hand", near(K.certify(toy).bound, 26, 1e-12) && K.certify(toy).gap === 0 && K.certify(toy).unsound === 0);
+  check("proof: a cost above the bound shows as a gap, so a wrong answer cannot pass", K.certify(Object.assign({}, toy, { ObjectiveValue: 27 })).gap > 0.03);
+  check("proof: a dual that no bound can pay for is flagged", K.certify(Object.assign({}, toy, { Rows: [{ Dual: 5, Lower: null, Upper: 4 }] })).unsound === 5);
+  const rc = B.qual6.receipt;
+  check("receipt: the example is proved optimal to a billionth or so, independently of the solver's status", rc.proved && rc.certificate.gap < 1e-6 && rc.certificate.unsound < 1e-3 && rc.checks.length === 3 && rc.checks.every((c) => c.pass), rc.certificate);
+  check("receipt: it records what produced the result", rc.objective === "money" && rc.solver === "HiGHS 1.15.3" && rc.assumptions.holdingRate === 1.5 && rc.rows > 15000 && /^[0-9a-f]{16}$/.test(rc.input), rc);
+  check("receipt: the fingerprint follows the input", rc.input === K.solve(highs, N.build("base"), { mode: "qualified", hold: 6 }).receipt.input && rc.input !== B.fixed6.receipt.input);
+  // the value of capacity: known on a small chain, and measured against a real bump on the example
+  const chainNet = chain({ d: { capacity: 18000 }, edit: (n) => Object.assign(n.config, { packValue: 2, unitCost: 1, holdingRate: 1, discountRate: 0 }) }), cvc = K.solve(highs, chainNet, { mode: "qualified", hold: 6 }).capacityValue;
+  check("capacity value: at the only bottleneck a pack of capacity is worth a pack's margin, and elsewhere nothing", cvc.money && near(cvc.sites.d.monthly[60], 2, 0.02) && cvc.sites.pk.total === 0 && cvc.sites.r.total === 0, cvc.sites.d.monthly[60]);
+  { const net = N.build("base"), b = K.build(net, { mode: "qualified", hold: 6 }), S = { output_flag: false, solver: "ipm", run_crossover: "off" }, r0 = highs.solve(b.lp, S), nm = "p" + b.meta.sIdx["d-vlc"] + "_" + (60 + b.meta.W);
+    const at = b.lp.indexOf("\nBounds\n"), head = b.lp.slice(0, at), tail = b.lp.slice(at), up = new RegExp(" " + nm + " <= ([0-9.e+-]+)\n").exec(tail);
+    const r1 = highs.solve(head + tail.replace(up[0], " " + nm + " <= " + (+up[1] + 0.1) + "\n"), S), measured = (r0.ObjectiveValue - r1.ObjectiveValue) / 0.1 / K.COST.unmet * net.config.packValue;
+    check("capacity value: the figure shown matches what one more unit really changes, on the example", near(B.qual6.capacityValue.sites["d-vlc"].monthly[60], measured, 2e-3), [B.qual6.capacityValue.sites["d-vlc"].monthly[60], measured]); }
+  const cvx = B.qual6.capacityValue.sites;
+  check("capacity value: Valencia's new line pays many times over at the margin; Jebel Ali's bay does not", cvx["d-vlc"].candidates[0].ratio > 5 && cvx["w-ae"].candidates[0].ratio < 1, [cvx["d-vlc"].candidates[0].ratio, cvx["w-ae"].candidates[0].ratio]);
   check("c-flex: more sourcing freedom never serves less (fixed ≤ qualified ≤ any)", B.fixed6.fill <= B.qual6.fill + 1e-6 && B.qual6.fill <= B.any6.fill + 1e-6, [B.fixed6.fill, B.qual6.fill, B.any6.fill]);
   check("c-flex: any supplier pushes the first unmet month back by more than a year", B.any6.firstUnmet > B.qual6.firstUnmet + 12, [B.qual6.firstUnmet, B.any6.firstUnmet]);
   check("c-expand: the expansion programme lifts the fill rate above 99%", B.expand.fill > 0.99, B.expand.fill);

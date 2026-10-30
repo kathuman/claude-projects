@@ -216,6 +216,8 @@
     var t0 = Date.now(), s = solveLP(highs, b, opts);
     if (!s.r) return { ok: false, errors: ["The investment optimiser could not be solved (" + s.why + ")."] };
     var out = read(net, b.meta, s.r.Columns); out.size = { rows: b.meta.rows, cols: Object.keys(s.r.Columns).length }; out.timedOut = s.timedOut;
+    out.receipt = { model: "yearly", objective: "money", solver: "HiGHS 1.15.3", method: "branch and bound", status: s.r.Status, rows: out.size.rows, cols: out.size.cols, gapLimit: 0.002, proved: !s.timedOut,
+      input: K.hashOf(JSON.stringify([net, opts.mode, opts.budget])), assumptions: { packValue: net.config.packValue, unitCost: net.config.unitCost, holdingRate: net.config.holdingRate, discountRate: net.config.discountRate, mode: opts.mode } };
     // the same model with nothing to build: the margin the chosen package recovers, and so its net present value
     var b0 = build(net, Object.assign({}, opts, { noCandidates: true, budget: 0 })), s0 = b0.ok ? solveLP(highs, b0, opts) : {};
     if (s0.r) {
@@ -224,7 +226,7 @@
       out.recoveredPV = base.lostPV - out.lostPV;
       out.npv = out.recoveredPV - out.capexPV - out.opexPV;
     }
-    out.seconds = (Date.now() - t0) / 1000;
+    out.seconds = out.receipt.seconds = (Date.now() - t0) / 1000;
     return out;
   }
 
@@ -240,7 +242,7 @@
     if (!m0.ok || !m1.ok) return { ok: false, errors: (m0.errors || []).concat(m1.errors || []) };
     var lost = function (res) { var pv = 0; Object.keys(res.sites).forEach(function (id) { var x = res.sites[id]; if (x.site.tier === "market") for (var m = 0; m < x.unmet.length; m++) pv += x.unmet[m] * cfg.packValue * wt.w[Math.floor(m / 12)]; }); return pv; };
     var recovered = lost(m0) - lost(m1), holdingSaved = (m0.holdingPV || 0) - (m1.holdingPV || 0), npv = recovered + holdingSaved - r.capexPV - r.opexPV;
-    return { ok: true, fillBefore: m0.fill, fillAfter: m1.fill, recoveredPV: recovered, holdingSavedPV: holdingSaved, npv: npv, screeningNpv: r.npv, pays: npv >= 0, agrees: (npv >= 0) === (r.npv >= 0), seconds: (Date.now() - t0) / 1000 };
+    return { ok: true, fillBefore: m0.fill, fillAfter: m1.fill, recoveredPV: recovered, holdingSavedPV: holdingSaved, npv: npv, screeningNpv: r.npv, pays: npv >= 0, agrees: (npv >= 0) === (r.npv >= 0), receipts: [m0.receipt, m1.receipt], proved: m0.receipt.proved && m1.receipt.proved, seconds: (Date.now() - t0) / 1000 };
   }
 
   return { YEARS: YEARS, TERMINAL_YEARS: TERMINAL_YEARS, TIME_LIMIT: TIME_LIMIT, PRIORITY_TIE: PRIORITY_TIE, weights: weights, build: build, read: read, solve: solve, verify: verify };

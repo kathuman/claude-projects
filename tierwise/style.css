@@ -410,3 +410,8 @@ svg.map.world.picking, .mode-add svg.map.world{cursor:crosshair;}
 .iv-verdict{margin:12px 0 10px; padding:9px 12px; border-left:4px solid var(--line); font-weight:600; line-height:1.45;}
 .iv-verdict.good{border-left-color:var(--good);}
 .iv-verdict.bad{border-left-color:var(--bad);}
+.receipt{margin:10px 0; font-size:13.5px; border:1px solid var(--line); border-radius:8px; padding:7px 11px;}
+.receipt summary{cursor:pointer;}
+.receipt summary b.ok{color:var(--good);} .receipt summary b.no{color:#ff8a89;}
+.receipt dl{display:grid; grid-template-columns:minmax(120px,max-content) minmax(0,1fr); gap:4px 14px; margin:9px 0 3px;}
+.receipt dt{opacity:.75;} .receipt dd{margin:0; overflow-wrap:anywhere;}

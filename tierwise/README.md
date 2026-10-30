@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.3.3 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.4.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -43,11 +43,10 @@ server, but the code is layered so that a server can slot in behind the same int
 ## Roadmap
 
 Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 (world map), 2.3 (capacity investment),
-2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4: every optimiser result verified, the monthly plan priced in money).
+2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers).
 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
-| 2.4 | Honest numbers | Every optimiser result priced by the monthly plan (**done**); the monthly objective in money (**done**); the value of capacity by site and month; first receipts | No unverified NPV on screen |
 | 2.5 | Architecture and memory | The application API, a versioned data layer, a job runner; autosave, named scenarios with a diff, a decision ledger, offline use; the browser suite in CI; a three-step front door (network, where it breaks, what to do) | A reload loses nothing |
 | 2.6 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
 | 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
@@ -363,6 +362,39 @@ For a selected route it edits share, transit days, mode and route parameters.
 - parameter definitions and values;
 - the undo history.
 
+## Receipts and the value of capacity (`src/constrained.js`)
+
+**Receipts.** Every result carries one, under a line at the top of its panel. It records the objective, the assumptions,
+the solver and method, the model's size, and a fingerprint of the input.
+
+The monthly plan's receipt also holds a **proof that doesn't take the solver's word for it**. From the row and column
+duals alone, `certify` computes a lower bound on the cost of any feasible plan (weak duality). If the plan's own cost
+meets that bound, nothing can beat it. On the example the two agree to about one part in a billion. Two more checks run
+on the plan itself: delivered + unmet = demand in every market and month, and no site above its capacity. Tests confirm
+that a wrong cost shows as a gap, and that the bound is flagged if a dual makes it unsound.
+
+The yearly optimiser is a mixed-integer search, so it has no such proof. Its receipt says it was solved to within its
+0.2% gap, or that time ran out. Its answer is then priced by two proved monthly plans. A package whose monthly plans
+fail their checks is shown as not verified, and cannot be applied.
+
+**What more capacity is worth.** Within capacity, a table ranks the sites by the value of 1,000 more packs a month over
+the 13 years: the shadow price of their capacity, in present value. Next to it is each site's best candidate, with the
+value of its first unit against its cost. On the example:
+
+| Site | Value of 1,000 more packs a month | Best candidate, value ÷ cost |
+|---|---|---|
+| Rosario Dosing | $139k | – |
+| Valencia Dosing | $139k | 10.6× |
+| Penang Dosing | $139k | – |
+| Jebel Ali DC | $0.9k | 0.08× |
+| Cape Town Packaging | $0.5k | 0.05× |
+
+A shadow price holds for the first unit only: it falls as capacity is added, because the next bottleneck takes over.
+So a low value doesn't rule a line out. Cape Town's second line shows 0.05× and loses $1.9M on its own, and Valencia's
+line earns $7.1M on its own, but the two together earn $11.2M, because expanding dosing moves the bottleneck to packaging.
+The table shows where to look, and the optimiser prices the expansion. A test checks the figure against a real capacity
+bump on the example: up and down, in four months across the horizon, they agree to within 0.1%.
+
 ## Your own supply chain (`src/io.js`)
 
 The **Your supply chain** box loads a network from a file. You can also drop the file onto it. **Template · CSV** and
@@ -472,8 +504,8 @@ node tierwise/tests/io.test.js     # 59: CSV / Excel / JSON round trips, routes 
 node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
 node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
-                                   # 46: the plan within capacity on chains with known answers, and the example
-node tierwise/tests/invest.test.js # 55: the investment optimiser on chains with known answers, and the example,
+                                   # 55: the plan within capacity on chains with known answers, and the example
+node tierwise/tests/invest.test.js # 57: the investment optimiser on chains with known answers, and the example,
                                    # priced again in the month-by-month plan
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json

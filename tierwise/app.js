@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.3.3";
+  var VERSION = "2.4.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -488,8 +488,27 @@
   }
   // the month-by-month price leads; the screening model's figures (year resolution) are shown as the estimate they are,
   // and a package that could not be checked cannot be applied
+  // a result's receipt: how it was obtained, what it assumes, and the checks behind it. The optimality gap is recomputed
+  // here from the solver's duals, so the proof does not rest on the solver's own status.
+  function receiptHtml(rc, title) {
+    if (!rc) return "";
+    var yr = rc.model === "yearly", cert = rc.certificate, a = rc.assumptions, gapText = cert ? fx(Math.max(cert.gap, 1e-6) * 100, 4) + "%" : "";
+    var head = !rc.proved ? T("Not proved: treat this result with care.") : yr ? T("Solved to within {g} of the best possible.", { g: fx(rc.gapLimit * 100, 1) + "%" }) : T("Proved: no plan can beat this by more than {g}.", { g: gapText });
+    var row = function (k, v) { return "<dt>" + k + "</dt><dd>" + v + "</dd>"; };
+    var names = { optimal: T("Optimality (recomputed from the shadow prices)"), balance: T("Delivered + unmet = demand"), capacity: T("No site above its capacity") };
+    var money = a.unitCost > 0 && a.holdingRate > 0 && a.packValue > 0;
+    return "<details class='receipt'><summary><b class='" + (rc.proved ? "ok" : "no") + "'>" + (rc.proved ? "✓" : "!") + "</b> " + (title ? esc(title) + ": " : "") + esc(head) + "</summary><dl>" +
+      row(T("Objective"), rc.objective === "money" ? T("Money") : T("Penalty weights: stock is almost free")) +
+      row(T("Assumptions"), money ? esc(T("Pack value {a}, unit cost {b}, holding cost {c}% a month, discount rate {d}%", { a: fc(a.packValue), b: fc(a.unitCost), c: fx(a.holdingRate, 2), d: fx(a.discountRate || 0, 1) })) : "–") +
+      row(T("Solver"), esc(rc.solver + " · " + ({ "interior point": T("interior point"), "interior point with crossover": T("interior point with crossover"), "dual simplex": T("dual simplex"), "branch and bound": T("branch and bound") }[rc.method] || rc.method) + " · " + rc.status)) +
+      row(T("Size"), T("{r} rows, {c} variables", { r: fq(rc.rows), c: fq(rc.cols) }) + (rc.seconds != null ? " · " + T("{s} s", { s: fx(rc.seconds, 1) }) : "")) +
+      row(T("Input fingerprint"), "<code>" + esc(rc.input) + "</code>") +
+      (rc.checks ? row(T("Checks"), rc.checks.map(function (c) { return (c.pass ? "✓ " : "✗ ") + esc(names[c.id]); }).join("<br>")) : "") + "</dl></details>";
+  }
   function renderIvResults(r) {
-    var opex = r.investments.some(function (x) { return x.opex > 0; }), v = r.verified || { ok: false }, checked = v.ok && !v.nothingToCheck, has = r.investments.length > 0;
+    var opex = r.investments.some(function (x) { return x.opex > 0; }), v = r.verified || { ok: false }, has = r.investments.length > 0;
+    if (v.ok && !v.nothingToCheck && !v.proved) v = { ok: false };
+    var checked = v.ok && !v.nothingToCheck;
     var vd = $("ivVerdict");
     vd.hidden = !has; vd.className = "iv-verdict " + (checked && v.pays ? "good" : "bad");
     vd.textContent = !v.ok ? T("Not verified: the month-by-month plan could not price this package, so these figures are only a screening estimate.") :
@@ -508,6 +527,7 @@
       [T("Total capex"), fc(r.capexTotal)],
       [T("Investments chosen"), String(r.investments.length)]
     ].filter(Boolean).map(function (k) { return "<div class='kpi-tile'><div class='kpi-label'>" + k[0] + "</div><div class='kpi-value'>" + esc(k[1]) + "</div></div>"; }).join("");
+    $("ivReceipt").innerHTML = receiptHtml(r.receipt, T("The yearly screening model")) + (checked ? v.receipts.map(function (x, i) { return receiptHtml(x, i ? T("The monthly plan with the package") : T("The monthly plan without the package")); }).join("") : "");
     var note = "<p class='panel-note'>" + T("A year-resolution screening estimate. Present values at {r} a year; capacity is credited for {n} years after the horizon.", { r: fx(r.discountRate, r.discountRate % 1 ? 1 : 0) + "%", n: r.terminalYears }) + "</p>";
     if (!r.investments.length) { $("ivTable").innerHTML = note + "<p class='lanes'>" + T("No candidate is worth building at the pack value and discount rate set above.") + "</p>"; return; }
     $("ivTable").innerHTML = note + "<table class='outlook needs'><thead><tr><th style='text-align:left'>" + T("Site") + "</th><th style='text-align:left'>" + T("Candidate") +
@@ -784,8 +804,22 @@
     if (state.cres) st.textContent = T("Solved in {s} s · {r} constraints", { s: fx(state.cres.seconds || 0, 1), r: (state.cres.size ? state.cres.size.rows : 0).toLocaleString(I.locale) });
   }
   // what reaches the shelves: delivered and unmet demand per period, and per market
+  // what the first extra unit of capacity is worth at each site, and whether its best candidate would pay at that value
+  function renderValue() {
+    var cv = CAP() && state.cres ? state.cres.capacityValue : null, box = $("valuePanel");
+    box.hidden = !(cv && cv.money); if (box.hidden) return;
+    var rows = Object.keys(cv.sites).map(function (id) { return { id: id, x: cv.sites[id] }; }).filter(function (r) { return r.x.total * 1000 >= 1 && byId(r.id); }).sort(function (a, b) { return b.x.total - a.x.total; }).slice(0, 10);
+    if (!rows.length) { $("valueTable").innerHTML = "<p class='lanes'>" + T("No site's capacity limits this plan.") + "</p>"; return; }
+    $("valueTable").innerHTML = "<table class='outlook needs'><thead><tr><th style='text-align:left'>" + T("Site") + "</th><th>" + T("Value of 1,000 more packs a month") + "</th><th>" + T("Months it limits the plan") + "</th><th>" + T("From") + "</th><th style='text-align:left'>" + T("Best candidate") + "</th><th>" + T("First unit's value ÷ cost") + "</th></tr></thead><tbody>" +
+      rows.map(function (r) {
+        var s = byId(r.id), c = r.x.candidates[0];
+        return "<tr><th><button class='linkish' data-sel='" + esc(r.id) + "'>" + esc(nm(s)) + "</button></th><td>" + fc(r.x.total * 1000) + "</td><td>" + r.x.months + "</td><td>" + esc(IO.monthText(r.x.first, state.net.config)) + "</td><td style='text-align:left'>" + (c ? esc(T(c.label)) : "–") + "</td><td class='" + (c ? (c.ratio >= 1 ? "ok" : "bad") : "") + "'>" + (c ? fx(c.ratio, c.ratio < 1 ? 2 : 1) + "×" : "–") + "</td></tr>";
+      }).join("") + "</tbody></table>";
+    each($("valueTable").querySelectorAll("[data-sel]"), function (b) { b.addEventListener("click", function () { select(b.getAttribute("data-sel")); }); });
+  }
   function renderService() {
-    var box = $("servicePanel"); box.hidden = !CAP(); if (!CAP()) return;
+    var box = $("servicePanel"); box.hidden = !CAP(); renderValue(); if (!CAP()) return;
+    $("svcReceipt").innerHTML = receiptHtml(state.cres.receipt);
     // without real costs the plan treats stock as almost free, and its fill rate is an upper limit, not an economic plan
     var mc = state.net.config;
     $("moneyNote").hidden = mc.packValue > 0 && mc.unitCost > 0 && mc.holdingRate > 0;

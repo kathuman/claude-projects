@@ -90,7 +90,7 @@
       if (s.tier === "warehouse") { var q = new Float64Array(Tn); for (t = 0; t < Tn; t++) q[t] = r.ss[Math.min(M - 1, Math.max(0, t - W))] / SC; ss[s.id] = q; }
     });
     // ---- LP text, written row by row
-    var obj = [], rows = [], bounds = [], nRows = 0, W0 = W;
+    var obj = [], rows = [], bounds = [], nRows = 0, W0 = W, capRows = {};
     var CO = costsOf(cfg), disc = function (t) { return CO.rate ? Math.pow(1 + CO.rate, -Math.max(0, Math.min(t - W0, M - 1)) / 12) : 1; };
     function term(c, v) { return (c >= 0 ? " + " : " - ") + fmt(Math.abs(c)) + " " + v; }
     function fmt(c) { return c === 1 ? "1" : +c.toPrecision(12) + ""; }
@@ -145,7 +145,7 @@
         lim(function (k) { return Iv(i, k); }, t, incF, L);
         if (isW) {
           var o = (outL[s.id] || []).map(function (l) { return term(1, Xv(l.i, t)); });
-          if (o.length) row(o, "<=", cap[s.id][t]);
+          if (o.length) { capRows[s.id + "_" + t] = nRows; row(o, "<=", cap[s.id][t]); }
           if (ss[s.id][t] > 0) { row([term(1, Iv(i, t)), term(1, Sv(i, t))], ">=", ss[s.id][t] * pe.warehouse); obj.push(term(CO.safety * disc(t), Sv(i, t))); }
         } else {
           bounds.push(" " + Pv(i, t) + " <= " + fmt(Math.max(0, cap[s.id][t])));
@@ -176,7 +176,7 @@
     });
     var objLines = []; for (var q = 0; q < obj.length; q += 8) objLines.push(obj.slice(q, q + 8).join(""));
     var lp = "Minimize\n obj:" + objLines.join("\n") + "\nSubject To\n" + rows.join("\n") + "\nBounds\n" + bounds.join("\n") + "\nEnd\n";
-    return { ok: true, lp: lp, meta: { mode: mode, hold: hold, scale: SC, W: W, Tn: Tn, lanes: lanes, sIdx: sIdx, pe: pe, rows: nRows, base: base } };
+    return { ok: true, lp: lp, meta: { mode: mode, hold: hold, scale: SC, W: W, Tn: Tn, lanes: lanes, sIdx: sIdx, pe: pe, rows: nRows, base: base, capRows: capRows } };
   }
 
   // the solution, read back into the shape of a requirements plan
@@ -238,6 +238,64 @@
   }
   function byTier(net, id) { for (var i = 0; i < net.sites.length; i++) if (net.sites[i].id === id) return net.sites[i].tier; return "market"; }
   function sumA(s, a, b) { var t = 0; for (var i = a; i < b; i++) t += s[i]; return t; }
+  // an optimality proof that does not take the solver's word for it. From the row and column duals alone, weak duality
+  // gives a lower bound on any feasible plan's cost; a plan whose own cost meets that bound cannot be beaten. `lost` is any
+  // dual a bound cannot pay for (it should be zero), which is what would make the bound unsound.
+  function certify(r) {
+    var bound = 0, lost = 0;
+    var add = function (y, lo, up) { if (y > 0) { if (lo == null || !isFinite(lo)) lost = Math.max(lost, y); else bound += y * lo; } else if (y < 0) { if (up == null || !isFinite(up)) lost = Math.max(lost, -y); else bound += y * up; } };
+    r.Rows.forEach(function (x) { add(x.Dual, x.Lower, x.Upper); });
+    Object.keys(r.Columns).forEach(function (n) { var c = r.Columns[n]; add(c.Dual, c.Lower, c.Upper); });
+    return { cost: r.ObjectiveValue, bound: bound, gap: Math.abs(r.ObjectiveValue - bound) / Math.max(1, Math.abs(r.ObjectiveValue)), unsound: lost };
+  }
+  // what one more pack-equivalent of a site's capacity is worth, month by month: the shadow price of its capacity, in
+  // present money (or, without a money objective, in packs). It is the value of the first extra unit only: it falls as
+  // capacity is added, because the next bottleneck takes over.
+  function capacityValue(net, meta, r) {
+    var CO = costsOf(net.config), M = P.MONTHS, W = meta.W, per = (CO.money ? net.config.packValue : 1) / CO.unmet, floor = 1e-3 * per * CO.unmet, sites = {};
+    var disc = function (y) { return Math.pow(1 + CO.rate, -y); };
+    net.sites.forEach(function (s) {
+      if (s.tier === "market") return;
+      var v = new Float64Array(M), total = 0, n = 0, first = -1, i = meta.sIdx[s.id];
+      for (var m = 0; m < M; m++) {
+        var t = m + W, cell = s.tier === "warehouse" ? r.Rows[meta.capRows[s.id + "_" + t]] : r.Columns["p" + i + "_" + t];
+        var x = cell ? Math.max(0, -cell.Dual) * per : 0;
+        if (x >= floor) { v[m] = x; total += x; n++; if (first < 0) first = m; }
+      }
+      var cands = (s.candidates || []).map(function (c) {
+        var ready = Math.ceil((c.build || 0) + (c.qualify || 0)), got = 0, opex = 0, addPe = c.add * meta.pe[s.tier];
+        for (var k = ready; k < M; k++) { got += v[k]; opex += (c.opex || 0) / 12 * disc(Math.floor(k / 12)); }
+        return { id: c.id, label: c.label, ready: ready, valuePer1000: got * 1000, costPer1000: addPe > 0 ? (c.capex + opex) / addPe * 1000 : Infinity, ratio: addPe > 0 && c.capex + opex > 0 ? got * addPe / (c.capex + opex) : 0 };
+      }).sort(function (a, b) { return b.ratio - a.ratio; });
+      sites[s.id] = { monthly: v, total: total, months: n, first: first, candidates: cands };
+    });
+    return { money: CO.money, sites: sites };
+  }
+  // the receipt: everything needed to reproduce a result, and to see why it can be trusted
+  function hashOf(text) {
+    var h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (var i = 0; i < text.length; i++) { var c = text.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return ("00000000" + (h2 >>> 0).toString(16)).slice(-8) + ("00000000" + (h1 >>> 0).toString(16)).slice(-8);
+  }
+  var METHODS = ["interior point", "interior point with crossover", "dual simplex"], GAP_OK = 1e-4;
+  function receipt(net, o, r, out, attempt, opts) {
+    var CO = costsOf(net.config), cfg = net.config, cert = certify(r), worstB = 0, worstC = 0;
+    Object.keys(out.sites).forEach(function (id) {
+      var x = out.sites[id];
+      if (x.site.tier === "market") { for (var m = 0; m < x.demand.length; m++) worstB = Math.max(worstB, Math.abs(x.delivered[m] + x.unmet[m] - x.demand[m]) / Math.max(1, x.demand[m])); }
+      else for (var k = 0; k < x.load.length; k++) if (x.capacity[k] > 0) worstC = Math.max(worstC, x.load[k] / x.capacity[k] - 1);
+    });
+    var checks = [
+      { id: "optimal", pass: cert.gap <= GAP_OK && cert.unsound <= 1e-3, value: cert.gap },
+      { id: "balance", pass: worstB <= 1e-6, value: worstB },
+      { id: "capacity", pass: worstC <= 1e-5, value: Math.max(0, worstC) }
+    ];
+    return { model: "monthly", objective: CO.money ? "money" : "penalty", solver: "HiGHS 1.15.3", method: METHODS[attempt - 1], status: r.Status, seconds: out.seconds, rows: out.size.rows, cols: out.size.cols,
+      input: hashOf(JSON.stringify([net, o.mode, o.hold])), assumptions: { packValue: cfg.packValue, unitCost: cfg.unitCost, holdingRate: cfg.holdingRate, discountRate: cfg.discountRate, mode: o.mode, hold: o.hold },
+      certificate: cert, checks: checks, proved: checks.every(function (c) { return c.pass; }) };
+  }
   // solve with a loaded HiGHS instance (Node or a worker)
   function solve(highs, net, opts) {
     var b = build(net, opts); if (!b.ok) return b;
@@ -249,8 +307,10 @@
     }
     if (!r) return { ok: false, errors: ["The constrained plan could not be solved (" + why + ")."] };
     var out = read(net, b.meta, r.Columns); out.seconds = (Date.now() - t0) / 1000; out.size = { rows: b.meta.rows, cols: Object.keys(r.Columns).length }; out.attempts = k;
+    out.capacityValue = capacityValue(net, b.meta, r);
+    out.receipt = receipt(net, { mode: b.meta.mode, hold: b.meta.hold }, r, out, k, opts);
     return out;
   }
-  var API = { WARMUP: 1.1, COST: COST, costsOf: costsOf, MODES: MODES, split: split, packEq: packEq, lanesOf: lanesOf, build: build, read: read, solve: solve };
+  var API = { WARMUP: 1.1, COST: COST, costsOf: costsOf, certify: certify, hashOf: hashOf, MODES: MODES, split: split, packEq: packEq, lanesOf: lanesOf, build: build, read: read, solve: solve };
   return API;
 });

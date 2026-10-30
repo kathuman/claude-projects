@@ -196,6 +196,11 @@ function chain(o) {
     check("example network, monthly plan: fill 86.8% → 89.9% with the package", v.ok && Math.abs(v.fillBefore - 0.868) < 0.0005 && Math.abs(v.fillAfter - 0.899) < 0.0005, v);
     check("example network, monthly plan: recovers $14.0M PV, saves $1.8M of stock, NPV +$11.2M", Math.abs(v.recoveredPV - 14.0e6) < 0.05e6 && Math.abs(v.holdingSavedPV - 1.83e6) < 0.05e6 && Math.abs(v.npv - 11.24e6) < 0.05e6, v);
     check("verification: the monthly plan and the screening model agree in sign once stock has a real cost", v.pays === true && v.agrees === true && v.screeningNpv === r.npv, v);
+    check("verification: each monthly solve carries its proof; the yearly model records its own", v.proved === true && v.receipts.length === 2 && r.receipt.model === "yearly" && r.receipt.proved === true && /^[0-9a-f]{16}$/.test(r.receipt.input), r.receipt);
+    // a site can look worthless at the margin and still belong in the package: expanding dosing moves the bottleneck to packaging
+    const part = (site) => { const inv = r.investments.filter((x) => x.site === site); return { investments: inv, capexPV: inv.reduce((a, x) => a + x.capexPV, 0), opexPV: inv.reduce((a, x) => a + x.opexPV, 0), npv: 0 }; };
+    const vv = K.verify(highs, net, part("d-vlc"), { mode: "qualified", hold: 6 }), vc = K.verify(highs, net, part("pk-cpt"), { mode: "qualified", hold: 6 });
+    check("example network: Cape Town alone loses money, Valencia alone earns less than the two together", vc.npv < 0 && vv.npv > 0 && vv.npv < v.npv && Math.abs(vc.npv + 1.94e6) < 0.05e6 && Math.abs(vv.npv - 7.07e6) < 0.05e6, [vv.npv, vc.npv, v.npv]);
     const free = N.build("base"); delete free.config.unitCost; delete free.config.holdingRate;
     const vf = K.verify(highs, free, r, { mode: "qualified", hold: 6 });
     check("verification: with stock almost free the same package looks like a loss (−$4.0M), and is reported as a disagreement", vf.ok && Math.abs(vf.npv + 4.03e6) < 0.05e6 && vf.pays === false && vf.agrees === false, vf);
