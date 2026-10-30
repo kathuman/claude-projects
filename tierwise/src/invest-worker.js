@@ -14,6 +14,8 @@ self.onmessage = function (e) {
   highs().then(function (h) {
     var r;
     try { r = self.TWInvest.solve(h, d.net, d.opts); } catch (err) { r = { ok: false, errors: ["The investment optimiser could not be solved (" + (err && err.message || err) + ")."] }; }
+    // no package reaches the page without its month-by-month price
+    if (r.ok) { try { r.verified = self.TWInvest.verify(h, d.net, r, d.opts); } catch (err2) { r.verified = { ok: false, errors: [String(err2 && err2.message || err2)] }; } }
     self.postMessage({ id: d.id, result: r });
   }, function () { ready = null; self.postMessage({ id: d.id, result: { ok: false, errors: ["The solver could not be loaded."] } }); });
 };

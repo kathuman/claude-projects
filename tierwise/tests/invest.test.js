@@ -191,13 +191,12 @@ function chain(o) {
     check("example network: screening fill 86.3% → 89.6%, NPV $16.1M", Math.abs(r.fill - 0.896) < 0.0005 && Math.abs(r.npv - 16.1e6) < 0.05e6, [r.fill, r.npv]);
     // ... and the month-by-month plan disagrees: priced there (qualified lanes, 6 months of stock ahead), the same
     // package recovers almost nothing, because the yearly model cannot see the monthly bottlenecks. Pinned here so the
-    // README states it honestly; the verification loop of 2.4.0 is meant to close this gap.
-    const wt = K.weights(net.config), lost = (res) => { let s = 0; Object.values(res.sites).forEach((x) => { if (x.site.tier === "market") for (let m = 0; m < 156; m++) s += x.unmet[m] * net.config.packValue * wt.w[Math.floor(m / 12)]; }); return s; };
-    const n2 = N.build("base"); r.investments.forEach((x) => { const s = n2.sites.find((y) => y.id === x.site); s.expansions = (s.expansions || []).concat([{ from: x.readyMonth, add: x.add }]); });
-    const m0 = C.solve(highs, N.build("base"), { mode: "qualified", hold: 6 }), m1 = C.solve(highs, n2, { mode: "qualified", hold: 6 });
-    const recM = lost(m0) - lost(m1), npvM = recM - r.capexPV - r.opexPV;
-    check("example network, monthly plan: fill 90.1% → 90.2% with the package", m0.ok && m1.ok && Math.abs(m0.fill - 0.901) < 0.0005 && Math.abs(m1.fill - 0.902) < 0.0005, [m0.fill, m1.fill]);
-    check("example network, monthly plan: recovers $0.6M PV, NPV −$4.0M", Math.abs(recM - 0.57e6) < 0.05e6 && Math.abs(npvM + 4.03e6) < 0.05e6, [recM, npvM]);
+    // README states it honestly; TWInvest.verify runs this check on every optimiser result; 3.0 is meant to close the gap itself.
+    const v = K.verify(highs, net, r, { mode: "qualified", hold: 6 });
+    check("example network, monthly plan: fill 90.1% → 90.2% with the package", v.ok && Math.abs(v.fillBefore - 0.901) < 0.0005 && Math.abs(v.fillAfter - 0.902) < 0.0005, v);
+    check("example network, monthly plan: recovers $0.6M PV, NPV −$4.0M", Math.abs(v.recoveredPV - 0.57e6) < 0.05e6 && Math.abs(v.npv + 4.03e6) < 0.05e6, v);
+    check("verification: flags that the monthly plan disagrees with the screening model", v.pays === false && v.agrees === false && v.screeningNpv === r.npv, v);
+    check("verification: nothing chosen, nothing to check", K.verify(highs, net, { investments: [] }, {}).nothingToCheck === true);
     r.investments.forEach((inv) => {
       const site = net.sites.find((s) => s.id === inv.site), cand = site && (site.candidates || []).find((c) => c.id === inv.id);
       check("example network: " + inv.site + "/" + inv.id + " matches a defined candidate", !!cand && cand.add === inv.add && cand.capex === inv.capex, inv);

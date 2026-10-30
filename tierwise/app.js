@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.3.1";
+  var VERSION = "2.3.2";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -62,7 +62,7 @@
     return fx(v, a >= 10 ? 0 : 1);
   }
   function fu(v, unit) { return fq(v) + " " + unit; }
-  function fc(v) { return (state.net.config.currency || "$") + fq(v); }
+  function fc(v) { return (v < 0 ? "−" : "") + (state.net.config.currency || "$") + fq(Math.abs(v)); }
   function hasCandidates() { return state.net.sites.some(function (s) { return s.candidates && s.candidates.length; }); }
   function pct(u) { return u == null || isNaN(u) ? "–" : isFinite(u) ? Math.round(u * 100) + "%" : "∞"; }
   function pts(d) { var r = Math.round(d * 100); return (r > 0 ? "+" : r < 0 ? "−" : "±") + Math.abs(r) + " " + T("pts"); }
@@ -478,24 +478,33 @@
   function renderIvStatus() {
     var st = $("ivStatus"), iv = state.iv;
     if (iv.err) { st.innerHTML = "<span class='bad'>" + esc(iv.err) + "</span>"; }
-    else if (iv.solving) { st.innerHTML = "<span class='spin'></span>" + T("Solving (this can take up to a couple of minutes)…"); }
+    else if (iv.solving) { st.innerHTML = "<span class='spin'></span>" + T("Solving, then checking the result month by month (this can take up to a couple of minutes)…"); }
     else if (iv.res) { st.textContent = T("Solved in {s} s", { s: fx(iv.res.seconds || 0, 1) }) + (iv.res.timedOut ? " · " + T("best found in the time available, not proven optimal") : ""); }
     else st.textContent = "";
     $("ivResults").hidden = !iv.res;
     if (iv.res) renderIvResults(iv.res);
   }
-  // every figure is a present value in currency, from the year-resolution screening model; the fill rate is that
-  // model's estimate, with nothing built and with the package
+  // the month-by-month price leads; the screening model's figures (year resolution) are shown as the estimate they are,
+  // and a package that could not be checked cannot be applied
   function renderIvResults(r) {
-    var opex = r.investments.some(function (x) { return x.opex > 0; });
+    var opex = r.investments.some(function (x) { return x.opex > 0; }), v = r.verified || { ok: false }, checked = v.ok && !v.nothingToCheck, has = r.investments.length > 0;
+    var vd = $("ivVerdict");
+    vd.hidden = !has; vd.className = "iv-verdict " + (checked && v.pays ? "good" : "bad");
+    vd.textContent = !v.ok ? T("Not verified: the month-by-month plan could not price this package, so these figures are only a screening estimate.") :
+      v.pays ? T("Verified: priced month by month, this package pays for itself.") :
+      T("Do not rely on the estimate: the screening model says {a}, but priced month by month this package returns {b}.", { a: fc(v.screeningNpv), b: fc(v.npv) });
+    $("ivApply").disabled = !has || !v.ok;
+    $("ivApply").textContent = checked && !v.pays ? T("Add them anyway") : T("Add the chosen investments as expansions");
     $("ivKpis").innerHTML = [
-      [T("Net present value"), r.npv != null ? fc(r.npv) : "–"],
-      [T("Margin recovered (PV)"), r.recoveredPV != null ? fc(r.recoveredPV) : "–"],
+      checked ? [T("Net present value, month by month"), fc(v.npv)] : null,
+      checked ? [T("Fill rate, month by month"), pctFine(v.fillBefore) + " → " + pctFine(v.fillAfter)] : null,
+      checked ? [T("Margin recovered, month by month (PV)"), fc(v.recoveredPV)] : null,
+      [T("Screening estimate of NPV"), r.npv != null ? fc(r.npv) : "–"],
+      [T("Screening fill"), (r.baseline ? pctFine(r.baseline.fill) + " → " : "") + pctFine(r.fill)],
       [T("Capex (PV)"), fc(r.capexPV)],
       opex ? [T("Opex (PV)"), fc(r.opexPV)] : null,
       [T("Total capex"), fc(r.capexTotal)],
-      [T("Investments chosen"), String(r.investments.length)],
-      [T("Screening fill"), (r.baseline ? pctFine(r.baseline.fill) + " → " : "") + pctFine(r.fill)]
+      [T("Investments chosen"), String(r.investments.length)]
     ].filter(Boolean).map(function (k) { return "<div class='kpi-tile'><div class='kpi-label'>" + k[0] + "</div><div class='kpi-value'>" + esc(k[1]) + "</div></div>"; }).join("");
     var note = "<p class='panel-note'>" + T("A year-resolution screening estimate. Present values at {r} a year; capacity is credited for {n} years after the horizon.", { r: fx(r.discountRate, r.discountRate % 1 ? 1 : 0) + "%", n: r.terminalYears }) + "</p>";
     if (!r.investments.length) { $("ivTable").innerHTML = note + "<p class='lanes'>" + T("No candidate is worth building at the pack value and discount rate set above.") + "</p>"; return; }
@@ -510,7 +519,7 @@
     var budget = num($("ivBudget").value); if (!isFinite(budget) || !(budget > 0)) budget = undefined;
     if (!ivWorker) { ivWorker = new Worker("src/invest-worker.js"); ivWorker.onmessage = onInvestSolved; ivWorker.onerror = function () { ivWorker = null; state.iv.solving = false; state.iv.err = T("The solver could not be loaded."); renderIvStatus(); }; }
     ivId++;
-    ivWorker.postMessage({ id: ivId, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, budget: budget } });
+    ivWorker.postMessage({ id: ivId, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, hold: state.hold, budget: budget } });
   }
   function onInvestSolved(e) {
     var r = e.data.result;

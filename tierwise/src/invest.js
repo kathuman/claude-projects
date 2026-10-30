@@ -228,5 +228,20 @@
     return out;
   }
 
-  return { YEARS: YEARS, TERMINAL_YEARS: TERMINAL_YEARS, TIME_LIMIT: TIME_LIMIT, PRIORITY_TIE: PRIORITY_TIE, weights: weights, build: build, read: read, solve: solve };
+  // every chosen package is priced again by the month-by-month plan, because the screening model above cannot see stock,
+  // cover or peak months, and the two can disagree in sign. Both use the same discounting, so the verified NPV differs
+  // from the screening NPV only in what the package really recovers.
+  function verify(highs, net, r, opts) {
+    opts = opts || {};
+    if (!r.investments.length) return { ok: true, nothingToCheck: true };
+    var t0 = Date.now(), o = { mode: opts.mode, hold: opts.hold }, cfg = net.config, wt = weights(cfg), n1 = JSON.parse(JSON.stringify(net));
+    r.investments.forEach(function (x) { n1.sites.forEach(function (s) { if (s.id === x.site) s.expansions = (s.expansions || []).concat([{ from: x.readyMonth, add: x.add }]); }); });
+    var m0 = K.solve(highs, net, o), m1 = K.solve(highs, n1, o);
+    if (!m0.ok || !m1.ok) return { ok: false, errors: (m0.errors || []).concat(m1.errors || []) };
+    var lost = function (res) { var pv = 0; Object.keys(res.sites).forEach(function (id) { var x = res.sites[id]; if (x.site.tier === "market") for (var m = 0; m < x.unmet.length; m++) pv += x.unmet[m] * cfg.packValue * wt.w[Math.floor(m / 12)]; }); return pv; };
+    var recovered = lost(m0) - lost(m1), npv = recovered - r.capexPV - r.opexPV;
+    return { ok: true, fillBefore: m0.fill, fillAfter: m1.fill, recoveredPV: recovered, npv: npv, screeningNpv: r.npv, pays: npv >= 0, agrees: (npv >= 0) === (r.npv >= 0), seconds: (Date.now() - t0) / 1000 };
+  }
+
+  return { YEARS: YEARS, TERMINAL_YEARS: TERMINAL_YEARS, TIME_LIMIT: TIME_LIMIT, PRIORITY_TIE: PRIORITY_TIE, weights: weights, build: build, read: read, solve: solve, verify: verify };
 });

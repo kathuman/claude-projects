@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.3.1</span>
+    <span class="ver" id="ver">v2.3.2</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -258,7 +258,7 @@
 
   <section class="panel" id="investPanel">
     <h2 data-i18n="iv.h">Capacity investment</h2>
-    <p class="panel-note" data-i18n="iv.note">Which candidate expansions are worth building, and about when. A year-resolution screening model, separate from the month-by-month plan above: it answers whether an expansion pays for itself, not what ships in a given month — check a chosen investment's seasonal adequacy against the plan before committing. Capex, running costs and the margin lost on unmet demand are all discounted alike, and capacity is credited for a number of years after the horizon. Define candidates (capacity added, capex, build and qualification time, and an optional running cost a year) on a site in the Network Studio inspector.</p>
+    <p class="panel-note" data-i18n="iv.note">Which candidate expansions are worth building, and about when. A year-resolution screening model, separate from the month-by-month plan above: it finds the candidates and a rough timing. Every package it chooses is then priced again by the month-by-month plan, and that price is the one to trust. Capex, running costs and the margin lost on unmet demand are all discounted alike, and capacity is credited for a number of years after the horizon. Define candidates (capacity added, capex, build and qualification time, and an optional running cost a year) on a site in the Network Studio inspector.</p>
     <div class="iv-ctl">
       <label class="ctl inline"><span data-i18n="iv.packValue">Pack value (margin per pack)</span><input id="ivPackValue" class="num" inputmode="decimal" style="width:90px"></label>
       <label class="ctl inline"><span data-i18n="iv.discount">Discount rate (% a year)</span><input id="ivDiscount" class="num" inputmode="decimal" style="width:70px"></label>
@@ -268,6 +268,7 @@
       <span class="solve-status" id="ivStatus" aria-live="polite"></span>
     </div>
     <div id="ivResults" hidden>
+      <p class="iv-verdict" id="ivVerdict" role="status" hidden></p>
       <div class="kpis" id="ivKpis"></div>
       <div class="table-scroll" id="ivTable"></div>
       <button class="btn small" type="button" id="ivApply" data-i18n="iv.apply" style="margin-top:10px">Add the chosen investments as expansions</button>
@@ -314,7 +315,7 @@
   </details>
 
   <footer class="foot">
-    Tierwise v<span id="ver2">2.3.1</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.3.2</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 

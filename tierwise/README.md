@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.3.1 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.3.2 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -24,23 +24,75 @@ Cork (52°N) to Gippsland (38°S). The six tiers, from the consumer upstream:
 Every site above the consumer can source from several sites in the tier above, each with a share. All figures are
 illustrative.
 
-## Plan
+## Direction
 
-| Phase | Content | Version |
-|---|---|---|
-| 1 | Explain and share: tracing, capacity to add, comparison, links and files, your own supply chain, tutorial, Spanish and Danish | done, 1.1.0 |
-| 2 | Within capacity: a linear program (HiGHS in the browser) that builds stock ahead, re-sources and reports unmet demand, fill rates and bottlenecks | done, 2.0.0 |
-| – | Network Studio: the network drawn and edited by tier, custom parameters, routes tables | done, 2.1.0 |
-| – | World map: the network on the globe, zoom and pan, great-circle routes, edited in place | done, 2.2.0 |
-| 3 | Capacity investment: candidate expansions with build and qualification times, capex, an optimiser | done, 2.3.0 |
-| A1 | Investment economics: lost margin discounted like capex, a terminal value, opex, priority as a tie-breaker, availability in months | done, 2.3.1 |
-| A2 | The optimiser sees the monthly plan's constraints (stock between years, cover, peak months) and is verified by it | 2.4.0 |
-| B | Foundations: autosave, named scenarios with history and a diff, modules and type checks, offline, the browser suite in CI | 2.5 |
-| C | Scale: variable time buckets, the model built as arrays, lane pruning, screen-and-verify, published benchmarks | 3.0 |
-| D | A general network: optional tiers, multi-level bills of materials, several products, stock at any node | 3.1 |
-| E | Design decisions: new sites, closures, transport modes, landed cost, the cost against fill-rate frontier | 3.2 |
-| F | Uncertainty and risk: forecast ranges, Monte Carlo, robust investment, a disruption library | 4.0 |
-| G | Polish, alongside C–F: the Studio at scale, ERP import, a board report, accessibility, translation tooling | – |
+**Every number is proved, and every plan shows what it depends on.** AI proposes, the solver proves, and a person
+decides. No number on screen comes from a language model.
+
+Five principles guide every release:
+
+1. **Receipts on every number:** the data, model version, solver status and optimality gap behind each figure.
+2. **One truth:** a fast estimate is never shown as an answer until the monthly model has checked it.
+3. **Policies, not plans:** the output is a rule with a trigger, its value and its regret, not one forecast.
+4. **Intent, not parameters:** goals stated in words compile into constraints you can read and approve.
+5. **Private by default:** the solver stays in the browser, and AI is opt-in with the user's own key.
+
+Tierwise is in test pilot, and is built to become a commercial product. It stays local-first until something forces a
+server, but the code is layered so that a server can slot in behind the same interface.
+
+## Roadmap
+
+Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 (world map), 2.3 (capacity investment),
+2.3.1 (investment economics), 2.3.2 (every optimiser result verified, the first part of 2.4).
+
+| Version | Theme | What it adds | Must be true to ship |
+|---|---|---|---|
+| 2.4 | Honest numbers | Every optimiser result priced by the monthly plan (**done**); the monthly objective in money; the value of capacity by site and month; first receipts | No unverified NPV on screen |
+| 2.5 | Architecture and memory | The application API, a versioned data layer, a job runner; autosave, named scenarios with a diff, a decision ledger, offline use; the browser suite in CI; a three-step front door (network, where it breaks, what to do) | A reload loses nothing |
+| 2.6 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
+| 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
+| 3.1 | Real food networks | Several products, full bills of materials, shelf life, QA hold, CO₂; custom parameters such as certifications become solver constraints; new sites, closures, landed cost | A halal rule is enforced by the solver |
+| 4.0 | Plan by intent | Goals compiled to constraints; conflicts explained in words, with the price of relaxing each | Every infeasibility is explained |
+| 4.1 | From mess to model | Contracts, emails and spreadsheets become a draft network, with a source for each field | Nothing is accepted without a person |
+| 5.0 | Plans as policies | Uncertainty built in, real-options triggers, an AI red team that hunts for the worst plausible disruption | The solver prices every attack |
+| 6.0 | The living plan | Scheduled feeds (shipping, climate, milk prices), alerts when an assumption breaks, past predictions scored against outcomes | A public accuracy record |
+| 7.0 | Define the standard | An open benchmark for AI planners, an open receipt format, an MCP server; planning across companies without sharing their data (a research bet) | Published scores |
+
+**A server** is not a numbered release. It arrives with the first of these: several people on one network, solves too
+slow for the browser, users who won't bring an AI key, live feeds that outgrow scheduled jobs, or the commercial launch.
+
+**The old phases** map onto this table: A2 is now 2.4 and 3.0, B is 2.5, C is 3.0, D and E are 3.1, F is 5.0, and G is
+spread across the releases.
+
+### Architecture
+
+```
+UI                screens and the Studio; they only read state and send commands
+Application API   plan · solve · invest · trace · compare · explain
+                  used by the UI, AI tools, tests and an MCP server alike
+Processing        pure engines + a job runner, cached by input hash
+                  a Web Worker now, a server later, behind the same interface
+Data              versioned networks, scenarios, results, receipts, decisions
+                  in the browser now, a database later; records are append-only
+```
+
+The boundary between the layers comes first (2.5). Records carry an owner and a schema version from the start, so
+accounts and a server don't force a migration.
+
+### What the monthly plan is doing today
+
+Found while preparing 2.4, and the reason its objective has to be in money. On the example (qualified lanes, 6 months
+of stock ahead), the monthly plan runs all three dosing sites at 100% from the first month to the last, and carries up
+to 15.6M packs of stock across the chain, because stock costs almost nothing in the penalty weights. The six-month
+limit keeps each unit young, but the stock level itself can roll forward for years. The 90.1% fill is therefore the most
+that can be delivered with stock nearly free, not an economic plan.
+
+"First bottleneck" is the first month a site's unconstrained need passes its capacity (February 2030 at Valencia). The
+same site is at 100% well before that, by choice, to build stock.
+
+Shadow prices from the interior-point solve are reliable: adding one unit of Valencia's capacity in a single month
+changed the objective exactly as its dual predicted, in each of the three months tested. Nearly all of the value of
+production capacity sits at the dosing sites.
 
 ## How it plans (`src/plan.js`)
 
@@ -173,8 +225,8 @@ peaks do not line up (raw-milk troughs, dosing peaks and market peaks fall in di
 design), so overlaying every site's bad month onto one simulated instant made the whole network look saturated
 everywhere at once. Lead, release and transit times are not modelled within a year (days to a few weeks against a
 one-year resolution); what a site ships in year *y* is matched by what it receives in year *y*, converted by yield.
-There is no stock carried between years and no peak within a year. This is a screening model: cross-check a chosen
-investment against the month-by-month plan before committing (see the example below for why).
+There is no stock carried between years and no peak within a year. This is a screening model, so every package it
+chooses is priced again by the month-by-month plan (see below).
 
 **The decision.** A binary per candidate per review year (0–12) decides whether and when to start it, at most one
 review year per candidate. Started at the beginning of review year *y*, a candidate is ready in month
@@ -222,9 +274,14 @@ $16.1M.
 fill only from 90.1% to 90.2%, and recovers $0.6M present value of margin: an NPV of −$4.0M. Every figure in this
 paragraph and the one before is checked by `tests/invest.test.js`. The yearly model does not see the monthly
 bottlenecks. (2.3.0 also chose Jebel Ali's bay, but on an undiscounted lost margin, so its answer was no more
-trustworthy.) Until 2.4.0 makes the yearly model see stock, cover and peak
-months, and checks its pick against the monthly plan automatically, treat its recommendation as a shortlist to price in
-**Within capacity**.
+trustworthy.)
+
+**Every package is verified.** `TWInvest.verify` prices each chosen package in the monthly plan, at the sourcing and
+stock settings on screen, with the same discounting, and the worker runs it after every solve (about 10 s on the
+example). The panel leads with the month-by-month figures and shows the screening NPV as an estimate. If the two
+disagree it says so, and the button becomes **Add them anyway**. A package that could not be checked cannot be applied.
+The optimiser still searches on the yearly model, so it can recommend a package the monthly plan rejects. 3.0 closes that
+gap by making the search itself answer to the monthly plan.
 
 **Limits.**
 - Candidates are expansions of existing sites only. A new site would need its own candidate supply lanes, which are
@@ -403,7 +460,7 @@ node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message
 node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
                                    # 41: the plan within capacity on chains with known answers, and the example
-node tierwise/tests/invest.test.js # 52: the investment optimiser on chains with known answers, and the example,
+node tierwise/tests/invest.test.js # 54: the investment optimiser on chains with known answers, and the example,
                                    # priced again in the month-by-month plan
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json

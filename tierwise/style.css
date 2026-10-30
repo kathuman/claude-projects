@@ -407,3 +407,6 @@ svg.map.world.picking, .mode-add svg.map.world{cursor:crosshair;}
 .map.world .m-lab.sel{fill:var(--ink);}
 .map.world .link-temp{stroke:var(--tele); stroke-width:2; stroke-dasharray:5 4; fill:none; pointer-events:none;}
 .map-wrap{position:relative;}
+.iv-verdict{margin:12px 0 10px; padding:9px 12px; border-left:4px solid var(--line); font-weight:600; line-height:1.45;}
+.iv-verdict.good{border-left-color:var(--good);}
+.iv-verdict.bad{border-left-color:var(--bad);}
