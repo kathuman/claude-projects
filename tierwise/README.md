@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.4.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.4.1 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -47,7 +47,7 @@ Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 
 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
-| 2.5 | Architecture and memory | The application API, a versioned data layer, a job runner; autosave, named scenarios with a diff, a decision ledger, offline use; the browser suite in CI; a three-step front door (network, where it breaks, what to do) | A reload loses nothing |
+| 2.5 | Priorities, architecture and memory | **What to do** (**done**, 2.4.1); the browser suite in CI (**done**); the application API, a versioned data layer, a job runner; autosave, named scenarios with a diff, a decision ledger, offline use; the browser suite in CI; a three-step front door (network, where it breaks, what to do) | A reload loses nothing |
 | 2.6 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
 | 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
 | 3.1 | Real food networks | Several products, full bills of materials, shelf life, QA hold, CO₂; custom parameters such as certifications become solver constraints; new sites, closures, landed cost | A halal rule is enforced by the solver |
@@ -283,14 +283,14 @@ $6.7M of capex, $4.6M present value. The screening model estimates fill rising f
 $16.1M.
 
 **The month-by-month plan agrees on the decision, and cuts the value.** Priced there (qualified lanes, 6 months of stock
-ahead), the same package lifts fill from 86.8% to 89.9%, recovers $14.0M present value of margin and saves $1.8M of
-stock: an NPV of +$11.2M. Every figure in this
+ahead), the same package lifts fill from 86.8% to 89.9% and recovers $14.0M present value of margin: an NPV of +$8.9M.
+Every figure in this
 paragraph and the one before is checked by `tests/invest.test.js`. (2.3.0 also chose Jebel Ali's bay, but on an undiscounted lost margin, so its answer was no more
 trustworthy.)
 
 **Every package is verified.** `TWInvest.verify` prices each chosen package in the monthly plan, at the sourcing and
 stock settings on screen, with the same discounting, and the worker runs it after every solve (about 10 s on the
-example). The verified NPV also counts the stock the package saves or adds. The panel leads with the month-by-month figures and shows the screening NPV as an estimate. If the two
+example). The verified NPV is measured on the objective the plan minimises, plus the credit after the horizon, so it also counts the stock the package saves or adds. (Before 2.4.1 it added up margin and stock separately. Among plans of nearly equal cost that split can jump, which once put a one-year delay at +$1.7M. A test now holds that value never rises when the same capacity arrives later.) The panel leads with the month-by-month figures and shows the screening NPV as an estimate. If the two
 disagree it says so, and the button becomes **Add them anyway**. A package that could not be checked cannot be applied.
 The optimiser still searches on the yearly model, so it can recommend a package the monthly plan rejects. 3.0 closes that
 gap by making the search itself answer to the monthly plan.
@@ -362,6 +362,46 @@ For a selected route it edits share, transit days, mode and route parameters.
 - parameter definitions and values;
 - the undo history.
 
+## What to do (`src/priorities.js`, `src/priorities-worker.js`)
+
+**Work out the priorities** ranks what to do next. The ranking comes from the plan, and it works with no AI at all. Every
+action is priced by solving the month-by-month plan with it and without it, so every figure has a receipt. The result is
+four groups, not a blended score, so the reason for an order stays visible:
+
+| Group | Meaning |
+|---|---|
+| **Act now** | Value starts falling if you wait, or it costs nothing to do today |
+| **Decide by a date** | Worth doing, with a latest safe start |
+| **Watch** | Depends on an assumption, is too far off to decide today, or is a shortfall no priced action settles |
+| **Don't** | Priced, and it does not pay |
+
+**How it works:**
+1. Every candidate is priced at its earliest start. That gives the most capacity, so if its gain can't cover even its
+   cheapest (latest) cost, no start can make it pay.
+2. The best one is priced across its start years. The latest safe start is the last that keeps 95% of the value.
+3. It is fixed in the plan, and the rest are priced again on top of it, because actions interact. A candidate gets its
+   verdict only at the end: one that fails now may pay once another site stops being the bottleneck.
+4. Each pick is priced again at 10% lower demand. If it stops paying, it moves to **Watch**.
+5. A decision eight or more years off, or with most of its value credited after the horizon, moves to **Watch** and stays
+   out of the plan while nearer decisions are priced, since it would take the value of anything it competes with.
+
+It also names sites worth expanding that have no option defined, and the markets that carry the shortfall.
+
+**Limits.** The order is greedy, one action at a time, so it finds a good sequence, not a proven best one. It covers the
+candidates in the network and the sourcing and stock settings on screen. It does not yet price re-sourcing or stock
+changes as actions, and it takes a few minutes, because the example solves 39 plans.
+
+**On the example:**
+
+| Group | Action | Why |
+|---|---|---|
+| Act now | Define an option for Rosario, and for Penang | As valuable as Valencia at the margin ($139k per 1,000 packs a month), with no option on the table |
+| Decide by 2030 | Valencia's fourth dosing line | Worth $8.0M; each further year costs about $0.6M; still +$4.4M at 10% lower demand |
+| Watch | Dhaka, Manila, Lagos | Filled at 52%, 68% and 81%; no action here settles it |
+| Watch | Jebel Ali's bay | Worth $7.5M if started in 2038, but 83% of that comes after the horizon |
+| Watch | Cape Town's second line | +$1.4M on top of Valencia (it loses $1.8M alone), and it stops paying at 10% lower demand |
+| Watch | Hamilton's dryer | +$1.0M on top of both, and it stops paying at 10% lower demand |
+
 ## Receipts and the value of capacity (`src/constrained.js`)
 
 **Receipts.** Every result carries one, under a line at the top of its panel. It records the objective, the assumptions,
@@ -390,8 +430,8 @@ value of its first unit against its cost. On the example:
 | Cape Town Packaging | $0.5k | 0.05× |
 
 A shadow price holds for the first unit only: it falls as capacity is added, because the next bottleneck takes over.
-So a low value doesn't rule a line out. Cape Town's second line shows 0.05× and loses $1.9M on its own, and Valencia's
-line earns $7.1M on its own, but the two together earn $11.2M, because expanding dosing moves the bottleneck to packaging.
+So a low value doesn't rule a line out. Cape Town's second line shows 0.05× and loses $2.0M on its own, and Valencia's
+line earns $7.4M on its own, but the two together earn $8.9M, because expanding dosing moves the bottleneck to packaging.
 The table shows where to look, and the optimiser prices the expansion. A test checks the figure against a real capacity
 bump on the example: up and down, in four months across the horizon, they agree to within 0.1%.
 
@@ -507,13 +547,18 @@ cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test
                                    # 55: the plan within capacity on chains with known answers, and the example
 node tierwise/tests/invest.test.js # 57: the investment optimiser on chains with known answers, and the example,
                                    # priced again in the month-by-month plan
+node tierwise/tests/priorities.test.js
+                                   # 17: what to do, on chains with known answers and the example (39 plans, several minutes)
+node tierwise/tests/browser.test.js
+                                   # 34: the page in a real browser, in three languages (needs Playwright and a network)
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json
 ```
 
-CI runs them on every change to `tierwise/`. A browser suite runs locally with Playwright. It covers 103 checks across
-the flows, file loading and links, and every tutorial step in three languages. It also scans the Spanish and Danish
-pages for leftover English.
+CI runs them all on every change to `tierwise/`, with the browser suite as its own job. That suite covers planning, the
+Studio, files and links, the solver with its receipts in three languages, the priorities, the tutorial and phone width.
+It replaces an earlier local suite of 103 checks that was never in the repository and has been lost, so its checks of
+every tutorial step and its scan for leftover English are not yet back.
 
 ## Validation (`validation.html`, `src/validation.js`)
 

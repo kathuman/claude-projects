@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.4.0</span>
+    <span class="ver" id="ver">v2.4.1</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -121,6 +121,13 @@
 
   <div class="kpis" id="kpis"></div>
 
+  <section class="panel" id="prioPanel">
+    <h2 data-i18n="pr.h">What to do</h2>
+    <p class="panel-note" data-i18n="pr.note">Every action is priced by solving the month-by-month plan with it and without it, one after another, so that actions which depend on each other show up. The order comes from the plan, not from an AI model. It solves dozens of plans, so it takes a few minutes.</p>
+    <button class="btn" type="button" id="prRun" data-i18n="pr.run">Work out the priorities</button>
+    <span class="solve-status" id="prStatus" aria-live="polite"></span>
+    <div id="prList"></div>
+  </section>
   <section class="panel" id="servicePanel" hidden>
     <h2 data-i18n="sv.h">What reaches the shelves · within capacity</h2>
     <p class="panel-note" data-i18n="sv.note">The plan within capacity: no site makes or ships more than it can, so some demand may go unsupplied. Sites build stock ahead of a peak (up to the limit you set), re-source to suppliers with room, and draw safety stock in a crunch; what still cannot be made is lost. Every consumption point counts the same unless you give it a priority in the editor.</p>
@@ -326,7 +333,7 @@
   </details>
 
   <footer class="foot">
-    Tierwise v<span id="ver2">2.4.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.4.1</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 

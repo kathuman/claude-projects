@@ -230,9 +230,35 @@
     return out;
   }
 
+  // the margin a monthly plan loses, as a present value, with the credit after the horizon
+  function lostPV(cfg, res) {
+    var wt = weights(cfg), pv = 0;
+    Object.keys(res.sites).forEach(function (id) { var x = res.sites[id]; if (x.site.tier === "market") for (var m = 0; m < x.unmet.length; m++) pv += x.unmet[m] * cfg.packValue * wt.w[Math.floor(m / 12)]; });
+    return pv;
+  }
+  // what a monthly plan m1 gains over m0, as a present value. In money it is measured on the objective the plan minimises,
+  // plus the credit after the horizon. Adding up lost margin and stock separately is not safe: among plans of nearly equal
+  // cost the split between the two can jump, and the sum with it (it once put a one-year delay at +$1.7M).
+  function gainOf(cfg, m0, m1) {
+    if (!K.costsOf(cfg).money) return lostPV(cfg, m0) - lostPV(cfg, m1);
+    return m0.planCostPV - m1.planCostPV + tailPV(cfg, m0) - tailPV(cfg, m1);
+  }
+  // the part of a plan's lost margin credited after the horizon: the last year's, for the years that follow it
+  function tailPV(cfg, res) {
+    var wt = weights(cfg), pv = 0;
+    Object.keys(res.sites).forEach(function (id) { var x = res.sites[id]; if (x.site.tier === "market") for (var m = 12 * (YEARS - 1); m < x.unmet.length; m++) pv += x.unmet[m] * cfg.packValue * wt.disc[YEARS - 1] * wt.tail; });
+    return pv;
+  }
+  // what a candidate costs if started at the beginning of review year y, as present values
+  function costOf(cfg, c, y) {
+    var wt = weights(cfg), ready = 12 * y + c.lead, opex = 0;
+    for (var a = 0; a < YEARS; a++) opex += (c.opex || 0) * monthsIn(a, ready) / 12 * wt.w[a];
+    return { capexPV: c.capex * wt.disc[y], opexPV: opex };
+  }
   // every chosen package is priced again by the month-by-month plan, because the screening model above cannot see stock,
   // cover or peak months, and the two can disagree in sign. Both use the same discounting, so the verified NPV differs
-  // from the screening NPV only in what the package really recovers, and in the stock it saves or adds.
+  // from the screening NPV only in what the package really recovers, and in the stock it saves or adds. Without a money
+  // objective, stock has no real cost, and only the margin recovered counts.
   function verify(highs, net, r, opts) {
     opts = opts || {};
     if (!r.investments.length) return { ok: true, nothingToCheck: true };
@@ -240,10 +266,9 @@
     r.investments.forEach(function (x) { n1.sites.forEach(function (s) { if (s.id === x.site) s.expansions = (s.expansions || []).concat([{ from: x.readyMonth, add: x.add }]); }); });
     var m0 = K.solve(highs, net, o), m1 = K.solve(highs, n1, o);
     if (!m0.ok || !m1.ok) return { ok: false, errors: (m0.errors || []).concat(m1.errors || []) };
-    var lost = function (res) { var pv = 0; Object.keys(res.sites).forEach(function (id) { var x = res.sites[id]; if (x.site.tier === "market") for (var m = 0; m < x.unmet.length; m++) pv += x.unmet[m] * cfg.packValue * wt.w[Math.floor(m / 12)]; }); return pv; };
-    var recovered = lost(m0) - lost(m1), holdingSaved = (m0.holdingPV || 0) - (m1.holdingPV || 0), npv = recovered + holdingSaved - r.capexPV - r.opexPV;
+    var recovered = lostPV(cfg, m0) - lostPV(cfg, m1), gain = gainOf(cfg, m0, m1), holdingSaved = gain - recovered, npv = gain - r.capexPV - r.opexPV;
     return { ok: true, fillBefore: m0.fill, fillAfter: m1.fill, recoveredPV: recovered, holdingSavedPV: holdingSaved, npv: npv, screeningNpv: r.npv, pays: npv >= 0, agrees: (npv >= 0) === (r.npv >= 0), receipts: [m0.receipt, m1.receipt], proved: m0.receipt.proved && m1.receipt.proved, seconds: (Date.now() - t0) / 1000 };
   }
 
-  return { YEARS: YEARS, TERMINAL_YEARS: TERMINAL_YEARS, TIME_LIMIT: TIME_LIMIT, PRIORITY_TIE: PRIORITY_TIE, weights: weights, build: build, read: read, solve: solve, verify: verify };
+  return { YEARS: YEARS, TERMINAL_YEARS: TERMINAL_YEARS, TIME_LIMIT: TIME_LIMIT, PRIORITY_TIE: PRIORITY_TIE, weights: weights, build: build, read: read, solve: solve, verify: verify, gainOf: gainOf, lostPV: lostPV, tailPV: tailPV, costOf: costOf };
 });

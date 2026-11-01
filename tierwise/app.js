@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.4.0";
+  var VERSION = "2.4.1";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -169,7 +169,7 @@
     renderViews();
   }
   function renderViews() {
-    renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus();
+    renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus(); renderPriorities();
     if (window.TWStudio) window.TWStudio.render();
   }
   function renderSelection() { if (state.res && state.res.ok) { renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
@@ -462,6 +462,63 @@
     var qs = ids.map(function (id) { return { id: id, q: requiredFor(id) }; });
     qs.forEach(function (x) { var s = byId(x.id); if (!x.q || !x.q.additions.length) return; s.expansions = (s.expansions || []).concat(x.q.additions).sort(function (a, b) { return a.from - b.from; }); });
     renderEditor(); render();
+  }
+
+  // ---- what to do: worked out on request in a worker, because it solves many plans
+  var prWorker = null, prId = 0;
+  function runPriorities() {
+    var c = state.net.config;
+    state.pr = { solving: true, n: 0, key: solveKey() }; renderPriorities();
+    if (!(c.packValue > 0 && c.unitCost > 0 && c.holdingRate > 0)) { state.pr = { err: T("The priorities need real costs: set a pack value, unit cost and holding cost under Capacity investment.") }; renderPriorities(); return; }
+    if (!prWorker) { prWorker = new Worker("src/priorities-worker.js"); prWorker.onmessage = onPriorities; prWorker.onerror = function () { prWorker = null; state.pr = { err: T("The solver could not be loaded.") }; renderPriorities(); }; }
+    prId++;
+    prWorker.postMessage({ id: prId, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, hold: state.hold } });
+  }
+  function onPriorities(e) {
+    var d = e.data; if (d.id !== prId) return;
+    if (d.progress != null) { state.pr.n = d.progress; renderPrStatus(); return; }
+    var r = d.result;
+    if (!r || !r.ok) { state.pr = { err: (r && r.errors || [T("The solver could not be loaded.")]).map(function (x) { return I.tw(x); }).join(" ") }; renderPriorities(); return; }
+    state.pr = { res: r, key: state.pr.key }; renderPriorities();
+  }
+  function renderPrStatus() {
+    var p = state.pr || {}, st = $("prStatus");
+    if (p.err) st.innerHTML = "<span class='bad'>" + esc(p.err) + "</span>";
+    else if (p.solving) st.innerHTML = "<span class='spin'></span>" + T("Solving plan {n}…", { n: p.n || 1 });
+    else if (p.res) st.textContent = p.key === solveKey() ? T("{n} plans solved in {s} s", { n: p.res.solves, s: fx(p.res.seconds, 0) }) : T("The network or settings have changed: work this out again.");
+    else st.textContent = "";
+    $("prRun").disabled = !!p.solving;
+  }
+  function prItem(i) {
+    var s = byId(i.site), site = s ? nm(s) : i.site, cfg = state.net.config, yr = function (y) { return (cfg.startYear || 0) + y; };
+    var names = function (keys) { return keys.map(function (k) { var o = byId(k.split(":")[0]); return o ? nm(o) : k; }).join(", "); };
+    var title, lines = [];
+    if (i.kind === "define") { title = T("Define an expansion option for {site}", { site: site }); lines.push(T("1,000 more packs a month of capacity here would be worth {v}, and no option is on the table.", { v: fc(i.valuePer1000) })); }
+    else if (i.kind === "market") { title = T("{site} goes short", { site: site }); lines.push(T("It gets {f} of its demand and loses {v} of margin. No action below settles this: check that its launch plan and priority are what you want.", { f: pct(i.fill), v: fc(i.lostPV) })); }
+    else {
+      title = T("{label} at {site}", { label: T(i.label), site: site });
+      if (i.reason === "late") lines.push(T("Not a decision for today: worth {v} if started in {y}, and {p} of that comes from the years credited after the horizon. Look again nearer the time.", { v: fc(i.npv), y: yr(i.year), p: pct(Math.min(1, i.tailShare)) }));
+      else if (i.group === "dont") lines.push(T("Does not pay: it returns {v} even at its best start.", { v: fc(i.npv) }));
+      else {
+        if (i.group === "now") lines.push(T("Start now: worth {v}.", { v: fc(i.npv) }));
+        else lines.push(T("Start by {y}: worth {v}, best started in {b}.", { y: yr(i.latestYear), v: fc(i.npv), b: yr(i.year) }));
+        if (i.waitNext > 0) lines.push(T("Each further year costs about {w}.", { w: fc(i.waitNext) }));
+        if (i.after.length && i.alone != null) lines.push(i.alone < 0 ? T("On its own it returns {a}: it pays only with {x}.", { a: fc(i.alone), x: names(i.after) }) : T("Priced on top of {x}; alone it returns {a}.", { a: fc(i.alone), x: names(i.after) }));
+        if (i.lowDemandNpv != null) lines.push(i.lowDemandNpv > 0 ? T("Still pays if demand comes in 10% lower ({l}).", { l: fc(i.lowDemandNpv) }) : T("Does not pay if demand comes in 10% lower ({l}): decide once demand is clearer.", { l: fc(i.lowDemandNpv) }));
+        if (i.curve) lines.push(T("By start year:") + " " + i.curve.map(function (c) { return yr(c.year) + " " + fc(c.npv); }).join(" · "));
+      }
+    }
+    return "<li><b>" + esc(title) + "</b><p>" + lines.map(esc).join(" ") + "</p>" + receiptHtml(i.receipts[i.receipts.length - 1], i.proved ? "" : T("Check this one")) + "</li>";
+  }
+  function renderPriorities() {
+    renderPrStatus();
+    var p = state.pr || {}, box = $("prList");
+    if (!p.res || p.key !== solveKey()) { box.innerHTML = ""; return; }
+    var GROUPS = [["now", T("Act now")], ["by", T("Decide by a date")], ["watch", T("Watch")], ["dont", T("Don't")]];
+    box.innerHTML = GROUPS.map(function (g) {
+      var it = p.res.items.filter(function (i) { return i.group === g[0]; });
+      return it.length ? "<div class='pr-group pr-" + g[0] + "'><h3>" + esc(g[1]) + "</h3><ul>" + it.map(prItem).join("") + "</ul></div>" : "";
+    }).join("");
   }
 
   // ---- the capacity investment optimiser: a one-shot solve in a worker (not re-run automatically on every edit)
@@ -1197,6 +1254,7 @@
     $("ivDiscount").addEventListener("change", function () { var v = num(this.value); state.net.config.discountRate = isFinite(v) ? v : 0; });
     $("ivTerminal").addEventListener("change", function () { var v = num(this.value); state.net.config.terminalYears = isFinite(v) && v >= 0 ? Math.round(v) : 5; this.value = state.net.config.terminalYears; });
     $("ivRun").addEventListener("click", runInvest);
+    $("prRun").addEventListener("click", runPriorities);
     $("ivApply").addEventListener("click", applyInvestments);
     var drop = $("dataBox");
     ["dragover", "dragenter"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("drag"); }); });

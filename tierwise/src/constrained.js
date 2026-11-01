@@ -308,6 +308,8 @@
     if (!r) return { ok: false, errors: ["The constrained plan could not be solved (" + why + ")."] };
     var out = read(net, b.meta, r.Columns); out.seconds = (Date.now() - t0) / 1000; out.size = { rows: b.meta.rows, cols: Object.keys(r.Columns).length }; out.attempts = k;
     out.capacityValue = capacityValue(net, b.meta, r);
+    // what the plan costs in present money: the objective it minimises, converted out of its scaled units
+    var CO = costsOf(net.config); out.planCostPV = CO.money ? r.ObjectiveValue * net.config.packValue * b.meta.scale / CO.unmet : null;
     out.receipt = receipt(net, { mode: b.meta.mode, hold: b.meta.hold }, r, out, k, opts);
     return out;
   }
