@@ -24,6 +24,7 @@ jobs:
       - run: node epicycles/tests/fourier.test.js
       - run: node epicycles/tests/prepare.test.js
       - run: node epicycles/tests/i18n.test.js
+      - run: node epicycles/tests/release.test.js
       - name: Syntax-check the page scripts
         run: for f in epicycles/src/*.js epicycles/*.js; do node --check "$f"; done
         shell: bash

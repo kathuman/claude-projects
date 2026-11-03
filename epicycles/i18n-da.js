@@ -39,7 +39,7 @@
     "a.text": "Tekst, der skal tegnes",
     "hint.draw": "Tegn på lærredet med musen eller en finger. Flere streger forbindes i den rækkefølge, du tegnede dem.",
     "b.use": "Brug tegningen", "b.clear": "Ryd", "b.upload": "Upload billede…",
-    "hint.upload": "Bliver på din enhed: billedet læses i denne fane og uploades aldrig.",
+    "hint.upload": "Et billede, du uploader, åbnes først i vinduet <b>Forbered billedet</b>, så du kan forenkle det, før det bruges; knappen åbner det igen for ethvert billede. Det bliver på din enhed: det læses i denne fane og uploades aldrig.",
     "h.tracing": "Optegning", "l.find": "Find", "m.outline": "Omrids", "m.edges": "Kanter",
     "hint.mode": "Omrids: kanten af de mørke former (logoer, tekst, silhuetter). Kanter: overalt hvor lysstyrken skifter brat (fotos). Skygge: punkter lige så tætte, som billedet er mørkt, forbundet til én streg.",
     "l.invert": "Lyse former på mørk baggrund",
@@ -112,7 +112,7 @@
     "ab.author": "Forfatter",
     "ab.authorp": "Epicycles er designet og bygget af <b>Daniel Alberto Sepulveda Estay, PhD</b>, grundlægger af <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Han arbejder med systemdynamik og netværksoptimering for robuste forsyningskæder. Han har en ph.d. fra Danmarks Tekniske Universitet og en MSc fra Massachusetts Institute of Technology og er medlem af rådet i System Dynamics Society.",
     "ab.more": "Mere om Daniel →",
-    "ab.cite": "<b>Henvisning:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.3.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/",
+    "ab.cite": "<b>Henvisning:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.3.1) [Software]. https://kathuman.github.io/claude-projects/epicycles/",
     "ab.openapp": "Åbn appen",
     "ab.foot": "Et billede tegnet af to kæder af roterende cirkler, ét Fourierled ad gangen. Bygget med <a href=\"https://claude.com\" target=\"_blank\" rel=\"noopener\">Claude</a>.",
     // ---- prepare picture window

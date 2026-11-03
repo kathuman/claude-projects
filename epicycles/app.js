@@ -2,7 +2,7 @@
 // picture, keeps the animation state and draws. Text goes through T() and numbers through fx() (i18n.js).
 (function () {
   "use strict";
-  var VERSION = "1.3.0";
+  var VERSION = "1.3.1";   // also the ?v= on every script in index.html and about.html (tests/release.test.js)
   var I = window.EPi18n, T = I.T, fx = I.fx;
   var E = window.Epicycles, TAU = Math.PI * 2, M = 1024, KMAX = 500, HISTORY = 4;
   var $ = function (id) { return document.getElementById(id); };
@@ -75,7 +75,13 @@
 
   function imageSource(cv) { return { kind: "image", canvas: cv, w: cv.width, h: cv.height }; }
 
-  function setImageSource(cv) { retrace(imageSource(cv)); }
+  // a sample picture can be prepared too: the window opens on it with settings suggested from the picture
+  function setImageSource(cv) {
+    var src = imageSource(cv);
+    src.original = cv;
+    src.prep = window.EpPrepUI.settingsFor(E.analyse(cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height));
+    retrace(src);
+  }
 
   // an uploaded picture: drawn on white (transparent logos), at most 360 px a side, then opened in the Prepare
   // picture window (prep.js) with settings suggested from the picture: a logo-like picture (two clear tones) is
@@ -550,6 +556,7 @@
     pressed("samples", "sample", kind);
     $("textCtl").hidden = kind !== "text";
     $("drawCtl").hidden = kind !== "draw";
+    $("prepAgain").hidden = kind === "draw" || !(S.source && S.source.original);
   }
 
   function setMode(m) {

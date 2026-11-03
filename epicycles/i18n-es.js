@@ -39,7 +39,7 @@
     "a.text": "Texto a dibujar",
     "hint.draw": "Dibuje en el lienzo con el mouse o con un dedo. Los trazos se unen en el orden en que los dibujó.",
     "b.use": "Usar dibujo", "b.clear": "Borrar", "b.upload": "Subir imagen…",
-    "hint.upload": "Se queda en su dispositivo: la imagen se lee en esta pestaña y nunca se sube.",
+    "hint.upload": "Una imagen que sube se abre primero en la ventana <b>Preparar la imagen</b>, para simplificarla antes de usarla; el botón la vuelve a abrir para cualquier imagen. Se queda en su dispositivo: se lee en esta pestaña y nunca se sube.",
     "h.tracing": "Trazado", "l.find": "Buscar", "m.outline": "Contorno", "m.edges": "Bordes",
     "hint.mode": "Contorno: el borde de las formas oscuras (logotipos, texto, siluetas). Bordes: dondequiera que el brillo cambie bruscamente (fotos). Sombreado: puntos tan densos como oscura es la imagen, unidos en una sola línea.",
     "l.invert": "Formas claras sobre fondo oscuro",
@@ -112,7 +112,7 @@
     "ab.author": "Autor",
     "ab.authorp": "Epicycles fue diseñado y construido por <b>Daniel Alberto Sepulveda Estay, PhD</b>, fundador de <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Trabaja en dinámica de sistemas y optimización de redes para la resiliencia de las cadenas de suministro. Es doctor de la Universidad Técnica de Dinamarca y magíster del Instituto Tecnológico de Massachusetts, y miembro del consejo de la System Dynamics Society.",
     "ab.more": "Más sobre Daniel →",
-    "ab.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (versión 1.3.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/",
+    "ab.cite": "<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (versión 1.3.1) [Software]. https://kathuman.github.io/claude-projects/epicycles/",
     "ab.openapp": "Abrir la aplicación",
     "ab.foot": "Una imagen dibujada por dos cadenas de círculos que giran, un término de Fourier a la vez. Construido con <a href=\"https://claude.com\" target=\"_blank\" rel=\"noopener\">Claude</a>.",
     // ---- prepare picture window
