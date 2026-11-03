@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: 22
       - run: node epicycles/tests/fourier.test.js
+      - run: node epicycles/tests/i18n.test.js
       - name: Syntax-check the page scripts
         run: for f in epicycles/src/*.js epicycles/*.js; do node --check "$f"; done
         shell: bash

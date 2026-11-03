@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Epicycles — A Picture Drawn by Turning Circles</title>
-  <meta name="description" content="Turn any picture into one closed line, then draw it with two chains of turning circles, one for x and one for y. One circle per side, then two, then three: each circle is one term of the line's Fourier series and turns as many times per cycle as its term number." />
+  <title data-i18n="title">Epicycles — A Picture Drawn by Turning Circles</title>
+  <meta data-i18n-attr="content=meta" name="description" content="Turn any picture into one closed line, then draw it with two chains of turning circles, one for x and one for y. One circle per side, then two, then three: each circle is one term of the line's Fourier series and turns as many times per cycle as its term number." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%228%22/><circle cx=%2278%22 cy=%2250%22 r=%2216%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%228%22/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,6 +34,8 @@ a{color:var(--accent);}
 .brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
 .back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
 .back-link:hover{color:var(--accent); border-color:var(--accent);}
+select.lang{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); background:var(--panel-2); padding:5px 8px; border:1px solid var(--line); border-radius:6px; cursor:pointer;}
+select.lang:hover{color:var(--accent); border-color:var(--accent);}
 
 .layout{display:grid; grid-template-columns:290px minmax(0,1fr); flex:1;}
 .rail{border-right:1px solid var(--line); background:var(--panel-2); padding:16px 16px 28px; overflow-y:auto; max-height:calc(100vh - 57px); position:sticky; top:57px;}
@@ -121,160 +123,164 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
     <div class="brand">
       <div class="mark">Epi<span>cycles</span></div>
       <span class="ver" id="ver"></span>
-      <span class="sub">a picture drawn by turning circles</span>
+      <span class="sub" data-i18n="sub">a picture drawn by turning circles</span>
     </div>
-    <div style="display:flex; gap:8px;">
-      <a class="back-link" href="about.html">About</a>
-      <a class="back-link" href="../">← All projects</a>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
     </div>
   </header>
 
   <div class="layout">
     <aside class="rail">
-      <h2>Picture</h2>
+      <h2 data-i18n="h.picture">Picture</h2>
       <div class="chips" id="samples">
-        <button class="btn" data-sample="text" aria-pressed="true">Text</button>
-        <button class="btn" data-sample="heart">Heart</button>
-        <button class="btn" data-sample="star">Star</button>
-        <button class="btn" data-sample="gear">Gear</button>
-        <button class="btn" data-sample="draw">Draw</button>
+        <button class="btn" data-sample="text" aria-pressed="true" data-i18n="s.text">Text</button>
+        <button class="btn" data-sample="heart" data-i18n="s.heart">Heart</button>
+        <button class="btn" data-sample="star" data-i18n="s.star">Star</button>
+        <button class="btn" data-sample="gear" data-i18n="s.gear">Gear</button>
+        <button class="btn" data-sample="draw" data-i18n="s.draw">Draw</button>
       </div>
       <div class="ctl" id="textCtl" style="margin-top:10px">
-        <input type="text" id="textIn" value="Hi" maxlength="12" aria-label="Text to draw" />
+        <input type="text" id="textIn" value="Hi" maxlength="12" aria-label="Text to draw" data-i18n-attr="aria-label=a.text" />
       </div>
       <div class="ctl" id="drawCtl" hidden style="margin-top:10px">
-        <div class="hint">Draw on the canvas with the mouse or a finger. Several strokes are joined in the order you drew them.</div>
+        <div class="hint" data-i18n="hint.draw">Draw on the canvas with the mouse or a finger. Several strokes are joined in the order you drew them.</div>
         <div class="chips" style="margin-top:8px">
-          <button class="btn primary" id="useDrawing">Use drawing</button>
-          <button class="btn" id="clearDrawing">Clear</button>
+          <button class="btn primary" id="useDrawing" data-i18n="b.use">Use drawing</button>
+          <button class="btn" id="clearDrawing" data-i18n="b.clear">Clear</button>
         </div>
       </div>
       <div style="margin-top:10px">
-        <label class="btn" for="file" style="display:inline-block">Upload picture…</label>
+        <label class="btn" for="file" style="display:inline-block" data-i18n="b.upload">Upload picture…</label>
         <input type="file" id="file" accept="image/*" hidden />
-        <div class="hint">Stays on your device: the picture is read in this tab and never uploaded.</div>
+        <div class="hint" data-i18n="hint.upload">Stays on your device: the picture is read in this tab and never uploaded.</div>
       </div>
 
-      <h2>Tracing</h2>
+      <h2 data-i18n="h.tracing">Tracing</h2>
       <div class="ctl">
-        <div class="row"><span>Find</span></div>
+        <div class="row"><span data-i18n="l.find">Find</span></div>
         <div class="seg" id="modeSeg">
-          <button data-mode="outline" aria-pressed="true">Outline</button>
-          <button data-mode="edges">Edges</button>
+          <button data-mode="outline" aria-pressed="true" data-i18n="m.outline">Outline</button>
+          <button data-mode="edges" data-i18n="m.edges">Edges</button>
         </div>
-        <div class="hint">Outline: the border of the dark shapes (logos, text, silhouettes). Edges: wherever brightness changes sharply (photos).</div>
+        <div class="hint" data-i18n="hint.mode">Outline: the border of the dark shapes (logos, text, silhouettes). Edges: wherever brightness changes sharply (photos).</div>
       </div>
-      <label class="check" id="invertCtl"><input type="checkbox" id="invert" /> Light shapes on a dark background</label>
+      <label class="check" id="invertCtl"><input type="checkbox" id="invert" /> <span data-i18n="l.invert">Light shapes on a dark background</span></label>
       <div class="ctl" id="detailCtl" hidden>
-        <div class="row"><label for="detail">Edge detail</label><output id="detailOut"></output></div>
+        <div class="row"><label for="detail" data-i18n="l.detail">Edge detail</label><output id="detailOut"></output></div>
         <input type="range" id="detail" min="0" max="100" step="5" value="50" />
-        <div class="hint">50 % splits real edges from the grain of the photo automatically. Higher keeps fainter edges; lower keeps only the strongest.</div>
+        <div class="hint" data-i18n="hint.detail">50 % splits real edges from the grain of the photo automatically. Higher keeps fainter edges; lower keeps only the strongest.</div>
       </div>
       <div class="ctl">
-        <div class="row"><label for="pts">Points on the line</label><output id="ptsOut"></output></div>
+        <div class="row"><label for="pts" data-i18n="l.pts">Points on the line</label><output id="ptsOut"></output></div>
         <input type="range" id="pts" min="200" max="3000" step="100" value="1500" />
-        <div class="hint">The traced pixels are thinned to this many, then joined into one closed line.</div>
+        <div class="hint" data-i18n="hint.pts">The traced pixels are thinned to this many, then joined into one closed line.</div>
       </div>
 
-      <h2>Circles</h2>
+      <h2 data-i18n="h.circles">Circles</h2>
       <div class="ctl">
-        <div class="row"><span>Sequence</span></div>
+        <div class="row"><span data-i18n="l.seq">Sequence</span></div>
         <div class="seg" id="seqSeg">
           <button data-seq="auto" aria-pressed="true">1, 2, 3 …</button>
-          <button data-seq="manual">Fixed</button>
+          <button data-seq="manual" data-i18n="q.fixed">Fixed</button>
         </div>
-        <div class="hint">1, 2, 3 …: one full cycle with each count, then the next. Fixed: keep drawing with the count below.</div>
+        <div class="hint" data-i18n="hint.seq">1, 2, 3 …: one full cycle with each count, then the next. Fixed: keep drawing with the count below.</div>
       </div>
       <div class="ctl">
-        <div class="row"><label for="nIn">Circles per side</label><output id="nOut"></output></div>
+        <div class="row"><label for="nIn" data-i18n="l.n">Circles per side</label><output id="nOut"></output></div>
         <input type="range" id="nIn" min="1" max="500" step="1" value="1" />
       </div>
       <div class="ctl">
-        <div class="row"><span>Order</span></div>
+        <div class="row"><span data-i18n="l.order">Order</span></div>
         <div class="seg" id="orderSeg">
-          <button data-order="frequency" aria-pressed="true">Series order</button>
-          <button data-order="size">Largest first</button>
+          <button data-order="frequency" aria-pressed="true" data-i18n="o.freq">Series order</button>
+          <button data-order="size" data-i18n="o.size">Largest first</button>
         </div>
-        <div class="hint">Series order adds the circles turning 1, 2, 3 … times per cycle. Largest first adds whichever circles are biggest, whatever their speed.</div>
+        <div class="hint" data-i18n="hint.order">Series order adds the circles turning 1, 2, 3 … times per cycle. Largest first adds whichever circles are biggest, whatever their speed.</div>
       </div>
 
-      <h2>Playback</h2>
+      <h2 data-i18n="h.playback">Playback</h2>
       <div class="chips">
         <button class="btn primary" id="play">Pause</button>
-        <button class="btn" id="restart">Restart</button>
-        <button class="btn" id="next">Next count</button>
+        <button class="btn" id="restart" data-i18n="b.restart">Restart</button>
+        <button class="btn" id="next" data-i18n="b.next">Next count</button>
       </div>
       <div class="ctl" style="margin-top:10px">
-        <div class="row"><label for="period">Seconds per cycle</label><output id="periodOut"></output></div>
+        <div class="row"><label for="period" data-i18n="l.period">Seconds per cycle</label><output id="periodOut"></output></div>
         <input type="range" id="period" min="2" max="30" step="1" value="8" />
       </div>
 
-      <h2>Show</h2>
-      <label class="check"><input type="checkbox" id="showCircles" checked /> Circles</label>
-      <label class="check"><input type="checkbox" id="showTarget" checked /> Traced line</label>
-      <label class="check"><input type="checkbox" id="showPicture" checked /> Picture</label>
-      <label class="check"><input type="checkbox" id="showHistory" checked /> Earlier counts</label>
+      <h2 data-i18n="h.show">Show</h2>
+      <label class="check"><input type="checkbox" id="showCircles" checked /> <span data-i18n="sh.circles">Circles</span></label>
+      <label class="check"><input type="checkbox" id="showTarget" checked /> <span data-i18n="sh.target">Traced line</span></label>
+      <label class="check"><input type="checkbox" id="showPicture" checked /> <span data-i18n="sh.picture">Picture</span></label>
+      <label class="check"><input type="checkbox" id="showHistory" checked /> <span data-i18n="sh.history">Earlier counts</span></label>
       <div class="chips" style="margin-top:10px">
-        <button class="btn" id="svgOut">Download SVG</button>
+        <button class="btn" id="svgOut" data-i18n="b.svg">Download SVG</button>
       </div>
     </aside>
 
     <main class="content">
       <div class="stage-wrap">
-        <canvas id="stage" tabindex="0" aria-label="The picture drawn by two chains of circles: the top chain sets x, the left chain sets y"></canvas>
+        <canvas id="stage" tabindex="0" aria-label="The picture drawn by two chains of circles: the top chain sets x, the left chain sets y" data-i18n-attr="aria-label=a.stage"></canvas>
         <div class="overlay-msg" id="msg" hidden></div>
-        <div class="busy" id="busy" hidden>Tracing…</div>
-        <div class="zoom-hint">Scroll or pinch to zoom · drag to move · double-click to fit</div>
-        <div class="zoom-ctl" role="group" aria-label="Zoom">
+        <div class="busy" id="busy" hidden data-i18n="busy">Tracing…</div>
+        <div class="zoom-hint" data-i18n="z.hint">Scroll or pinch to zoom · drag to move · double-click to fit</div>
+        <div class="zoom-ctl" role="group" aria-label="Zoom" data-i18n-attr="aria-label=z.group">
           <output id="zoomLevel">×1.0</output>
-          <button class="btn" id="zoomOut" title="Zoom out (−)" aria-label="Zoom out">−</button>
-          <button class="btn" id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
-          <button class="btn" id="zoomFit" title="Fit everything (0 or double-click)">Fit</button>
-          <button class="btn" id="follow" aria-pressed="false" title="Keep the pen in the middle while it draws (F)">Follow pen</button>
+          <button class="btn" id="zoomOut" title="Zoom out (−)" aria-label="Zoom out" data-i18n-attr="title=z.outT,aria-label=z.out">−</button>
+          <button class="btn" id="zoomIn" title="Zoom in (+)" aria-label="Zoom in" data-i18n-attr="title=z.inT,aria-label=z.in">+</button>
+          <button class="btn" id="zoomFit" title="Fit everything (0 or double-click)" data-i18n-attr="title=z.fitT" data-i18n="z.fit">Fit</button>
+          <button class="btn" id="follow" aria-pressed="false" title="Keep the pen in the middle while it draws (F)" data-i18n-attr="title=z.followT" data-i18n="z.follow">Follow pen</button>
         </div>
       </div>
 
       <div class="stats">
-        <div class="stat"><div class="k">Circles per side</div><div class="v" id="stN">–</div><div class="s" id="stStage"></div></div>
-        <div class="stat"><div class="k">Distance from the line</div><div class="v" id="stErr">–</div><div class="s">RMS, as a share of the picture's spread</div></div>
-        <div class="stat"><div class="k">Fastest circle</div><div class="v" id="stFast">–</div><div class="s">turns per cycle</div></div>
-        <div class="stat"><div class="k">Traced line</div><div class="v" id="stPts">–</div><div class="s" id="stPtsS">points</div></div>
+        <div class="stat"><div class="k" data-i18n="st.n">Circles per side</div><div class="v" id="stN">–</div><div class="s" id="stStage"></div></div>
+        <div class="stat"><div class="k" data-i18n="st.err">Distance from the line</div><div class="v" id="stErr">–</div><div class="s" data-i18n="st.errS">RMS, as a share of the picture's spread</div></div>
+        <div class="stat"><div class="k" data-i18n="st.fast">Fastest circle</div><div class="v" id="stFast">–</div><div class="s" data-i18n="st.fastS">turns per cycle</div></div>
+        <div class="stat"><div class="k" data-i18n="st.pts">Traced line</div><div class="v" id="stPts">–</div><div class="s" id="stPtsS"></div></div>
       </div>
 
       <div class="eq" id="eq"></div>
 
       <div class="grid2">
         <div class="card">
-          <h3>Error by number of circles</h3>
-          <p class="lede">How far the drawn curve stays from the traced line, for every number of circles per side (log scale). The dot is the count being drawn.</p>
-          <div class="chart-wrap"><canvas id="errChart" aria-label="Error falling as circles are added"></canvas><div class="tip" id="tip" hidden></div></div>
-          <details><summary>Table view</summary><table id="errTable"></table></details>
+          <h3 data-i18n="c.err">Error by number of circles</h3>
+          <p class="lede" data-i18n="c.errL">How far the drawn curve stays from the traced line, for every number of circles per side (log scale). The dot is the count being drawn.</p>
+          <div class="chart-wrap"><canvas id="errChart" aria-label="Error falling as circles are added" data-i18n-attr="aria-label=a.chart"></canvas><div class="tip" id="tip" hidden></div></div>
+          <details><summary data-i18n="c.table">Table view</summary><table id="errTable"></table></details>
         </div>
         <div class="card">
-          <h3>The circles</h3>
-          <p class="lede">Each circle is one term r cos(k t + φ). It starts at angle φ and turns k times while the pen goes round once, so term k spins k times as fast as term 1.</p>
+          <h3 data-i18n="c.circles">The circles</h3>
+          <p class="lede" data-i18n="c.circlesL">Each circle is one term r cos(k t + φ). It starts at angle φ and turns k times while the pen goes round once, so term k spins k times as fast as term 1.</p>
           <div class="tables">
-            <div><h4 style="color:var(--cx)">Top chain → x</h4><table id="tabX"></table></div>
-            <div><h4 style="color:var(--cy)">Left chain → y</h4><table id="tabY"></table></div>
+            <div><h4 style="color:var(--cx)" data-i18n="c.top">Top chain → x</h4><table id="tabX"></table></div>
+            <div><h4 style="color:var(--cy)" data-i18n="c.left">Left chain → y</h4><table id="tabY"></table></div>
           </div>
           <div class="more" id="more"></div>
         </div>
       </div>
 
       <div class="card explain">
-        <h3>How it works</h3>
+        <h3 data-i18n="x.h">How it works</h3>
         <ol>
-          <li><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (Canny-style: blurred, thinned to one-pixel lines, with the threshold set well above the photo's grain). An uploaded picture with two clear tones is traced by its outline, any other by its edges, and a dark background is detected from the border. These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
-          <li><b>Even steps.</b> The cycle is resampled to 1,024 points evenly spaced along its length. A parameter <code>t</code> runs from 0 to 2π once round.</li>
-          <li><b>One series per side.</b> Each coordinate is expanded separately: <code>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</code>, and the same for <code>y(t)</code>. Each term is one circle. Chained end to end above the picture, the circles' tip sets x; chained down the left, it sets y. The guide lines from the two tips meet at the pen.</li>
-          <li><b>One, two, three …</b> With one circle per side the pen draws an ellipse, the best single-frequency fit. Each extra circle adds detail at a higher speed. The error falls toward zero as the count rises.</li>
+          <li data-i18n="x.1"><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (Canny-style: blurred, thinned to one-pixel lines, with the threshold set well above the photo's grain). An uploaded picture with two clear tones is traced by its outline, any other by its edges, and a dark background is detected from the border. These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
+          <li data-i18n="x.2"><b>Even steps.</b> The cycle is resampled to 1,024 points evenly spaced along its length. A parameter <code>t</code> runs from 0 to 2π once round.</li>
+          <li data-i18n="x.3"><b>One series per side.</b> Each coordinate is expanded separately: <code>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</code>, and the same for <code>y(t)</code>. Each term is one circle. Chained end to end above the picture, the circles' tip sets x; chained down the left, it sets y. The guide lines from the two tips meet at the pen.</li>
+          <li data-i18n="x.4"><b>One, two, three …</b> With one circle per side the pen draws an ellipse, the best single-frequency fit. Each extra circle adds detail at a higher speed. The error falls toward zero as the count rises.</li>
         </ol>
-        <h3 style="margin-top:12px">Taylor or Fourier?</h3>
-        <p>These turning circles are a <b>Fourier</b> series. A Taylor series in time, <code>c₀ + c₁t + c₂t² + …</code>, never comes back to where it started, so it cannot draw a closed loop. Still, the two ideas are closely related. Write <code>z = e<sup>it</sup></code>, a point going round the unit circle once per cycle. Then <code>x(t) = Re(A₀ + A₁z + A₂z² + A₃z³ + …)</code> with <code>A<sub>k</sub> = r<sub>k</sub>e<sup>iφ<sub>k</sub></sup></code>. That is a Taylor (power) series in <code>z</code>. Each power <code>z<sup>k</sup></code> is a point going round k times as fast, so the term's place in the expansion sets its circle's speed, and its coefficient sets the circle's size and starting angle.</p>
+        <h3 style="margin-top:12px" data-i18n="x.th">Taylor or Fourier?</h3>
+        <p data-i18n="x.tp">These turning circles are a <b>Fourier</b> series. A Taylor series in time, <code>c₀ + c₁t + c₂t² + …</code>, never comes back to where it started, so it cannot draw a closed loop. Still, the two ideas are closely related. Write <code>z = e<sup>it</sup></code>, a point going round the unit circle once per cycle. Then <code>x(t) = Re(A₀ + A₁z + A₂z² + A₃z³ + …)</code> with <code>A<sub>k</sub> = r<sub>k</sub>e<sup>iφ<sub>k</sub></sup></code>. That is a Taylor (power) series in <code>z</code>. Each power <code>z<sup>k</sup></code> is a point going round k times as fast, so the term's place in the expansion sets its circle's speed, and its coefficient sets the circle's size and starting angle.</p>
       </div>
     </main>
   </div>
 </div>
+<script src="i18n-es.js"></script>
+<script src="i18n-da.js"></script>
+<script src="i18n.js"></script>
 <script src="src/fourier.js"></script>
 <script src="app.js"></script>
 </body>

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About Epicycles</title>
-  <meta name="description" content="Epicycles turns a picture into one closed line and draws it with two chains of turning circles, one for x and one for y, adding circles one at a time. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <title data-i18n="ab.title">About Epicycles</title>
+  <meta data-i18n-attr="content=ab.meta" name="description" content="Epicycles turns a picture into one closed line and draws it with two chains of turning circles, one for x and one for y, adding circles one at a time. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%228%22/><circle cx=%2278%22 cy=%2250%22 r=%2216%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%228%22/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,6 +29,8 @@ body{background-image:linear-gradient(rgba(125,211,252,.05) 1px, transparent 1px
 .back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
 button.back-link{background:transparent; cursor:pointer; font-family:var(--head);}
 .back-link:hover{color:var(--accent); border-color:var(--accent);}
+select.lang{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); background:var(--panel-2); padding:5px 8px; border:1px solid var(--line); border-radius:6px; cursor:pointer;}
+select.lang:hover{color:var(--accent); border-color:var(--accent);}
 main{max-width:980px; margin:0 auto; padding:34px 22px 10px;}
 .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
 h1{font-family:var(--head); font-weight:700; font-size:40px; letter-spacing:.02em; margin:8px 0 12px;}
@@ -56,24 +58,25 @@ a{color:var(--accent);}
 <header class="topbar">
   <div class="brand">
     <div class="mark">Epi<span>cycles</span></div>
-    <div class="sub">ABOUT THE APP</div>
+    <div class="sub" data-i18n="ab.sub">ABOUT THE APP</div>
   </div>
   <div class="actions">
-    <a class="back-link" href="./">Open Epicycles</a>
-    <a class="back-link" href="../">← Projects</a>
+    <select class="lang" id="langSel" aria-label="Language"></select>
+    <a class="back-link" href="./" data-i18n="ab.open">Open Epicycles</a>
+    <a class="back-link" href="../" data-i18n="ab.projects">← Projects</a>
   </div>
 </header>
 
 <main>
-  <div class="eyebrow">About the app</div>
+  <div class="eyebrow" data-i18n="ab.eyebrow">About the app</div>
   <h1>Epicycles</h1>
-  <p class="lede">Any closed line can be drawn by circles turning on circles. Epicycles turns a picture into one closed line and draws it with two chains of circles: the chain above the picture sets x, the chain to its left sets y. It starts with one circle per side, then two, then three, so you can watch the drawing take shape term by term.</p>
-  <p><a class="open" href="./">Open Epicycles →</a></p>
+  <p class="lede" data-i18n="ab.lede">Any closed line can be drawn by circles turning on circles. Epicycles turns a picture into one closed line and draws it with two chains of circles: the chain above the picture sets x, the chain to its left sets y. It starts with one circle per side, then two, then three, so you can watch the drawing take shape term by term.</p>
+  <p><a class="open" href="./" data-i18n="ab.openbtn">Open Epicycles →</a></p>
 
   <div class="cols">
     <section class="card">
-      <h2>What it does</h2>
-      <ul>
+      <h2 data-i18n="ab.what">What it does</h2>
+      <ul data-i18n="ab.whatlist">
         <li><b>Takes any picture</b>Text you type, a heart, a star, a gear, your own drawing, or an uploaded picture. An uploaded picture is read in the browser tab and never leaves your device.</li>
         <li><b>Makes one closed line</b>It finds the picture's outline (for logos, text and silhouettes) or its edges (for photos, ignoring their grain), choosing which from the picture and noticing a dark background, thins them to a set number of points and joins them into a single loop. A nearest-neighbour tour is improved with 2-opt until no reversal shortens it, so the line does not cross itself needlessly. Separate shapes are joined by straight jumps.</li>
         <li><b>Draws it with circles, one count at a time</b>One full loop with 1 circle per side, then 2, 3 … 10, 12, 15, 20, up to 500, with earlier loops kept faded. Or fix the count, or click the error chart to jump to any count. Circles can be added in series order or largest first. Zoom and move around while it draws, or let the view follow the pen to watch the smallest circles up close.</li>
@@ -82,22 +85,25 @@ a{color:var(--accent);}
     </section>
 
     <section class="card">
-      <h2>How it is built</h2>
-      <p>The line is resampled to 1,024 points evenly spaced along its length, and each coordinate is expanded on its own as a Fourier series, <b>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</b>. Term k is one circle: radius r<sub>k</sub>, starting angle φ<sub>k</sub>, turning k times while the pen goes round once. The error is exact, by Parseval's theorem.</p>
-      <p><b>Taylor or Fourier?</b> A Taylor series in time cannot close a loop, but with z = e<sup>it</sup> the same sum is Re Σ A<sub>k</sub>z<sup>k</sup>, a power series in z. Each power z<sup>k</sup> goes round k times as fast, so a term's place in the expansion sets its circle's speed.</p>
-      <p>The tests check that a circle needs exactly one circle per side, that the full series rebuilds a square, that the error never grows as circles are added and equals the measured distance, that the chain tips equal the series, that the tour visits every point once and 2-opt never lengthens it, and that a drawn ring is traced along its edges. Everything runs in your browser.</p>
+      <h2 data-i18n="ab.how">How it is built</h2>
+      <p data-i18n="ab.how1">The line is resampled to 1,024 points evenly spaced along its length, and each coordinate is expanded on its own as a Fourier series, <b>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</b>. Term k is one circle: radius r<sub>k</sub>, starting angle φ<sub>k</sub>, turning k times while the pen goes round once. The error is exact, by Parseval's theorem.</p>
+      <p data-i18n="ab.how2"><b>Taylor or Fourier?</b> A Taylor series in time cannot close a loop, but with z = e<sup>it</sup> the same sum is Re Σ A<sub>k</sub>z<sup>k</sup>, a power series in z. Each power z<sup>k</sup> goes round k times as fast, so a term's place in the expansion sets its circle's speed.</p>
+      <p data-i18n="ab.how3">The tests check that a circle needs exactly one circle per side, that the full series rebuilds a square, that the error never grows as circles are added and equals the measured distance, that the chain tips equal the series, that the tour visits every point once and 2-opt never lengthens it, and that a drawn ring is traced along its edges. Everything runs in your browser.</p>
 
-      <h2 style="margin-top:22px;">Author</h2>
-      <p>Epicycles was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
-      <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a></p>
-      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.1.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/</p>
+      <h2 style="margin-top:22px;" data-i18n="ab.author">Author</h2>
+      <p data-i18n="ab.authorp">Epicycles was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+      <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener" data-i18n="ab.more">More about Daniel →</a></p>
+      <p class="cite" data-i18n="ab.cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.2.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/</p>
     </section>
   </div>
 </main>
 
 <footer class="foot">
-  <span class="consult">Epicycles v1.1.0 · <a href="./">Open the app</a></span>
-  <span>A picture drawn by two chains of turning circles, one Fourier term at a time. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
+  <span class="consult">Epicycles v1.2.0 · <a href="./" data-i18n="ab.openapp">Open the app</a></span>
+  <span data-i18n="ab.foot">A picture drawn by two chains of turning circles, one Fourier term at a time. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
 </footer>
+<script src="i18n-es.js"></script>
+<script src="i18n-da.js"></script>
+<script src="i18n.js"></script>
 </body>
 </html>

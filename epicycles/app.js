@@ -1,8 +1,9 @@
 // Epicycles page — picture in, two chains of circles out. The maths lives in src/fourier.js; this file reads the
-// picture, keeps the animation state and draws.
+// picture, keeps the animation state and draws. Text goes through T() and numbers through fx() (i18n.js).
 (function () {
   "use strict";
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
+  var I = window.EPi18n, T = I.T, fx = I.fx;
   var E = window.Epicycles, TAU = Math.PI * 2, M = 1024, KMAX = 500, HISTORY = 4;
   var $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION;
@@ -33,7 +34,7 @@
     var g = cv.getContext("2d");
     g.fillStyle = "#fff"; g.fillRect(0, 0, W, H); g.fillStyle = "#000";
     if (kind === "text") {
-      var txt = $("textIn").value.trim() || "Hi", size = 220;
+      var txt = $("textIn").value.trim() || T("Hi"), size = 220;
       g.font = "bold " + size + "px Georgia, 'Times New Roman', serif";
       while (g.measureText(txt).width > W - 30 && size > 20) { size -= 6; g.font = "bold " + size + "px Georgia, 'Times New Roman', serif"; }
       g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, W / 2, H / 2 + size * 0.04);
@@ -79,7 +80,7 @@
   // an uploaded picture: drawn on white (transparent logos), at most 360 px a side; a logo-like picture (two clear
   // tones) is traced by its outline, a photo by its edges, and a dark background is detected from the border
   function loadFile(file) {
-    if (file.type && !/^image\//.test(file.type)) { flash("That file is not a picture."); return; }
+    if (file.type && !/^image\//.test(file.type)) { flash(T("That file is not a picture.")); return; }
     var url = URL.createObjectURL(file), img = new Image();
     img.onload = function () {
       var iw = img.naturalWidth || 360, ih = img.naturalHeight || 360;   // an SVG without a size reports 0
@@ -93,13 +94,14 @@
       setSample(null);
       setMode(a.twoTone ? "outline" : "edges");
       setInvert(a.darkBackground);
-      retrace(imageSource(pic), "Traced by its " + (a.twoTone ? "outline" : "edges") + (a.darkBackground && a.twoTone ? ", as light shapes on a dark background" : "") + ". Switch under Tracing if another works better.",
+      var how = !a.twoTone ? T("Traced by its edges.") : a.darkBackground ? T("Traced by its outline, as light shapes on a dark background.") : T("Traced by its outline.");
+      retrace(imageSource(pic), how + " " + T("Switch under Tracing if another works better."),
         function () {   // nothing to trace: keep the previous picture and its settings
           setSample(before.sample); setMode(before.mode); setInvert(before.invert);
           if (before.drawing) { S.drawing = true; cv.classList.add("drawing"); }
         });
     };
-    img.onerror = function () { URL.revokeObjectURL(url); flash("That file could not be read as a picture (try PNG, JPEG, GIF, WebP or SVG)."); };
+    img.onerror = function () { URL.revokeObjectURL(url); flash(T("That file could not be read as a picture (try PNG, JPEG, GIF, WebP or SVG).")); };
     img.src = url;
   }
 
@@ -122,9 +124,9 @@
           var res = E.traceImage(data, source.w, source.h, { mode: S.mode, invert: S.invert, detail: S.detail / 100, maxPoints: S.maxPoints, timeBudgetMs: 700 });
           if (!res || res.tour.length < 3) {
             $("busy").hidden = true;
-            var why = S.mode === "outline" ? "No shapes found in this picture. Try Edges, or change “Light shapes on a dark background”." : "No edges found in this picture. Try Outline.";
-            if (onFail) { onFail(); why = "Nothing to trace in this picture: it looks blank."; }
-            flash(why + (S.source && S.source !== source ? " Still showing the previous picture." : ""));
+            var why = S.mode === "outline" ? T("No shapes found in this picture. Try Edges, or change “Light shapes on a dark background”.") : T("No edges found in this picture. Try Outline.");
+            if (onFail) { onFail(); why = T("Nothing to trace in this picture: it looks blank."); }
+            flash(why + (S.source && S.source !== source ? " " + T("Still showing the previous picture.") : ""));
             return;
           }
           tour = res.tour; points = res.points;
@@ -138,7 +140,7 @@
         flash(note || "");
       } catch (err) {
         if (onFail) onFail();
-        flash("This picture could not be traced: " + err.message);
+        flash(T("This picture could not be traced: {why}", { why: err.message }));
       } finally {
         if (token === traceToken) $("busy").hidden = true;
       }
@@ -313,43 +315,44 @@
     if (key === lastStatsKey) return;
     lastStatsKey = key;
     $("stN").textContent = S.N;
-    $("stStage").textContent = S.seq === "auto" ? "count " + (S.stage + 1) + " of " + S.stages.length + (S.stage === S.stages.length - 1 ? ", repeating" : "") : "fixed";
+    $("stStage").textContent = S.seq === "auto" ? T(S.stage === S.stages.length - 1 ? "count {i} of {n}, repeating" : "count {i} of {n}", { i: S.stage + 1, n: S.stages.length }) : T("fixed");
     $("stErr").textContent = pct(S.errs[S.N]);
     var fast = 0;
     for (var i = 0; i < S.N; i++) fast = Math.max(fast, S.ox[i], S.oy[i]);
     $("stFast").textContent = fast + "×";
-    $("stPts").textContent = S.tracedPoints.toLocaleString("en");
-    $("stPtsS").textContent = "points joined, resampled to " + M.toLocaleString("en");
+    $("stPts").textContent = S.tracedPoints.toLocaleString(I.locale);
+    $("stPtsS").textContent = T("points joined, resampled to {m}", { m: M.toLocaleString(I.locale) });
     $("nOut").textContent = S.N; $("nIn").value = S.N;
     $("eq").innerHTML = equation("x", S.sr.x, S.ox) + "<br>" + equation("y", S.sr.y, S.oy);
     fillCircleTables();
     drawErrChart();
   }
 
-  function pct(e) { return (100 * e).toFixed(e < 0.1 ? 2 : 1) + " %"; }
-  function f3(v) { return (v < 0 ? "−" : "") + Math.abs(v).toFixed(3); }
+  function pct(e) { return fx(100 * e, e < 0.1 ? 2 : 1) + " %"; }
+  function f3(v) { return (v < 0 ? "−" : "") + fx(Math.abs(v), 3); }
 
   function equation(name, ax, order) {
     var s = '<span class="' + name + '">' + name + "(t)</span> ≈ " + f3(ax.a0), shown = Math.min(S.N, 4);
     for (var i = 0; i < shown; i++) {
       var k = order[i], ph = ax.phi[k];
-      s += " + " + ax.r[k].toFixed(3) + " cos(" + (k === 1 ? "" : k) + "t " + (ph < 0 ? "− " : "+ ") + Math.abs(ph).toFixed(2) + ")";
+      s += " + " + fx(ax.r[k], 3) + " cos(" + (k === 1 ? "" : k) + "t " + (ph < 0 ? "− " : "+ ") + fx(Math.abs(ph), 2) + ")";
     }
-    if (S.N > shown) s += " + … (" + (S.N - shown) + " more)";
+    if (S.N > shown) s += " + … " + T("({n} more)", { n: S.N - shown });
     return s;
   }
 
   function fillCircleTables() {
     var rows = Math.min(S.N, 12);
     [["tabX", S.sr.x, S.ox, C.cx], ["tabY", S.sr.y, S.oy, C.cy]].forEach(function (d) {
-      var h = '<tr><th></th><th>k</th><th>radius</th><th>start φ</th><th>turns / cycle</th></tr>';
+      var h = "<tr><th></th><th>k</th><th>" + T("radius") + "</th><th>" + T("start φ") + "</th><th>" + T("turns / cycle") + "</th></tr>";
       for (var i = 0; i < rows; i++) {
         var k = d[2][i];
-        h += '<tr><td class="sw" style="color:' + d[3] + '"><i></i></td><td>' + k + "</td><td>" + d[1].r[k].toFixed(4) + "</td><td>" + Math.round(d[1].phi[k] * 180 / Math.PI) + "°</td><td>" + k + "</td></tr>";
+        h += '<tr><td class="sw" style="color:' + d[3] + '"><i></i></td><td>' + k + "</td><td>" + fx(d[1].r[k], 4) + "</td><td>" + Math.round(d[1].phi[k] * 180 / Math.PI) + "°</td><td>" + k + "</td></tr>";
       }
       $(d[0]).innerHTML = h;
     });
-    $("more").textContent = S.N > rows ? "…and " + (S.N - rows) + " more on each side. Radii are in units of half the picture's longer side." : "Radii are in units of half the picture's longer side.";
+    var unit = T("Radii are in units of half the picture's longer side.");
+    $("more").textContent = S.N > rows ? T("…and {n} more on each side.", { n: S.N - rows }) + " " + unit : unit;
   }
 
   // ---- error chart ---------------------------------------------------------------------------------------
@@ -385,7 +388,7 @@
     ectx.save(); ectx.strokeStyle = C["ink-faint"]; ectx.lineWidth = 1; ectx.beginPath(); ectx.moveTo(G.X(n) + 0.5, G.Y(1)); ectx.lineTo(G.X(n) + 0.5, G.Y(0)); ectx.stroke();
     ectx.beginPath(); ectx.arc(G.X(n), G.Y(S.errs[n]), 4, 0, TAU); ectx.fillStyle = C.pen; ectx.fill(); ectx.restore();
     var tip = $("tip"); tip.hidden = false;
-    tip.textContent = n + " circle" + (n > 1 ? "s" : "") + " per side · " + pct(S.errs[n]);
+    tip.textContent = T(n === 1 ? "1 circle per side · {e}" : "{n} circles per side · {e}", { n: n, e: pct(S.errs[n]) });
     tip.style.left = Math.min(Math.max(G.X(n), 90), G.W - 90) + "px"; tip.style.top = G.Y(S.errs[n]) + "px";
   });
   ec.addEventListener("pointerleave", function () { $("tip").hidden = true; drawErrChart(); });
@@ -397,7 +400,7 @@
   });
 
   function fillErrTable() {
-    var h = "<tr><th>Circles per side</th><th>Distance</th></tr>";
+    var h = "<tr><th>" + T("Circles per side") + "</th><th>" + T("Distance") + "</th></tr>";
     S.stages.forEach(function (n) { h += "<tr><td>" + n + "</td><td>" + pct(S.errs[n]) + "</td></tr>"; });
     $("errTable").innerHTML = h;
   }
@@ -419,7 +422,7 @@
 
   function setFollow(on) { S.cam.follow = !!on; $("follow").setAttribute("aria-pressed", String(S.cam.follow)); }
 
-  function syncZoom() { $("zoomLevel").textContent = "×" + (S.cam.z < 10 ? S.cam.z.toFixed(1) : Math.round(S.cam.z)); }
+  function syncZoom() { $("zoomLevel").textContent = "×" + (S.cam.z < 10 ? fx(S.cam.z, 1) : Math.round(S.cam.z)); }
 
   function centre() { var r = cv.getBoundingClientRect(); return [r.width / 2, r.height / 2]; }
 
@@ -500,7 +503,7 @@
     ctx.restore();
     if (!S.strokes.length) {
       ctx.fillStyle = C["ink-faint"]; ctx.font = "600 18px Rajdhani, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("Draw here", sz.w / 2, sz.h / 2); ctx.textAlign = "left";
+      ctx.fillText(T("Draw here"), sz.w / 2, sz.h / 2); ctx.textAlign = "left";
     }
   }
 
@@ -520,7 +523,7 @@
 
   function useDrawing() {
     var path = [].concat.apply([], S.strokes);
-    if (path.length < 3) { flash("Draw a longer line first."); return; }
+    if (path.length < 3) { flash(T("Draw a longer line first.")); return; }
     S.drawing = false; cv.classList.remove("drawing");
     retrace({ kind: "path", path: path });
   }
@@ -557,7 +560,7 @@
     var b = ev.target.closest("[data-sample]"); if (!b) return;
     var kind = b.dataset.sample;
     setSample(kind);
-    if (kind === "draw") { S.drawing = true; S.strokes = []; cv.classList.add("drawing"); flash("Draw, then press “Use drawing”."); return; }
+    if (kind === "draw") { S.drawing = true; S.strokes = []; cv.classList.add("drawing"); flash(T("Draw, then press “Use drawing”.")); return; }
     S.drawing = false; cv.classList.remove("drawing");
     setMode("outline"); setInvert(false);
     setImageSource(sampleCanvas(kind));
@@ -575,7 +578,7 @@
   $("invert").addEventListener("change", function (ev) { S.invert = ev.target.checked; retrace(); });
   $("detail").addEventListener("input", function (ev) { S.detail = +ev.target.value; $("detailOut").textContent = S.detail + " %"; });
   $("detail").addEventListener("change", function () { if (S.source && S.source.kind === "image") retrace(); });
-  $("pts").addEventListener("input", function (ev) { S.maxPoints = +ev.target.value; $("ptsOut").textContent = S.maxPoints.toLocaleString("en"); });
+  $("pts").addEventListener("input", function (ev) { S.maxPoints = +ev.target.value; $("ptsOut").textContent = S.maxPoints.toLocaleString(I.locale); });
   $("pts").addEventListener("change", function () { if (S.source && S.source.kind === "image") retrace(); });
 
   $("seqSeg").addEventListener("click", function (ev) { var b = ev.target.closest("[data-seq]"); if (b) { setSeq(b.dataset.seq); if (b.dataset.seq === "auto") restart(); } });
@@ -585,7 +588,7 @@
     setN(n, false);
   });
   $("orderSeg").addEventListener("click", function (ev) { var b = ev.target.closest("[data-order]"); if (b) { S.order = b.dataset.order; pressed("orderSeg", "order", S.order); reorder(); } });
-  $("play").addEventListener("click", function () { S.playing = !S.playing; $("play").textContent = S.playing ? "Pause" : "Play"; });
+  $("play").addEventListener("click", function () { S.playing = !S.playing; $("play").textContent = S.playing ? T("Pause") : T("Play"); });
   $("restart").addEventListener("click", restart);
   $("next").addEventListener("click", nextStage);
   $("period").addEventListener("input", function (ev) { S.period = +ev.target.value; $("periodOut").textContent = S.period + " s"; });
@@ -600,7 +603,7 @@
     var pts = [];
     for (var i = 0; i < 2000; i++) pts.push(penAt(TAU * i / 2000));
     var d = "M" + pts.map(function (p) { return (500 + 450 * p[0]).toFixed(2) + " " + (500 + 450 * p[1]).toFixed(2); }).join(" L") + " Z";
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><title>Drawn with ' + S.N + ' circles per side</title><path d="' + d + '" fill="none" stroke="#0a2f52" stroke-width="2" stroke-linejoin="round"/></svg>';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><title>' + T("Drawn with {n} circles per side", { n: S.N }) + '</title><path d="' + d + '" fill="none" stroke="#0a2f52" stroke-width="2" stroke-linejoin="round"/></svg>';
     var a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
     a.download = "epicycles-" + S.N + "-circles.svg"; a.click();
@@ -615,7 +618,8 @@
   }
 
   // ---- start ---------------------------------------------------------------------------------------------
-  $("detailOut").textContent = S.detail + " %"; $("ptsOut").textContent = S.maxPoints.toLocaleString("en"); $("periodOut").textContent = S.period + " s";
+  $("detailOut").textContent = S.detail + " %"; $("ptsOut").textContent = S.maxPoints.toLocaleString(I.locale); $("periodOut").textContent = S.period + " s";
+  $("play").textContent = T("Pause"); $("textIn").value = T("Hi");
   setSample("text"); setMode("outline");
   setImageSource(sampleCanvas("text"));
   requestAnimationFrame(tick);

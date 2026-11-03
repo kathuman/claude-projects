@@ -26,6 +26,8 @@ so you can watch the drawing converge.
 - **Read-outs.** The RMS distance from the traced line (exact, by Parseval), the error for every count (chart and
   table), the equations with their first terms, and each circle's radius, phase and speed.
 - **Download SVG** of the curve at the current count.
+- **Languages.** English, Spanish (Latin America) and Danish, with Danish decimal commas. Chosen with the selector in
+  the header, `?lang=en|es|da`, the viewer's last choice or the browser's language.
 
 ## Taylor or Fourier?
 
@@ -38,15 +40,18 @@ fast, so a term's place in the expansion sets its circle's speed.
 ```
 index.html          — page and styles
 about.html          — about page
+i18n.js             — language choice and switching; i18n-es.js and i18n-da.js hold the translations
 app.js              — picture loading, animation, drawing, read-outs
 src/fourier.js      — the maths: tracing, tour, resampling, series, error (UMD, also runs in Node)
 tests/fourier.test.js
+tests/i18n.test.js  — every page key and script message translated, placeholders and HTML tags kept
 ```
 
 ## Tests
 
 ```
 node epicycles/tests/fourier.test.js
+node epicycles/tests/i18n.test.js
 ```
 
 The tests check that a circle needs exactly one circle per side and pure harmonics land on their own k, that the
