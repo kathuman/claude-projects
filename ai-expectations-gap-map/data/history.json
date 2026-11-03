@@ -112,6 +112,119 @@
      "evidence_index": 19.7
     }
    }
+  },
+  {
+   "period": "2026-10",
+   "technologies": {
+    "ai-observability": {
+     "expectations_index": 24.8,
+     "evidence_index": 86.9
+    },
+    "ai-factories": {
+     "expectations_index": 56.4,
+     "evidence_index": null
+    },
+    "quantum-for-ai": {
+     "expectations_index": 24.9,
+     "evidence_index": 29.6
+    },
+    "agentic-commerce": {
+     "expectations_index": 16.1,
+     "evidence_index": null
+    },
+    "first-principles-ai": {
+     "expectations_index": 30.7,
+     "evidence_index": 0.0
+    },
+    "ai-cybersecurity-governance": {
+     "expectations_index": 52.5,
+     "evidence_index": null
+    },
+    "causal-ai": {
+     "expectations_index": 28.2,
+     "evidence_index": 39.7
+    },
+    "physical-ai": {
+     "expectations_index": 51.9,
+     "evidence_index": 33.3
+    },
+    "ai-agent-identity": {
+     "expectations_index": 17.9,
+     "evidence_index": null
+    },
+    "ai-simulation": {
+     "expectations_index": 13.4,
+     "evidence_index": null
+    },
+    "ai-governance-technologies": {
+     "expectations_index": 47.5,
+     "evidence_index": null
+    },
+    "ai-native-software-engineering": {
+     "expectations_index": 73.0,
+     "evidence_index": 34.1
+    },
+    "agi": {
+     "expectations_index": 73.7,
+     "evidence_index": null
+    },
+    "composite-ai": {
+     "expectations_index": 41.4,
+     "evidence_index": null
+    },
+    "decision-intelligence": {
+     "expectations_index": 24.3,
+     "evidence_index": null
+    },
+    "finops-for-ai": {
+     "expectations_index": 13.3,
+     "evidence_index": 86.1
+    },
+    "sovereign-ai": {
+     "expectations_index": 30.7,
+     "evidence_index": null
+    },
+    "ai-engineering": {
+     "expectations_index": 31.5,
+     "evidence_index": 72.5
+    },
+    "ai-agents": {
+     "expectations_index": 80.2,
+     "evidence_index": 80.1
+    },
+    "multimodal-ai": {
+     "expectations_index": 41.6,
+     "evidence_index": null
+    },
+    "world-models": {
+     "expectations_index": 36.6,
+     "evidence_index": null
+    },
+    "ai-ready-data": {
+     "expectations_index": 31.1,
+     "evidence_index": 72.1
+    },
+    "foundation-models": {
+     "expectations_index": 84.6,
+     "evidence_index": 100.0
+    },
+    "synthetic-data": {
+     "expectations_index": 30.9,
+     "evidence_index": 20.2
+    },
+    "edge-ai": {
+     "expectations_index": 42.3,
+     "evidence_index": 83.8
+    },
+    "generative-ai": {
+     "expectations_index": 46.3,
+     "evidence_index": null
+    },
+    "knowledge-graphs": {
+     "expectations_index": 42.7,
+     "evidence_index": 19.7
+    }
+   }
   }
  ]
 }
