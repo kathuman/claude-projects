@@ -11,7 +11,7 @@ const els = {
   earlyGrid: document.getElementById("earlyGrid"),
   earlySection: document.getElementById("earlySection"),
   search: document.getElementById("searchInput"),
-  tagFilters: document.getElementById("tagFilters"),
+  tagFilter: document.getElementById("tagFilter"),
   stats: document.getElementById("stats"),
   empty: document.getElementById("emptyState"),
   template: document.getElementById("cardTemplate"),
@@ -93,29 +93,16 @@ function renderStats() {
   }
 }
 
+// one dropdown: "All tags", then every tag in alphabetical order with the number of projects carrying it
 function renderTagFilters() {
-  const tags = Array.from(new Set(allProjects.flatMap((p) => p.tags || []))).sort();
-  els.tagFilters.innerHTML = "";
+  const counts = new Map();
+  for (const p of allProjects) for (const tag of p.tags || []) counts.set(tag, (counts.get(tag) || 0) + 1);
+  const tags = Array.from(counts.keys()).sort();
+  els.tagFilter.innerHTML = "";
 
-  const allChip = makeTagChip("All", null);
-  els.tagFilters.appendChild(allChip);
-
-  for (const tag of tags) {
-    els.tagFilters.appendChild(makeTagChip(tag, tag));
-  }
-}
-
-function makeTagChip(label, tagValue) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "tag-chip" + (activeTag === tagValue ? " active" : "");
-  btn.textContent = label;
-  btn.addEventListener("click", () => {
-    activeTag = activeTag === tagValue ? null : tagValue;
-    renderTagFilters();
-    renderGrid();
-  });
-  return btn;
+  els.tagFilter.appendChild(new Option(`All tags (${allProjects.length})`, ""));
+  for (const tag of tags) els.tagFilter.appendChild(new Option(`${tag} (${counts.get(tag)})`, tag));
+  els.tagFilter.value = activeTag || "";
 }
 
 function renderGrid() {
@@ -239,3 +226,7 @@ function escapeHtml(str) {
 }
 
 els.search.addEventListener("input", renderGrid);
+els.tagFilter.addEventListener("change", () => {
+  activeTag = els.tagFilter.value || null;
+  renderGrid();
+});

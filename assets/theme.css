@@ -68,8 +68,6 @@ html, body { font-family: var(--font-sans); }
 .card-title { font-family: var(--font-head); font-weight: 700; letter-spacing: .03em; font-size: 1.2em; }
 .card { background: var(--bg-elev); border-color: var(--border); }
 .card:hover { border-color: var(--accent); }
-.tag-chip { font-family: var(--font-head); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
-.tag-chip.active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
 .gh-link, .site-footer .consult { font-family: var(--font-head); font-weight: 600; letter-spacing: .03em; }
 .gh-link { text-transform: uppercase; border-radius: 8px; border-color: var(--border); }
 .gh-link:hover, .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
