@@ -1,0 +1,27 @@
+name: Epicycles tests
+
+# The Fourier core: single-circle and pure-harmonic cases, exact rebuild, Parseval error against measured distance,
+# chain tips, tour and 2-opt, even resampling, and tracing a drawn ring.
+on:
+  push:
+    paths:
+      - 'epicycles/**'
+      - '.github/workflows/epicycles-ci.yml'
+  pull_request:
+    paths:
+      - 'epicycles/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node epicycles/tests/fourier.test.js
+      - name: Syntax-check the page scripts
+        run: for f in epicycles/src/*.js epicycles/*.js; do node --check "$f"; done
+        shell: bash

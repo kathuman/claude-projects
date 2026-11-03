@@ -1,5 +1,13 @@
 [
   {
+    "title": "Epicycles",
+    "description": "Turn any picture into one closed line, then draw it with two chains of turning circles: the chain above the picture sets x, the chain to its left sets y, and guide lines from their tips meet at the pen. It starts with one circle per side, then two, then three, up to 500, keeping earlier counts faded so you watch the drawing converge. The picture's outline (Otsu threshold) or edges (Sobel filter) are thinned and joined into a single cycle by a nearest-neighbour tour improved with 2-opt, resampled evenly along its length, and expanded per side as a Fourier series: circle k has the radius and starting angle of term k and turns k times per cycle. Written as a power series in z = e^{it}, it is a Taylor series, and each power of z spins as many times as its exponent. Series order or largest circles first, the exact RMS error for every count (chart and table), the equations and every circle's radius, phase and speed, text, sample shapes, your own drawing or an uploaded picture (never leaves the browser), and SVG download. Tested core.",
+    "date": "2026-11-03",
+    "tags": ["javascript", "web", "math", "fourier", "canvas", "image-processing"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/epicycles",
+    "demoUrl": "https://kathuman.github.io/claude-projects/epicycles/"
+  },
+  {
     "title": "Ripple — Supply Chain Distribution Game",
     "description": "A supply chain ordering game for classes. A team runs a chain from store to plant on one device, turn by turn behind a hand-over screen so each stage sees only its own numbers (or at an open table), with simulated players for any stage nobody holds; orders and shipments take time to travel, so small changes in customer demand become large swings upstream. The debrief charts the bullwhip and the stock and backlog of every stage, compares the team with the same chain played by typical players and by the best simple rule, reads each player's decision rule from their orders (how much of what was already on order they counted, how fast they corrected, how they forecast), replays the game with every stage counting more of its supply line, and shows time used beside cost. Configurable chain length, delays, costs and four demand patterns; saved after every decision; CSV export.",
     "date": "2026-10-24",

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Epicycles — A Picture Drawn by Turning Circles</title>
+  <meta name="description" content="Turn any picture into one closed line, then draw it with two chains of turning circles, one for x and one for y. One circle per side, then two, then three: each circle is one term of the line's Fourier series and turns as many times per cycle as its term number." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%228%22/><circle cx=%2278%22 cy=%2250%22 r=%2216%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%228%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --warn:#ffcf4a; --bad:#ff8a7a;
+  /* the x chain, the y chain and the pen */
+  --cx:#7dd3fc; --cy:#ffcf4a; --pen:#f4f9ff;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+html,body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+a{color:var(--accent);}
+.app{display:flex; flex-direction:column; min-height:100vh;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52); position:sticky; top:0; z-index:20;}
+.brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.brand .ver{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); border:1px solid var(--line); border-radius:5px; padding:1px 6px;}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+
+.layout{display:grid; grid-template-columns:290px minmax(0,1fr); flex:1;}
+.rail{border-right:1px solid var(--line); background:var(--panel-2); padding:16px 16px 28px; overflow-y:auto; max-height:calc(100vh - 57px); position:sticky; top:57px;}
+.rail h2{font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:18px 0 8px;}
+.rail h2:first-child{margin-top:0;}
+.ctl{margin-bottom:10px;}
+.ctl .row{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13.5px;}
+.ctl .row output{font-family:var(--mono); font-size:12.5px; color:var(--accent); white-space:nowrap;}
+.ctl input[type=range]{width:100%; accent-color:var(--accent); margin:4px 0 0;}
+.ctl input[type=text]{width:100%; font:inherit; font-size:14px; padding:6px 8px; border-radius:7px; border:1px solid var(--line); background:var(--panel); color:var(--ink);}
+.hint{font-size:11.5px; color:var(--ink-faint); line-height:1.4; margin-top:3px;}
+.seg{display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; margin-top:4px;}
+.seg button{flex:1; font:inherit; font-size:12.5px; padding:6px 4px; background:transparent; color:var(--ink-dim); border:0; cursor:pointer;}
+.seg button + button{border-left:1px solid var(--line);}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); font-weight:600;}
+.chips{display:flex; flex-wrap:wrap; gap:6px;}
+.btn{font-family:var(--head); font-weight:700; font-size:13px; letter-spacing:.05em; text-transform:uppercase; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:7px; padding:6px 11px; cursor:pointer;}
+.btn:hover{border-color:var(--accent); color:var(--accent);}
+.btn[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+.check{display:flex; align-items:center; gap:8px; font-size:13.5px; margin:5px 0; cursor:pointer;}
+.check input{accent-color:var(--accent);}
+
+.content{padding:16px 20px 30px; min-width:0;}
+.stage-wrap{position:relative; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); overflow:hidden;}
+#stage{display:block; width:100%; height:min(72vh, 760px); touch-action:none;}
+#stage.drawing{cursor:crosshair;}
+.overlay-msg{position:absolute; inset:auto 12px 12px 12px; font-size:13px; color:var(--ink-dim); background:rgba(8,36,68,.85); border:1px solid var(--line); border-radius:8px; padding:8px 12px; pointer-events:none;}
+.busy{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--head); font-size:18px; letter-spacing:.06em; color:var(--accent); background:rgba(8,36,68,.6);}
+
+.stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin:14px 0;}
+.stat{border:1px solid var(--line); border-radius:9px; background:var(--panel); padding:10px 12px;}
+.stat .k{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-faint);}
+.stat .v{font-family:var(--mono); font-size:22px; color:var(--ink); margin-top:2px;}
+.stat .s{font-size:12px; color:var(--ink-faint);}
+.eq{font-family:var(--mono); font-size:13px; line-height:1.7; color:var(--ink-dim); border:1px solid var(--line-soft); border-radius:9px; padding:10px 14px; background:var(--panel-2); overflow-x:auto; white-space:nowrap;}
+.eq .x{color:var(--cx);} .eq .y{color:var(--cy);}
+
+.grid2{display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-top:14px;}
+.card{border:1px solid var(--line); border-radius:10px; background:var(--panel); padding:12px 14px; min-width:0;}
+.card h3{font-family:var(--head); font-weight:700; font-size:15px; letter-spacing:.06em; text-transform:uppercase; margin:0 0 4px; color:var(--ink);}
+.card .lede{font-size:12.5px; color:var(--ink-faint); margin:0 0 8px; line-height:1.4;}
+.chart-wrap{position:relative;}
+#errChart{display:block; width:100%; height:220px;}
+.tip{position:absolute; pointer-events:none; font-family:var(--mono); font-size:12px; background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:5px 8px; color:var(--ink); white-space:nowrap; transform:translate(-50%, -110%);}
+table{border-collapse:collapse; width:100%; font-size:12.5px;}
+th, td{padding:4px 6px; text-align:right; border-bottom:1px solid var(--line-soft); font-family:var(--mono);}
+th{font-family:var(--head); font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-faint); font-size:11.5px;}
+th:first-child, td:first-child{text-align:left;}
+td.sw{width:10px; padding-right:0;}
+.sw i{display:inline-block; width:9px; height:9px; border-radius:50%; border:2px solid currentColor;}
+.tables{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+.tables h4{font-family:var(--head); font-size:13px; letter-spacing:.06em; text-transform:uppercase; margin:0 0 4px;}
+.more{font-size:12px; color:var(--ink-faint); margin-top:4px;}
+details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-top:8px;}
+
+.explain{margin-top:14px; line-height:1.55; font-size:14.5px;}
+.explain h3{margin-top:4px;}
+.explain p{margin:8px 0; color:var(--ink);}
+.explain code{font-family:var(--mono); font-size:13px; color:var(--accent);}
+.explain ol{padding-left:20px; margin:6px 0;}
+.explain li{margin:4px 0;}
+
+@media (max-width: 860px){
+  .layout{grid-template-columns:1fr;}
+  .rail{position:static; max-height:none; border-right:0; border-bottom:1px solid var(--line);}
+  .content{padding:14px 16px 26px;}
+  #stage{height:62vh;}
+  .tables{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">Epi<span>cycles</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub">a picture drawn by turning circles</span>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a class="back-link" href="about.html">About</a>
+      <a class="back-link" href="../">← All projects</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail">
+      <h2>Picture</h2>
+      <div class="chips" id="samples">
+        <button class="btn" data-sample="text" aria-pressed="true">Text</button>
+        <button class="btn" data-sample="heart">Heart</button>
+        <button class="btn" data-sample="star">Star</button>
+        <button class="btn" data-sample="gear">Gear</button>
+        <button class="btn" data-sample="draw">Draw</button>
+      </div>
+      <div class="ctl" id="textCtl" style="margin-top:10px">
+        <input type="text" id="textIn" value="Hi" maxlength="12" aria-label="Text to draw" />
+      </div>
+      <div class="ctl" id="drawCtl" hidden style="margin-top:10px">
+        <div class="hint">Draw on the canvas with the mouse or a finger. Several strokes are joined in the order you drew them.</div>
+        <div class="chips" style="margin-top:8px">
+          <button class="btn primary" id="useDrawing">Use drawing</button>
+          <button class="btn" id="clearDrawing">Clear</button>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label class="btn" for="file" style="display:inline-block">Upload picture…</label>
+        <input type="file" id="file" accept="image/*" hidden />
+        <div class="hint">Stays on your device: the picture is read in this tab and never uploaded.</div>
+      </div>
+
+      <h2>Tracing</h2>
+      <div class="ctl">
+        <div class="row"><span>Find</span></div>
+        <div class="seg" id="modeSeg">
+          <button data-mode="outline" aria-pressed="true">Outline</button>
+          <button data-mode="edges">Edges</button>
+        </div>
+        <div class="hint">Outline: the border of the dark shapes (logos, text, silhouettes). Edges: wherever brightness changes sharply (photos).</div>
+      </div>
+      <label class="check" id="invertCtl"><input type="checkbox" id="invert" /> Light shapes on a dark background</label>
+      <div class="ctl" id="keepCtl" hidden>
+        <div class="row"><label for="keep">Edge strength kept</label><output id="keepOut"></output></div>
+        <input type="range" id="keep" min="2" max="20" step="1" value="7" />
+      </div>
+      <div class="ctl">
+        <div class="row"><label for="pts">Points on the line</label><output id="ptsOut"></output></div>
+        <input type="range" id="pts" min="200" max="3000" step="100" value="1500" />
+        <div class="hint">The traced pixels are thinned to this many, then joined into one closed line.</div>
+      </div>
+
+      <h2>Circles</h2>
+      <div class="ctl">
+        <div class="row"><span>Sequence</span></div>
+        <div class="seg" id="seqSeg">
+          <button data-seq="auto" aria-pressed="true">1, 2, 3 …</button>
+          <button data-seq="manual">Fixed</button>
+        </div>
+        <div class="hint">1, 2, 3 …: one full cycle with each count, then the next. Fixed: keep drawing with the count below.</div>
+      </div>
+      <div class="ctl">
+        <div class="row"><label for="nIn">Circles per side</label><output id="nOut"></output></div>
+        <input type="range" id="nIn" min="1" max="500" step="1" value="1" />
+      </div>
+      <div class="ctl">
+        <div class="row"><span>Order</span></div>
+        <div class="seg" id="orderSeg">
+          <button data-order="frequency" aria-pressed="true">Series order</button>
+          <button data-order="size">Largest first</button>
+        </div>
+        <div class="hint">Series order adds the circles turning 1, 2, 3 … times per cycle. Largest first adds whichever circles are biggest, whatever their speed.</div>
+      </div>
+
+      <h2>Playback</h2>
+      <div class="chips">
+        <button class="btn primary" id="play">Pause</button>
+        <button class="btn" id="restart">Restart</button>
+        <button class="btn" id="next">Next count</button>
+      </div>
+      <div class="ctl" style="margin-top:10px">
+        <div class="row"><label for="period">Seconds per cycle</label><output id="periodOut"></output></div>
+        <input type="range" id="period" min="2" max="30" step="1" value="8" />
+      </div>
+
+      <h2>Show</h2>
+      <label class="check"><input type="checkbox" id="showCircles" checked /> Circles</label>
+      <label class="check"><input type="checkbox" id="showTarget" checked /> Traced line</label>
+      <label class="check"><input type="checkbox" id="showPicture" checked /> Picture</label>
+      <label class="check"><input type="checkbox" id="showHistory" checked /> Earlier counts</label>
+      <div class="chips" style="margin-top:10px">
+        <button class="btn" id="svgOut">Download SVG</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="stage-wrap">
+        <canvas id="stage" aria-label="The picture drawn by two chains of circles: the top chain sets x, the left chain sets y"></canvas>
+        <div class="overlay-msg" id="msg" hidden></div>
+        <div class="busy" id="busy" hidden>Tracing…</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">Circles per side</div><div class="v" id="stN">–</div><div class="s" id="stStage"></div></div>
+        <div class="stat"><div class="k">Distance from the line</div><div class="v" id="stErr">–</div><div class="s">RMS, as a share of the picture's spread</div></div>
+        <div class="stat"><div class="k">Fastest circle</div><div class="v" id="stFast">–</div><div class="s">turns per cycle</div></div>
+        <div class="stat"><div class="k">Traced line</div><div class="v" id="stPts">–</div><div class="s" id="stPtsS">points</div></div>
+      </div>
+
+      <div class="eq" id="eq"></div>
+
+      <div class="grid2">
+        <div class="card">
+          <h3>Error by number of circles</h3>
+          <p class="lede">How far the drawn curve stays from the traced line, for every number of circles per side (log scale). The dot is the count being drawn.</p>
+          <div class="chart-wrap"><canvas id="errChart" aria-label="Error falling as circles are added"></canvas><div class="tip" id="tip" hidden></div></div>
+          <details><summary>Table view</summary><table id="errTable"></table></details>
+        </div>
+        <div class="card">
+          <h3>The circles</h3>
+          <p class="lede">Each circle is one term r cos(k t + φ). It starts at angle φ and turns k times while the pen goes round once, so term k spins k times as fast as term 1.</p>
+          <div class="tables">
+            <div><h4 style="color:var(--cx)">Top chain → x</h4><table id="tabX"></table></div>
+            <div><h4 style="color:var(--cy)">Left chain → y</h4><table id="tabY"></table></div>
+          </div>
+          <div class="more" id="more"></div>
+        </div>
+      </div>
+
+      <div class="card explain">
+        <h3>How it works</h3>
+        <ol>
+          <li><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (a Sobel filter). These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
+          <li><b>Even steps.</b> The cycle is resampled to 1,024 points evenly spaced along its length. A parameter <code>t</code> runs from 0 to 2π once round.</li>
+          <li><b>One series per side.</b> Each coordinate is expanded separately: <code>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</code>, and the same for <code>y(t)</code>. Each term is one circle. Chained end to end above the picture, the circles' tip sets x; chained down the left, it sets y. The guide lines from the two tips meet at the pen.</li>
+          <li><b>One, two, three …</b> With one circle per side the pen draws an ellipse, the best single-frequency fit. Each extra circle adds detail at a higher speed. The error falls toward zero as the count rises.</li>
+        </ol>
+        <h3 style="margin-top:12px">Taylor or Fourier?</h3>
+        <p>These turning circles are a <b>Fourier</b> series. A Taylor series in time, <code>c₀ + c₁t + c₂t² + …</code>, never comes back to where it started, so it cannot draw a closed loop. Still, the two ideas are closely related. Write <code>z = e<sup>it</sup></code>, a point going round the unit circle once per cycle. Then <code>x(t) = Re(A₀ + A₁z + A₂z² + A₃z³ + …)</code> with <code>A<sub>k</sub> = r<sub>k</sub>e<sup>iφ<sub>k</sub></sup></code>. That is a Taylor (power) series in <code>z</code>. Each power <code>z<sup>k</sup></code> is a point going round k times as fast, so the term's place in the expansion sets its circle's speed, and its coefficient sets the circle's size and starting angle.</p>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="src/fourier.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
