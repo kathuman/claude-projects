@@ -2,7 +2,7 @@
 // picture, keeps the animation state and draws. Text goes through T() and numbers through fx() (i18n.js).
 (function () {
   "use strict";
-  var VERSION = "1.2.0";
+  var VERSION = "1.3.0";
   var I = window.EPi18n, T = I.T, fx = I.fx;
   var E = window.Epicycles, TAU = Math.PI * 2, M = 1024, KMAX = 500, HISTORY = 4;
   var $ = function (id) { return document.getElementById(id); };
@@ -77,8 +77,10 @@
 
   function setImageSource(cv) { retrace(imageSource(cv)); }
 
-  // an uploaded picture: drawn on white (transparent logos), at most 360 px a side; a logo-like picture (two clear
-  // tones) is traced by its outline, a photo by its edges, and a dark background is detected from the border
+  // an uploaded picture: drawn on white (transparent logos), at most 360 px a side, then opened in the Prepare
+  // picture window (prep.js) with settings suggested from the picture: a logo-like picture (two clear tones) is
+  // traced by its outline, a photo is smoothed and posterized and traced by its edges, and a dark background is
+  // detected from the border
   function loadFile(file) {
     if (file.type && !/^image\//.test(file.type)) { flash(T("That file is not a picture.")); return; }
     var url = URL.createObjectURL(file), img = new Image();
@@ -89,20 +91,27 @@
       var g = pic.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, pic.width, pic.height); g.drawImage(img, 0, 0, pic.width, pic.height);
       URL.revokeObjectURL(url);
       var a = E.analyse(g.getImageData(0, 0, pic.width, pic.height).data, pic.width, pic.height);
-      var before = { sample: S.sample, mode: S.mode, invert: S.invert, drawing: S.drawing };
-      S.drawing = false; cv.classList.remove("drawing");
-      setSample(null);
-      setMode(a.twoTone ? "outline" : "edges");
-      setInvert(a.darkBackground);
-      var how = !a.twoTone ? T("Traced by its edges.") : a.darkBackground ? T("Traced by its outline, as light shapes on a dark background.") : T("Traced by its outline.");
-      retrace(imageSource(pic), how + " " + T("Switch under Tracing if another works better."),
-        function () {   // nothing to trace: keep the previous picture and its settings
-          setSample(before.sample); setMode(before.mode); setInvert(before.invert);
-          if (before.drawing) { S.drawing = true; cv.classList.add("drawing"); }
-        });
+      if (a.separability === 0) { flash(T("Nothing to trace in this picture: it looks blank.")); return; }
+      window.EpPrepUI.open(pic, window.EpPrepUI.settingsFor(a), usePrepared);
     };
     img.onerror = function () { URL.revokeObjectURL(url); flash(T("That file could not be read as a picture (try PNG, JPEG, GIF, WebP or SVG).")); };
     img.src = url;
+  }
+
+  // the Prepare picture window's result: the prepared picture is imported (dark on white, so not inverted), and
+  // the original and its settings are kept so the window can be opened again from where it was left
+  function usePrepared(canvas, settings, original) {
+    var before = { sample: S.sample, mode: S.mode, invert: S.invert, drawing: S.drawing };
+    S.drawing = false; cv.classList.remove("drawing");
+    setSample(null);
+    setMode(settings.mode); setInvert(false);
+    S.detail = settings.detail; $("detail").value = S.detail; $("detailOut").textContent = S.detail + " %";
+    S.maxPoints = settings.maxPoints; $("pts").value = S.maxPoints; $("ptsOut").textContent = S.maxPoints.toLocaleString(I.locale);
+    var src = imageSource(canvas); src.original = original; src.prep = settings;
+    retrace(src, "", function () {   // nothing to trace: keep the previous picture and its settings
+      setSample(before.sample); setMode(before.mode); setInvert(before.invert);
+      if (before.drawing) { S.drawing = true; cv.classList.add("drawing"); }
+    });
   }
 
   // ---- picture → line → series ---------------------------------------------------------------------------
@@ -124,7 +133,8 @@
           var res = E.traceImage(data, source.w, source.h, { mode: S.mode, invert: S.invert, detail: S.detail / 100, maxPoints: S.maxPoints, timeBudgetMs: 700 });
           if (!res || res.tour.length < 3) {
             $("busy").hidden = true;
-            var why = S.mode === "outline" ? T("No shapes found in this picture. Try Edges, or change “Light shapes on a dark background”.") : T("No edges found in this picture. Try Outline.");
+            var why = S.mode === "outline" ? T("No shapes found in this picture. Try Edges, or change “Light shapes on a dark background”.")
+              : S.mode === "shading" ? T("No dark areas to place points in. Try Outline or Edges.") : T("No edges found in this picture. Try Outline.");
             if (onFail) { onFail(); why = T("Nothing to trace in this picture: it looks blank."); }
             flash(why + (S.source && S.source !== source ? " " + T("Still showing the previous picture.") : ""));
             return;
@@ -133,7 +143,8 @@
         } else { tour = source.path; points = tour.length; }
         var norm = E.normalise(E.resample(tour, M)), sr = E.series(norm.path, KMAX);
         if (source.kind === "image") { toPicture = { cx: norm.cx, cy: norm.cy, scale: norm.scale }; source.ink = inkLayer(source.canvas); }
-        S.source = source; S.path = norm.path; S.toPicture = toPicture; S.tracedPoints = points;
+        S.source = source; S.path = norm.path;
+        $("prepAgain").hidden = !source.original; S.toPicture = toPicture; S.tracedPoints = points;
         S.sr = sr; S.stages = E.stages(sr.K);
         fitView();
         reorder();
@@ -543,7 +554,7 @@
 
   function setMode(m) {
     S.mode = m; pressed("modeSeg", "mode", m);
-    $("invertCtl").hidden = m !== "outline"; $("detailCtl").hidden = m !== "edges";
+    $("invertCtl").hidden = m === "edges"; $("detailCtl").hidden = m !== "edges";
   }
 
   function setInvert(on) { S.invert = !!on; $("invert").checked = S.invert; }
@@ -572,6 +583,9 @@
   });
   $("useDrawing").addEventListener("click", useDrawing);
   $("clearDrawing").addEventListener("click", function () { S.strokes = []; });
+  $("prepAgain").addEventListener("click", function () {
+    if (S.source && S.source.original) window.EpPrepUI.open(S.source.original, S.source.prep, usePrepared);
+  });
   $("file").addEventListener("change", function (ev) { var f = ev.target.files[0]; if (f) loadFile(f); ev.target.value = ""; });
 
   $("modeSeg").addEventListener("click", function (ev) { var b = ev.target.closest("[data-mode]"); if (b) { setMode(b.dataset.mode); if (S.source && S.source.kind === "image") retrace(); } });

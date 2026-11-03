@@ -1,5 +1,6 @@
 // Epicycles core — turns a picture into one closed line and that line into two chains of turning circles.
-//   picture → points:  Sobel edges (photos) or the outline of an Otsu threshold (logos, text), thinned on a grid
+//   picture → points:  edges (photos), the outline of an Otsu threshold (logos, text) or shading (points as dense as
+//                      the picture is dark, by error diffusion), thinned on a grid
 //   points → cycle:    nearest-neighbour tour (spatial grid), then 2-opt until no swap shortens it
 //   cycle → series:    resampled to M points evenly spaced along its length, then for each axis
 //                      x(t) = a0 + Σ_k r_k cos(k t + φ_k),  t in [0, 2π)
@@ -140,6 +141,30 @@
         }
       }
       if (comp.length >= run) comp.forEach(function (q) { pts.push([q % w, (q - q % w) / w]); });
+    }
+    return pts;
+  }
+
+  // shading: about `count` points with density proportional to darkness (1 − brightness), by serpentine
+  // Floyd–Steinberg error diffusion, so the points are evenly spread and pure white gets none
+  function stipple(g, w, h, count) {
+    var n = w * h, sum = 0, top = 0, i;
+    for (i = 0; i < n; i++) { var d = 1 - g[i]; sum += d; if (d > top) top = d; }
+    if (!(sum > 0) || !(count > 0)) return [];
+    var scale = Math.min(1 / top, count / sum), e = new Float32Array(n), pts = [];
+    for (i = 0; i < n; i++) e[i] = (1 - g[i]) * scale;
+    for (var y = 0; y < h; y++) {
+      var ltr = (y & 1) === 0, dir = ltr ? 1 : -1;
+      for (var k = 0; k < w; k++) {
+        var x = ltr ? k : w - 1 - k, j = y * w + x, v = e[j], q = v >= 0.5 ? 1 : 0, err = v - q;
+        if (q && g[j] < 1) pts.push([x, y]);
+        if (x + dir >= 0 && x + dir < w) e[j + dir] += err * 7 / 16;
+        if (y + 1 < h) {
+          if (x - dir >= 0 && x - dir < w) e[j + w - dir] += err * 3 / 16;
+          e[j + w] += err * 5 / 16;
+          if (x + dir >= 0 && x + dir < w) e[j + w + dir] += err / 16;
+        }
+      }
     }
     return pts;
   }
@@ -348,8 +373,10 @@
   // the whole pipeline from picture pixels to a normalised closed path
   function traceImage(rgba, w, h, opts) {
     opts = opts || {};
-    var g = grayscale(rgba, w, h);
-    var raw = opts.mode === "outline" ? outlinePixels(g, w, h, opts.invert) : edgePixels(g, w, h, opts.detail);
+    var g = opts.gray || grayscale(rgba, w, h);
+    var raw = opts.mode === "outline" ? outlinePixels(g, w, h, opts.invert)
+      : opts.mode === "shading" ? stipple(opts.invert ? g.map(function (v) { return 1 - v; }) : g, w, h, opts.maxPoints || 1500)
+      : edgePixels(g, w, h, opts.detail);
     if (raw.length < 3) return null;
     var pts = thin(raw, opts.maxPoints || 1500);
     var tour = twoOpt(nearestNeighbourTour(pts), { timeBudgetMs: opts.timeBudgetMs || 600 });
@@ -357,7 +384,7 @@
   }
 
   return {
-    grayscale: grayscale, otsu: otsu, analyse: analyse, outlinePixels: outlinePixels, edgePixels: edgePixels, thin: thin,
+    grayscale: grayscale, otsu: otsu, analyse: analyse, outlinePixels: outlinePixels, edgePixels: edgePixels, stipple: stipple, thin: thin,
     nearestNeighbourTour: nearestNeighbourTour, twoOpt: twoOpt, tourLength: tourLength,
     resample: resample, normalise: normalise, axisSeries: axisSeries, series: series,
     circleOrder: circleOrder, chain: chain, evalAxis: evalAxis, radiusSum: radiusSum,

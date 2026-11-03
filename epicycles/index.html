@@ -108,6 +108,37 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
 .explain ol{padding-left:20px; margin:6px 0;}
 .explain li{margin:4px 0;}
 
+select.sel{width:100%; font:inherit; font-size:13.5px; padding:6px 8px; border-radius:7px; border:1px solid var(--line); background:var(--panel); color:var(--ink); margin-top:4px;}
+/* ---- the Prepare picture window */
+body.prep-open{overflow:hidden;}
+.prep{position:fixed; inset:0; z-index:50; background:rgba(4,20,38,.78); display:flex; align-items:center; justify-content:center; padding:18px;}
+.prep-box{background:var(--panel-2); border:1px solid var(--line); border-radius:12px; width:min(1320px, 100%); max-height:100%; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.prep-head{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; border-bottom:1px solid var(--line);}
+.prep-head h2{font-family:var(--head); font-weight:700; font-size:20px; letter-spacing:.05em; text-transform:uppercase; margin:0;}
+.prep-head p{margin:2px 0 0; font-size:12.5px; color:var(--ink-faint);}
+.prep-body{display:grid; grid-template-columns:300px minmax(0,1fr); min-height:0; flex:1; overflow:hidden;}
+.prep-ctl{padding:14px 16px; border-right:1px solid var(--line); overflow-y:auto;}
+.prep-ctl h3{font-family:var(--head); font-weight:700; font-size:13.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); margin:14px 0 6px;}
+.prep-ctl h3:first-child{margin-top:0;}
+.prep-ctl h3 .n{display:inline-block; width:18px; height:18px; line-height:18px; text-align:center; border-radius:50%; background:var(--accent); color:var(--accent-ink); font-size:11.5px; margin-right:6px;}
+.prep-ctl .off{opacity:.45;}
+.prep-views{padding:14px 16px; overflow-y:auto; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; align-content:start;}
+.prep-views figure{margin:0; min-width:0;}
+.prep-views figcaption{font-family:var(--head); font-weight:600; font-size:12.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); margin-bottom:6px;}
+.prep-views canvas{display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:8px; background:#fff;}
+#prOut{cursor:crosshair;}
+#prLine{background:var(--panel-2);}
+.prep-views .cap{font-size:12px; color:var(--ink-faint); margin-top:6px; line-height:1.4;}
+.prep-foot{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 18px; border-top:1px solid var(--line);}
+.prep-foot .right{display:flex; gap:8px;}
+.btn:disabled{opacity:.45; cursor:not-allowed;}
+@media (max-width: 1000px){ .prep-views{grid-template-columns:1fr 1fr;} .prep-views figure:last-child{grid-column:1 / -1;} }
+@media (max-width: 760px){
+  .prep{padding:0;} .prep-box{border-radius:0; height:100%;}
+  .prep-body{grid-template-columns:1fr; overflow-y:auto;} .prep-ctl{border-right:0; border-bottom:1px solid var(--line); overflow:visible;}
+  .prep-views{grid-template-columns:1fr; overflow:visible;} .prep-views figure:last-child{grid-column:auto;}
+}
+
 @media (max-width: 860px){
   .layout{grid-template-columns:1fr;}
   .rail{position:static; max-height:none; border-right:0; border-bottom:1px solid var(--line);}
@@ -153,7 +184,10 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
         </div>
       </div>
       <div style="margin-top:10px">
-        <label class="btn" for="file" style="display:inline-block" data-i18n="b.upload">Upload picture…</label>
+        <div class="chips">
+          <label class="btn" for="file" style="display:inline-block" data-i18n="b.upload">Upload picture…</label>
+          <button class="btn" id="prepAgain" hidden data-i18n="b.prepare">Prepare picture…</button>
+        </div>
         <input type="file" id="file" accept="image/*" hidden />
         <div class="hint" data-i18n="hint.upload">Stays on your device: the picture is read in this tab and never uploaded.</div>
       </div>
@@ -164,8 +198,9 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
         <div class="seg" id="modeSeg">
           <button data-mode="outline" aria-pressed="true" data-i18n="m.outline">Outline</button>
           <button data-mode="edges" data-i18n="m.edges">Edges</button>
+          <button data-mode="shading" data-i18n="m.shading">Shading</button>
         </div>
-        <div class="hint" data-i18n="hint.mode">Outline: the border of the dark shapes (logos, text, silhouettes). Edges: wherever brightness changes sharply (photos).</div>
+        <div class="hint" data-i18n="hint.mode">Outline: the border of the dark shapes (logos, text, silhouettes). Edges: wherever brightness changes sharply (photos). Shading: points as dense as the picture is dark, joined into one line.</div>
       </div>
       <label class="check" id="invertCtl"><input type="checkbox" id="invert" /> <span data-i18n="l.invert">Light shapes on a dark background</span></label>
       <div class="ctl" id="detailCtl" hidden>
@@ -267,7 +302,8 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
       <div class="card explain">
         <h3 data-i18n="x.h">How it works</h3>
         <ol>
-          <li data-i18n="x.1"><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (Canny-style: blurred, thinned to one-pixel lines, with the threshold set well above the photo's grain). An uploaded picture with two clear tones is traced by its outline, any other by its edges, and a dark background is detected from the border. These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
+          <li data-i18n="x.0"><b>Simplify first.</b> An uploaded picture opens in the Prepare picture window. An edge-preserving (bilateral) filter flattens texture, posterizing leaves a few tone levels, a flood fill from the border turns the background pure white, and a tone curve with a hard cutoff and a gamma above 1 makes light areas white too, so texture, background and light shading do not become scribble.</li>
+          <li data-i18n="x.1"><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (Canny-style: blurred, thinned to one-pixel lines, with the threshold set well above the photo's grain), or placed as shading: points as dense as the picture is dark, by error diffusion. An uploaded picture with two clear tones is traced by its outline, any other by its edges, and a dark background is detected from the border. These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
           <li data-i18n="x.2"><b>Even steps.</b> The cycle is resampled to 1,024 points evenly spaced along its length. A parameter <code>t</code> runs from 0 to 2π once round.</li>
           <li data-i18n="x.3"><b>One series per side.</b> Each coordinate is expanded separately: <code>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</code>, and the same for <code>y(t)</code>. Each term is one circle. Chained end to end above the picture, the circles' tip sets x; chained down the left, it sets y. The guide lines from the two tips meet at the pen.</li>
           <li data-i18n="x.4"><b>One, two, three …</b> With one circle per side the pen draws an ellipse, the best single-frequency fit. Each extra circle adds detail at a higher speed. The error falls toward zero as the count rises.</li>
@@ -278,10 +314,96 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
     </main>
   </div>
 </div>
+<div class="prep" id="prep" hidden role="dialog" aria-modal="true" aria-labelledby="prTitle">
+  <div class="prep-box">
+    <div class="prep-head">
+      <div>
+        <h2 id="prTitle" data-i18n="pr.title">Prepare the picture</h2>
+        <p data-i18n="pr.lede">Make the picture simple before it becomes a line: texture and background turn into scribble, so flatten them first. The previews update as you go.</p>
+      </div>
+      <button class="btn" id="prClose" aria-label="Close" data-i18n-attr="aria-label=pr.close">✕</button>
+    </div>
+    <div class="prep-body">
+      <div class="prep-ctl">
+        <h3><span class="n">1</span><span data-i18n="pr.h1">Simplify</span></h3>
+        <div class="ctl">
+          <div class="row"><label for="prSmooth" data-i18n="pr.smooth">Smoothing</label><output id="prSmoothOut"></output></div>
+          <input type="range" id="prSmooth" min="0" max="10" step="1" />
+          <div class="hint" data-i18n="pr.smoothH">An edge-preserving (bilateral) filter: flattens skin, fabric and foliage, keeps the edges between different colours.</div>
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="prLevels" data-i18n="pr.levels">Tone levels</label></div>
+          <select class="sel" id="prLevels">
+            <option value="0" data-i18n="pr.levelsOff">Off (all tones)</option>
+            <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+            <option value="5">5</option><option value="6">6</option><option value="8">8</option>
+          </select>
+          <div class="hint" data-i18n="pr.levelsH">Posterize: 4–6 levels turn soft shading into a few clear areas.</div>
+        </div>
+
+        <h3><span class="n">2</span><span data-i18n="pr.h2">Background</span></h3>
+        <label class="check"><input type="checkbox" id="prBg" /> <span data-i18n="pr.bg">Remove the background</span></label>
+        <div id="prBgCtl">
+          <div class="ctl">
+            <div class="row"><label for="prTol" data-i18n="pr.tol">Tolerance</label><output id="prTolOut"></output></div>
+            <input type="range" id="prTol" min="4" max="80" step="1" />
+            <div class="hint" data-i18n="pr.tolH">Colours connected to the picture's border, and this close to it, become pure white. Raise it for a busy or shaded background; lower it if the subject is eaten.</div>
+          </div>
+          <label class="check"><input type="checkbox" id="prLargest" /> <span data-i18n="pr.largest">Keep only the largest subject</span></label>
+          <div class="hint" data-i18n="pr.clickH">Click a leftover patch of background in the Prepared picture to remove it too.</div>
+          <div class="chips" style="margin-top:6px; align-items:center;"><button class="btn" id="prReset" data-i18n="pr.reset">Reset clicks</button><span class="hint" id="prSeedsN"></span></div>
+        </div>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="prInvert" /> <span data-i18n="pr.invert">Light subject on a dark background</span></label>
+
+        <h3><span class="n">3</span><span data-i18n="pr.h3">Tone curve</span></h3>
+        <div class="ctl">
+          <div class="row"><label for="prCutoff" data-i18n="pr.cutoff">Cutoff</label><output id="prCutoffOut"></output></div>
+          <input type="range" id="prCutoff" min="0" max="90" step="1" />
+          <div class="hint" data-i18n="pr.cutoffH">Anything lighter than this becomes pure white and gets no points, instead of a sparse sprinkle.</div>
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="prGamma" data-i18n="pr.gamma">Gamma</label><output id="prGammaOut"></output></div>
+          <input type="range" id="prGamma" min="1" max="3" step="0.1" />
+          <div class="hint" data-i18n="pr.gammaH">Above 1, light tones get lighter while dark ones stay dark, so the line gathers where the picture is darkest.</div>
+        </div>
+
+        <h3><span class="n">4</span><span data-i18n="pr.h4">Line from</span></h3>
+        <div class="seg" id="prMode">
+          <button data-mode="outline" data-i18n="m.outline">Outline</button>
+          <button data-mode="edges" data-i18n="m.edges">Edges</button>
+          <button data-mode="shading" data-i18n="m.shading">Shading</button>
+        </div>
+        <div class="ctl" id="prDetailCtl" style="margin-top:8px">
+          <div class="row"><label for="prDetail" data-i18n="l.detail">Edge detail</label><output id="prDetailOut"></output></div>
+          <input type="range" id="prDetail" min="0" max="100" step="5" />
+        </div>
+        <div class="ctl" style="margin-top:8px">
+          <div class="row"><label for="prPts" data-i18n="l.pts">Points on the line</label><output id="prPtsOut"></output></div>
+          <input type="range" id="prPts" min="200" max="3000" step="100" />
+        </div>
+      </div>
+      <div class="prep-views">
+        <figure><figcaption data-i18n="pr.orig">Original</figcaption><canvas id="prOrig"></canvas></figure>
+        <figure><figcaption data-i18n="pr.out">Prepared</figcaption><canvas id="prOut" aria-label="The prepared picture; click a leftover patch of background to remove it" data-i18n-attr="aria-label=pr.outA"></canvas>
+          <div class="cap" data-i18n="pr.outCap">Removed background is tinted blue here; it is pure white in the picture that is imported.</div></figure>
+        <figure><figcaption data-i18n="pr.line">Line</figcaption><canvas id="prLine"></canvas><div class="cap" id="prLineInfo"></div></figure>
+      </div>
+    </div>
+    <div class="prep-foot">
+      <button class="btn" id="prDefaults" data-i18n="pr.defaults">Suggested settings</button>
+      <div class="right">
+        <button class="btn" id="prCancel" data-i18n="pr.cancel">Cancel</button>
+        <button class="btn primary" id="prUse" data-i18n="pr.use">Use this picture</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script src="i18n-es.js"></script>
 <script src="i18n-da.js"></script>
 <script src="i18n.js"></script>
 <script src="src/fourier.js"></script>
+<script src="src/prepare.js"></script>
+<script src="prep.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

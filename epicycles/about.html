@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title data-i18n="ab.title">About Epicycles</title>
-  <meta data-i18n-attr="content=ab.meta" name="description" content="Epicycles turns a picture into one closed line and draws it with two chains of turning circles, one for x and one for y, adding circles one at a time. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <meta data-i18n-attr="content=ab.meta" name="description" content="How Epicycles draws any picture with spinning circles, explained step by step with the equations. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%228%22/><circle cx=%2278%22 cy=%2250%22 r=%2216%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%228%22/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,6 +51,14 @@ a{color:var(--accent);}
 .foot{max-width:980px; margin:30px auto 0; padding:18px 22px 40px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-faint); line-height:1.7;}
 .foot .consult{display:block; color:var(--ink); font-weight:600; margin-bottom:4px;}
 .foot a{color:var(--accent);}
+.maths{margin-top:22px;}
+.maths .intro{margin-bottom:6px;}
+.step{padding:14px 0; border-top:1px dashed var(--line-soft);}
+.step h3{font-family:var(--head); font-weight:700; font-size:17px; letter-spacing:.04em; margin:0 0 8px; color:var(--ink);}
+.step p{margin:0 0 10px;}
+.math{font-family:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size:18px; line-height:1.9; color:var(--ink); background:var(--panel-2); border:1px solid var(--line-soft); border-left:3px solid var(--accent); border-radius:8px; padding:10px 16px; margin:4px 0 12px; overflow-x:auto;}
+.math i{font-style:italic;}
+@media (max-width:760px){ .math{font-size:16px;} }
 @media (max-width:760px){ .cols{grid-template-columns:1fr;} h1{font-size:32px;} .lede{font-size:16px;} .brand .sub{display:none;} }
 </style>
 </head>
@@ -70,36 +78,72 @@ a{color:var(--accent);}
 <main>
   <div class="eyebrow" data-i18n="ab.eyebrow">About the app</div>
   <h1>Epicycles</h1>
-  <p class="lede" data-i18n="ab.lede">Any closed line can be drawn by circles turning on circles. Epicycles turns a picture into one closed line and draws it with two chains of circles: the chain above the picture sets x, the chain to its left sets y. It starts with one circle per side, then two, then three, so you can watch the drawing take shape term by term.</p>
+  <p class="lede" data-i18n="ab.lede">Draw a circle. Now put a second, smaller circle on its edge, and a third on the edge of that one, and let them all spin. The pen on the last circle traces a strange path. Choose the right sizes and speeds, and that path can be any shape you like: a heart, your name, a face. Epicycles finds those circles for any picture and shows them at work.</p>
   <p><a class="open" href="./" data-i18n="ab.openbtn">Open Epicycles →</a></p>
 
   <div class="cols">
     <section class="card">
       <h2 data-i18n="ab.what">What it does</h2>
-      <ul data-i18n="ab.whatlist">
-        <li><b>Takes any picture</b>Text you type, a heart, a star, a gear, your own drawing, or an uploaded picture. An uploaded picture is read in the browser tab and never leaves your device.</li>
-        <li><b>Makes one closed line</b>It finds the picture's outline (for logos, text and silhouettes) or its edges (for photos, ignoring their grain), choosing which from the picture and noticing a dark background, thins them to a set number of points and joins them into a single loop. A nearest-neighbour tour is improved with 2-opt until no reversal shortens it, so the line does not cross itself needlessly. Separate shapes are joined by straight jumps.</li>
-        <li><b>Draws it with circles, one count at a time</b>One full loop with 1 circle per side, then 2, 3 … 10, 12, 15, 20, up to 500, with earlier loops kept faded. Or fix the count, or click the error chart to jump to any count. Circles can be added in series order or largest first. Zoom and move around while it draws, or let the view follow the pen to watch the smallest circles up close.</li>
-        <li><b>Shows every number</b>The distance from the traced line for every count, as a chart and a table; the equations with their first terms; and each circle's radius, starting angle and speed. The curve at any count can be downloaded as SVG.</li>
-      </ul>
+      <ul data-i18n="ab.whatlist"><li><b>Takes any picture</b>Type some text, pick a heart, a star or a gear, draw your own, or upload a photo. Your photo stays on your device: it is never sent anywhere.</li><li><b>Cleans it up</b>Photos are full of tiny details, like skin pores, grass or fabric, that would turn into scribble. A preparation window blurs them away, turns the background white and makes light areas white too.</li><li><b>Turns it into one line</b>Like a connect-the-dots puzzle: the picture becomes dots, and the dots are joined into one line that ends where it started.</li><li><b>Draws it with circles</b>First with 1 circle on each side, then 2, then 3, and so on up to 500. Watch the drawing get sharper with every step. You can zoom in, or let the view follow the pen.</li><li><b>Shows the numbers</b>How far the drawing is from the line, and the size, starting angle and speed of every circle. You can save the drawing as an SVG file. In English, Spanish and Danish.</li></ul>
     </section>
 
     <section class="card">
-      <h2 data-i18n="ab.how">How it is built</h2>
-      <p data-i18n="ab.how1">The line is resampled to 1,024 points evenly spaced along its length, and each coordinate is expanded on its own as a Fourier series, <b>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</b>. Term k is one circle: radius r<sub>k</sub>, starting angle φ<sub>k</sub>, turning k times while the pen goes round once. The error is exact, by Parseval's theorem.</p>
-      <p data-i18n="ab.how2"><b>Taylor or Fourier?</b> A Taylor series in time cannot close a loop, but with z = e<sup>it</sup> the same sum is Re Σ A<sub>k</sub>z<sup>k</sup>, a power series in z. Each power z<sup>k</sup> goes round k times as fast, so a term's place in the expansion sets its circle's speed.</p>
-      <p data-i18n="ab.how3">The tests check that a circle needs exactly one circle per side, that the full series rebuilds a square, that the error never grows as circles are added and equals the measured distance, that the chain tips equal the series, that the tour visits every point once and 2-opt never lengthens it, and that a drawn ring is traced along its edges. Everything runs in your browser.</p>
-
-      <h2 style="margin-top:22px;" data-i18n="ab.author">Author</h2>
+      <h2 data-i18n="ab.author">Author</h2>
       <p data-i18n="ab.authorp">Epicycles was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
       <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener" data-i18n="ab.more">More about Daniel →</a></p>
-      <p class="cite" data-i18n="ab.cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.2.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/</p>
+      <p class="cite" data-i18n="ab.cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.3.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/</p>
     </section>
   </div>
+
+  <section class="card maths">
+    <h2 data-i18n="ab.math">The maths, step by step</h2>
+    <p class="intro" data-i18n="ab.mathL">You only need to know what a circle, sine and cosine are. Everything else is built from there.</p>
+      <div class="step">
+        <h3 data-i18n="ab.s1h">1. One spinning circle</h3>
+        <p data-i18n="ab.s1p">A pen sits on the edge of a circle with radius <i>r</i>. When the circle has turned by an angle θ, the pen is at</p>
+        <div class="math"><i>x</i> = <i>r</i> · cos θ &nbsp;&nbsp;&nbsp; <i>y</i> = <i>r</i> · sin θ</div>
+        <p data-i18n="ab.s1q">Let a clock <i>t</i> run from 0 to 2π: that is one <b>round</b>. If the circle turns <i>k</i> times during one round, its angle is θ = <i>k</i>·<i>t</i> + φ. The Greek letter φ (phi) is just where it starts. So <i>k</i> is the circle's <b>speed</b>: a circle with <i>k</i> = 3 spins three times as fast as one with <i>k</i> = 1.</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="ab.s2h">2. Circles on circles</h3>
+        <p data-i18n="ab.s2p">Put the centre of circle 2 on the pen of circle 1, the centre of circle 3 on the pen of circle 2, and so on. The left–right position of the last pen is simply all the steps added up:</p>
+        <div class="math"><i>x</i>(<i>t</i>) = <i>a</i>₀ + <i>r</i>₁ cos(<i>t</i> + φ₁) + <i>r</i>₂ cos(2<i>t</i> + φ₂) + <i>r</i>₃ cos(3<i>t</i> + φ₃) + …</div>
+        <p data-i18n="ab.s2q">Here <i>a</i>₀ is where the chain starts. Circle 1 turns once per round, circle 2 twice, circle 3 three times. The up–down position <i>y</i>(<i>t</i>) gets a sum just like it, with its own circles. That is why the app has <b>two chains</b>: the one above the picture moves the pen left and right, the one on the left moves it up and down, and the dashed guide lines meet at the pen.</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="ab.s3h">3. From a picture to one line</h3>
+        <p data-i18n="ab.s3p">The app finds the outlines or edges in the picture, or places dots where it is dark, and joins the dots like a connect-the-dots puzzle: start anywhere and always go to the nearest dot you have not visited yet. Then it fixes crossings: if two pieces of the line cross like an X, flipping the part in between always makes the line shorter, so it keeps flipping until nothing crosses. Finally it puts 1,024 points evenly along the line, at the times</p>
+        <div class="math"><i>t</i><sub>j</sub> = 2π · <i>j</i> / 1024, &nbsp; <i>j</i> = 0, 1, 2, …, 1023</div>
+      </div>
+      <div class="step">
+        <h3 data-i18n="ab.s4h">4. How big is each circle?</h3>
+        <p data-i18n="ab.s4p">To find circle <i>k</i>, multiply each point of the line by a circle that turns <i>k</i> times, and take the average. The sign Σ means “add up over all the points <i>j</i>”:</p>
+        <div class="math" data-i18n="ab.m4"><i>a</i><sub>k</sub> = (2/1024) · Σ <i>x</i><sub>j</sub> · cos(<i>k t</i><sub>j</sub>) &nbsp;&nbsp;&nbsp; <i>b</i><sub>k</sub> = (2/1024) · Σ <i>x</i><sub>j</sub> · sin(<i>k t</i><sub>j</sub>)<br><i>r</i><sub>k</sub> = √(<i>a</i><sub>k</sub>² + <i>b</i><sub>k</sub>²) &nbsp;&nbsp;&nbsp; φ<sub>k</sub> = the angle of the point (<i>a</i><sub>k</sub>, −<i>b</i><sub>k</sub>)</div>
+        <p data-i18n="ab.s4q">Why does this work? If the line swings back and forth in step with a circle turning <i>k</i> times, the products are mostly positive and the average is large: that circle is big. If they do not match, the products are positive half the time and negative half the time, and they cancel out to almost zero. <i>a</i>₀, the start of the chain, is just the average of all the <i>x</i><sub>j</sub>. This recipe is called a <b>Fourier series</b>, after Joseph Fourier, who found it in 1807.</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="ab.s5h">5. How close is the drawing?</h3>
+        <p data-i18n="ab.s5p">Every circle carries its own share of the line's movement, equal to <i>r</i>²/2. Leave some circles out and you lose exactly their shares. So the error with <i>N</i> circles is</p>
+        <div class="math" data-i18n="ab.m5">error<sub>N</sub> = √( sum of <i>r</i>²/2 for the circles left out ÷ sum of <i>r</i>²/2 for all circles )</div>
+        <p data-i18n="ab.s5q">Adding a circle can only make the error smaller, never bigger, and with all the circles it is zero. This is the “Distance from the line” number in the app, and the falling curve in its chart. (Mathematicians call this Parseval's theorem.)</p>
+      </div>
+      <div class="step">
+        <h3 data-i18n="ab.s6h">6. Taylor or Fourier?</h3>
+        <p data-i18n="ab.s6p">You may have met a <b>Taylor series</b>, which builds a curve from powers of <i>t</i>:</p>
+        <div class="math"><i>x</i>(<i>t</i>) = <i>c</i>₀ + <i>c</i>₁<i>t</i> + <i>c</i>₂<i>t</i>² + <i>c</i>₃<i>t</i>³ + …</div>
+        <p data-i18n="ab.s6q">Powers of <i>t</i> keep growing, so this curve never comes back to where it started, and it cannot draw a closed loop. But here is the trick. Let <i>z</i> be a point going once round a circle of radius 1 in each round, written <i>z</i> = <i>e</i><sup><i>it</i></sup>. Then <i>z</i>² goes round twice as fast, <i>z</i>³ three times as fast, and so on, and</p>
+        <div class="math" data-i18n="ab.m6b"><i>x</i>(<i>t</i>) = Re( <i>A</i>₀ + <i>A</i>₁<i>z</i> + <i>A</i>₂<i>z</i>² + <i>A</i>₃<i>z</i>³ + … ), &nbsp; with <i>A</i><sub>k</sub> = <i>r</i><sub>k</sub> <i>e</i><sup><i>i</i>φ<sub>k</sub></sup></div>
+        <p data-i18n="ab.s6r">is a Taylor series too, but in <i>z</i> instead of <i>t</i>. (“Re” means: take only the left–right part.) Each power <i>z</i><sup><i>k</i></sup> is one of our circles, and its place in the series is its speed.</p>
+      </div>
+    <div class="step">
+      <h3 data-i18n="ab.testsh">How do we know it works?</h3>
+      <p data-i18n="ab.testsp">The app checks itself with more than 80 automatic tests. A few of them: give it a perfect circle, and it must find exactly one circle per side. Give it a square, and all the circles together must rebuild the square. Adding a circle must never make the error bigger. Every dot must be visited exactly once, and untangling must never make the line longer. Everything runs in your browser.</p>
+    </div>
+  </section>
 </main>
 
 <footer class="foot">
-  <span class="consult">Epicycles v1.2.0 · <a href="./" data-i18n="ab.openapp">Open the app</a></span>
+  <span class="consult">Epicycles v1.3.0 · <a href="./" data-i18n="ab.openapp">Open the app</a></span>
   <span data-i18n="ab.foot">A picture drawn by two chains of turning circles, one Fourier term at a time. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
 </footer>
 <script src="i18n-es.js"></script>

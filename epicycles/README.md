@@ -10,7 +10,15 @@ so you can watch the drawing converge.
 
 - **Pictures.** Text you type, a heart, a star, a gear, your own drawing, or any uploaded picture. The picture is read
   in the browser tab and never uploaded.
-- **One closed line.** The outline (Otsu threshold) or the edges (Canny-style: blur, Sobel, one-pixel ridges, a threshold
+- **Prepare picture window.** An upload opens here first, with the original, the prepared picture and the line it
+  will give side by side, updating live: a joint bilateral filter (edge-preserving smoothing), posterizing to 2–8 tone
+  levels, background removal (a flood fill from the border within a tolerance of a slowly drifting reference colour,
+  plus clicks on leftover patches, optionally keeping only the largest subject), invert for light subjects, and a tone
+  curve with a hard cutoff and a gamma above 1 so light areas become pure white. *Prepare picture…* reopens it from
+  the original with the same settings. Background removal is classical, not a neural network (rembg and SAM are
+  Python tools with large models); it suits product shots, plain walls and logos, and a busy background needs clicks.
+- **One closed line.** The outline (Otsu threshold) or shading (points as dense as the picture is dark, by serpentine Floyd–Steinberg error
+  diffusion, none on white) or the edges (Canny-style: blur, Sobel, one-pixel ridges, a threshold
   well above the grain, measured as the median gradient, and hysteresis) of the picture, thinned to up to 3,000 points and joined into a single cycle: a nearest-neighbour tour, then 2-opt until no reversal shortens it.
   The cycle is resampled to 1,024 points evenly spaced along its length.
   An upload with two clear tones is traced by its outline, any other picture by its edges, and a dark background is
@@ -43,7 +51,10 @@ about.html          — about page
 i18n.js             — language choice and switching; i18n-es.js and i18n-da.js hold the translations
 app.js              — picture loading, animation, drawing, read-outs
 src/fourier.js      — the maths: tracing, tour, resampling, series, error (UMD, also runs in Node)
+src/prepare.js      — picture preparation: bilateral filter, background fill, posterize, tone curve
+prep.js             — the Prepare picture window
 tests/fourier.test.js
+tests/prepare.test.js
 tests/i18n.test.js  — every page key and script message translated, placeholders and HTML tags kept
 ```
 
@@ -51,6 +62,7 @@ tests/i18n.test.js  — every page key and script message translated, placeholde
 
 ```
 node epicycles/tests/fourier.test.js
+node epicycles/tests/prepare.test.js
 node epicycles/tests/i18n.test.js
 ```
 

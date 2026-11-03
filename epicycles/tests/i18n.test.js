@@ -20,7 +20,7 @@ const pageKeys = Object.keys(english);
 check("the pages have translatable text", pageKeys.length > 80, pageKeys.length + " keys");
 
 // ---- the script's messages: every string literal inside a T( … ) call, including both sides of a ternary
-const app = fs.readFileSync(path.join(dir, "app.js"), "utf8"), msgs = new Set();
+const app = ["app.js", "prep.js"].map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join(";\n"), msgs = new Set();
 for (let i = app.indexOf("T("); i >= 0; i = app.indexOf("T(", i + 2)) {
   if (/[\w.$]/.test(app[i - 1] || "")) continue;
   let depth = 0, j = i + 1, inVars = 0, args = [];
