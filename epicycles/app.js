@@ -2,7 +2,7 @@
 // picture, keeps the animation state and draws.
 (function () {
   "use strict";
-  var VERSION = "1.0.0";
+  var VERSION = "1.1.0";
   var E = window.Epicycles, TAU = Math.PI * 2, M = 1024, KMAX = 500, HISTORY = 4;
   var $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION;
@@ -12,7 +12,7 @@
   ["cx", "cy", "pen", "ink", "ink-dim", "ink-faint", "line", "line-soft", "accent", "panel-2"].forEach(function (k) { C[k] = css.getPropertyValue("--" + k).trim(); });
 
   var S = {
-    sample: "text", mode: "outline", invert: false, keep: 7, maxPoints: 1500,
+    sample: "text", mode: "outline", invert: false, detail: 50, maxPoints: 1500,
     seq: "auto", order: "frequency", period: 8, playing: true,
     show: { circles: true, target: true, picture: true, history: true },
     source: null,        // { kind: "image", canvas, w, h } or { kind: "path", path }
@@ -21,6 +21,7 @@
     sr: null, ox: null, oy: null, stages: [], errs: null,
     stage: 0, N: 1, t: 0, trace: [], history: [],
     lay: null,           // eased layout radii
+    cam: { z: 1, tx: 0, ty: 0, follow: false },   // zoom and pan on top of the fitted view: screen = z · fitted + t
     drawing: false, strokes: [], tracedPoints: 0
   };
 
@@ -71,52 +72,76 @@
     return out;
   }
 
-  function setImageSource(cv) {
-    S.source = { kind: "image", canvas: cv, w: cv.width, h: cv.height };
-    retrace();
-  }
+  function imageSource(cv) { return { kind: "image", canvas: cv, w: cv.width, h: cv.height }; }
 
+  function setImageSource(cv) { retrace(imageSource(cv)); }
+
+  // an uploaded picture: drawn on white (transparent logos), at most 360 px a side; a logo-like picture (two clear
+  // tones) is traced by its outline, a photo by its edges, and a dark background is detected from the border
   function loadFile(file) {
+    if (file.type && !/^image\//.test(file.type)) { flash("That file is not a picture."); return; }
     var url = URL.createObjectURL(file), img = new Image();
     img.onload = function () {
-      var s = Math.min(1, 360 / Math.max(img.width, img.height)), cv = document.createElement("canvas");
-      cv.width = Math.max(8, Math.round(img.width * s)); cv.height = Math.max(8, Math.round(img.height * s));
-      var g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      var iw = img.naturalWidth || 360, ih = img.naturalHeight || 360;   // an SVG without a size reports 0
+      var s = Math.min(1, 360 / Math.max(iw, ih)), pic = document.createElement("canvas");
+      pic.width = Math.max(16, Math.round(iw * s)); pic.height = Math.max(16, Math.round(ih * s));
+      var g = pic.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, pic.width, pic.height); g.drawImage(img, 0, 0, pic.width, pic.height);
       URL.revokeObjectURL(url);
+      var a = E.analyse(g.getImageData(0, 0, pic.width, pic.height).data, pic.width, pic.height);
+      var before = { sample: S.sample, mode: S.mode, invert: S.invert, drawing: S.drawing };
+      S.drawing = false; cv.classList.remove("drawing");
       setSample(null);
-      setMode("edges");
-      setImageSource(cv);
+      setMode(a.twoTone ? "outline" : "edges");
+      setInvert(a.darkBackground);
+      retrace(imageSource(pic), "Traced by its " + (a.twoTone ? "outline" : "edges") + (a.darkBackground && a.twoTone ? ", as light shapes on a dark background" : "") + ". Switch under Tracing if another works better.",
+        function () {   // nothing to trace: keep the previous picture and its settings
+          setSample(before.sample); setMode(before.mode); setInvert(before.invert);
+          if (before.drawing) { S.drawing = true; cv.classList.add("drawing"); }
+        });
     };
-    img.onerror = function () { URL.revokeObjectURL(url); flash("That file could not be read as a picture."); };
+    img.onerror = function () { URL.revokeObjectURL(url); flash("That file could not be read as a picture (try PNG, JPEG, GIF, WebP or SVG)."); };
     img.src = url;
   }
 
   // ---- picture → line → series ---------------------------------------------------------------------------
 
-  function retrace() {
-    if (!S.source) return;
+  // traces `source` (default: the current picture again) and switches to it only when the trace succeeds, all in one
+  // step, so a frame never sees a half-switched picture; a newer request supersedes one still waiting
+  var traceToken = 0;
+  function retrace(source, note, onFail) {
+    source = source || S.source;
+    if (!source) return;
+    var token = ++traceToken;
     $("busy").hidden = false;
     setTimeout(function () {
-      var tour, norm;
-      if (S.source.kind === "image") {
-        var src = S.source, data = src.canvas.getContext("2d").getImageData(0, 0, src.w, src.h).data;
-        var res = E.traceImage(data, src.w, src.h, { mode: S.mode, invert: S.invert, keep: S.keep / 100, maxPoints: S.maxPoints, timeBudgetMs: 700 });
-        $("busy").hidden = true;
-        if (!res) { flash(S.mode === "outline" ? "No shapes found. Try Edges, or tick “Light shapes on a dark background”." : "No edges found. Try Outline."); return; }
-        tour = res.tour; S.tracedPoints = res.points;
-      } else {
-        $("busy").hidden = true;
-        tour = S.source.path; S.tracedPoints = tour.length;
+      if (token !== traceToken) return;
+      var tour, points, toPicture = null;
+      try {
+        if (source.kind === "image") {
+          var data = source.canvas.getContext("2d").getImageData(0, 0, source.w, source.h).data;
+          var res = E.traceImage(data, source.w, source.h, { mode: S.mode, invert: S.invert, detail: S.detail / 100, maxPoints: S.maxPoints, timeBudgetMs: 700 });
+          if (!res || res.tour.length < 3) {
+            $("busy").hidden = true;
+            var why = S.mode === "outline" ? "No shapes found in this picture. Try Edges, or change “Light shapes on a dark background”." : "No edges found in this picture. Try Outline.";
+            if (onFail) { onFail(); why = "Nothing to trace in this picture: it looks blank."; }
+            flash(why + (S.source && S.source !== source ? " Still showing the previous picture." : ""));
+            return;
+          }
+          tour = res.tour; points = res.points;
+        } else { tour = source.path; points = tour.length; }
+        var norm = E.normalise(E.resample(tour, M)), sr = E.series(norm.path, KMAX);
+        if (source.kind === "image") { toPicture = { cx: norm.cx, cy: norm.cy, scale: norm.scale }; source.ink = inkLayer(source.canvas); }
+        S.source = source; S.path = norm.path; S.toPicture = toPicture; S.tracedPoints = points;
+        S.sr = sr; S.stages = E.stages(sr.K);
+        fitView();
+        reorder();
+        flash(note || "");
+      } catch (err) {
+        if (onFail) onFail();
+        flash("This picture could not be traced: " + err.message);
+      } finally {
+        if (token === traceToken) $("busy").hidden = true;
       }
-      var resampled = E.resample(tour, M);
-      norm = E.normalise(resampled);
-      S.path = norm.path;
-      S.toPicture = S.source.kind === "image" ? { cx: norm.cx, cy: norm.cy, scale: norm.scale } : null;
-      if (S.source.kind === "image") S.source.ink = inkLayer(S.source.canvas);
-      S.sr = E.series(S.path, KMAX);
-      S.stages = E.stages(S.sr.K);
-      reorder();
-      flash("");
     }, 30);
   }
 
@@ -167,7 +192,8 @@
   function tick(now) {
     var dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (S.sr && S.playing && !S.drawing) {
-      var dth = TAU * dt / S.period, steps = Math.max(1, Math.ceil(dth / (TAU / 1500)));
+      // finer pen steps when zoomed in, so the line stays smooth up close
+      var dth = TAU * dt / S.period, steps = Math.max(1, Math.ceil(dth / (TAU / (1500 * Math.min(S.cam.z, 20)))));
       for (var i = 1; i <= steps; i++) {
         var t = Math.min(TAU, S.t + dth * i / steps);
         S.trace.push(penAt(t));
@@ -178,8 +204,8 @@
         else { pushHistory(); S.t = 0; S.trace = [penAt(0)]; }
       }
     }
+    requestAnimationFrame(tick);   // scheduled first, so a failed frame never stops the animation
     render();
-    requestAnimationFrame(tick);
   }
 
   function sizeCanvas() {
@@ -213,10 +239,14 @@
     var L = layout(), b = L.box, pad = 18;
     var sc = Math.min((sz.w - 2 * pad) / (b[2] - b[0]), (sz.h - 2 * pad) / (b[3] - b[1]));
     var ox = (sz.w - sc * (b[2] - b[0])) / 2 - sc * b[0], oy = (sz.h - sc * (b[3] - b[1])) / 2 - sc * b[1];
+    var cam = S.cam, pen = penAt(S.t % TAU);
+    sc *= cam.z; ox *= cam.z; oy *= cam.z;
+    if (cam.follow) { cam.tx = sz.w / 2 - (ox + sc * pen[0]); cam.ty = sz.h / 2 - (oy + sc * pen[1]); }
+    ox += cam.tx; oy += cam.ty;
     view = { sc: sc, ox: ox, oy: oy };
     var X = function (x) { return ox + sc * x; }, Y = function (y) { return oy + sc * y; };
 
-    if (S.show.picture && S.toPicture && S.source && S.source.kind === "image") {
+    if (S.show.picture && S.toPicture && S.source && S.source.ink) {
       var tp = S.toPicture;
       ctx.save(); ctx.globalAlpha = 0.14;
       ctx.drawImage(S.source.ink, X(-tp.cx / tp.scale), Y(-tp.cy / tp.scale), sc * S.source.w / tp.scale, sc * S.source.h / tp.scale);
@@ -225,7 +255,6 @@
     if (S.show.target) polyline(S.path, X, Y, C["ink-faint"], 1, 0.45, true, [3, 4]);
     if (S.show.history) S.history.forEach(function (h, i) { polyline(h.pts, X, Y, C["ink-dim"], 1.2, 0.12 + 0.12 * (i + 1) / S.history.length, false); });
 
-    var pen = penAt(S.t % TAU);
     var cx = E.chain(S.sr.x, S.ox, S.N, S.t, L.xBase, "x"), cy = E.chain(S.sr.y, S.oy, S.N, S.t, L.yBase, "y");
     if (S.show.circles) { drawChain(cx, S.sr.x, S.ox, X, Y, sc, C.cx); drawChain(cy, S.sr.y, S.oy, X, Y, sc, C.cy); }
     var tx = cx[cx.length - 1], ty = cy[cy.length - 1];
@@ -373,6 +402,91 @@
     $("errTable").innerHTML = h;
   }
 
+  // ---- zoom and pan ---------------------------------------------------------------------------------------
+  // the wheel or a pinch zooms about the pointer, a drag moves the view, a double-click fits it again; with
+  // Follow pen the view keeps the pen in the middle, so you can zoom in on the smallest circles while it draws
+
+  var ZMIN = 0.5, ZMAX = 400;
+
+  function zoomAt(px, py, f) {
+    var c = S.cam, z = Math.min(ZMAX, Math.max(ZMIN, c.z * f));
+    f = z / c.z;
+    c.tx = px - (px - c.tx) * f; c.ty = py - (py - c.ty) * f; c.z = z;
+    syncZoom();
+  }
+
+  function fitView() { S.cam.z = 1; S.cam.tx = 0; S.cam.ty = 0; setFollow(false); syncZoom(); }
+
+  function setFollow(on) { S.cam.follow = !!on; $("follow").setAttribute("aria-pressed", String(S.cam.follow)); }
+
+  function syncZoom() { $("zoomLevel").textContent = "×" + (S.cam.z < 10 ? S.cam.z.toFixed(1) : Math.round(S.cam.z)); }
+
+  function centre() { var r = cv.getBoundingClientRect(); return [r.width / 2, r.height / 2]; }
+
+  cv.addEventListener("wheel", function (ev) {
+    if (S.drawing || !S.sr) return;
+    ev.preventDefault();
+    var r = cv.getBoundingClientRect(), d = ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY;
+    var p = S.cam.follow ? centre() : [ev.clientX - r.left, ev.clientY - r.top];
+    zoomAt(p[0], p[1], Math.exp(-d * 0.0015));
+  }, { passive: false });
+
+  var touches = new Map(), pinch = null;
+  function pointerPos(ev) { var r = cv.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
+  function pinchState() {
+    var p = Array.from(touches.values());
+    return { d: Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]) || 1, m: [(p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2] };
+  }
+  cv.addEventListener("pointerdown", function (ev) {
+    if (S.drawing) return;
+    touches.set(ev.pointerId, pointerPos(ev));
+    try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* the pointer is already gone */ }
+    if (touches.size === 2) pinch = pinchState();
+    cv.classList.add("panning");
+  });
+  cv.addEventListener("pointermove", function (ev) {
+    if (S.drawing || !touches.has(ev.pointerId)) return;
+    var prev = touches.get(ev.pointerId), p = pointerPos(ev);
+    touches.set(ev.pointerId, p);
+    if (touches.size >= 2 && pinch) {
+      var now = pinchState();
+      if (!S.cam.follow) { S.cam.tx += now.m[0] - pinch.m[0]; S.cam.ty += now.m[1] - pinch.m[1]; }
+      var at = S.cam.follow ? centre() : now.m;
+      zoomAt(at[0], at[1], now.d / pinch.d);
+      pinch = now;
+    } else if (touches.size === 1) {
+      var dx = p[0] - prev[0], dy = p[1] - prev[1];
+      if (dx || dy) { if (S.cam.follow) setFollow(false); S.cam.tx += dx; S.cam.ty += dy; }
+    }
+  });
+  function endPointer(ev) {
+    touches.delete(ev.pointerId);
+    pinch = touches.size === 2 ? pinchState() : null;
+    if (!touches.size) cv.classList.remove("panning");
+  }
+  cv.addEventListener("pointerup", endPointer);
+  cv.addEventListener("pointercancel", endPointer);
+  cv.addEventListener("dblclick", function () { if (!S.drawing) fitView(); });
+  cv.addEventListener("keydown", function (ev) {
+    if (S.drawing || !S.sr) return;
+    var c = centre(), k = ev.key, step = 40;
+    if (k === "+" || k === "=") zoomAt(c[0], c[1], 1.25);
+    else if (k === "-" || k === "_") zoomAt(c[0], c[1], 0.8);
+    else if (k === "0") fitView();
+    else if (k === "f" || k === "F") setFollow(!S.cam.follow);
+    else if (k === "ArrowLeft") S.cam.tx += step;
+    else if (k === "ArrowRight") S.cam.tx -= step;
+    else if (k === "ArrowUp") S.cam.ty += step;
+    else if (k === "ArrowDown") S.cam.ty -= step;
+    else return;
+    if (k.indexOf("Arrow") === 0 && S.cam.follow) setFollow(false);
+    ev.preventDefault();
+  });
+  $("zoomIn").addEventListener("click", function () { var c = centre(); zoomAt(c[0], c[1], 1.5); });
+  $("zoomOut").addEventListener("click", function () { var c = centre(); zoomAt(c[0], c[1], 1 / 1.5); });
+  $("zoomFit").addEventListener("click", fitView);
+  $("follow").addEventListener("click", function () { setFollow(!S.cam.follow); });
+
   // ---- drawing your own ----------------------------------------------------------------------------------
 
   function renderDrawing(sz) {
@@ -408,8 +522,7 @@
     var path = [].concat.apply([], S.strokes);
     if (path.length < 3) { flash("Draw a longer line first."); return; }
     S.drawing = false; cv.classList.remove("drawing");
-    S.source = { kind: "path", path: path };
-    retrace();
+    retrace({ kind: "path", path: path });
   }
 
   // ---- controls ------------------------------------------------------------------------------------------
@@ -427,8 +540,10 @@
 
   function setMode(m) {
     S.mode = m; pressed("modeSeg", "mode", m);
-    $("invertCtl").hidden = m !== "outline"; $("keepCtl").hidden = m !== "edges";
+    $("invertCtl").hidden = m !== "outline"; $("detailCtl").hidden = m !== "edges";
   }
+
+  function setInvert(on) { S.invert = !!on; $("invert").checked = S.invert; }
 
   function setSeq(q) {
     S.seq = q; pressed("seqSeg", "seq", q);
@@ -444,7 +559,7 @@
     setSample(kind);
     if (kind === "draw") { S.drawing = true; S.strokes = []; cv.classList.add("drawing"); flash("Draw, then press “Use drawing”."); return; }
     S.drawing = false; cv.classList.remove("drawing");
-    setMode("outline"); S.invert = false; $("invert").checked = false;
+    setMode("outline"); setInvert(false);
     setImageSource(sampleCanvas(kind));
   });
   var textTimer = null;
@@ -458,8 +573,8 @@
 
   $("modeSeg").addEventListener("click", function (ev) { var b = ev.target.closest("[data-mode]"); if (b) { setMode(b.dataset.mode); if (S.source && S.source.kind === "image") retrace(); } });
   $("invert").addEventListener("change", function (ev) { S.invert = ev.target.checked; retrace(); });
-  $("keep").addEventListener("input", function (ev) { S.keep = +ev.target.value; $("keepOut").textContent = S.keep + " %"; });
-  $("keep").addEventListener("change", retrace);
+  $("detail").addEventListener("input", function (ev) { S.detail = +ev.target.value; $("detailOut").textContent = S.detail + " %"; });
+  $("detail").addEventListener("change", function () { if (S.source && S.source.kind === "image") retrace(); });
   $("pts").addEventListener("input", function (ev) { S.maxPoints = +ev.target.value; $("ptsOut").textContent = S.maxPoints.toLocaleString("en"); });
   $("pts").addEventListener("change", function () { if (S.source && S.source.kind === "image") retrace(); });
 
@@ -500,7 +615,7 @@
   }
 
   // ---- start ---------------------------------------------------------------------------------------------
-  $("keepOut").textContent = S.keep + " %"; $("ptsOut").textContent = S.maxPoints.toLocaleString("en"); $("periodOut").textContent = S.period + " s";
+  $("detailOut").textContent = S.detail + " %"; $("ptsOut").textContent = S.maxPoints.toLocaleString("en"); $("periodOut").textContent = S.period + " s";
   setSample("text"); setMode("outline");
   setImageSource(sampleCanvas("text"));
   requestAnimationFrame(tick);

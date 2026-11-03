@@ -75,8 +75,8 @@ a{color:var(--accent);}
       <h2>What it does</h2>
       <ul>
         <li><b>Takes any picture</b>Text you type, a heart, a star, a gear, your own drawing, or an uploaded picture. An uploaded picture is read in the browser tab and never leaves your device.</li>
-        <li><b>Makes one closed line</b>It finds the picture's outline (for logos, text and silhouettes) or its edges (for photos), thins them to a set number of points and joins them into a single loop. A nearest-neighbour tour is improved with 2-opt until no reversal shortens it, so the line does not cross itself needlessly. Separate shapes are joined by straight jumps.</li>
-        <li><b>Draws it with circles, one count at a time</b>One full loop with 1 circle per side, then 2, 3 … 10, 12, 15, 20, up to 500, with earlier loops kept faded. Or fix the count, or click the error chart to jump to any count. Circles can be added in series order or largest first.</li>
+        <li><b>Makes one closed line</b>It finds the picture's outline (for logos, text and silhouettes) or its edges (for photos, ignoring their grain), choosing which from the picture and noticing a dark background, thins them to a set number of points and joins them into a single loop. A nearest-neighbour tour is improved with 2-opt until no reversal shortens it, so the line does not cross itself needlessly. Separate shapes are joined by straight jumps.</li>
+        <li><b>Draws it with circles, one count at a time</b>One full loop with 1 circle per side, then 2, 3 … 10, 12, 15, 20, up to 500, with earlier loops kept faded. Or fix the count, or click the error chart to jump to any count. Circles can be added in series order or largest first. Zoom and move around while it draws, or let the view follow the pen to watch the smallest circles up close.</li>
         <li><b>Shows every number</b>The distance from the traced line for every count, as a chart and a table; the equations with their first terms; and each circle's radius, starting angle and speed. The curve at any count can be downloaded as SVG.</li>
       </ul>
     </section>
@@ -90,13 +90,13 @@ a{color:var(--accent);}
       <h2 style="margin-top:22px;">Author</h2>
       <p>Epicycles was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
       <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a></p>
-      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.0.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/</p>
+      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Epicycles: a picture drawn by turning circles</em> (version 1.1.0) [Software]. https://kathuman.github.io/claude-projects/epicycles/</p>
     </section>
   </div>
 </main>
 
 <footer class="foot">
-  <span class="consult">Epicycles v1.0.0 · <a href="./">Open the app</a></span>
+  <span class="consult">Epicycles v1.1.0 · <a href="./">Open the app</a></span>
   <span>A picture drawn by two chains of turning circles, one Fourier term at a time. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
 </footer>
 </body>

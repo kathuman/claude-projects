@@ -60,7 +60,16 @@ a{color:var(--accent);}
 .content{padding:16px 20px 30px; min-width:0;}
 .stage-wrap{position:relative; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); overflow:hidden;}
 #stage{display:block; width:100%; height:min(72vh, 760px); touch-action:none;}
+#stage{cursor:grab;}
+#stage.panning{cursor:grabbing;}
 #stage.drawing{cursor:crosshair;}
+#stage:focus-visible{outline:2px solid var(--accent); outline-offset:-2px;}
+.zoom-ctl{position:absolute; top:10px; right:10px; display:flex; gap:6px; align-items:center;}
+.zoom-ctl .btn{padding:4px 10px; font-size:13px; background:rgba(13,58,99,.9);}
+.zoom-ctl .btn[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink);}
+.zoom-ctl output{font-family:var(--mono); font-size:12px; color:var(--ink-dim); min-width:42px; text-align:right;}
+.zoom-hint{position:absolute; top:12px; left:12px; font-size:11.5px; color:var(--ink-faint); pointer-events:none;}
+@media (max-width: 640px){ .zoom-hint{display:none;} }
 .overlay-msg{position:absolute; inset:auto 12px 12px 12px; font-size:13px; color:var(--ink-dim); background:rgba(8,36,68,.85); border:1px solid var(--line); border-radius:8px; padding:8px 12px; pointer-events:none;}
 .busy{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--head); font-size:18px; letter-spacing:.06em; color:var(--accent); background:rgba(8,36,68,.6);}
 
@@ -156,9 +165,10 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
         <div class="hint">Outline: the border of the dark shapes (logos, text, silhouettes). Edges: wherever brightness changes sharply (photos).</div>
       </div>
       <label class="check" id="invertCtl"><input type="checkbox" id="invert" /> Light shapes on a dark background</label>
-      <div class="ctl" id="keepCtl" hidden>
-        <div class="row"><label for="keep">Edge strength kept</label><output id="keepOut"></output></div>
-        <input type="range" id="keep" min="2" max="20" step="1" value="7" />
+      <div class="ctl" id="detailCtl" hidden>
+        <div class="row"><label for="detail">Edge detail</label><output id="detailOut"></output></div>
+        <input type="range" id="detail" min="0" max="100" step="5" value="50" />
+        <div class="hint">50 % splits real edges from the grain of the photo automatically. Higher keeps fainter edges; lower keeps only the strongest.</div>
       </div>
       <div class="ctl">
         <div class="row"><label for="pts">Points on the line</label><output id="ptsOut"></output></div>
@@ -211,9 +221,17 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
 
     <main class="content">
       <div class="stage-wrap">
-        <canvas id="stage" aria-label="The picture drawn by two chains of circles: the top chain sets x, the left chain sets y"></canvas>
+        <canvas id="stage" tabindex="0" aria-label="The picture drawn by two chains of circles: the top chain sets x, the left chain sets y"></canvas>
         <div class="overlay-msg" id="msg" hidden></div>
         <div class="busy" id="busy" hidden>Tracing…</div>
+        <div class="zoom-hint">Scroll or pinch to zoom · drag to move · double-click to fit</div>
+        <div class="zoom-ctl" role="group" aria-label="Zoom">
+          <output id="zoomLevel">×1.0</output>
+          <button class="btn" id="zoomOut" title="Zoom out (−)" aria-label="Zoom out">−</button>
+          <button class="btn" id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
+          <button class="btn" id="zoomFit" title="Fit everything (0 or double-click)">Fit</button>
+          <button class="btn" id="follow" aria-pressed="false" title="Keep the pen in the middle while it draws (F)">Follow pen</button>
+        </div>
       </div>
 
       <div class="stats">
@@ -246,7 +264,7 @@ details summary{cursor:pointer; font-size:12.5px; color:var(--ink-dim); margin-t
       <div class="card explain">
         <h3>How it works</h3>
         <ol>
-          <li><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (a Sobel filter). These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
+          <li><b>One closed line.</b> The picture is reduced to pixels on its outline (an Otsu threshold) or on its edges (Canny-style: blurred, thinned to one-pixel lines, with the threshold set well above the photo's grain). An uploaded picture with two clear tones is traced by its outline, any other by its edges, and a dark background is detected from the border. These are thinned on a grid and joined into one cycle: nearest neighbour first, then 2-opt, which reverses any stretch whose reversal makes the line shorter, so crossings go away. Separate shapes get joined by straight jumps, because a single line has to visit them all.</li>
           <li><b>Even steps.</b> The cycle is resampled to 1,024 points evenly spaced along its length. A parameter <code>t</code> runs from 0 to 2π once round.</li>
           <li><b>One series per side.</b> Each coordinate is expanded separately: <code>x(t) = a₀ + Σ r<sub>k</sub> cos(k t + φ<sub>k</sub>)</code>, and the same for <code>y(t)</code>. Each term is one circle. Chained end to end above the picture, the circles' tip sets x; chained down the left, it sets y. The guide lines from the two tips meet at the pen.</li>
           <li><b>One, two, three …</b> With one circle per side the pen draws an ellipse, the best single-frequency fit. Each extra circle adds detail at a higher speed. The error falls toward zero as the count rises.</li>

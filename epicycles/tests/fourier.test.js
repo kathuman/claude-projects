@@ -113,10 +113,44 @@ const TAU = Math.PI * 2;
     const tr = E.traceImage(rgba, w, h, { mode, maxPoints: 400, timeBudgetMs: 2000 });
     const onRing = tr.tour.every((p) => { const d = Math.hypot(p[0] - 60, p[1] - 50); return d > 22 && d < 38; });
     check(mode + ": every point of the line lies on the ring's edges", tr && onRing && tr.points <= 400, tr && tr.points + " points from " + tr.pixels + " pixels");
-    const s = E.series(E.normalise(E.resample(tr.tour, 512)).path, 100);
+    const s = E.series(E.normalise(E.resample(tr.tour, 512)).path);
     const ox = E.circleOrder(s.x, "size"), oy = E.circleOrder(s.y, "size");
-    check(mode + ": a hundred circles per side draw it to within 15 %", E.relativeError(s, ox, oy, 100) < 0.15, (100 * E.relativeError(s, ox, oy, 100)).toFixed(1) + " %");
+    check(mode + ": thirty circles per side draw it to within 15 %", E.relativeError(s, ox, oy, 30) < 0.15, (100 * E.relativeError(s, ox, oy, 30)).toFixed(1) + " %");
   }
+  const a = E.analyse(rgba, w, h);
+  check("a black ring on white is two-tone on a light background", a.twoTone && !a.darkBackground, a.separability.toFixed(3));
+  const neg = rgba.map((v, i) => (i % 4 === 3 ? v : 255 - v)), an = E.analyse(neg, w, h);
+  check("…its negative is two-tone on a dark background", an.twoTone && an.darkBackground);
+  const tr = E.traceImage(neg, w, h, { mode: "outline", invert: true, maxPoints: 400 });
+  check("…and traced as light shapes it lies on the same ring", tr && tr.tour.every((p) => { const d = Math.hypot(p[0] - 60, p[1] - 50); return d > 22 && d < 38; }));
+  let s2 = 3; const noise = () => (s2 = (s2 * 16807) % 2147483647) / 2147483647;
+  const photo = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4, v = 255 * (0.5 + 0.3 * Math.sin(x / 9) * Math.cos(y / 13)) + 40 * (noise() - 0.5); photo[i] = photo[i + 1] = photo[i + 2] = v; photo[i + 3] = 255; }
+  check("a picture of smooth shading and noise (a photo) is not two-tone", !E.analyse(photo, w, h).twoTone, E.analyse(photo, w, h).separability.toFixed(3));
+  // a grainy photo of a dark disk on a shaded background: the edges are the disk's rim, not the grain
+  const W2 = 240, H2 = 180, grainy = new Uint8ClampedArray(W2 * H2 * 4);
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+    const i = (y * W2 + x) * 4, inDisk = Math.hypot(x - 110, y - 90) < 50;
+    const v = (inDisk ? 70 : 150 + 60 * x / W2) + 60 * (noise() - 0.5);
+    grainy[i] = grainy[i + 1] = grainy[i + 2] = v; grainy[i + 3] = 255;
+  }
+  const ep = E.edgePixels(E.grayscale(grainy, W2, H2), W2, H2, 0.5);
+  const onRim = ep.filter((p) => Math.abs(Math.hypot(p[0] - 110, p[1] - 90) - 50) <= 3).length;
+  check("edges of a grainy photo lie on the real contour, not the grain", ep.length > 200 && onRim / ep.length > 0.9, onRim + " of " + ep.length + " on the rim");
+  const around = new Set(ep.filter((p) => Math.abs(Math.hypot(p[0] - 110, p[1] - 90) - 50) <= 3).map((p) => Math.round(Math.atan2(p[1] - 90, p[0] - 110) * 18 / Math.PI)));
+  check("…and they go all the way round it", around.size >= 34, around.size + " of 36 ten-degree sectors");
+  // a clean picture with a strong edge (dark disk) and a faint one (a square a little darker than the paper)
+  const clean = new Uint8ClampedArray(W2 * H2 * 4);
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+    const i = (y * W2 + x) * 4, v = Math.hypot(x - 70, y - 90) < 40 ? 40 : (x > 150 && x < 210 && y > 60 && y < 120 ? 205 : 235);
+    clean[i] = clean[i + 1] = clean[i + 2] = v; clean[i + 3] = 255;
+  }
+  const cg = E.grayscale(clean, W2, H2), ce = E.edgePixels(cg, W2, H2, 0.5);
+  const onSquare = ce.filter((p) => p[0] > 145 && p[0] < 215 && p[1] > 55 && p[1] < 125).length;
+  check("a clean picture keeps a faint edge beside a strong one", onSquare > 150 && ce.length - onSquare > 150, onSquare + " on the faint square, " + (ce.length - onSquare) + " on the disk");
+  const c0 = E.edgePixels(cg, W2, H2, 0);
+  check("…the lowest detail still keeps the strong edge", c0.filter((p) => p[0] < 145).length > 150, c0.length);
+  check("…and more detail never keeps fewer edge pixels", E.edgePixels(cg, W2, H2, 1).length >= ce.length && ce.length >= c0.length);
   const blank = new Uint8ClampedArray(w * h * 4).fill(255);
   check("a blank picture gives no line", E.traceImage(blank, w, h, { mode: "edges" }) === null);
 }

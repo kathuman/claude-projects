@@ -10,14 +10,19 @@ so you can watch the drawing converge.
 
 - **Pictures.** Text you type, a heart, a star, a gear, your own drawing, or any uploaded picture. The picture is read
   in the browser tab and never uploaded.
-- **One closed line.** The outline (Otsu threshold) or the edges (Sobel filter) of the picture, thinned to up to
-  3,000 points and joined into a single cycle: a nearest-neighbour tour, then 2-opt until no reversal shortens it.
+- **One closed line.** The outline (Otsu threshold) or the edges (Canny-style: blur, Sobel, one-pixel ridges, a threshold
+  well above the grain, measured as the median gradient, and hysteresis) of the picture, thinned to up to 3,000 points and joined into a single cycle: a nearest-neighbour tour, then 2-opt until no reversal shortens it.
   The cycle is resampled to 1,024 points evenly spaced along its length.
+  An upload with two clear tones is traced by its outline, any other picture by its edges, and a dark background is
+  detected from the border. A picture with nothing to trace leaves the previous one in place.
 - **Two series.** `x(t) = a₀ + Σ r_k cos(k t + φ_k)`, and the same for `y(t)`, with up to 500 terms each.
   Term k is one circle: radius r_k, starting angle φ_k, turning k times per cycle.
 - **Sequence.** One full cycle with 1 circle per side, then 2, 3 … 10, 12, 15, 20 … 500. Earlier counts stay faded.
   Or fix the count, or click the error chart to jump to any count.
 - **Order.** Series order (k = 1, 2, 3 …) or largest circles first.
+- **Zoom and move** while it draws: scroll or pinch to zoom about the pointer, drag to move, double-click (or 0) to
+  fit, + and − buttons or keys, arrow keys to move. **Follow pen** keeps the pen in the middle, so you can zoom in up
+  to ×400 on the smallest circles; the pen's path is sampled more finely as you zoom.
 - **Read-outs.** The RMS distance from the traced line (exact, by Parseval), the error for every count (chart and
   table), the equations with their first terms, and each circle's radius, phase and speed.
 - **Download SVG** of the curve at the current count.

@@ -59,6 +59,22 @@
     return (t + 1) / 256;
   }
 
+  // what kind of picture this is: twoTone when Otsu's split explains most of the brightness variance (a logo, text
+  // or silhouette, best traced by its outline; a photo is not), darkBackground when the border is mostly on the
+  // dark side of the split (so the shapes are the light pixels)
+  function analyse(rgba, w, h) {
+    var g = grayscale(rgba, w, h), t = otsu(g), n = g.length, mean = 0, i;
+    for (i = 0; i < n; i++) mean += g[i];
+    mean /= n;
+    var total = 0, n0 = 0, s0 = 0;
+    for (i = 0; i < n; i++) { total += (g[i] - mean) * (g[i] - mean); if (g[i] < t) { n0++; s0 += g[i]; } }
+    var n1 = n - n0, between = n0 && n1 ? n0 * n1 / n * Math.pow(s0 / n0 - (mean * n - s0) / n1, 2) : 0;
+    var dark = 0, border = 0;
+    for (var x = 0; x < w; x++) { dark += (g[x] < t) + (g[(h - 1) * w + x] < t); border += 2; }
+    for (var y = 1; y < h - 1; y++) { dark += (g[y * w] < t) + (g[y * w + w - 1] < t); border += 2; }
+    return { threshold: t, separability: total > 0 ? between / total : 0, twoTone: total > 0 && between / total > 0.8, darkBackground: dark > border / 2 };
+  }
+
   // pixels on the boundary of the dark (or, inverted, light) region
   function outlinePixels(g, w, h, invert) {
     var t = otsu(g), fg = new Uint8Array(w * h), pts = [];
@@ -72,20 +88,59 @@
     return pts;
   }
 
-  // the strongest `keep` share of Sobel gradient magnitudes
-  function edgePixels(g, w, h, keep) {
-    var b = blur3(g, w, h), mag = new Float32Array(w * h), vals = [];
+  // Canny-style edges: blur (two box passes ≈ Gaussian), Sobel, thin to one-pixel ridges (non-maximum suppression),
+  // keep the ridges above a threshold plus weaker ones joined to them (hysteresis), then drop specks smaller than
+  // `minRun` pixels. Most pixels are not on an edge, so the median gradient measures the grain; the threshold is a
+  // multiple of it (never below a small floor, for clean pictures), set by `detail` in 0..1: 0.5 is 4× the grain,
+  // 1 is 2× (fainter edges), 0 is 8× (only the strongest), capped so the strongest edge always survives.
+  function edgePixels(g, w, h, detail, minRun) {
+    var b = blur3(blur3(g, w, h), w, h), n = w * h, mag = new Float32Array(n), dir = new Uint8Array(n);
     for (var y = 1; y < h - 1; y++) for (var x = 1; x < w - 1; x++) {
       var i = y * w + x;
       var gx = b[i - w + 1] + 2 * b[i + 1] + b[i + w + 1] - b[i - w - 1] - 2 * b[i - 1] - b[i + w - 1];
       var gy = b[i + w - 1] + 2 * b[i + w] + b[i + w + 1] - b[i - w - 1] - 2 * b[i - w] - b[i - w + 1];
       mag[i] = Math.hypot(gx, gy);
-      if (mag[i] > 0.02) vals.push(mag[i]);
+      var a = (Math.atan2(gy, gx) * 4 / Math.PI + 8) % 4;   // 0 = horizontal gradient, 1 = /, 2 = vertical, 3 = \
+      dir[i] = Math.round(a) % 4;
+    }
+    var step = [1, w + 1, w, w - 1], ridge = new Float32Array(n), vals = [];
+    for (y = 2; y < h - 2; y++) for (x = 2; x < w - 2; x++) {
+      i = y * w + x;
+      var m = mag[i], s = step[dir[i]];
+      if (m > 0.02 && m >= mag[i - s] && m >= mag[i + s]) { ridge[i] = m; vals.push(m); }
     }
     if (!vals.length) return [];
-    vals.sort(function (a, c) { return c - a; });
-    var t = vals[Math.min(vals.length - 1, Math.floor(w * h * (keep || 0.08)))], pts = [];
-    for (y = 1; y < h - 1; y++) for (x = 1; x < w - 1; x++) if (mag[y * w + x] >= t && mag[y * w + x] > 0.02) pts.push([x, y]);
+    var top = 0, k;
+    for (k = 0; k < vals.length; k++) top = Math.max(top, vals[k]);
+    var inner = [];
+    for (y = 1; y < h - 1; y += 2) for (x = 1; x < w - 1; x += 2) inner.push(mag[y * w + x]);
+    inner.sort(function (p, q) { return p - q; });
+    if (detail === undefined) detail = 0.5;
+    var factor = Math.pow(2, 1 - 2 * detail);   // 2 at detail 0, 1 at 0.5, ½ at 1
+    var hi = Math.min(0.9 * top, Math.max(0.08 * factor, 4 * factor * inner[inner.length >> 1])), lo = hi / 2;
+    var mark = new Uint8Array(n), stack = [];
+    for (i = 0; i < n; i++) if (ridge[i] >= hi && !mark[i]) { mark[i] = 1; stack.push(i); }
+    while (stack.length) {
+      var c = stack.pop(), cx = c % w, cy = (c - cx) / w;
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+        var j = (cy + dy) * w + cx + dx;
+        if ((dx || dy) && !mark[j] && ridge[j] >= lo) { mark[j] = 1; stack.push(j); }
+      }
+    }
+    // connected runs of edge pixels (8-neighbours); short ones are specks
+    var seen = new Uint8Array(n), pts = [], run = minRun || 10;
+    for (i = 0; i < n; i++) {
+      if (!mark[i] || seen[i]) continue;
+      var comp = [i]; seen[i] = 1;
+      for (var k = 0; k < comp.length; k++) {
+        var p = comp[k], px = p % w, py = (p - px) / w;
+        for (dy = -1; dy <= 1; dy++) for (dx = -1; dx <= 1; dx++) {
+          j = (py + dy) * w + px + dx;
+          if ((dx || dy) && mark[j] && !seen[j]) { seen[j] = 1; comp.push(j); }
+        }
+      }
+      if (comp.length >= run) comp.forEach(function (q) { pts.push([q % w, (q - q % w) / w]); });
+    }
     return pts;
   }
 
@@ -294,7 +349,7 @@
   function traceImage(rgba, w, h, opts) {
     opts = opts || {};
     var g = grayscale(rgba, w, h);
-    var raw = opts.mode === "outline" ? outlinePixels(g, w, h, opts.invert) : edgePixels(g, w, h, opts.keep);
+    var raw = opts.mode === "outline" ? outlinePixels(g, w, h, opts.invert) : edgePixels(g, w, h, opts.detail);
     if (raw.length < 3) return null;
     var pts = thin(raw, opts.maxPoints || 1500);
     var tour = twoOpt(nearestNeighbourTour(pts), { timeBudgetMs: opts.timeBudgetMs || 600 });
@@ -302,7 +357,7 @@
   }
 
   return {
-    grayscale: grayscale, otsu: otsu, outlinePixels: outlinePixels, edgePixels: edgePixels, thin: thin,
+    grayscale: grayscale, otsu: otsu, analyse: analyse, outlinePixels: outlinePixels, edgePixels: edgePixels, thin: thin,
     nearestNeighbourTour: nearestNeighbourTour, twoOpt: twoOpt, tourLength: tourLength,
     resample: resample, normalise: normalise, axisSeries: axisSeries, series: series,
     circleOrder: circleOrder, chain: chain, evalAxis: evalAxis, radiusSum: radiusSum,
