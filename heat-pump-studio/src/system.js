@@ -140,9 +140,42 @@
     return 2.5 * Math.pow(lfl, 1.25) * MOUNT[mounting] * Math.sqrt(area);
   }
 
+
+  // ---- heat exchanger selection
+  // brazed-plate heat exchangers: generic plate sizes (heat-transfer area per plate, channel width, plate length);
+  // water channels 2 mm deep
+  var PLATES = [
+    { name: "S", area: 0.012, width: 0.072, length: 0.19 }, { name: "M", area: 0.03, width: 0.11, length: 0.31 },
+    { name: "L", area: 0.1, width: 0.19, length: 0.53 }, { name: "XL", area: 0.25, width: 0.30, length: 0.83 },
+    { name: "XXL", area: 0.55, width: 0.40, length: 1.4 }
+  ];
+  var GAP = 0.002;
+  function plateHX(area, flowLs) {
+    if (!(area > 0) || !(flowLs > 0)) return null;
+    // every size, in as many parallel units as it takes to stay at or below 200 plates; pick the one whose water
+    // velocity is closest to 0.3 m/s (fast enough for good heat transfer, slow enough for a modest pressure drop)
+    var best = null;
+    PLATES.forEach(function (p) {
+      var units = 1, n;
+      while ((n = Math.max(10, Math.ceil(area / units / p.area) + 2)) > 200) units++;
+      var channels = Math.floor((n - 1) / 2) * units, v = flowLs / 1000 / (channels * p.width * GAP);
+      var score = Math.abs(Math.log(v / 0.3)) + (units - 1) * 0.5;
+      if (!best || score < best.score) best = { size: p.name, plates: n, units: units, channels: channels, velocity: v, length: p.length, width: p.width, score: score };
+    });
+    best.ok = best.velocity >= 0.1 && best.velocity <= 0.8; best.low = best.velocity < 0.1;
+    delete best.score;
+    return best;
+  }
+  // finned air coil: face area from a 2.5 m/s face velocity; about 17.6 m² of air-side surface per m² of face and per
+  // row (fin pitch 2.5 mm, which frosts up slowly, and a 22 mm row depth)
+  var FACE_V = 2.5, AREA_PER_ROW = 2 / 0.0025 * 0.022;
+  function airCoil(area, vdot) {
+    var face = vdot / FACE_V, rows = Math.max(1, Math.ceil(area / (face * AREA_PER_ROW)));
+    return { face: face, rows: rows, side: Math.sqrt(face), ok: rows <= 6 };
+  }
   root.HPSsystem = { LEVELS: LEVELS, CITIES: CITIES, SOURCES: SOURCES, SINKS: SINKS, CONDENSER_U: CONDENSER_U, GROUND: GROUND, MOUNT: MOUNT,
     COPPER: COPPER, STEEL: STEEL, LINES: LINES, AIR: AIR, WATER: WATER, BRINE: BRINE,
     heatLoad: heatLoad, temps: temps, lmtd: lmtd, condenser: condenser, evaporator: evaporator, borehole: borehole,
-    pipes: pipes, charge: charge, chargeLimit: chargeLimit };
+    pipes: pipes, charge: charge, chargeLimit: chargeLimit, PLATES: PLATES, plateHX: plateHX, airCoil: airCoil };
   if (typeof module !== "undefined" && module.exports) module.exports = root.HPSsystem;
 })(typeof self !== "undefined" ? self : this);

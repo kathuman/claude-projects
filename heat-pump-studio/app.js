@@ -2,7 +2,7 @@
 // Every user-visible message goes through T(english, vars).
 (function () {
   "use strict";
-  var VERSION = "1.1.0";
+  var VERSION = "1.2.0";
   var I18 = window.HPSi18n, T = I18.T, fx = I18.fx, PR = window.HPSprops, CY = window.HPScycle, SY = window.HPSsystem, SE = window.HPSseasonal, CL = window.HPS_CLIMATE;
   var $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION;
@@ -21,7 +21,7 @@
     source: "air", srcIn: -12, linkAir: true, srcDT: 5, srcApp: 6, ground: "normal", depth: 100,
     sink: "lowRad", flow: 45, ret: 38, condApp: 3,
     fluid: "R290", comp: "scroll", etaIs: 0.70, etaEl: 0.90, SH: 5, SC: 3, rps: 50,
-    install: "outdoor", room: 20, mount: "floor", tab: "ph",
+    install: "outdoor", room: 20, mount: "floor", tab: "plant",
     climate: "auto", coverage: 100, limit: 16, compensation: true, dhw: 3600, dhwFlow: 55,
     elPrice: 0.30, gasPrice: 0.10, boiler: 0.92, co2El: 0.20, extra: 6000, currency: "€"
   };
@@ -217,6 +217,11 @@
   function card(title, rows, note) {
     return "<div class='card'><h4>" + title + "</h4><dl>" + rows.map(function (r) { return "<dt>" + r[0] + "</dt><dd>" + r[1] + "</dd>"; }).join("") + "</dl>" + (note ? "<p>" + note + "</p>" : "") + "</div>";
   }
+  function plateRows(p) {
+    if (!p) return [];
+    return [[T("Plates"), (p.units > 1 ? p.units + " × " : "") + p.plates + " × " + T("size {s}", { s: p.size }) + " (" + n0(p.width * 1000) + " × " + n0(p.length * 1000) + " mm)"],
+            [T("Channel velocity"), fx(p.velocity, 2) + " m/s" + (p.ok ? "" : p.low ? " ⚠ " + T("low") : " ⚠ " + T("high"))]];
+  }
   function components() {
     var c = R.cyc;
     if (!c.ok) { $("components").innerHTML = ""; return; }
@@ -230,12 +235,18 @@
     h += card(T("Condenser") + " — " + T("brazed plate"), [
       [T("Heat delivered"), kw(c.Q)], [T("Area"), (cd.feasible ? num(cd.area, 3) : "—") + " m²"],
       [T("Desuperheating / condensing / subcooling"), cd.zones.map(function (z) { return zone(z); }).reverse().join(" / ")],
-      [T("Smallest temperature gap"), n1(cd.pinch) + " K"], [T("Water flow"), num(cd.water.flow, 3) + " L/s · " + num(cd.water.flow * 3.6, 3) + " m³/h"]]);
+      [T("Smallest temperature gap"), n1(cd.pinch) + " K"], [T("Water flow"), num(cd.water.flow, 3) + " L/s · " + num(cd.water.flow * 3.6, 3) + " m³/h"]].concat(plateRows(cd.feasible ? SY.plateHX(cd.area, cd.water.flow) : null)));
     var evName = S.source === "air" ? T("finned air coil") : T("brazed plate");
     var srcRows = [[T("Heat from the source"), kw(c.Qe)], [S.source === "air" ? T("Air-side area") : T("Area"), (ev.feasible ? num(ev.area, 3) : "—") + " m²"],
       [T("Smallest temperature gap"), n1(ev.pinch) + " K"]];
-    if (S.source === "air") srcRows.push([T("Air flow"), n0(ev.source.vdot * 3600) + " m³/h"], [T("Fan power"), kw(ev.source.aux)]);
-    else srcRows.push([S.source === "ground" ? T("Brine flow") : T("Water flow"), num(ev.source.vdot * 1000, 3) + " L/s"], [T("Pump power"), kw(ev.source.aux)]);
+    if (S.source === "air") {
+      srcRows.push([T("Air flow"), n0(ev.source.vdot * 3600) + " m³/h"], [T("Fan power"), kw(ev.source.aux)]);
+      if (ev.feasible) { var coil = SY.airCoil(ev.area, ev.source.vdot);
+        srcRows.push([T("Face area"), num(coil.face, 3) + " m² (" + fx(coil.side, 2) + " × " + fx(coil.side, 2) + " m)"], [T("Rows"), coil.rows + (coil.ok ? "" : " ⚠")]); }
+    } else {
+      srcRows.push([S.source === "ground" ? T("Brine flow") : T("Water flow"), num(ev.source.vdot * 1000, 3) + " L/s"], [T("Pump power"), kw(ev.source.aux)]);
+      srcRows = srcRows.concat(plateRows(ev.feasible ? SY.plateHX(ev.area, ev.source.vdot * 1000) : null));
+    }
     h += card(T("Evaporator") + " — " + evName, srcRows);
     if (R.bore) h += card(T("Boreholes"), [[T("Total length"), n0(R.bore.length) + " m"], [T("Boreholes"), R.bore.holes + " × " + n0(R.bore.depth) + " m"], [T("Specific extraction"), R.bore.specific + " W/m"]],
       T("Guide values after VDI 4640 for about 1800 heating hours a year; a geologist or a thermal response test sets the real value."));
@@ -552,10 +563,109 @@
       row(T("Simple payback of the extra cost"), "", !isFinite(E.payback) ? T("never at these prices") : E.payback > 0 ? T("{y} years", { y: n1(E.payback) }) : "—", "") + "</tbody>";
   }
 
+  var lastDiagram = null;
+  // --- installation diagram
+  function drawPlant() {
+    var c = R.cyc, el = $("diagram");
+    if (!c.ok) { el.innerHTML = ""; return; }
+    var st = c.byId, ev = R.evap, cd = R.cond;
+    var srcName = { air: T("Outdoor air"), ground: T("Brine from the ground"), water: T("Ground or lake water"), waste: T("Waste heat water") }[S.source];
+    var flowSrc = S.source === "air" ? n0(ev.source.vdot * 3600) + " m³/h" : num(ev.source.vdot * 1000, 3) + " L/s";
+    var emitter = $("inSink").selectedOptions[0] ? $("inSink").selectedOptions[0].textContent.replace(/\s*\(.*\)\s*$/, "") : "";
+    var Y = R.year && R.year.ok ? R.year : null;
+    var d = {
+      source: S.source, sink: S.sink, install: S.install, dhw: S.dhw > 0,
+      T: T,
+      labels: {
+        title: T("Installation diagram"), compressor: T("Compressor"), valve: T("Expansion valve"), evap: T("Evaporator"), cond: T("Condenser"),
+        fan: T("Fan"), srcPump: S.source === "ground" ? T("Brine pump") : T("Source pump"), circPump: T("Circulation pump"),
+        backup: Y && Y.maxBackup > 0.01 ? T("Electric heater {p} kW", { p: num(Y.maxBackup, 2) }) : T("Electric heater (standby)"),
+        emitter: emitter, tank: T("Hot-water tank"),
+        boundary: { outdoor: T("Outdoor unit (monobloc)"), indoor: T("Indoor unit"), plant: T("Machinery room") }[S.install],
+        groundLine: S.source === "ground" && R.bore ? T("{n} boreholes × {d} m", { n: R.bore.holes, d: n0(R.bore.depth) }) : T("supply and return wells")
+      },
+      values: {
+        comp1: T("{p} kW electric", { p: num(c.Wel, 3) }), comp2: num(c.displacement, 3) + " cm³/rev · " + n0(S.rps) + " rev/s",
+        srcHead: srcName, src1: T("in {a} °C → out {b} °C", { a: n1(R.srcIn), b: n1(R.srcOut) }), src2: flowSrc + " · " + num(ev.source.aux, 2) + " kW",
+        sinkHead: T("flow {f} °C · return {r} °C", { f: n0(S.flow), r: n0(S.ret) }), sink1: num(cd.water.flow, 3) + " L/s · " + num(cd.water.flow * 3.6, 3) + " m³/h",
+        sink2: T("heat {q} kW", { q: num(c.Q, 3) }),
+        dhw1: T("hot water {e} kWh/yr", { e: n0(S.dhw) }), dhw2: T("charged at {t} °C", { t: n0(S.dhwFlow) }),
+        s1: n1(st["1"].T) + " °C · " + num(st["1"].p, 3) + " bar", s2: n1(st["2"].T) + " °C · " + num(st["2"].p, 3) + " bar",
+        s3: n1(st["3"].T) + " °C · " + num(st["3"].p, 3) + " bar", s4: n1(st["4"].T) + " °C · x " + fx(st["4"].x, 2),
+        evapQ: "← " + num(c.Qe, 3) + " kW", condQ: num(c.Q, 3) + " kW →"
+      },
+      colors: { bg: css("--panel-2"), panel: css("--panel"), ink: css("--ink"), dim: css("--ink-faint"), line: css("--line"),
+        hot: css("--s2"), cold: css("--s1"), liquid: css("--s4"), mixed: css("--accent"), source: css("--s3"), sourceOut: css("--ink-dim"), ground: "#6b4f2a" }
+    };
+    lastDiagram = d;
+    el.innerHTML = window.HPSdiagram.svg(d);
+    var sw = function (col, lab) { return "<span><i style='background:" + col + "'></i>" + lab + "</span>"; };
+    $("legPlant").innerHTML = sw(css("--s2"), T("hot gas and heating flow")) + sw(css("--s4"), T("liquid refrigerant")) + sw(css("--accent"), T("refrigerant after the valve (liquid and vapour)")) +
+      sw(css("--s1"), T("cold vapour and heating return")) + sw(css("--s3"), T("heat source"));
+  }
+
+  // --- datasheet and tour
+  function openDatasheet() {
+    if (!R.cyc.ok) return;
+    var c = R.cyc, info = PR.fluid(S.fluid).info, Y = R.year && R.year.ok ? R.year : null, E = R.econ;
+    var printColors = { bg: "#ffffff", panel: "#f2f5f9", ink: "#111111", dim: "#555555", line: "#999999", hot: "#d95926", cold: "#2a78d6",
+      liquid: "#c98500", mixed: "#4f9fd8", source: "#199e70", sourceOut: "#555555", ground: "#b08a5a" };
+    drawPlant();                                         // fills lastDiagram with this design's labels and values
+    var d = Object.assign({}, lastDiagram, { colors: printColors });
+    var opt = function (id) { var o = $(id).selectedOptions[0]; return o ? o.textContent : ""; };
+    var srcName = { air: T("Outdoor air"), ground: T("Brine from the ground"), water: T("Ground or lake water"), waste: T("Waste heat water") }[S.source];
+    var cards = [].map.call(document.querySelectorAll("#components .card"), function (k) {
+      var dts = k.querySelectorAll("dt"), dds = k.querySelectorAll("dd");
+      return [k.querySelector("h4").textContent, [].map.call(dts, function (t, i) { return [t.textContent, dds[i].innerHTML]; })];
+    });
+    window.HPSextras.datasheet({
+      T: T, version: VERSION, date: new Date().toISOString().slice(0, 10),
+      title: T("Heat pump design: {q} kW, {f}, {src}", { q: num(c.Q, 3), f: S.fluid, src: srcName.toLowerCase() }),
+      diagram: window.HPSdiagram.svg(d),
+      basis: [[T("Heat load"), num(R.load.total, 3) + " kW"], [T("Design outdoor"), n0(S.Tout) + " °C" + (S.loadMode === "calc" ? " · " + opt("inCity") : "")],
+        [T("Heat source"), srcName + " · " + n1(R.srcIn) + " → " + n1(R.srcOut) + " °C"], [T("Emitters"), opt("inSink")],
+        [T("Flow / return"), n0(S.flow) + " / " + n0(S.ret) + " °C"], [T("Refrigerant"), S.fluid + " (" + info.safety + ", GWP " + info.gwp + ")"],
+        [T("Compressor"), opt("inComp")], [T("Installation"), { outdoor: T("Outdoor unit (monobloc)"), indoor: T("Indoor unit"), plant: T("Machinery room") }[S.install]]],
+      results: [[T("Heating capacity"), kw(c.Q)], ["COP", fx(c.cop, 2) + " (Carnot " + fx(c.copCarnot, 2) + ")"], [T("Electrical input"), kw(c.Wel)],
+        [T("System COP"), fx(R.copSys, 2)], [T("Heat from the source"), kw(c.Qe)], [T("Evaporating / condensing"), n1(c.Te) + " / " + n1(c.Tc) + " °C"],
+        [T("Pressures"), num(c.pe, 3) + " / " + num(c.pc, 3) + " bar"], [T("Discharge temperature"), n1(c.T2) + " °C"],
+        [T("Refrigerant flow"), num(c.m * 1000, 3) + " g/s"], [T("Displacement"), num(c.displacement, 3) + " cm³/rev"]],
+      states: $("statesTable").outerHTML,
+      components: cards,
+      year: Y ? [["SCOP", fx(Y.scop, 2) + " (" + T("system") + " " + fx(Y.scopSys, 2) + ")"], [T("Climate data"), R.climateName + ", 2015–2024"],
+        [T("Heat pump share"), pct(Y.hpShare)], [T("Balance point"), isFinite(Y.balance) ? n1(Y.balance) + " °C" : "—"],
+        [T("Space heating"), n0(Y.total.heat) + " kWh"], [T("Electricity"), n0(E.hp.el) + " kWh"],
+        [T("Cost per year"), money(E.hp.cost) + " (" + T("gas boiler") + " " + money(E.boiler.cost) + ")"],
+        [T("CO₂ per year"), num(E.hp.co2 / 1000, 3) + " t (" + T("gas boiler") + " " + num(E.boiler.co2 / 1000, 3) + " t)"]] : null,
+      warnings: [].map.call(document.querySelectorAll("#alerts .alert.bad span:last-child, #alerts .alert.warn span:last-child"), function (x) { return x.innerHTML; }),
+      footer: T("Heat Pump Studio · refrigerant properties CoolProp · climate Open-Meteo (ERA5, CC BY 4.0) · typical figures for a first design; check against manufacturers’ data and local standards.")
+    });
+  }
+  function startTour() {
+    var steps = [
+      { el: "#rail .step:nth-of-type(1)", title: T("1 · The building"), text: T("Start with how much heat the building needs on the coldest day: estimate it from floor area and insulation, or type it in.") },
+      { el: "#rail .step:nth-of-type(2)", title: T("2 · The heat source"), text: T("Choose where the heat comes from. The source temperature sets the evaporating temperature — the warmer the source, the better the COP.") },
+      { el: "#rail .step:nth-of-type(3)", title: T("3 · The heating circuit"), text: T("Floor heating needs about 35 °C, old radiators 55 °C or more. Every degree of flow temperature costs efficiency.") },
+      { el: "#rail .step:nth-of-type(4)", title: T("4 · Refrigerant and compressor"), text: T("Pick the refrigerant and compressor. Each refrigerant suits a range of temperatures; its safety class and GWP matter too.") },
+      { el: "#rail .step:nth-of-type(5)", title: T("5 · Installation"), text: T("Where the unit stands decides how much flammable refrigerant it may hold.") },
+      { el: "#rail .step:nth-of-type(6)", title: T("6 · Year round"), text: T("The coldest day is rare. Choose the climate, how much of the peak the heat pump covers, and weather compensation.") },
+      { el: "#rail .step:nth-of-type(7)", title: T("7 · Costs and CO₂"), text: T("Prices and the grid’s CO₂ turn the energy into running costs and emissions, compared with a gas boiler.") },
+      { el: "#kpis", title: T("The results"), text: T("Heating capacity, COP against the Carnot limit, power, pressures and temperatures at the design point, and the seasonal SCOP.") },
+      { el: "#alerts", title: T("Engineering checks"), text: T("Problems and things to check appear here: hot discharge, high pressure ratio, pinch in a heat exchanger, charge limits, high GWP.") },
+      { el: "[data-tab=plant]", tab: "plant", title: T("The installation"), text: T("The whole system as designed, with the temperatures, pressures, flows and powers at every point.") },
+      { el: "[data-tab=ph]", tab: "ph", title: T("The cycle"), text: T("The refrigerant’s pressure–enthalpy chart: the horizontal lengths are the heat from the source, the compressor work and the heat delivered.") },
+      { el: "[data-tab=year]", tab: "year", title: T("The year"), text: T("How the heat pump does over a real year at this location: SCOP, the balance point, backup heat, costs and CO₂.") },
+      { el: "#btnSheet", title: T("The datasheet"), text: T("A printable summary of the design, with the installation diagram, for a client or an installer.") }
+    ];
+    window.HPSextras.tour(steps, T, function (st) { if (st.tab && S.tab !== st.tab) { S.tab = st.tab; showTab(); draw(); } });
+  }
+  $("btnSheet").addEventListener("click", openDatasheet);
+  $("btnTour").addEventListener("click", startTour);
+
   // ------------------------------------------------------------------ update and draw
   function draw() {
     if (!R) return;
-    if (S.tab === "ph") drawPH(); else if (S.tab === "ts") drawTS();
+    if (S.tab === "plant") drawPlant(); else if (S.tab === "ph") drawPH(); else if (S.tab === "ts") drawTS();
     else if (S.tab === "hx" && R.cyc.ok) {
       drawHX("chartCond", "tipCond", R.cond, css("--warn"), css("--s2"), T("water"));
       drawHX("chartEvap", "tipEvap", R.evap, css("--warn"), css("--s1"), S.source === "air" ? T("air") : T("source"));
@@ -580,5 +690,7 @@
   [["chartPH", "tipPH"], ["chartTS", "tipTS"], ["chartCond", "tipCond"], ["chartEvap", "tipEvap"], ["chartEnergy", "tipEnergy"], ["chartYear", "tipYear"], ["chartBins", "tipBins"]].forEach(function (a) { hook(a[0], a[1]); });
   window.addEventListener("resize", draw);
   showTab(); sync(); update();
+  // ?sheet=1 opens the datasheet straight away (a link to it, or printing it to PDF)
+  try { if (new URLSearchParams(location.search).get("sheet")) openDatasheet(); } catch (e) { /* no datasheet */ }
   window.__hps = { S: S, get R() { return R; }, update: update, sync: sync };
 })();

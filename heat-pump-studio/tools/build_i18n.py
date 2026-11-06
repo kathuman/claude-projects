@@ -6,6 +6,8 @@ sys.path.insert(0, HERE)
 from translations import T, H
 import translations_season as _s
 T.update(_s.T); H.update(_s.H)
+import translations_v12 as _v
+T.update(_v.T); H.update(_v.H)
 
 def js(var, label, idx):
     t = {k: v[idx] for k, v in T.items()}; h = {k: v[idx] for k, v in H.items()}

@@ -25,6 +25,7 @@ jobs:
       - run: node heat-pump-studio/tests/props.test.js
       - run: node heat-pump-studio/tests/cycle.test.js
       - run: node heat-pump-studio/tests/seasonal.test.js
+      - run: node heat-pump-studio/tests/design.test.js
       - run: node heat-pump-studio/tests/i18n.test.js
       - run: node heat-pump-studio/tests/release.test.js
       - name: Syntax-check the page scripts

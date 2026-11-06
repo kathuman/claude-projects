@@ -44,6 +44,17 @@ commercial and industrial machines (up to megawatts). English, Spanish (Latin Am
   - a chart of the building's load against the heat pump's full-speed capacity, with the backup region shaded;
   - annual heat per outdoor-temperature bin, split between heat pump and electric heater;
   - hot water, plus running costs, CO₂ and simple payback against a gas boiler.
+- **Installation diagram:** a live schematic of the whole system.
+  - The source side matches the chosen source: air coil and fan, boreholes, wells or waste heat.
+  - The refrigerant circuit shows state points 1–4 with temperatures and pressures.
+  - The heating circuit includes the circulation pump, electric backup heater, emitters and hot-water tank.
+  - A frame shows what sits in the outdoor unit, indoor unit or machinery room.
+- **Heat exchanger selection:** brazed-plate units are chosen by plate size and number of plates, aiming for a water
+  channel velocity of about 0.3 m/s (accepted range 0.1–0.8 m/s). Air coils get a face area at 2.5 m/s and a number of
+  rows at a 2.5 mm fin pitch.
+- **Datasheet:** a printable A4 summary with the diagram, design basis, results, cycle states, components, year-round
+  figures and warnings. `?sheet=1` in the address opens it directly.
+- **Guided tour:** 13 steps through the design.
 - **Tables:** all eight cycle states, and cards for the compressor, condenser, evaporator, boreholes, refrigerant
   lines (copper, or steel for ammonia), expansion valve, and charge and safety.
 
@@ -67,6 +78,7 @@ The design is stored in the page address, so **Copy link** shares it.
 |---|---|
 | `tests/props.test.js` | the tables against CoolProp at 560 random states, for all seven refrigerants |
 | `tests/cycle.test.js` | ten complete CoolProp reference cycles (COP within 0.5 %, discharge temperature within 0.5 K), plus the energy balance, the Carnot limit, trends, and the system calculations |
+| `tests/design.test.js` | heat exchanger selection, plus the installation diagram in all 48 variants |
 | `tests/i18n.test.js`, `tests/release.test.js` | translations complete, and script versions consistent |
 
 `tests/seasonal.test.js` checks the climate data (8 766 hours a year), the energy balance per bin, SCOP trends and
@@ -88,4 +100,4 @@ typical figures for a first design. CO₂ (R744, transcritical) is not covered y
 The seasonal model is an inverter that runs down to 30 % of full capacity, with typical defrost losses and
 weather-compensation curves.
 
-Next: detailed heat exchangers, a printable datasheet and a guided tour. Later: CO₂ (R744) and two-stage cycles.
+Later: CO₂ (R744, transcritical), two-stage and vapour-injection cycles, and hot-water priority.
