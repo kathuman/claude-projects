@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.4.1";
+  var VERSION = "2.5.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -148,6 +148,7 @@
     err.hidden = true; return true;
   }
   function render() {
+    autosave();
     if (!replan()) { if (window.TWStudio) window.TWStudio.render(); return; }
     if (!byId(state.sel)) { var c = state.net.sites.filter(function (s) { return s.tier !== "market"; }); state.sel = (c.filter(function (s) { return s.tier === "product"; })[0] || c[0] || state.net.sites[0]).id; }
     if (!byId(state.market) || byId(state.market).tier !== "market") state.market = sitesOf("market")[0].id;
@@ -169,7 +170,7 @@
     renderViews();
   }
   function renderViews() {
-    renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus(); renderPriorities();
+    renderDoor(); renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus(); renderPriorities();
     if (window.TWStudio) window.TWStudio.render();
   }
   function renderSelection() { if (state.res && state.res.ok) { renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
@@ -188,6 +189,22 @@
     return t;
   }
   function overCount(res, net) { return net.sites.filter(function (s) { return s.tier !== "market" && res.sites[s.id].firstOver >= 0; }).length; }
+  // the three steps, at the top: what the network is, where it breaks, and what to do about it
+  function renderDoor() {
+    var src = state.scenario === "custom" ? (state.custom ? state.custom.name : T("your network")) : T("the example");
+    $("door1").textContent = T("{n} sites in {t} tiers · {s}", { n: state.net.sites.length, t: state.res.tiers.slice(0).filter(function (t) { return sitesOf(t.id).length; }).length, s: src });
+    var f = firstOverall(), d2;
+    if (CAP() && state.cres) { var fm = firstUnmetMarket(); d2 = T("Serves {f} within capacity", { f: pctFine(state.cres.fill) }) + (fm ? " · " + T("first unmet {w}", { w: monthLabel(fm.m) }) : ""); $("door2a").setAttribute("href", "#servicePanel"); }
+    else { d2 = f ? T("{s} runs short first, in {w}", { s: nm(f.site), w: monthLabel(f.m) }) : T("Every site keeps up"); $("door2a").setAttribute("href", "#heatPanel"); }
+    $("door2").textContent = d2;
+    var p = state.pr || {}, d3;
+    if (p.solving) d3 = T("Working it out…");
+    else if (p.res && p.key === solveKey()) {
+      var first = p.res.items.filter(function (i) { return i.kind === "build" && (i.group === "now" || i.group === "by"); })[0], n = p.res.items.filter(function (i) { return i.group === "now" || i.group === "by"; }).length;
+      d3 = first ? T("{a}: start by {y}", { a: T(first.label), y: (state.net.config.startYear || 0) + first.latestYear }) + (n > 1 ? " · " + T("{n} actions", { n: n }) : "") : T("{n} actions", { n: n });
+    } else d3 = T("Work out the priorities");
+    $("door3").textContent = d3;
+  }
   function renderHeadline() {
     var f = firstOverall(), y1 = demandTotal(0, 12), y13 = demandTotal(P.MONTHS - 12, P.MONTHS), unit = tierUnit("market");
     var over3 = state.net.sites.filter(function (s) { var r = state.res.sites[s.id]; return s.tier !== "market" && r.firstOver >= 0 && r.firstOver < P.MONTHLY; }).length;
@@ -464,22 +481,20 @@
     renderEditor(); render();
   }
 
-  // ---- what to do: worked out on request in a worker, because it solves many plans
-  var prWorker = null, prId = 0;
+  // ---- every question to the engine goes through the application API (src/api.js); in the page its jobs run in Web
+  // Workers (src/jobs.js), one per kind, so a newer request replaces a stale one and a repeated one comes from the cache
+  var ENGINE = window.TWApi.create(window.TWJobs.runner());
+  var failed = function (r) { return (r && r.errors || [T("The solver could not be loaded.")]).map(function (x) { return I.tw(x); }).join(" "); };
+  // ---- what to do: worked out on request, because it solves many plans
   function runPriorities() {
     var c = state.net.config;
     state.pr = { solving: true, n: 0, key: solveKey() }; renderPriorities();
     if (!(c.packValue > 0 && c.unitCost > 0 && c.holdingRate > 0)) { state.pr = { err: T("The priorities need real costs: set a pack value, unit cost and holding cost under Capacity investment.") }; renderPriorities(); return; }
-    if (!prWorker) { prWorker = new Worker("src/priorities-worker.js"); prWorker.onmessage = onPriorities; prWorker.onerror = function () { prWorker = null; state.pr = { err: T("The solver could not be loaded.") }; renderPriorities(); }; }
-    prId++;
-    prWorker.postMessage({ id: prId, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, hold: state.hold } });
-  }
-  function onPriorities(e) {
-    var d = e.data; if (d.id !== prId) return;
-    if (d.progress != null) { state.pr.n = d.progress; renderPrStatus(); return; }
-    var r = d.result;
-    if (!r || !r.ok) { state.pr = { err: (r && r.errors || [T("The solver could not be loaded.")]).map(function (x) { return I.tw(x); }).join(" ") }; renderPriorities(); return; }
-    state.pr = { res: r, key: state.pr.key }; renderPriorities();
+    var key = state.pr.key;
+    ENGINE.priorities(JSON.parse(IO.toJSON(state.net)), { mode: state.csrc, hold: state.hold }, function (n) { if (state.pr && state.pr.solving) { state.pr.n = n; renderPrStatus(); } }).then(function (r) {
+      if (!r || !r.ok) { state.pr = { err: failed(r) }; renderPriorities(); return; }
+      state.pr = { res: r, key: key }; state.prDone = {}; renderPriorities();
+    }, function (e) { if (!(e && e.superseded)) { state.pr = { err: failed() }; renderPriorities(); } });
   }
   function renderPrStatus() {
     var p = state.pr || {}, st = $("prStatus");
@@ -508,10 +523,12 @@
         if (i.curve) lines.push(T("By start year:") + " " + i.curve.map(function (c) { return yr(c.year) + " " + fc(c.npv); }).join(" · "));
       }
     }
-    return "<li><b>" + esc(title) + "</b><p>" + lines.map(esc).join(" ") + "</p>" + receiptHtml(i.receipts[i.receipts.length - 1], i.proved ? "" : T("Check this one")) + "</li>";
+    var can = i.kind === "build" && i.group !== "dont", done = state.prDone && state.prDone[i.key];
+    var btns = can ? "<p class='pr-act'>" + (done ? "<span class='ok'>✓ " + esc(done === "do" ? T("Recorded: do it") : T("Recorded: not now")) + "</span>" : "<button class='btn small' type='button' data-pr-do='" + esc(i.key) + "'>" + T("Decide: do it") + "</button> <button class='btn small' type='button' data-pr-not='" + esc(i.key) + "'>" + T("Decide: not now") + "</button>") + "</p>" : "";
+    return "<li><b>" + esc(title) + "</b><p>" + lines.map(esc).join(" ") + "</p>" + btns + receiptHtml(i.receipts[i.receipts.length - 1], i.proved ? "" : T("Check this one")) + "</li>";
   }
   function renderPriorities() {
-    renderPrStatus();
+    renderPrStatus(); if (state.res && state.res.ok) renderDoor();
     var p = state.pr || {}, box = $("prList");
     if (!p.res || p.key !== solveKey()) { box.innerHTML = ""; return; }
     var GROUPS = [["now", T("Act now")], ["by", T("Decide by a date")], ["watch", T("Watch")], ["dont", T("Don't")]];
@@ -519,10 +536,15 @@
       var it = p.res.items.filter(function (i) { return i.group === g[0]; });
       return it.length ? "<div class='pr-group pr-" + g[0] + "'><h3>" + esc(g[1]) + "</h3><ul>" + it.map(prItem).join("") + "</ul></div>" : "";
     }).join("");
+    var decide = function (key, choice) {
+      var i = p.res.items.filter(function (x) { return x.key === key; })[0], s = byId(i.site);
+      if (recordDecision({ action: "priority", key: key, choice: choice, title: T("{label} at {site}", { label: T(i.label), site: s ? nm(s) : i.site }), group: i.group, npv: i.npv, startYear: i.year, latestYear: i.latestYear, receipts: i.receipts.map(function (r) { return r.input; }) })) { state.prDone = state.prDone || {}; state.prDone[key] = choice; renderPriorities(); }
+    };
+    each(box.querySelectorAll("[data-pr-do]"), function (b) { b.addEventListener("click", function () { decide(b.getAttribute("data-pr-do"), "do"); }); });
+    each(box.querySelectorAll("[data-pr-not]"), function (b) { b.addEventListener("click", function () { decide(b.getAttribute("data-pr-not"), "not"); }); });
   }
 
-  // ---- the capacity investment optimiser: a one-shot solve in a worker (not re-run automatically on every edit)
-  var ivWorker = null, ivId = 0;
+  // ---- the capacity investment optimiser: a one-shot solve (not re-run automatically on every edit)
   function renderInvest() {
     $("ivPackValue").value = state.net.config.packValue || "";
     $("ivUnitCost").value = state.net.config.unitCost || "";
@@ -596,20 +618,18 @@
   function runInvest() {
     state.iv.solving = true; state.iv.err = null; state.iv.res = null; renderIvStatus();
     var budget = num($("ivBudget").value); if (!isFinite(budget) || !(budget > 0)) budget = undefined;
-    if (!ivWorker) { ivWorker = new Worker("src/invest-worker.js"); ivWorker.onmessage = onInvestSolved; ivWorker.onerror = function () { ivWorker = null; state.iv.solving = false; state.iv.err = T("The solver could not be loaded."); renderIvStatus(); }; }
-    ivId++;
-    ivWorker.postMessage({ id: ivId, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, hold: state.hold, budget: budget } });
-  }
-  function onInvestSolved(e) {
-    var r = e.data.result;
-    state.iv.solving = false;
-    if (!r || !r.ok) { state.iv.err = (r && r.errors || []).map(function (x) { return I.tw(x); }).join(" "); renderIvStatus(); return; }
-    state.iv.res = r; renderIvStatus();
+    ENGINE.invest(JSON.parse(IO.toJSON(state.net)), { mode: state.csrc, hold: state.hold, budget: budget }).then(function (r) {
+      state.iv.solving = false;
+      if (!r || !r.ok) { state.iv.err = failed(r); renderIvStatus(); return; }
+      state.iv.res = r; renderIvStatus();
+    }, function (e) { if (!(e && e.superseded)) { state.iv.solving = false; state.iv.err = failed(); renderIvStatus(); } });
   }
   function applyInvestments() {
     if (!state.iv.res || !state.iv.res.investments.length) return;
     hist.record(state.net);
     // from the month each one is ready, as the optimiser counted it
+    var res = state.iv.res, v = res.verified || {};
+    recordDecision({ action: "expansions", items: res.investments.map(function (x) { return { site: x.site, label: T(x.label), readyMonth: x.readyMonth, add: x.add, capex: x.capex }; }), verifiedNpv: v.npv, screeningNpv: res.npv, receipts: (v.receipts || []).map(function (r) { return r.input; }).concat(res.receipt ? [res.receipt.input] : []) });
     state.iv.res.investments.forEach(function (x) { var s = byId(x.site); if (!s) return; s.expansions = (s.expansions || []).concat([{ from: x.readyMonth, add: x.add }]).sort(function (a, b) { return a.from - b.from; }); });
     renderEditor(); render();
   }
@@ -822,8 +842,8 @@
     $("table-fc").innerHTML = h + "</tbody></table>";
   }
 
-  // ---- the plan within capacity: solved in a worker (HiGHS), cached by network and options
-  var worker = null, wid = 0, wkey = "", waiters = [], solveTimer = null;
+  // ---- the plan within capacity: solved through the API (HiGHS in a worker), cached by network and options
+  var waiters = [], solveTimer = null;
   function solveKey() { return JSON.stringify([IO.toJSON(state.net), state.csrc, state.hold]); }
   function cached(key) { for (var i = 0; i < state.cache.length; i++) if (state.cache[i].key === key) return state.cache[i].res; return null; }
   function remember(key, res) { state.cache = state.cache.filter(function (c) { return c.key !== key; }); state.cache.unshift({ key: key, res: res }); if (state.cache.length > 8) state.cache.length = 8; }
@@ -833,17 +853,12 @@
     state.solving = true; state.solveErr = null; renderSolveStatus();
     clearTimeout(solveTimer);
     solveTimer = setTimeout(function () {
-      if (worker && wkey && wkey !== key) { worker.terminate(); worker = null; }
-      if (wkey === key && worker) return;
-      if (!worker) { worker = new Worker("src/solve-worker.js"); worker.onmessage = onSolved; worker.onerror = function () { worker = null; wkey = ""; state.solving = false; state.solveErr = T("The solver could not be loaded."); renderSolveStatus(); settle(); }; }
-      wkey = key; wid++;
-      worker.postMessage({ id: wid, key: key, net: JSON.parse(IO.toJSON(state.net)), opts: { mode: state.csrc, hold: state.hold } });
       state.t0 = Date.now();
+      ENGINE.solve(JSON.parse(IO.toJSON(state.net)), { mode: state.csrc, hold: state.hold }).then(function (r) { onSolved(key, r); }, function (e) { if (!(e && e.superseded)) onSolved(key, null); });
     }, 350);
   }
-  function onSolved(e) {
-    var key = wkey, r = e.data.result; wkey = "";
-    if (!r || !r.ok) { state.solving = false; state.solveErr = (r && r.errors || []).map(function (x) { return I.tw(x); }).join(" "); renderSolveStatus(); settle(); return; }
+  function onSolved(key, r) {
+    if (!r || !r.ok) { if (key !== solveKey()) return; state.solving = false; state.solveErr = failed(r); renderSolveStatus(); settle(); return; }
     remember(key, r);
     if (state.mode === "cap" && key === solveKey()) { state.cres = r; state.ckey = key; state.solving = false; renderViews(); }
     settle();
@@ -947,6 +962,71 @@
     });
     return xlsxReady;
   }
+  // ---- memory: the session is saved as you go, scenarios are kept as versions, decisions are recorded with their receipts
+  var ST = window.TWStore.open((function () { try { return window.TWStore.browser(window.localStorage); } catch (e) { return null; } })() || window.TWStore.memory());
+  var asTimer = null, restoring = false;
+  function sessionData() { return { net: JSON.parse(IO.toJSON(state.net)), scenario: state.scenario, custom: state.custom ? state.custom.name : null, mode: state.mode, csrc: state.csrc, hold: state.hold }; }
+  function autosave() { if (restoring) return; clearTimeout(asTimer); asTimer = setTimeout(function () { ST.autosave(sessionData()); }, 500); }
+  // on opening the page without a link: resume the last session, unless it was the untouched example with nothing switched on
+  function resume() {
+    var s = ST.session();
+    if (!s || !s.net || (IO.toJSON(s.net) === IO.toJSON(N.build("base")) && s.mode !== "cap")) return;
+    restoring = true;
+    state.mode = s.mode === "cap" ? "cap" : "plan"; state.csrc = s.csrc || "qualified"; state.hold = s.hold != null ? s.hold : 6;
+    $("csrc").value = state.csrc; $("hold").value = String(state.hold);
+    if (s.scenario && N.SCENARIOS[s.scenario] && IO.toJSON(N.build(s.scenario)) === IO.toJSON(s.net)) load(s.scenario); else useCustom(s.net, s.custom || T("your last session"));
+    each(document.querySelectorAll("#capMode button"), function (b) { b.classList.toggle("active", b.getAttribute("data-v") === state.mode); });
+    $("capOpts").hidden = state.mode !== "cap";
+    restoring = false; render();
+    dataMsg(T("Your last session is back, as you left it.") + " <button class='linkish' id='freshBtn' type='button'>" + T("Start from the example instead") + "</button>", "ok");
+    $("freshBtn").addEventListener("click", function () { ST.clearSession(); dataMsg(""); load("base"); });
+  }
+  var delArm = null;
+  function renderSaved() {
+    var list = ST.names("scenario");
+    $("scList").innerHTML = list.length ? "<table class='outlook'><tbody>" + list.map(function (x) {
+      return "<tr><th style='text-align:left'>" + esc(x.name) + "</th><td style='text-align:left'>" + T("{n} versions · saved {d}", { n: x.versions, d: new Date(x.latest.created).toLocaleString(I.lang === "en" ? undefined : I.lang) }) + "</td><td>" +
+        "<button class='btn small' data-sc-open='" + esc(x.name) + "' type='button'>" + T("Open") + "</button> <button class='btn small' data-sc-diff='" + esc(x.name) + "' type='button'>" + T("Compare with the plan on screen") + "</button> <button class='btn small' data-sc-del='" + esc(x.name) + "' type='button'>" + (delArm === x.name ? T("Delete every version?") : T("Delete")) + "</button></td></tr>";
+    }).join("") + "</tbody></table>" : "<p class='lanes'>" + T("No saved scenarios yet.") + "</p>";
+    each($("scList").querySelectorAll("[data-sc-open]"), function (b) { b.addEventListener("click", function () { var r = ST.latest("scenario", b.getAttribute("data-sc-open")); useCustom(r.data.net, r.name); $("scDiff").innerHTML = ""; }); });
+    each($("scList").querySelectorAll("[data-sc-diff]"), function (b) { b.addEventListener("click", function () { showDiff(b.getAttribute("data-sc-diff")); }); });
+    // no browser dialogs: deleting takes a second click
+    each($("scList").querySelectorAll("[data-sc-del]"), function (b) { b.addEventListener("click", function () { var n = b.getAttribute("data-sc-del"); if (delArm === n) { ST.remove("scenario", n); delArm = null; $("scDiff").innerHTML = ""; } else delArm = n; renderSaved(); }); });
+    renderLedger();
+  }
+  function saveScenario() {
+    var name = $("scName").value.trim(); if (!name) { $("scName").focus(); return; }
+    var r = ST.put("scenario", name, { net: JSON.parse(IO.toJSON(state.net)), mode: state.csrc, hold: state.hold }, { app: VERSION });
+    if (!r.ok) dataMsg(esc(T("The browser's storage is full: export your scenarios as files, then delete old ones.")), "bad");
+    $("scName").value = ""; renderSaved();
+  }
+  function showDiff(name) {
+    var r = ST.latest("scenario", name), d = window.TWStore.diff(r.data.net, state.net), lines = [], nmOf = function (id, n) { var s = n.sites.filter(function (x) { return x.id === id; })[0]; return s ? (s.name || id) : id; };
+    var val = function (v) { return v == null ? "–" : typeof v === "object" ? JSON.stringify(v) : String(v); };
+    d.sites.added.forEach(function (id) { lines.push(T("Added: {s}", { s: nmOf(id, state.net) })); });
+    d.sites.removed.forEach(function (id) { lines.push(T("Removed: {s}", { s: nmOf(id, r.data.net) })); });
+    d.sites.changed.forEach(function (c) { c.fields.forEach(function (f) { lines.push(nmOf(c.id, state.net) + " · " + f.k + ": " + val(f.from) + " → " + val(f.to)); }); });
+    var rn = function (k) { var p = k.split(">"); return nmOf(p[0], state.net) + " → " + nmOf(p[1], state.net); };
+    d.routes.added.forEach(function (k) { lines.push(T("New route: {r}", { r: rn(k) })); });
+    d.routes.removed.forEach(function (k) { lines.push(T("Route removed: {r}", { r: rn(k) })); });
+    d.routes.changed.forEach(function (c) { c.fields.forEach(function (f) { lines.push(rn(c.id) + " · " + f.k + ": " + val(f.from) + " → " + val(f.to)); }); });
+    d.settings.forEach(function (f) { lines.push(T("Setting") + " · " + f.k + ": " + val(f.from) + " → " + val(f.to)); });
+    $("scDiff").innerHTML = "<p class='mini-h'>" + esc(T("From “{n}” to the plan on screen", { n: name })) + "</p>" + (lines.length ? "<ul class='lanes'>" + lines.slice(0, 60).map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul>" + (lines.length > 60 ? "<p class='lanes'>" + T("…and {n} more changes.", { n: lines.length - 60 }) + "</p>" : "") : "<p class='lanes'>" + T("No differences.") + "</p>");
+  }
+  // a decision is kept with what it was based on: the plan's fingerprint and the receipts of the figures behind it
+  function recordDecision(d) { var r = ST.put("decision", null, Object.assign({ network: window.TWStore.hashOf(IO.toJSON(state.net)) }, d), { app: VERSION }); if (!r.ok) dataMsg(esc(T("The browser's storage is full: export your scenarios as files, then delete old ones.")), "bad"); renderLedger(); return r.ok; }
+  function renderLedger() {
+    var list = ST.all("decision");
+    $("ledList").innerHTML = list.length ? "<ul class='lanes'>" + list.map(function (r) {
+      var d = r.data, when = new Date(r.created).toLocaleDateString(I.lang === "en" ? undefined : I.lang), text;
+      if (d.action === "expansions") text = T("Added the optimiser's expansions: {x}; verified NPV {v}", { x: d.items.map(function (i) { return i.label; }).join(", "), v: d.verifiedNpv != null ? fc(d.verifiedNpv) : "–" });
+      else text = (d.choice === "do" ? T("Decided to do: {a}", { a: d.title }) : T("Decided not now: {a}", { a: d.title })) + (d.npv != null ? " · " + fc(d.npv) : "");
+      return "<li>" + esc(when) + " · " + esc(text) + " · <code>" + esc((d.receipts || [])[0] || d.network) + "</code></li>";
+    }).join("") + "</ul>" : "<p class='lanes'>" + T("No decisions recorded yet. Record one from What to do, or by adding the optimiser's expansions.") + "</p>";
+    $("ledExport").disabled = !list.length;
+  }
+  function exportLedger() { download("tierwise-decisions.json", JSON.stringify(ST.all("decision").reverse(), null, 2), "application/json"); }
+
   function dataMsg(html, kind) { var m = $("dataMsg"); m.hidden = !html; m.className = "data-msg" + (kind ? " " + kind : ""); m.innerHTML = html || ""; }
   function saveExcel() {
     needXLSX().then(function (X) { X.writeFile(IO.toWorkbook(state.net, X), fileBase() + ".xlsx"); })
@@ -1255,6 +1335,11 @@
     $("ivTerminal").addEventListener("change", function () { var v = num(this.value); state.net.config.terminalYears = isFinite(v) && v >= 0 ? Math.round(v) : 5; this.value = state.net.config.terminalYears; });
     $("ivRun").addEventListener("click", runInvest);
     $("prRun").addEventListener("click", runPriorities);
+    $("scSave").addEventListener("click", saveScenario);
+    $("scName").addEventListener("keydown", function (e) { if (e.key === "Enter") saveScenario(); });
+    $("ledExport").addEventListener("click", exportLedger);
+    renderSaved();
+    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("sw.js").catch(function () {});
     $("ivApply").addEventListener("click", applyInvestments);
     var drop = $("dataBox");
     ["dragover", "dragenter"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("drag"); }); });
@@ -1272,7 +1357,7 @@
     });
     load("base");
     readLink().then(function (r) {
-      if (!r) return;
+      if (!r) { resume(); return; }
       if (!r.ok) { dataMsg("<b>" + T("The shared link could not be opened:") + "</b><br>" + r.errors.map(function (e) { return esc(I.tw(e)); }).join("<br>"), "bad"); return; }
       if (r.net.scenario && N.SCENARIOS[r.net.scenario] && IO.toJSON(N.build(r.net.scenario)) === IO.toJSON(r.net)) { load(r.net.scenario); return; }
       useCustom(r.net, T("shared link"));

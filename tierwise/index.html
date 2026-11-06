@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.4.1</span>
+    <span class="ver" id="ver">v2.5.0</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -84,6 +84,11 @@
 </section>
 
 <main class="main">
+  <nav class="door" id="door" aria-label="Three steps" data-i18n-attr="aria-label=dr.aria">
+    <a class="door-step" href="#studioPanel"><span class="door-n">1</span><b data-i18n="dr.net">Your network</b><span class="door-sum" id="door1"></span></a>
+    <a class="door-step" href="#heatPanel" id="door2a"><span class="door-n">2</span><b data-i18n="dr.breaks">Where it breaks</b><span class="door-sum" id="door2"></span></a>
+    <a class="door-step" href="#prioPanel"><span class="door-n">3</span><b data-i18n="dr.todo">What to do</b><span class="door-sum" id="door3"></span></a>
+  </nav>
   <section class="data-box" id="dataBox">
     <div class="data-row">
       <div class="data-h"><b data-i18n="d.h">Your supply chain</b><span data-i18n="d.sub">Load your own network from CSV, Excel or JSON, or drop a file here. Start from a template: it is the network on screen.</span></div>
@@ -98,6 +103,16 @@
     </div>
     <div class="data-msg" id="dataMsg" hidden></div>
     <div class="share-box" id="shareBox" hidden><input id="shareUrl" readonly aria-label="Share link" data-i18n-attr="aria-label=d.shareAria"></div>
+    <details class="fmt" id="savedBox">
+      <summary data-i18n="sc.h">Saved scenarios and decisions</summary>
+      <p class="panel-note" data-i18n="sc.note">Your work is saved in this browser as you go, and comes back when you return. Save a scenario to keep a version you can reopen and compare; saving the same name again keeps the earlier versions. Nothing leaves your browser.</p>
+      <div class="data-btns"><input id="scName" class="num" style="width:220px" aria-label="Scenario name" data-i18n-attr="aria-label=sc.nameAria"><button class="btn small" type="button" id="scSave" data-i18n="sc.save">Save as scenario</button></div>
+      <div id="scList"></div>
+      <div id="scDiff"></div>
+      <h3 class="mini-h" data-i18n="ld.h">Decisions</h3>
+      <div id="ledList"></div>
+      <button class="btn small" type="button" id="ledExport" data-i18n="ld.export">Export decisions</button>
+    </details>
     <details class="fmt" id="fmt">
       <summary data-i18n="d.fmtH">The file format</summary>
       <div data-i18n="d.fmt">
@@ -333,7 +348,7 @@
   </details>
 
   <footer class="foot">
-    Tierwise v<span id="ver2">2.4.1</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.5.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
@@ -342,7 +357,12 @@
 <script src="src/graph.js"></script>
 <script src="src/geo.js"></script>
 <script src="src/io.js"></script>
+<script src="src/store.js"></script>
 <script src="src/constrained.js"></script>
+<script src="src/invest.js"></script>
+<script src="src/priorities.js"></script>
+<script src="src/api.js"></script>
+<script src="src/jobs.js"></script>
 <script src="app.js"></script>
 <script src="studio.js"></script>
 <script src="tour-content.js"></script>

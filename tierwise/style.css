@@ -423,3 +423,12 @@ svg.map.world.picking, .mode-add svg.map.world{cursor:crosshair;}
 .pr-group li{padding:8px 0; border-top:1px solid var(--line);}
 .pr-group li:first-child{border-top:0;}
 .pr-group p{margin:3px 0 4px; line-height:1.5;}
+#savedBox .data-btns{margin:8px 0;}
+#scList table{margin:6px 0;} #scList td{padding:4px 6px;}
+.pr-act{margin:2px 0 4px;}
+.door{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:0 0 14px;}
+.door-step{display:flex; flex-direction:column; gap:3px; padding:10px 12px 10px 44px; position:relative; border:1px solid var(--line); border-radius:8px; color:var(--ink); text-decoration:none;}
+.door-step:hover{border-color:var(--accent);}
+.door-n{position:absolute; left:12px; top:10px; width:22px; height:22px; border-radius:50%; background:var(--accent); color:var(--bg); font-weight:700; display:grid; place-items:center; font-size:13px;}
+.door-sum{font-size:13px; opacity:.85;}
+@media (max-width:700px){ .door{grid-template-columns:minmax(0,1fr);} }

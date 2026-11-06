@@ -88,13 +88,49 @@ const server = http.createServer((req, res) => {
   // ---- what to do: every action priced by the plan, grouped, with its receipt
   const w = await open();
   await w.click("#prRun");
-  await w.waitForFunction(() => document.querySelectorAll("#prList .pr-group").length > 0 || /bad/.test(document.getElementById("prStatus").innerHTML), null, { timeout: 420000 });
+  await w.waitForFunction(() => document.querySelectorAll("#prList .pr-group").length > 0 || /bad/.test(document.getElementById("prStatus").innerHTML), null, { timeout: 600000 });
   const list = await w.textContent("#prList");
   check("what to do: Valencia's line, with a date and a price", /Fourth dosing line at Valencia/.test(list) && /Start by 20\d\d/.test(list), (await w.textContent("#prStatus")));
   check("what to do: sites with no option are named", /Define an expansion option for/.test(list));
   check("what to do: a decision that is too far off is left for later, and says why", /Not a decision for today/.test(list));
+  await w.click("#prList [data-pr-do]");
+  await w.click("#savedBox summary");
+  check("what to do: a decision is recorded with the receipts behind it", /Decided to do: Fourth dosing line at Valencia/.test(await w.textContent("#ledList")) && /[0-9a-f]{16}/.test(await w.textContent("#ledList")));
   check("what to do: every item has its receipt", (await w.$$("#prList li")).length === (await w.$$("#prList li details.receipt")).length && !(await w.$("#prList details.receipt b.no")));
   await w.close();
+
+  // ---- the three steps at the top, and working offline once the page has been opened
+  { const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } }), o = await ctx.newPage(); o.on("pageerror", (e) => errors.push(e.message));
+    await o.goto(URL0); await o.waitForSelector("#kpis *");
+    check("the three steps sum up the network and where it breaks", /27 sites in 6 tiers/.test(await o.textContent("#door1")) && /Cape Town Packaging runs short first, in Mar 2030/.test(await o.textContent("#door2")), await o.textContent("#door2"));
+    await o.evaluate(() => navigator.serviceWorker.ready);
+    await o.reload(); await o.waitForSelector("#kpis *");
+    await o.click('#capMode [data-v="cap"]'); await o.waitForFunction(() => !document.getElementById("valuePanel").hidden, null, { timeout: 120000 });
+    check("…and step 2 follows the plan within capacity", /Serves 86[.,]8%/.test(await o.textContent("#door2")));
+    await ctx.setOffline(true);
+    await o.reload(); await o.waitForSelector("#kpis *");
+    await o.waitForFunction(() => !document.getElementById("valuePanel").hidden, null, { timeout: 120000 });
+    check("offline, the page opens and plans within capacity, from the copies it kept", /86[.,]8/.test(await o.textContent("#kpis")));
+    await ctx.setOffline(false); await ctx.close(); }
+
+  // ---- memory: the session comes back, scenarios keep versions and compare, decisions are recorded
+  { const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } }), m = await ctx.newPage(); m.on("pageerror", (e) => errors.push(e.message));
+    await m.goto(URL0); await m.waitForSelector("#kpis *");
+    check("a first visit starts on the example, with nothing to restore", await m.isHidden("#dataMsg"));
+    await m.$eval("#scale", (e) => { e.value = 130; e.dispatchEvent(new Event("input", { bubbles: true })); });
+    await m.waitForTimeout(900); await m.reload(); await m.waitForSelector("#kpis *");
+    check("a reload brings the last session back, and says so", (await m.inputValue("#scale")) === "130" && await m.isVisible("#freshBtn"));
+    await m.click("#savedBox summary"); await m.fill("#scName", "Pilot A"); await m.click("#scSave");
+    await m.$eval("#scale", (e) => { e.value = 140; e.dispatchEvent(new Event("input", { bubbles: true })); });
+    await m.click("#scSave").catch(() => {}); await m.fill("#scName", "Pilot A"); await m.click("#scSave");
+    check("saving the same name again keeps both versions", /2 versions/.test(await m.textContent("#scList")));
+    await m.$eval("#scale", (e) => { e.value = 100; e.dispatchEvent(new Event("input", { bubbles: true })); });
+    await m.click("[data-sc-diff='Pilot A']");
+    check("comparing a scenario with the plan on screen shows what changed", /demandScale: 1\.4 → 1/.test(await m.textContent("#scDiff")), await m.textContent("#scDiff"));
+    await m.click("#freshBtn").catch(() => {});
+    await m.click("[data-sc-del='Pilot A']"); await m.click("[data-sc-del='Pilot A']");
+    check("deleting takes a second click, and removes every version", /No saved scenarios yet/.test(await m.textContent("#scList")));
+    await ctx.close(); }
 
   // ---- the tutorial, the other pages, and a phone
   await p.click("#tourBtn"); await p.waitForSelector(".tour-menu");

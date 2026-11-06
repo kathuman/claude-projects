@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.4.1 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.5.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -43,11 +43,10 @@ server, but the code is layered so that a server can slot in behind the same int
 ## Roadmap
 
 Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 (world map), 2.3 (capacity investment),
-2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers).
+2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers), 2.4.1 and 2.5 (what to do; architecture and memory).
 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
-| 2.5 | Priorities, architecture and memory | **What to do** (**done**, 2.4.1); the browser suite in CI (**done**); the application API, a versioned data layer, a job runner; autosave, named scenarios with a diff, a decision ledger, offline use; the browser suite in CI; a three-step front door (network, where it breaks, what to do) | A reload loses nothing |
 | 2.6 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
 | 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
 | 3.1 | Real food networks | Several products, full bills of materials, shelf life, QA hold, CO₂; custom parameters such as certifications become solver constraints; new sites, closures, landed cost | A halal rule is enforced by the solver |
@@ -75,8 +74,20 @@ Data              versioned networks, scenarios, results, receipts, decisions
                   in the browser now, a database later; records are append-only
 ```
 
-The boundary between the layers comes first (2.5). Records carry an owner and a schema version from the start, so
-accounts and a server don't force a migration.
+Built in 2.5:
+
+- **Application API** (`src/api.js`): `plan`, `solve`, `invest`, `priorities`, `diff` and `fingerprint`, the same calls
+  for the page, the tests, and later AI tools or an MCP server. What runs a job is a `run(kind, payload, progress)`
+  function: in the page, the job runner; in Node, `TWApi.direct(highs)`, which calls the engine in the same thread.
+  `tests/api.test.js` checks that it returns the same plans and receipts as calling the engine directly.
+- **Job runner** (`src/jobs.js`): one Web Worker per kind of job. A newer job of the same kind replaces one still
+  running, and finished results are cached by their input.
+- **Data layer** (`src/store.js`): records that are never changed in place. Saving a name again adds a version that
+  points to the one before. Each record carries its kind, an owner, a schema version and a fingerprint of its data, so
+  accounts and a server don't force a migration. For the pilot the records live in the browser; the back end is a small
+  get/set/keys object, so a database can replace it behind the same calls.
+
+What is not yet behind the API: the Studio and the tables still change the network directly, through `api.edit`.
 
 ### Why the monthly plan is priced in money
 
@@ -362,6 +373,28 @@ For a selected route it edits share, transit days, mode and route parameters.
 - parameter definitions and values;
 - the undo history.
 
+## Memory: the session, scenarios and decisions (`src/store.js`)
+
+- **The session** is saved as you go, after every change, and comes back when you return to the page. It keeps the last
+  20 states. A link that carries a network still wins over the session, and **Start from the example instead** clears it.
+- **Saved scenarios.** **Save as scenario** keeps the network on screen under a name. Saving the same name again keeps
+  the earlier versions. Each can be reopened, compared with the plan on screen (sites, routes and settings, field by
+  field, from `diff`), or deleted, which takes a second click and removes every version.
+- **Decisions.** **Decide: do it** or **not now** on an action in **What to do**, and adding the optimiser's
+  expansions, record a decision. Each keeps the figures it was based on, the fingerprints of their receipts and of the
+  network. **Export decisions** writes them as JSON. This is the start of the ledger that 6.0 will score against what
+  actually happened.
+- Nothing leaves the browser. If its storage is full or refused, the page says so, or keeps the session in memory.
+
+## Working offline (`sw.js`) and the three steps
+
+**Offline.** Once the page has been opened, a service worker keeps a copy of it and of the solver. The page's own files
+are fetched fresh whenever the network is there, so a new version arrives at once. The solver and the Excel library come
+from CDNs at fixed versions, so their copies are used first. Offline, the page opens, plans and solves within capacity.
+
+**The three steps** at the top sum up the network, where it breaks (the first shortfall, or the fill rate within
+capacity) and what to do (the first action and its date, once worked out). Each links to the detail below.
+
 ## What to do (`src/priorities.js`, `src/priorities-worker.js`)
 
 **Work out the priorities** ranks what to do next. The ranking comes from the plan, and it works with no AI at all. Every
@@ -549,8 +582,10 @@ node tierwise/tests/invest.test.js # 57: the investment optimiser on chains with
                                    # priced again in the month-by-month plan
 node tierwise/tests/priorities.test.js
                                    # 17: what to do, on chains with known answers and the example (39 plans, several minutes)
+node tierwise/tests/store.test.js  # 19: records, versions, the session, full or refused storage, the network diff
+node tierwise/tests/api.test.js    # 7: the application API returns what the engine does (needs HiGHS)
 node tierwise/tests/browser.test.js
-                                   # 34: the page in a real browser, in three languages (needs Playwright and a network)
+                                   # 43: the page in a real browser: three languages, memory, offline (needs Playwright)
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json
 ```

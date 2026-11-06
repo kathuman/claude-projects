@@ -30,10 +30,11 @@ jobs:
       - run: node tierwise/tests/graph.test.js
       - run: node tierwise/tests/geo.test.js
       - run: node tierwise/tests/io.test.js
+      - run: node tierwise/tests/store.test.js
       - run: node tierwise/tests/i18n.test.js
       - run: node tierwise/tests/tour.test.js
       - name: The plan within capacity, the investment optimiser and the validation suite (HiGHS)
-        run: npm install --no-save --no-package-lock highs@1.15.3 && node tests/constrained.test.js && node tests/invest.test.js && node tests/priorities.test.js && node tests/validation.test.js
+        run: npm install --no-save --no-package-lock highs@1.15.3 && node tests/constrained.test.js && node tests/invest.test.js && node tests/api.test.js && node tests/priorities.test.js && node tests/validation.test.js
         working-directory: tierwise
       - name: Syntax-check the page scripts
         run: for f in tierwise/src/*.js tierwise/*.js; do node --check "$f"; done
@@ -41,7 +42,7 @@ jobs:
   browser:
     # the page itself in a real browser: planning, the Studio, files and links, the solver, its receipts, three languages
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
