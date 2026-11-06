@@ -24,6 +24,7 @@ jobs:
           node-version: 22
       - run: node turbine-lab/tests/physics.test.js
       - run: node turbine-lab/tests/machines.test.js
+      - run: node turbine-lab/tests/drawings.test.js
       - run: node turbine-lab/tests/i18n.test.js
       - run: node turbine-lab/tests/release.test.js
       - name: Syntax-check the page scripts

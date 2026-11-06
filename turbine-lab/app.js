@@ -6,7 +6,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-var VERSION = "1.0.1";
+var VERSION = "1.1.0";
 const I18 = window.TLi18n, T = I18.T, fx = I18.fx, PH = window.TLphys, MA = window.TLmach;
 const $ = (id) => document.getElementById(id);
 // part names and roles: translated per part key (TL_ES.P / TL_DA.P), English from src/machines.js
@@ -463,6 +463,7 @@ function syncControls() {
   const wb = $("segMedium").querySelector('[data-v="wind"]');
   wb.disabled = !hasWind(S.machine);
   $("machineBlurb").textContent = BLURB[S.machine]();
+  $("drLink").setAttribute("href", I18.withLang("drawings.html?m=" + S.machine));
   $("mediumHint").textContent = !hasWind(S.machine) ? T("A Pelton wheel needs a jet of water, so it has no wind twin.")
     : S.medium === "wind" ? T("The same machine scaled up and fed by air instead of water. Does it still make sense? See the Water vs wind tab.")
     : T("Try the wind twin: the same machine fed by air.");

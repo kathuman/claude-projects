@@ -23,6 +23,14 @@ run. It is aimed at anyone learning how hydropower works. English, Spanish (Lati
   lighter than water and needs 9.3× the speed for the same power. Wind at 10 m/s presses with only 6 mm of water,
   against the Francis runner's 25 m design head. The twins are thought experiments, not designs.
 
+- **Technical drawings** (`drawings.html`). For each turbine, an A3 general-arrangement sheet with:
+  - sections A–A (front to back), B–B (side to side) and C–C (horizontal), all through the runner centre at one
+    standard scale, plus an isometric view, in first-angle projection;
+  - hatched cut faces, cutting-plane lines, overall dimensions and the runner diameter;
+  - numbered balloons, a parts list with quantities, notes and a title block.
+
+  The sheet can be printed (A3), downloaded as a standalone SVG, or shown in blueprint colours.
+
 ## Files
 
 | Path | What it is |
@@ -30,11 +38,28 @@ run. It is aimed at anyone learning how hydropower works. English, Spanish (Lati
 | `index.html`, `style.css`, `app.js` | the page: viewer (three.js r186, vendored), controls, charts |
 | `src/physics.js` | pure physics: power, Pelton/Euler, efficiency curves, speeds, specific speed, selection zones, water vs air |
 | `src/machines.js` | the three machines' operating figures, every part's name and role, and the node-name → part rules |
+| `drawings.html`, `drawings.js` | the drawings page: lays the rendered views out on an A3 sheet (SVG, mm) |
+| `drawings/*.png`, `drawings/*.json` | the rendered views, and how each maps to metres (scale, cuts, extents, balloon points, quantities) |
 | `models/*.glb` | the exported models (from `../turbines/*.blend`, via `tools/export_glb.py`) |
 | `i18n.js`, `i18n-es.js`, `i18n-da.js` | languages (`?lang=en|es|da`); part names and roles are keyed by part |
-| `tests/` | `physics`, `machines` (reads the .glb files), `i18n`, `release`. Run with `node turbine-lab/tests/<name>.test.js` |
+| `tools/` | `export_glb.py` (models), `render_drawings.py` + `compress_drawings.py` (drawings), `build_i18n.py` (translations) |
+| `tests/` | `physics`, `machines` (reads the .glb files), `drawings` (reads the drawing data), `i18n`, `release`. Run with `node turbine-lab/tests/<name>.test.js` |
 
 CI: `.github/workflows/turbine-lab-ci.yml`.
+
+## Re-rendering the drawings
+
+```
+blender -b turbines/pelton_hydro_cutaway.blend       --python turbine-lab/tools/render_drawings.py -- pelton  turbine-lab/drawings
+blender -b turbines/francis_turbine_river_wind.blend --python turbine-lab/tools/render_drawings.py -- francis turbine-lab/drawings
+blender -b turbines/kaplan_turbine_river_wind.blend  --python turbine-lab/tools/render_drawings.py -- kaplan  turbine-lab/drawings
+python turbine-lab/tools/compress_drawings.py
+```
+
+How it works: each section bisects the machine through the runner centre and deletes the near half. Each object's
+closed cut loops are capped and hatched. Freestyle then draws visible edges, thin in general and thick on the cut
+outline. The three sections share one standard scale, at 125 mm per view on the A3 sheet. A test checks that the page
+prints the views at that size, so the stated scale holds.
 
 ## Re-exporting the models
 
