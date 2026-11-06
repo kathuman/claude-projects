@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="style.css?v=1.0.0">
+  <link rel="stylesheet" href="style.css?v=1.1.0">
 </head>
 <body>
 <div class="app">
@@ -137,6 +137,36 @@
         </div>
         <p class="hint" data-i18n="s5.hint">For flammable refrigerants the charge allowed in a room depends on its floor area and how high the unit sits.</p>
       </section>
+      <section class="step">
+        <h2><span class="n">6</span> <span data-i18n="s6.title">Year round</span></h2>
+        <label class="fld"><span data-i18n="s6.climate">Climate data</span><select id="inClimate"></select></label>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s6.coverage">Heat pump covers</span><span class="unit"><input type="number" id="inCoverage" step="5" min="30" max="150"> %</span></label>
+          <label class="fld"><span data-i18n="s6.limit">Heating limit</span><span class="unit"><input type="number" id="inLimit" step="1" min="10" max="20"> °C</span></label>
+        </div>
+        <label class="check"><input type="checkbox" id="inComp2"> <span data-i18n="s6.compensation">Weather compensation (lower flow on mild days)</span></label>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s6.dhw">Hot water per year</span><span class="unit"><input type="number" id="inDhw" step="100" min="0"> kWh</span></label>
+          <label class="fld"><span data-i18n="s6.dhwFlow">Hot-water flow</span><span class="unit"><input type="number" id="inDhwFlow" step="1" min="40" max="70"> °C</span></label>
+        </div>
+        <p class="hint" data-i18n="s6.hint">Coverage is the share of the design heat load the heat pump delivers at the design outdoor temperature; below 100 % an electric heater covers the coldest hours.</p>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">7</span> <span data-i18n="s7.title">Costs and CO₂</span></h2>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s7.el">Electricity</span><span class="unit"><input type="number" id="inElPrice" step="0.01" min="0"> /kWh</span></label>
+          <label class="fld"><span data-i18n="s7.gas">Gas</span><span class="unit"><input type="number" id="inGasPrice" step="0.01" min="0"> /kWh</span></label>
+        </div>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s7.boiler">Gas boiler efficiency</span><span class="unit"><input type="number" id="inBoiler" step="0.01" min="0.5" max="1.1"></span></label>
+          <label class="fld"><span data-i18n="s7.co2">Grid CO₂</span><span class="unit"><input type="number" id="inCo2El" step="0.01" min="0"> kg/kWh</span></label>
+        </div>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s7.extra">Extra cost vs boiler</span><span class="unit"><input type="number" id="inExtra" step="500" min="0"></span></label>
+          <label class="fld"><span data-i18n="s7.currency">Currency</span><input type="text" id="inCurrency" maxlength="4"></label>
+        </div>
+      </section>
       <button class="btn" id="btnReset" type="button" data-i18n="nav.reset">Reset to the example</button>
     </aside>
 
@@ -151,6 +181,7 @@
           <button role="tab" data-tab="hx" data-i18n="tab.hx">Heat exchangers</button>
           <button role="tab" data-tab="energy" data-i18n="tab.energy">Energy flow</button>
           <button role="tab" data-tab="cmp" data-i18n="tab.cmp">Compare refrigerants</button>
+          <button role="tab" data-tab="year" data-i18n="tab.year">Year round</button>
         </div>
         <div class="tabpane" data-pane="ph">
           <p class="lede" data-i18n="ph.lede">The cycle on the refrigerant's pressure–enthalpy chart. Inside the dome the refrigerant boils or condenses at constant temperature; the horizontal lengths are the energy per kilogram: heat taken from the source (4→1), compressor work (1→2) and heat delivered (2→3).</p>
@@ -174,6 +205,19 @@
           <p class="lede" data-i18n="en.lede">Where the delivered heat comes from: most of it is taken from the source for free; the compressor adds the rest as electrical work.</p>
           <div class="chartbox"><canvas id="chartEnergy" height="300"></canvas><div class="tip" id="tipEnergy" hidden></div></div>
         </div>
+        <div class="tabpane" data-pane="year" hidden>
+          <p class="lede" data-i18n="yr.lede">The design point is the coldest hour; the year is mostly milder. For every degree of outdoor temperature, the bars count the hours a year it occurs at this location; the heat pump follows the building's load, more efficiently on mild days, and an electric heater covers what it cannot. Below the balance point the heat pump alone is not enough.</p>
+          <div class="kpis" id="yearKpis"></div>
+          <h3 class="ph" data-i18n="yr.capTitle">Heat load and heat pump capacity</h3>
+          <div class="chartbox"><canvas id="chartYear" height="330"></canvas><div class="tip" id="tipYear" hidden></div></div>
+          <div class="legend" id="legYear"></div>
+          <h3 class="ph" data-i18n="yr.binTitle">Heat delivered over the year, by outdoor temperature</h3>
+          <div class="chartbox"><canvas id="chartBins" height="260"></canvas><div class="tip" id="tipBins" hidden></div></div>
+          <div class="legend" id="legBins"></div>
+          <h3 class="ph" data-i18n="yr.econTitle">Running costs and CO₂ per year</h3>
+          <div class="tablewrap"><table class="data" id="econTable"></table></div>
+          <p class="fine" data-i18n="yr.fine">Bin method after EN 14825: load linear from the design temperature to the heating limit, inverter down to 30 % of full capacity, on/off cycling below it (Cd 0.9), defrost losses up to 10 % around +1 °C for air sources. Hourly temperatures 2015–2024 from the Open-Meteo historical weather API (ERA5 reanalysis, CC BY 4.0). Gas CO₂ 0.202 kg/kWh.</p>
+        </div>
         <div class="tabpane" data-pane="cmp" hidden>
           <p class="lede" data-i18n="cmp.lede">Every refrigerant at the same source, heating circuit and compressor settings. Click a row to use that refrigerant.</p>
           <div class="tablewrap"><table class="data" id="cmpTable"></table></div>
@@ -191,13 +235,15 @@
   </div>
 </div>
 
-<script src="i18n-es.js?v=1.0.0"></script>
-<script src="i18n-da.js?v=1.0.0"></script>
-<script src="i18n.js?v=1.0.0"></script>
-<script src="data/refrigerants.js?v=1.0.0"></script>
-<script src="src/props.js?v=1.0.0"></script>
-<script src="src/cycle.js?v=1.0.0"></script>
-<script src="src/system.js?v=1.0.0"></script>
-<script src="app.js?v=1.0.0"></script>
+<script src="i18n-es.js?v=1.1.0"></script>
+<script src="i18n-da.js?v=1.1.0"></script>
+<script src="i18n.js?v=1.1.0"></script>
+<script src="data/refrigerants.js?v=1.1.0"></script>
+<script src="data/climate.js?v=1.1.0"></script>
+<script src="src/props.js?v=1.1.0"></script>
+<script src="src/cycle.js?v=1.1.0"></script>
+<script src="src/system.js?v=1.1.0"></script>
+<script src="src/seasonal.js?v=1.1.0"></script>
+<script src="app.js?v=1.1.0"></script>
 </body>
 </html>

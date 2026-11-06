@@ -20,6 +20,11 @@ commercial and industrial machines (up to megawatts). English, Spanish (Latin Am
 5. **Installation.** Outdoor unit, indoor unit or plant room. Indoor units get the room charge limit for flammable
    refrigerants, m = 2.5 · LFL^1.25 · h0 · √A.
 
+6. **Year round.** Choose the climate data, how much of the design load the heat pump covers, the heating limit,
+   weather compensation, and hot water per year.
+7. **Costs and CO₂.** Electricity and gas prices, the gas boiler's efficiency, the grid's CO₂ per kWh, and the extra
+   investment.
+
 ## What you get
 
 - **Results:** heat load, COP against the Carnot COP, electrical input, system COP (including fan or source pump),
@@ -34,6 +39,11 @@ commercial and industrial machines (up to megawatts). English, Spanish (Latin Am
   - temperature profiles through the condenser and the evaporator, with zone boundaries and the pinch;
   - an energy-flow chart;
   - a table comparing all seven refrigerants at the same conditions.
+- **Year round** (seasonal performance by the EN 14825 bin method, using real climates):
+  - SCOP and system SCOP, the heat pump's share, the balance point and the largest backup load;
+  - a chart of the building's load against the heat pump's full-speed capacity, with the backup region shaded;
+  - annual heat per outdoor-temperature bin, split between heat pump and electric heater;
+  - hot water, plus running costs, CO₂ and simple payback against a gas boiler.
 - **Tables:** all eight cycle states, and cards for the compressor, condenser, evaporator, boreholes, refrigerant
   lines (copper, or steel for ammonia), expansion valve, and charge and safety.
 
@@ -59,6 +69,13 @@ The design is stored in the page address, so **Copy link** shares it.
 | `tests/cycle.test.js` | ten complete CoolProp reference cycles (COP within 0.5 %, discharge temperature within 0.5 K), plus the energy balance, the Carnot limit, trends, and the system calculations |
 | `tests/i18n.test.js`, `tests/release.test.js` | translations complete, and script versions consistent |
 
+`tests/seasonal.test.js` checks the climate data (8 766 hours a year), the energy balance per bin, SCOP trends and
+ranges, backup and the balance point, the cycling and defrost formulas, and the economics.
+
+The climate bins come from 10 years (2015–2024) of hourly temperatures from the
+[Open-Meteo](https://open-meteo.com) historical weather API (ERA5 reanalysis, CC BY 4.0), built with
+`python heat-pump-studio/tools/build_climate.py`.
+
 Rebuilding the data needs CoolProp (`pip install CoolProp`):
 `python heat-pump-studio/tools/build_props.py`. The translations are generated with
 `python heat-pump-studio/tools/build_i18n.py`.
@@ -68,5 +85,7 @@ Rebuilding the data needs CoolProp (`pip install CoolProp`):
 Pressure drops are neglected. U-values, volumetric efficiencies, the charge estimate and the borehole values are
 typical figures for a first design. CO₂ (R744, transcritical) is not covered yet.
 
-Next: seasonal performance (the EN 14825 bin method, balance point, backup heat, running costs and CO₂ against a gas
-boiler). After that: detailed heat exchangers, a printable datasheet and a guided tour.
+The seasonal model is an inverter that runs down to 30 % of full capacity, with typical defrost losses and
+weather-compensation curves.
+
+Next: detailed heat exchangers, a printable datasheet and a guided tour. Later: CO₂ (R744) and two-stage cycles.

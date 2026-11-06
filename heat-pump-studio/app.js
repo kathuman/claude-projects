@@ -2,8 +2,8 @@
 // Every user-visible message goes through T(english, vars).
 (function () {
   "use strict";
-  var VERSION = "1.0.0";
-  var I18 = window.HPSi18n, T = I18.T, fx = I18.fx, PR = window.HPSprops, CY = window.HPScycle, SY = window.HPSsystem;
+  var VERSION = "1.1.0";
+  var I18 = window.HPSi18n, T = I18.T, fx = I18.fx, PR = window.HPSprops, CY = window.HPScycle, SY = window.HPSsystem, SE = window.HPSseasonal, CL = window.HPS_CLIMATE;
   var $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION;
 
@@ -21,7 +21,9 @@
     source: "air", srcIn: -12, linkAir: true, srcDT: 5, srcApp: 6, ground: "normal", depth: 100,
     sink: "lowRad", flow: 45, ret: 38, condApp: 3,
     fluid: "R290", comp: "scroll", etaIs: 0.70, etaEl: 0.90, SH: 5, SC: 3, rps: 50,
-    install: "outdoor", room: 20, mount: "floor", tab: "ph"
+    install: "outdoor", room: 20, mount: "floor", tab: "ph",
+    climate: "auto", coverage: 100, limit: 16, compensation: true, dhw: 3600, dhwFlow: 55,
+    elPrice: 0.30, gasPrice: 0.10, boiler: 0.92, co2El: 0.20, extra: 6000, currency: "€"
   };
   var S = Object.assign({}, DEFAULTS);
   try {
@@ -39,8 +41,11 @@
 
   var NUMS = { inTout: "Tout", inTout2: "Tout", inTin: "Tin", inArea: "area", inPersons: "persons", inLoad: "load", inSrcIn: "srcIn", inSrcDT: "srcDT",
     inSrcApp: "srcApp", inDepth: "depth", inFlow: "flow", inRet: "ret", inCondApp: "condApp", inEtaIs: "etaIs", inEtaEl: "etaEl", inSH: "SH", inSC: "SC",
-    inRps: "rps", inRoom: "room" };
-  var SELS = { inCity: "city", inLevel: "level", inGround: "ground", inSink: "sink", inFluid: "fluid", inComp: "comp", inMount: "mount" };
+    inRps: "rps", inRoom: "room", inCoverage: "coverage", inLimit: "limit", inDhw: "dhw", inDhwFlow: "dhwFlow",
+    inElPrice: "elPrice", inGasPrice: "gasPrice", inBoiler: "boiler", inCo2El: "co2El", inExtra: "extra" };
+  var SELS = { inCity: "city", inLevel: "level", inGround: "ground", inSink: "sink", inFluid: "fluid", inComp: "comp", inMount: "mount", inClimate: "climate" };
+  $("inClimate").innerHTML = "<option value='auto'>" + T("Follow the location") + "</option>" +
+    Object.keys(CL.cities).map(function (c) { return "<option value='" + c + "'>" + c + " (" + T("mean {t} °C", { t: fx(CL.cities[c].mean, 1) }) + ")</option>"; }).join("");
   Object.keys(NUMS).forEach(function (id) {
     $(id).addEventListener("input", function () {
       var v = parseFloat($(id).value); if (!isFinite(v)) return;
@@ -73,6 +78,8 @@
   });
   seg("segInstall", "install", function (v) { if (S.fluid === "R717" && v !== "plant") { /* the alert explains */ } });
   $("inLinkAir").addEventListener("change", function () { S.linkAir = $("inLinkAir").checked; sync(); update(); });
+  $("inComp2").addEventListener("change", function () { S.compensation = $("inComp2").checked; sync(); update(); });
+  $("inCurrency").addEventListener("input", function () { S.currency = $("inCurrency").value; sync(); update(); });
   $("btnReset").addEventListener("click", function () { S = Object.assign({}, DEFAULTS); sync(); update(); });
   $("btnLink").addEventListener("click", function () {
     var done = function () { $("btnLink").textContent = T("Link copied"); setTimeout(function () { $("btnLink").textContent = T("Copy link"); }, 1600); };
@@ -87,6 +94,8 @@
     Object.keys(SELS).forEach(function (id) { set(id, S[SELS[id]]); });
     if (S.source === "air" && S.linkAir) set("inSrcIn", S.Tout);
     $("inLinkAir").checked = !!S.linkAir;
+    $("inComp2").checked = !!S.compensation;
+    set("inCurrency", S.currency);
     $("rowLinkAir").hidden = S.source !== "air";
     $("groundRow").hidden = S.source !== "ground";
     $("roomRow").hidden = S.install !== "indoor";
@@ -133,6 +142,12 @@
       r.limit = S.install === "indoor" ? SY.chargeLimit(info.lfl, S.room, S.mount) : Infinity;
       r.bore = S.source === "ground" ? SY.borehole(cyc.Qe, S.ground, S.depth) : null;
       r.copSys = cyc.Q / (cyc.Wel + r.evap.source.aux);
+      r.climateName = S.climate !== "auto" ? S.climate : (CL.cities[S.city] ? S.city : "Copenhagen");
+      r.year = SE.run({ fluid: S.fluid, comp: S.comp, etaIs: S.etaIs, etaEl: S.etaEl, SH: S.SH, SC: S.SC, rps: S.rps, source: S.source,
+        srcIn: srcIn, srcDT: S.srcDT, srcApp: S.srcApp, flow: S.flow, ret: S.ret, condApp: S.condApp, compensation: S.compensation,
+        Tdesign: S.Tout, load: load.building, coverage: S.coverage / 100, limit: S.limit, dhw: S.dhw, dhwFlow: S.dhwFlow,
+        aux: r.evap.source.aux }, CL.cities[r.climateName]);
+      if (r.year.ok) r.econ = SE.economics(r.year, { elPrice: S.elPrice, gasPrice: S.gasPrice, boilerEff: S.boiler, co2El: S.co2El, co2Gas: 0.202, extra: S.extra });
     }
     return r;
   }
@@ -146,6 +161,7 @@
     h += kpi(T("Heat load"), num(R.load.total, 3), "kW", S.loadMode === "calc" ? T("building {b} + hot water {d}", { b: num(R.load.building, 3), d: num(R.load.dhw, 2) }) : T("as entered"));
     if (!c.ok) { $("kpis").innerHTML = h; return; }
     h += kpi("COP", fx(c.cop, 2), "", T("Carnot {c} · {p} of it", { c: fx(c.copCarnot, 2), p: pct(c.exergyEff) }), true);
+    if (R.year && R.year.ok) h += kpi("SCOP", fx(R.year.scop, 2), "", T("seasonal, {c}", { c: R.climateName }), true);
     h += kpi(T("Electrical input"), num(c.Wel, 3), "kW", T("compressor, incl. drive"));
     h += kpi(T("System COP"), fx(R.copSys, 2), "", T("with {what} {p} kW", { what: R.evap.source.kind === "fan" ? T("fan") : T("source pump"), p: num(R.evap.source.aux, 2) }));
     h += kpi(T("Heat from the source"), num(c.Qe, 3), "kW", T("{t} → {u} °C", { t: n1(R.srcIn), u: n1(R.srcOut) }));
@@ -471,6 +487,71 @@
   }
   $("cmpTable").addEventListener("click", function (e) { var tr = e.target.closest("tr[data-f]"); if (!tr) return; S.fluid = tr.dataset.f; sync(); update(); });
 
+  // --- year round: load and capacity, heat by bin, costs and CO₂
+  function money(v) { return (S.currency || "") + " " + n0(v); }
+  function drawYear() {
+    var Y = R.year, E = R.econ;
+    if (!R.cyc.ok || !Y || !Y.ok) { $("yearKpis").innerHTML = ""; $("econTable").innerHTML = ""; return; }
+    var bal = Y.balance === -Infinity ? T("none: always enough") : Y.balance == null ? T("never reached") : n1(Y.balance) + " °C";
+    $("yearKpis").innerHTML =
+      kpi("SCOP", fx(Y.scop, 2), "", T("system {s} incl. {what}", { s: fx(Y.scopSys, 2), what: S.source === "air" ? T("fan") : T("source pump") }), true) +
+      kpi(T("Heat pump share"), pct(Y.hpShare), "", T("backup {b} kWh", { b: n0(Y.total.elBackup) })) +
+      kpi(T("Balance point"), bal, "", T("max backup {p} kW", { p: num(Y.maxBackup, 2) })) +
+      kpi(T("Space heating"), n0(Y.total.heat), "kWh", T("{h} heating hours", { h: n0(Y.total.hours) })) +
+      kpi(T("Electricity"), n0(E.hp.el), "kWh", T("all uses, per year")) +
+      (Y.dhw ? kpi(T("Hot water"), n0(Y.dhw.heat), "kWh", T("COP {c} at {t} °C", { c: fx(Y.dhw.cop, 2), t: n0(S.dhwFlow) })) : "");
+    // load and capacity against outdoor temperature
+    var cv = $("chartYear");
+    if (cv.clientWidth) {
+      var g = setup(cv), ctx = g.ctx, B = Y.bins.filter(function (b) { return b.ok; });
+      var x0 = B[0].T - 1, x1 = S.limit, ymax = Math.max.apply(null, B.map(function (b) { return Math.max(b.load, b.Qmax); })) * 1.08;
+      var b = box(g.w, g.h, x0, x1, 0, ymax, false);
+      axes(ctx, b, niceTicks(x0, x1, 10), niceTicks(0, ymax, 6), T("Outdoor temperature (°C)"), T("Heat (kW)"));
+      // backup region: where the load is above the capacity
+      ctx.fillStyle = "rgba(201,133,0,0.22)";
+      B.forEach(function (q) { if (q.Qbu > 1e-9) { ctx.fillRect(b.x(q.T - 0.5), b.y(q.load), b.x(q.T + 0.5) - b.x(q.T - 0.5), b.y(q.Qmax) - b.y(q.load)); } });
+      path(ctx, B.map(function (q) { return [b.x(q.T), b.y(q.Qmax)]; }), css("--s1"), 2.4);
+      path(ctx, B.map(function (q) { return [b.x(q.T), b.y(q.load)]; }), css("--s2"), 2.4);
+      if (isFinite(Y.balance)) {
+        var xb = b.x(Y.balance); ctx.strokeStyle = css("--ink"); ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(xb, b.t); ctx.lineTo(xb, b.b); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = css("--ink"); ctx.font = "600 12px Barlow, sans-serif"; ctx.textAlign = "left"; ctx.fillText(T("balance point {t} °C", { t: n1(Y.balance) }), xb + 6, b.t + 14);
+      }
+      var hv = hover.chartYear;
+      if (hv && hv[0] > b.l && hv[0] < b.r) {
+        var tj = Math.round(b.ix(hv[0])), q = B.find(function (z) { return z.T === tj; });
+        tipAt($("tipYear"), cv, hv[0], hv[1], q ? "<b>" + n0(q.T) + " °C · " + n0(q.h) + " h/" + T("year") + "</b><br>" + T("load") + " " + num(q.load, 3) + " kW<br>" + T("full capacity") + " " + num(q.Qmax, 3) + " kW<br>" + T("backup") + " " + num(q.Qbu, 2) + " kW<br>COP " + fx(q.cop, 2) + " · " + T("flow") + " " + n1(q.flow) + " °C" : null);
+      } else $("tipYear").hidden = true;
+      $("legYear").innerHTML = "<span><i style='background:" + css("--s2") + "'></i>" + T("building heat load") + "</span><span><i style='background:" + css("--s1") + "'></i>" + T("heat pump at full speed") + "</span><span><i style='background:rgba(201,133,0,0.6);height:9px'></i>" + T("covered by the electric heater") + "</span>";
+    }
+    // heat per bin over the year
+    var cb = $("chartBins");
+    if (cb.clientWidth) {
+      var g2 = setup(cb), c2 = g2.ctx, B2 = Y.bins.filter(function (q) { return q.ok; });
+      var xa = B2[0].T - 1, xz = S.limit, emax = Math.max.apply(null, B2.map(function (q) { return q.eHeat; })) * 1.1;
+      var b2 = box(g2.w, g2.h, xa, xz, 0, emax, false, { l: 64 });
+      axes(c2, b2, niceTicks(xa, xz, 10), niceTicks(0, emax, 5), T("Outdoor temperature (°C)"), T("Heat per year (kWh)"));
+      var bw = Math.max(2, (b2.x(1) - b2.x(0)) - 2);
+      B2.forEach(function (q) {
+        var x = b2.x(q.T) - bw / 2, yHP = b2.y(q.eHP), yAll = b2.y(q.eHeat);
+        c2.fillStyle = css("--s1"); c2.fillRect(x, yHP, bw, b2.b - yHP);
+        if (q.eBackup > 0.5) { c2.fillStyle = css("--s4"); c2.fillRect(x, yAll, bw, yHP - yAll - 1); }
+      });
+      var hv2 = hover.chartBins;
+      if (hv2 && hv2[0] > b2.l && hv2[0] < b2.r) {
+        var tk = Math.round(b2.ix(hv2[0])), z = B2.find(function (w) { return w.T === tk; });
+        tipAt($("tipBins"), cb, hv2[0], hv2[1], z ? "<b>" + n0(z.T) + " °C · " + n0(z.h) + " h/" + T("year") + "</b><br>" + T("heat pump") + " " + n0(z.eHP) + " kWh<br>" + T("backup") + " " + n0(z.eBackup) + " kWh<br>" + T("electricity") + " " + n0(z.eElHP + z.eBackup) + " kWh" : null);
+      } else $("tipBins").hidden = true;
+      $("legBins").innerHTML = "<span><i style='background:" + css("--s1") + ";height:9px'></i>" + T("heat pump") + "</span><span><i style='background:" + css("--s4") + ";height:9px'></i>" + T("electric heater") + "</span><span>" + T("climate: {c}, 2015–2024", { c: R.climateName }) + "</span>";
+    }
+    // costs and CO₂
+    var row = function (a, b, c, d) { return "<tr><td class='l'>" + a + "</td><td>" + b + "</td><td>" + c + "</td><td>" + d + "</td></tr>"; };
+    $("econTable").innerHTML = "<thead><tr><th></th><th>" + T("Energy bought") + "</th><th>" + T("Cost per year") + "</th><th>" + T("CO₂ per year") + "</th></tr></thead><tbody>" +
+      row(T("Heat pump (electricity)"), n0(E.hp.el) + " kWh", money(E.hp.cost), num(E.hp.co2 / 1000, 3) + " t") +
+      row(T("Gas boiler (gas)"), n0(E.boiler.gas) + " kWh", money(E.boiler.cost), num(E.boiler.co2 / 1000, 3) + " t") +
+      row("<b>" + T("Saving with the heat pump") + "</b>", "", "<b>" + money(E.saving) + "</b>", "<b>" + num(E.co2Saving / 1000, 3) + " t</b>") +
+      row(T("Simple payback of the extra cost"), "", !isFinite(E.payback) ? T("never at these prices") : E.payback > 0 ? T("{y} years", { y: n1(E.payback) }) : "—", "") + "</tbody>";
+  }
+
   // ------------------------------------------------------------------ update and draw
   function draw() {
     if (!R) return;
@@ -481,6 +562,7 @@
       $("legHX").innerHTML = "<span><i style='background:" + css("--warn") + "'></i>" + T("refrigerant") + "</span><span><i style='background:" + css("--s2") + "'></i>" + T("heating water") + "</span><span><i style='background:" + css("--s1") + "'></i>" + (S.source === "air" ? T("air") : T("source")) + "</span><span>" + T("dashed lines: desuperheating · condensing · subcooling, and evaporating · superheating") + "</span>";
     } else if (S.tab === "energy") drawEnergy();
     else if (S.tab === "cmp") compare();
+    else if (S.tab === "year") drawYear();
   }
   function update() {
     R = compute();
@@ -495,7 +577,7 @@
     document.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", String(x.dataset.tab === S.tab)); });
     document.querySelectorAll(".tabpane").forEach(function (p) { p.hidden = p.dataset.pane !== S.tab; });
   }
-  [["chartPH", "tipPH"], ["chartTS", "tipTS"], ["chartCond", "tipCond"], ["chartEvap", "tipEvap"], ["chartEnergy", "tipEnergy"]].forEach(function (a) { hook(a[0], a[1]); });
+  [["chartPH", "tipPH"], ["chartTS", "tipTS"], ["chartCond", "tipCond"], ["chartEvap", "tipEvap"], ["chartEnergy", "tipEnergy"], ["chartYear", "tipYear"], ["chartBins", "tipBins"]].forEach(function (a) { hook(a[0], a[1]); });
   window.addEventListener("resize", draw);
   showTab(); sync(); update();
   window.__hps = { S: S, get R() { return R; }, update: update, sync: sync };

@@ -2,7 +2,7 @@ name: Heat Pump Studio tests
 
 # Refrigerant properties against CoolProp (saturation, vapour, liquid, inverse lookups), the cycle against complete
 # CoolProp reference cycles and the laws it must keep, the system calculations (heat load, heat exchanger zones and
-# pinch, flows, boreholes, pipes, charge limit), the Spanish and Danish translations, and the release checks.
+# pinch, flows, boreholes, pipes, charge limit), the seasonal bin method and the climate data, the Spanish and Danish translations, and the release checks.
 on:
   push:
     paths:
@@ -24,6 +24,7 @@ jobs:
           node-version: 22
       - run: node heat-pump-studio/tests/props.test.js
       - run: node heat-pump-studio/tests/cycle.test.js
+      - run: node heat-pump-studio/tests/seasonal.test.js
       - run: node heat-pump-studio/tests/i18n.test.js
       - run: node heat-pump-studio/tests/release.test.js
       - name: Syntax-check the page scripts
