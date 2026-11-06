@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="title">Heat Pump Studio — Design a Heat Pump</title>
+  <meta data-i18n-attr="content=meta" name="description" content="Design a heat pump from the building to the compressor: heat load, heat source, heating circuit, refrigerant cycle on live pressure–enthalpy and temperature–entropy charts with CoolProp properties, heat exchanger zones and pinch, compressor, pipes and charge, and a side-by-side comparison of seven refrigerants." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><path d=%22M20 75 L20 30 Q20 18 32 18 L68 18 Q80 18 80 30 L80 75%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%229%22/><circle cx=%2250%22 cy=%2260%22 r=%2214%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%229%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css?v=1.0.0">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">Heat Pump <span>Studio</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub" data-i18n="sub">design a heat pump, from the building to the compressor</span>
+    </div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <button class="back-link" id="btnLink" type="button" data-i18n="nav.link">Copy link</button>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail" id="rail">
+      <section class="step">
+        <h2><span class="n">1</span> <span data-i18n="s1.title">Building</span></h2>
+        <div class="seg" id="segLoad" role="group">
+          <button data-v="calc" data-i18n="s1.calc">Estimate</button><button data-v="direct" data-i18n="s1.direct">Enter heat load</button>
+        </div>
+        <div id="loadCalc">
+          <label class="fld"><span data-i18n="s1.city">Location</span><select id="inCity"></select></label>
+          <div class="pair">
+            <label class="fld"><span data-i18n="s1.tout">Design outdoor</span><span class="unit"><input type="number" id="inTout" step="1"> °C</span></label>
+            <label class="fld"><span data-i18n="s1.tin">Indoor</span><span class="unit"><input type="number" id="inTin" step="1"> °C</span></label>
+          </div>
+          <div class="pair">
+            <label class="fld"><span data-i18n="s1.area">Heated floor area</span><span class="unit"><input type="number" id="inArea" step="10" min="10"> m²</span></label>
+            <label class="fld"><span data-i18n="s1.persons">Occupants</span><span class="unit"><input type="number" id="inPersons" step="1" min="0"></span></label>
+          </div>
+          <label class="fld"><span data-i18n="s1.level">Insulation</span><select id="inLevel">
+            <option value="passive" data-i18n="lv.passive">Passive house</option>
+            <option value="new" data-i18n="lv.new">New building</option>
+            <option value="renovated" data-i18n="lv.renovated">Renovated</option>
+            <option value="older" data-i18n="lv.older">Older, partly insulated</option>
+            <option value="poor" data-i18n="lv.poor">Poorly insulated</option>
+          </select></label>
+        </div>
+        <div id="loadDirect" hidden>
+          <div class="pair">
+            <label class="fld"><span data-i18n="s1.load">Design heat load</span><span class="unit"><input type="number" id="inLoad" step="1" min="0.5"> kW</span></label>
+            <label class="fld"><span data-i18n="s1.tout">Design outdoor</span><span class="unit"><input type="number" id="inTout2" step="1"> °C</span></label>
+          </div>
+          <p class="hint" data-i18n="s1.directHint">Commercial and industrial loads up to several megawatts: the compressor type changes with size.</p>
+        </div>
+        <p class="result" id="loadResult"></p>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">2</span> <span data-i18n="s2.title">Heat source</span></h2>
+        <div class="seg seg4" id="segSource" role="group">
+          <button data-v="air" data-i18n="src.air">Air</button><button data-v="ground" data-i18n="src.ground">Ground</button><button data-v="water" data-i18n="src.water">Water</button><button data-v="waste" data-i18n="src.waste">Waste heat</button>
+        </div>
+        <p class="hint" id="sourceHint"></p>
+        <div class="pair">
+          <label class="fld"><span id="lblSrcIn" data-i18n="s2.in">Source inlet</span><span class="unit"><input type="number" id="inSrcIn" step="1"> °C</span></label>
+          <label class="fld"><span data-i18n="s2.dt">Cooled by</span><span class="unit"><input type="number" id="inSrcDT" step="0.5" min="1"> K</span></label>
+        </div>
+        <label class="check" id="rowLinkAir"><input type="checkbox" id="inLinkAir" checked> <span data-i18n="s2.link">Air at the design outdoor temperature</span></label>
+        <label class="fld"><span data-i18n="s2.approach">Approach (source out − evaporating)</span><span class="unit"><input type="number" id="inSrcApp" step="0.5" min="0.5"> K</span></label>
+        <div id="groundRow" class="pair">
+          <label class="fld"><span data-i18n="s2.ground">Ground</span><select id="inGround">
+            <option value="poor" data-i18n="gr.poor">Dry sediment (25 W/m)</option>
+            <option value="normal" data-i18n="gr.normal">Normal rock (60 W/m)</option>
+            <option value="rock" data-i18n="gr.rock">Rock, high conductivity (84 W/m)</option>
+          </select></label>
+          <label class="fld"><span data-i18n="s2.depth">Borehole depth</span><span class="unit"><input type="number" id="inDepth" step="10" min="30"> m</span></label>
+        </div>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">3</span> <span data-i18n="s3.title">Heating circuit</span></h2>
+        <label class="fld"><span data-i18n="s3.emitter">Emitters</span><select id="inSink">
+          <option value="floor" data-i18n="sk.floor">Underfloor heating (35/30 °C)</option>
+          <option value="lowRad" data-i18n="sk.lowRad">Low-temperature radiators (45/38 °C)</option>
+          <option value="radiator" data-i18n="sk.radiator">Radiators (55/45 °C)</option>
+          <option value="hot" data-i18n="sk.hot">Hot water, old radiators (65/55 °C)</option>
+          <option value="process" data-i18n="sk.process">Process heat, district heating (80/70 °C)</option>
+          <option value="custom" data-i18n="sk.custom">Custom</option>
+        </select></label>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s3.flow">Flow</span><span class="unit"><input type="number" id="inFlow" step="1"> °C</span></label>
+          <label class="fld"><span data-i18n="s3.ret">Return</span><span class="unit"><input type="number" id="inRet" step="1"> °C</span></label>
+        </div>
+        <label class="fld"><span data-i18n="s3.approach">Approach (condensing − flow)</span><span class="unit"><input type="number" id="inCondApp" step="0.5" min="0.5"> K</span></label>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">4</span> <span data-i18n="s4.title">Refrigerant and compressor</span></h2>
+        <label class="fld"><span data-i18n="s4.fluid">Refrigerant</span><select id="inFluid"></select></label>
+        <p class="hint" id="fluidHint"></p>
+        <label class="fld"><span data-i18n="s4.comp">Compressor</span><select id="inComp">
+          <option value="rotary" data-i18n="cp.rotary">Rotary (1–10 kW)</option>
+          <option value="scroll" data-i18n="cp.scroll">Scroll (3–100 kW)</option>
+          <option value="screw" data-i18n="cp.screw">Screw (50 kW – 5 MW)</option>
+          <option value="piston" data-i18n="cp.piston">Piston (5 kW – 2 MW)</option>
+        </select></label>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s4.etaIs">Isentropic efficiency</span><span class="unit"><input type="number" id="inEtaIs" step="0.01" min="0.4" max="0.9"></span></label>
+          <label class="fld"><span data-i18n="s4.etaEl">Motor and drive</span><span class="unit"><input type="number" id="inEtaEl" step="0.01" min="0.6" max="1"></span></label>
+        </div>
+        <div class="pair">
+          <label class="fld"><span data-i18n="s4.sh">Superheat</span><span class="unit"><input type="number" id="inSH" step="1" min="0"> K</span></label>
+          <label class="fld"><span data-i18n="s4.sc">Subcooling</span><span class="unit"><input type="number" id="inSC" step="1" min="0"> K</span></label>
+        </div>
+        <label class="fld"><span data-i18n="s4.rps">Compressor speed</span><span class="unit"><input type="number" id="inRps" step="1" min="5"> rev/s</span></label>
+      </section>
+
+      <section class="step">
+        <h2><span class="n">5</span> <span data-i18n="s5.title">Installation</span></h2>
+        <div class="seg" id="segInstall" role="group">
+          <button data-v="outdoor" data-i18n="in.outdoor">Outdoor unit</button><button data-v="indoor" data-i18n="in.indoor">Indoor unit</button><button data-v="plant" data-i18n="in.plant">Plant room</button>
+        </div>
+        <div class="pair" id="roomRow">
+          <label class="fld"><span data-i18n="s5.room">Room area</span><span class="unit"><input type="number" id="inRoom" step="1" min="4"> m²</span></label>
+          <label class="fld"><span data-i18n="s5.mount">Mounted</span><select id="inMount">
+            <option value="floor" data-i18n="mt.floor">On the floor</option>
+            <option value="wall" data-i18n="mt.wall">On the wall</option>
+            <option value="ceiling" data-i18n="mt.ceiling">Under the ceiling</option>
+          </select></label>
+        </div>
+        <p class="hint" data-i18n="s5.hint">For flammable refrigerants the charge allowed in a room depends on its floor area and how high the unit sits.</p>
+      </section>
+      <button class="btn" id="btnReset" type="button" data-i18n="nav.reset">Reset to the example</button>
+    </aside>
+
+    <main class="main">
+      <section class="kpis" id="kpis" aria-live="polite"></section>
+      <section class="alerts" id="alerts"></section>
+
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="ph" data-i18n="tab.ph">Pressure–enthalpy</button>
+          <button role="tab" data-tab="ts" data-i18n="tab.ts">Temperature–entropy</button>
+          <button role="tab" data-tab="hx" data-i18n="tab.hx">Heat exchangers</button>
+          <button role="tab" data-tab="energy" data-i18n="tab.energy">Energy flow</button>
+          <button role="tab" data-tab="cmp" data-i18n="tab.cmp">Compare refrigerants</button>
+        </div>
+        <div class="tabpane" data-pane="ph">
+          <p class="lede" data-i18n="ph.lede">The cycle on the refrigerant's pressure–enthalpy chart. Inside the dome the refrigerant boils or condenses at constant temperature; the horizontal lengths are the energy per kilogram: heat taken from the source (4→1), compressor work (1→2) and heat delivered (2→3).</p>
+          <div class="chartbox"><canvas id="chartPH" height="440"></canvas><div class="tip" id="tipPH" hidden></div></div>
+          <div class="legend" id="legPH"></div>
+        </div>
+        <div class="tabpane" data-pane="ts" hidden>
+          <p class="lede" data-i18n="ts.lede">The same cycle on the temperature–entropy chart, with the heat source and the heating circuit. The gaps between the refrigerant and the water or air are what the heat exchangers need to work; every kelvin of gap costs COP.</p>
+          <div class="chartbox"><canvas id="chartTS" height="440"></canvas><div class="tip" id="tipTS" hidden></div></div>
+          <div class="legend" id="legTS"></div>
+        </div>
+        <div class="tabpane" data-pane="hx" hidden>
+          <p class="lede" data-i18n="hx.lede">Temperatures along each heat exchanger, against the heat transferred. The refrigerant must stay hotter than the water in the condenser and colder than the source in the evaporator everywhere — the smallest gap is the pinch.</p>
+          <div class="hxgrid">
+            <div><h3 data-i18n="hx.cond">Condenser</h3><div class="chartbox"><canvas id="chartCond" height="300"></canvas><div class="tip" id="tipCond" hidden></div></div></div>
+            <div><h3 data-i18n="hx.evap">Evaporator</h3><div class="chartbox"><canvas id="chartEvap" height="300"></canvas><div class="tip" id="tipEvap" hidden></div></div></div>
+          </div>
+          <div class="legend" id="legHX"></div>
+        </div>
+        <div class="tabpane" data-pane="energy" hidden>
+          <p class="lede" data-i18n="en.lede">Where the delivered heat comes from: most of it is taken from the source for free; the compressor adds the rest as electrical work.</p>
+          <div class="chartbox"><canvas id="chartEnergy" height="300"></canvas><div class="tip" id="tipEnergy" hidden></div></div>
+        </div>
+        <div class="tabpane" data-pane="cmp" hidden>
+          <p class="lede" data-i18n="cmp.lede">Every refrigerant at the same source, heating circuit and compressor settings. Click a row to use that refrigerant.</p>
+          <div class="tablewrap"><table class="data" id="cmpTable"></table></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="ph" data-i18n="t.states">Cycle states</h2>
+        <div class="tablewrap"><table class="data" id="statesTable"></table></div>
+        <h2 class="ph" data-i18n="t.components">Components</h2>
+        <div class="cards" id="components"></div>
+        <p class="fine" data-i18n="t.fine">Refrigerant properties from CoolProp. Pressure drops in pipes and heat exchangers are neglected. U-values, volumetric efficiencies, the charge estimate and the borehole guide values (after VDI 4640) are typical figures for a first design, not a replacement for manufacturers' data.</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="i18n-es.js?v=1.0.0"></script>
+<script src="i18n-da.js?v=1.0.0"></script>
+<script src="i18n.js?v=1.0.0"></script>
+<script src="data/refrigerants.js?v=1.0.0"></script>
+<script src="src/props.js?v=1.0.0"></script>
+<script src="src/cycle.js?v=1.0.0"></script>
+<script src="src/system.js?v=1.0.0"></script>
+<script src="app.js?v=1.0.0"></script>
+</body>
+</html>

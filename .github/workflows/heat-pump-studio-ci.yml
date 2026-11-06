@@ -1,0 +1,31 @@
+name: Heat Pump Studio tests
+
+# Refrigerant properties against CoolProp (saturation, vapour, liquid, inverse lookups), the cycle against complete
+# CoolProp reference cycles and the laws it must keep, the system calculations (heat load, heat exchanger zones and
+# pinch, flows, boreholes, pipes, charge limit), the Spanish and Danish translations, and the release checks.
+on:
+  push:
+    paths:
+      - 'heat-pump-studio/**'
+      - '.github/workflows/heat-pump-studio-ci.yml'
+  pull_request:
+    paths:
+      - 'heat-pump-studio/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node heat-pump-studio/tests/props.test.js
+      - run: node heat-pump-studio/tests/cycle.test.js
+      - run: node heat-pump-studio/tests/i18n.test.js
+      - run: node heat-pump-studio/tests/release.test.js
+      - name: Syntax-check the page scripts
+        run: for f in heat-pump-studio/src/*.js heat-pump-studio/*.js heat-pump-studio/data/*.js; do node --check "$f"; done
+        shell: bash
