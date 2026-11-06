@@ -24,5 +24,10 @@ const shown = [fs.readFileSync(path.join(dir, "about.html"), "utf8"), fs.readFil
   .flatMap((t) => [...t.matchAll(/(?:v|versión |version )(\d+\.\d+\.\d+)/g)].map((m) => m[1]));
 check("every version on the about page is " + version, shown.length >= 3 && shown.every((v) => v === version), shown.join(", "));
 
+// charts: the canvas height attribute is rewritten for high-density screens, so it must be read only once (chartH)
+const appSrc = fs.readFileSync(path.join(dir, "app.js"), "utf8");
+const reads = (appSrc.match(/getAttribute\("height"\)/g) || []).length;
+check("charts read their height through chartH only (else they grow on every redraw)", reads === 1 && /function chartH\(cv\) \{ if \(!cv\.dataset\.h\)/.test(appSrc), reads + " reads");
+
 console.log(pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

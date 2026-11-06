@@ -117,7 +117,7 @@
       "about.title": "Acerca de Turbine Lab",
       "about.back": "← Volver al laboratorio",
       "about.h1": "Acerca de Turbine Lab",
-      "about.ver": "Turbine Lab, versión 1.0.0",
+      "about.ver": "Turbine Lab, versión 1.0.1",
       "about.p1": "Turbine Lab muestra las tres turbinas hidráulicas clásicas — Pelton, Francis y Kaplan — como modelos 3D que puede girar, desarmar y poner en marcha. Está pensado para quien quiera aprender cómo funciona la energía hidroeléctrica: estudiantes, docentes o curiosos.",
       "about.h.models": "Los modelos",
       "about.models": "Los modelos se hicieron en Blender y se exportaron a glTF; cada parte conserva su nombre, así la página puede rotularla, resaltarla y moverla. La escena Pelton es una central de salto alto excavada en una montaña; la escena Francis es un azud bajo con su casa de máquinas; la escena Kaplan es una unidad en corriente anclada en el lecho de un río. Las escenas Francis y Kaplan también contienen una “gemela eólica”: la misma máquina a mayor escala, alimentada con aire.",

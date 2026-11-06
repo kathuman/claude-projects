@@ -117,7 +117,7 @@
       "about.title": "Om Turbine Lab",
       "about.back": "← Tilbage til laboratoriet",
       "about.h1": "Om Turbine Lab",
-      "about.ver": "Turbine Lab version 1.0.0",
+      "about.ver": "Turbine Lab version 1.0.1",
       "about.p1": "Turbine Lab viser de tre klassiske vandturbiner — Pelton, Francis og Kaplan — som 3D-modeller, du kan dreje, skille ad og køre. Den er til alle, der vil lære, hvordan vandkraft virker: elever, lærere eller nysgerrige.",
       "about.h.models": "Modellerne",
       "about.models": "Modellerne er bygget i Blender og eksporteret til glTF; hver del beholder sit navn, så siden kan navngive den, fremhæve den og flytte den. Pelton-scenen er et værk med stor faldhøjde bygget ind i et bjerg; Francis-scenen er et lavt stemmeværk med maskinhus; Kaplan-scenen er en enhed i strømmen, forankret på flodbunden. Francis- og Kaplan-scenerne rummer også en “vindtvilling”: den samme maskine skaleret op og fodret med luft.",

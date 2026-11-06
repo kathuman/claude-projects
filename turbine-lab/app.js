@@ -6,7 +6,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-var VERSION = "1.0.0";
+var VERSION = "1.0.1";
 const I18 = window.TLi18n, T = I18.T, fx = I18.fx, PH = window.TLphys, MA = window.TLmach;
 const $ = (id) => document.getElementById(id);
 // part names and roles: translated per part key (TL_ES.P / TL_DA.P), English from src/machines.js
@@ -493,8 +493,11 @@ function update() {
 // ---------------------------------------------------------------- charts
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const SERIES = { pelton: "--s-pelton", francis: "--s-francis", kaplan: "--s-kaplan", propeller: "--s-propeller" };
+// a chart's height in CSS pixels. Read once from the height attribute and kept in data-h, because setting cv.height for a
+// high-density screen rewrites that attribute: reading it back would grow the chart on every redraw.
+function chartH(cv) { if (!cv.dataset.h) cv.dataset.h = cv.getAttribute("height"); return Number(cv.dataset.h); }
 function setup(cv) {
-  const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = Number(cv.getAttribute("height"));
+  const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = chartH(cv);
   if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); }
   cv.height = Math.round(h * dpr); cv.style.height = h + "px";
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
@@ -620,7 +623,7 @@ function drawPick() {
 }
 hookHover($("chartPick"), $("tipPick"), (x, y) => { pickHover.x = x; pickHover.y = y; drawPick(); });
 $("chartPick").addEventListener("click", (e) => {
-  const cv = $("chartPick"), r = cv.getBoundingClientRect(), b = logBox(cv.clientWidth, Number(cv.getAttribute("height")), PICK.Q0, PICK.Q1, PICK.H0, PICK.H1, { l: 60 });
+  const cv = $("chartPick"), r = cv.getBoundingClientRect(), b = logBox(cv.clientWidth, chartH(cv), PICK.Q0, PICK.Q1, PICK.H0, PICK.H1, { l: 60 });
   const x = e.clientX - r.left, y = e.clientY - r.top; if (x < b.l || x > b.r || y < b.t || y > b.b) return;
   S.site = { Q: b.ix(x), H: b.iy(y) }; renderPickResult(); drawPick();
 });
