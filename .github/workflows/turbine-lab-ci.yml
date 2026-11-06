@@ -1,0 +1,31 @@
+name: Turbine Lab tests
+
+# The physics (power from head and from a stream, Euler's Pelton optimum, efficiency curves, specific speeds, the
+# turbine-selection chart, water against air), the exported models (every mesh labelled, every driven node present),
+# the Spanish and Danish translations, and the release checks (cache-busting versions on every script).
+on:
+  push:
+    paths:
+      - 'turbine-lab/**'
+      - '.github/workflows/turbine-lab-ci.yml'
+  pull_request:
+    paths:
+      - 'turbine-lab/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node turbine-lab/tests/physics.test.js
+      - run: node turbine-lab/tests/machines.test.js
+      - run: node turbine-lab/tests/i18n.test.js
+      - run: node turbine-lab/tests/release.test.js
+      - name: Syntax-check the page scripts
+        run: for f in turbine-lab/src/*.js turbine-lab/*.js; do node --check "$f"; done
+        shell: bash

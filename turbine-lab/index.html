@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="title">Turbine Lab — How Water Turns Into Power</title>
+  <meta data-i18n-attr="content=meta" name="description" content="Explore Pelton, Francis and Kaplan turbines in 3D: every part labelled, a see-through and exploded view, live power from head and flow, efficiency at part load, a turbine-selection chart, and what happens if you feed the same machine with wind." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%228%22/><path d=%22M50 50 L50 14 M50 50 L81 68 M50 50 L19 68%22 stroke=%22%23ffcf4a%22 stroke-width=%2210%22 stroke-linecap=%22round%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css?v=1.0.0">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">Turbine <span>Lab</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub" data-i18n="sub">how water — and wind — turns into power</span>
+    </div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail">
+      <h2 data-i18n="h.machine">Machine</h2>
+      <div class="seg" id="segMachine" role="group" data-i18n-attr="aria-label=h.machine" aria-label="Machine">
+        <button data-v="pelton">Pelton</button><button data-v="francis">Francis</button><button data-v="kaplan">Kaplan</button>
+      </div>
+      <p class="hint" id="machineBlurb"></p>
+
+      <h2 data-i18n="h.medium">Fed by</h2>
+      <div class="seg" id="segMedium" role="group" data-i18n-attr="aria-label=h.medium" aria-label="Fed by">
+        <button data-v="water" data-i18n="medium.water">Water</button><button data-v="wind" data-i18n="medium.wind">Wind (thought experiment)</button>
+      </div>
+      <p class="hint" id="mediumHint"></p>
+
+      <h2 data-i18n="h.view">View</h2>
+      <div class="seg" id="segView" role="group" data-i18n-attr="aria-label=h.view" aria-label="View">
+        <button data-v="machine" data-i18n="view.machine">Machine</button><button data-v="site" data-i18n="view.site">Whole site</button>
+      </div>
+      <label class="check"><input type="checkbox" id="chkXray" /> <span data-i18n="show.xray">See through the casing</span></label>
+      <label class="check"><input type="checkbox" id="chkExplode" /> <span data-i18n="show.explode">Exploded view</span></label>
+      <label class="check"><input type="checkbox" id="chkSpin" checked /> <span data-i18n="show.spin">Spin the runner</span></label>
+      <label class="check"><input type="checkbox" id="chkFlow" checked /> <span data-i18n="show.flow">Show the flow moving</span></label>
+
+      <h2 data-i18n="h.operate">Operate it</h2>
+      <div id="ops"></div>
+
+      <h2 data-i18n="h.parts">Parts</h2>
+      <p class="hint" data-i18n="parts.hint">Point at the model, or pick a part here to fly to it.</p>
+      <ul class="parts" id="partsList"></ul>
+    </aside>
+
+    <main class="main">
+      <section class="stage" id="stage">
+        <canvas id="view3d" aria-label="3D model"></canvas>
+        <div class="loading" id="loading" data-i18n="loading">Loading the model…</div>
+        <div class="card" id="card" hidden>
+          <div class="card-name" id="cardName"></div>
+          <div class="card-role" id="cardRole"></div>
+        </div>
+        <div class="stage-note" id="stageNote"></div>
+        <div class="readout" id="readout" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="eff" data-i18n="tab.eff">Efficiency</button>
+          <button role="tab" data-tab="pick" data-i18n="tab.pick">Which turbine?</button>
+          <button role="tab" data-tab="wind" data-i18n="tab.wind">Water vs wind</button>
+        </div>
+
+        <div class="tabpane" data-pane="eff">
+          <p class="lede" data-i18n="eff.lede">No turbine is equally good at every flow. The curves show the typical share of the water's power each kind turns into shaft power as the flow drops below its rating. The marker is the machine you are running.</p>
+          <div class="chartbox"><canvas id="chartEff" height="300"></canvas><div class="tip" id="tipEff" hidden></div></div>
+          <div class="legend" id="legendEff"></div>
+          <div id="peltonBox" hidden>
+            <p class="lede" data-i18n="eff.pelton">Pelton only: how fast should the buckets move? A bucket standing still takes no work from the jet; a bucket as fast as the jet never gets hit. Euler's turbine equation puts the best in between — at half the jet speed. Move the "Bucket speed" slider and watch the marker.</p>
+            <div class="chartbox"><canvas id="chartUx" height="220"></canvas><div class="tip" id="tipUx" hidden></div></div>
+          </div>
+          <p class="fine" data-i18n="eff.fine">Curve shapes are typical for each kind of machine (as in the ESHA small-hydro guide), not those of a particular turbine. "Propeller" is a Kaplan runner with its blades locked.</p>
+        </div>
+
+        <div class="tabpane" data-pane="pick" hidden>
+          <p class="lede" data-i18n="pick.lede">Engineers choose a turbine from two numbers: the <b>head</b> (how far the water falls) and the <b>flow</b> (how much of it). Click anywhere on the chart to place your site.</p>
+          <div class="chartbox"><canvas id="chartPick" height="380"></canvas><div class="tip" id="tipPick" hidden></div></div>
+          <div class="legend" id="legendPick"></div>
+          <div class="pick-result" id="pickResult"></div>
+          <p class="fine" data-i18n="pick.fine">Zones are approximate, like those on manufacturers' selection charts; near a border more than one kind works and the choice turns on cost. Dashed lines: electrical power at 90% efficiency.</p>
+        </div>
+
+        <div class="tabpane" data-pane="wind" hidden>
+          <div id="windBody"></div>
+          <div class="chartbox"><canvas id="chartWind" height="300"></canvas><div class="tip" id="tipWind" hidden></div></div>
+          <div class="legend" id="legendWind"></div>
+          <p class="fine" data-i18n="wind.fine">The wind twins are thought experiments built from the same parts, not real products: real wind turbines use long, slender open blades because air carries so little energy per cubic metre.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="i18n-es.js?v=1.0.0"></script>
+<script src="i18n-da.js?v=1.0.0"></script>
+<script src="i18n.js?v=1.0.0"></script>
+<script src="src/physics.js?v=1.0.0"></script>
+<script src="src/machines.js?v=1.0.0"></script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script type="module" src="app.js?v=1.0.0"></script>
+</body>
+</html>

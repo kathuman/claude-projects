@@ -160,6 +160,7 @@ robot-configurator/index.html      — https://kathuman.github.io/claude-project
 ai-expectations-gap-map/index.html — https://kathuman.github.io/claude-projects/ai-expectations-gap-map/
 Beer-Distribution-Game/index.html  — https://kathuman.github.io/claude-projects/Beer-Distribution-Game/
 epicycles/index.html               — https://kathuman.github.io/claude-projects/epicycles/
+turbine-lab/index.html             — https://kathuman.github.io/claude-projects/turbine-lab/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules
