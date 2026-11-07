@@ -1,385 +1,385 @@
 {
-  "generated": "2026-10-24T10:21:54+00:00",
-  "period": "2026-09",
+  "generated": "2026-11-03T12:56:40+00:00",
+  "period": "2026-10",
   "window": {
     "current": [
-      "2026-07-01",
-      "2026-09-30"
+      "2026-08-01",
+      "2026-10-31"
     ],
     "prior": [
-      "2026-04-01",
-      "2026-06-30"
+      "2026-05-01",
+      "2026-07-31"
     ]
   },
   "method": "Relative indices: log-scaled, min-max normalised across the set. Expectations = 0.4 Wikipedia views + 0.4 HN stories + 0.2 momentum. Evidence = PyPI downloads where configured.",
   "technologies": {
     "ai-observability": {
-      "expectations_index": 27.0,
+      "expectations_index": 24.8,
       "evidence_index": 86.9,
       "raw": {
-        "wikipedia_views": 3858,
-        "wikipedia_views_prior": 2915,
+        "wikipedia_views": 4058,
+        "wikipedia_views_prior": 3273,
         "hn_stories": 5,
-        "hn_stories_prior": 9,
+        "hn_stories_prior": 8,
         "arxiv_papers": null,
         "pypi_downloads": 101422847,
-        "momentum": -0.1089
+        "momentum": -0.0909
       }
     },
     "ai-factories": {
-      "expectations_index": 40.8,
+      "expectations_index": 56.4,
       "evidence_index": null,
       "raw": {
         "wikipedia_views": null,
         "wikipedia_views_prior": null,
-        "hn_stories": 9,
-        "hn_stories_prior": 2,
+        "hn_stories": 12,
+        "hn_stories_prior": 3,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": 2.3333
+        "momentum": 2.25
       }
     },
     "quantum-for-ai": {
-      "expectations_index": 27.7,
+      "expectations_index": 24.9,
       "evidence_index": 29.6,
       "raw": {
-        "wikipedia_views": 10785,
-        "wikipedia_views_prior": 12773,
+        "wikipedia_views": 9948,
+        "wikipedia_views_prior": 12132,
         "hn_stories": 1,
         "hn_stories_prior": 1,
         "arxiv_papers": null,
         "pypi_downloads": 156378,
-        "momentum": -0.0811
+        "momentum": -0.0945
       }
     },
     "agentic-commerce": {
-      "expectations_index": 22.8,
+      "expectations_index": 16.1,
       "evidence_index": null,
       "raw": {
         "wikipedia_views": null,
         "wikipedia_views_prior": null,
-        "hn_stories": 7,
-        "hn_stories_prior": 16,
+        "hn_stories": 5,
+        "hn_stories_prior": 10,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.5294
+        "momentum": -0.4545
       }
     },
     "first-principles-ai": {
-      "expectations_index": 35.9,
+      "expectations_index": 30.7,
       "evidence_index": 0.0,
       "raw": {
-        "wikipedia_views": 17747,
-        "wikipedia_views_prior": 25028,
-        "hn_stories": 3,
-        "hn_stories_prior": 1,
+        "wikipedia_views": 17351,
+        "wikipedia_views_prior": 21990,
+        "hn_stories": 2,
+        "hn_stories_prior": 2,
         "arxiv_papers": null,
         "pypi_downloads": 5513,
-        "momentum": 0.1909
+        "momentum": -0.1117
       }
     },
     "ai-cybersecurity-governance": {
-      "expectations_index": 53.1,
+      "expectations_index": 52.5,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 19013,
-        "wikipedia_views_prior": 18328,
-        "hn_stories": 93,
-        "hn_stories_prior": 75,
+        "wikipedia_views": 22047,
+        "wikipedia_views_prior": 17475,
+        "hn_stories": 82,
+        "hn_stories_prior": 88,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": 0.1327
+        "momentum": 0.0847
       }
     },
     "causal-ai": {
-      "expectations_index": 34.4,
+      "expectations_index": 28.2,
       "evidence_index": 39.7,
       "raw": {
-        "wikipedia_views": 13773,
-        "wikipedia_views_prior": 14320,
-        "hn_stories": 2,
-        "hn_stories_prior": 0,
+        "wikipedia_views": 13598,
+        "wikipedia_views_prior": 13639,
+        "hn_stories": 1,
+        "hn_stories_prior": 1,
         "arxiv_papers": null,
         "pypi_downloads": 486930,
-        "momentum": 0.6987
+        "momentum": -0.0015
       }
     },
     "physical-ai": {
-      "expectations_index": 53.7,
+      "expectations_index": 51.9,
       "evidence_index": 33.3,
       "raw": {
-        "wikipedia_views": 31061,
-        "wikipedia_views_prior": 31570,
-        "hn_stories": 50,
-        "hn_stories_prior": 27,
+        "wikipedia_views": 30494,
+        "wikipedia_views_prior": 29584,
+        "hn_stories": 44,
+        "hn_stories_prior": 35,
         "arxiv_papers": null,
         "pypi_downloads": 237322,
-        "momentum": 0.3387
+        "momentum": 0.1351
       }
     },
     "ai-agent-identity": {
-      "expectations_index": 12.5,
+      "expectations_index": 17.9,
       "evidence_index": null,
       "raw": {
         "wikipedia_views": null,
         "wikipedia_views_prior": null,
-        "hn_stories": 3,
-        "hn_stories_prior": 13,
+        "hn_stories": 5,
+        "hn_stories_prior": 9,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.7143
+        "momentum": -0.4
       }
     },
     "ai-simulation": {
-      "expectations_index": 17.8,
+      "expectations_index": 13.4,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 7037,
-        "wikipedia_views_prior": 8687,
+        "wikipedia_views": 7220,
+        "wikipedia_views_prior": 7957,
         "hn_stories": 0,
-        "hn_stories_prior": 3,
+        "hn_stories_prior": 2,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.55
+        "momentum": -0.45
       }
     },
     "ai-governance-technologies": {
-      "expectations_index": 50.8,
+      "expectations_index": 47.5,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 32957,
-        "wikipedia_views_prior": 33980,
-        "hn_stories": 40,
-        "hn_stories_prior": 51,
+        "wikipedia_views": 31115,
+        "wikipedia_views_prior": 33699,
+        "hn_stories": 36,
+        "hn_stories_prior": 49,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.1255
+        "momentum": -0.1734
       }
     },
     "ai-native-software-engineering": {
-      "expectations_index": 70.9,
+      "expectations_index": 73.0,
       "evidence_index": 34.1,
       "raw": {
-        "wikipedia_views": 128694,
-        "wikipedia_views_prior": 189943,
-        "hn_stories": 375,
-        "hn_stories_prior": 404,
+        "wikipedia_views": 151130,
+        "wikipedia_views_prior": 167023,
+        "hn_stories": 409,
+        "hn_stories_prior": 395,
         "arxiv_papers": null,
         "pypi_downloads": 260509,
-        "momentum": -0.2069
+        "momentum": -0.0321
       }
     },
     "agi": {
-      "expectations_index": 72.5,
+      "expectations_index": 73.7,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 214274,
-        "wikipedia_views_prior": 141516,
-        "hn_stories": 142,
-        "hn_stories_prior": 80,
+        "wikipedia_views": 219810,
+        "wikipedia_views_prior": 133112,
+        "hn_stories": 122,
+        "hn_stories_prior": 94,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": 0.635
+        "momentum": 0.4622
       }
     },
     "composite-ai": {
-      "expectations_index": 37.2,
+      "expectations_index": 41.4,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 18573,
-        "wikipedia_views_prior": 22708,
-        "hn_stories": 6,
-        "hn_stories_prior": 8,
+        "wikipedia_views": 18776,
+        "wikipedia_views_prior": 20800,
+        "hn_stories": 9,
+        "hn_stories_prior": 5,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.2024
+        "momentum": 0.2266
       }
     },
     "decision-intelligence": {
-      "expectations_index": 23.0,
+      "expectations_index": 24.3,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 2163,
-        "wikipedia_views_prior": 2038,
+        "wikipedia_views": 2185,
+        "wikipedia_views_prior": 2089,
         "hn_stories": 2,
         "hn_stories_prior": 0,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": 0.7844
+        "momentum": 0.7714
       }
     },
     "finops-for-ai": {
-      "expectations_index": 18.3,
+      "expectations_index": 13.3,
       "evidence_index": 86.1,
       "raw": {
         "wikipedia_views": null,
         "wikipedia_views_prior": null,
-        "hn_stories": 4,
-        "hn_stories_prior": 10,
+        "hn_stories": 3,
+        "hn_stories_prior": 6,
         "arxiv_papers": null,
         "pypi_downloads": 92239101,
-        "momentum": -0.5455
+        "momentum": -0.4286
       }
     },
     "sovereign-ai": {
-      "expectations_index": 31.2,
+      "expectations_index": 30.7,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 604,
-        "wikipedia_views_prior": 0,
-        "hn_stories": 7,
+        "wikipedia_views": 1030,
+        "wikipedia_views_prior": 128,
+        "hn_stories": 12,
         "hn_stories_prior": 16,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": 15.8732
+        "momentum": 1.4722
       }
     },
     "ai-engineering": {
-      "expectations_index": 32.9,
+      "expectations_index": 31.5,
       "evidence_index": 72.5,
       "raw": {
-        "wikipedia_views": 6989,
-        "wikipedia_views_prior": 8344,
-        "hn_stories": 12,
-        "hn_stories_prior": 30,
+        "wikipedia_views": 7239,
+        "wikipedia_views_prior": 8018,
+        "hn_stories": 14,
+        "hn_stories_prior": 23,
         "arxiv_papers": null,
         "pypi_downloads": 19887934,
-        "momentum": -0.4073
+        "momentum": -0.2488
       }
     },
     "ai-agents": {
-      "expectations_index": 76.9,
+      "expectations_index": 80.2,
       "evidence_index": 80.1,
       "raw": {
-        "wikipedia_views": 72452,
-        "wikipedia_views_prior": 57547,
-        "hn_stories": 1661,
-        "hn_stories_prior": 1742,
+        "wikipedia_views": 89657,
+        "wikipedia_views_prior": 53568,
+        "hn_stories": 1683,
+        "hn_stories_prior": 1705,
         "arxiv_papers": null,
         "pypi_downloads": 47212716,
-        "momentum": 0.0957
+        "momentum": 0.2853
       }
     },
     "multimodal-ai": {
-      "expectations_index": 40.3,
+      "expectations_index": 41.6,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 9176,
-        "wikipedia_views_prior": 8127,
-        "hn_stories": 29,
-        "hn_stories_prior": 58,
+        "wikipedia_views": 9375,
+        "wikipedia_views_prior": 8039,
+        "hn_stories": 40,
+        "hn_stories_prior": 50,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.2423
+        "momentum": -0.0317
       }
     },
     "world-models": {
-      "expectations_index": 45.8,
+      "expectations_index": 36.6,
       "evidence_index": null,
       "raw": {
         "wikipedia_views": null,
         "wikipedia_views_prior": null,
-        "hn_stories": 59,
-        "hn_stories_prior": 69,
+        "hn_stories": 52,
+        "hn_stories_prior": 91,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.1429
+        "momentum": -0.4239
       }
     },
     "ai-ready-data": {
-      "expectations_index": 27.5,
+      "expectations_index": 31.1,
       "evidence_index": 72.1,
       "raw": {
-        "wikipedia_views": 4714,
-        "wikipedia_views_prior": 3885,
-        "hn_stories": 4,
-        "hn_stories_prior": 6,
+        "wikipedia_views": 6001,
+        "wikipedia_views_prior": 3795,
+        "hn_stories": 5,
+        "hn_stories_prior": 5,
         "arxiv_papers": null,
         "pypi_downloads": 19160330,
-        "momentum": -0.0691
+        "momentum": 0.2574
       }
     },
     "foundation-models": {
-      "expectations_index": 84.9,
+      "expectations_index": 84.6,
       "evidence_index": 100.0,
       "raw": {
-        "wikipedia_views": 337156,
-        "wikipedia_views_prior": 331093,
-        "hn_stories": 1325,
-        "hn_stories_prior": 1385,
+        "wikipedia_views": 353103,
+        "wikipedia_views_prior": 325271,
+        "hn_stories": 1201,
+        "hn_stories_prior": 1389,
         "arxiv_papers": null,
         "pypi_downloads": 446056288,
-        "momentum": -0.013
+        "momentum": -0.0311
       }
     },
     "synthetic-data": {
-      "expectations_index": 33.9,
+      "expectations_index": 30.9,
       "evidence_index": 20.2,
       "raw": {
-        "wikipedia_views": 7034,
-        "wikipedia_views_prior": 5980,
-        "hn_stories": 8,
+        "wikipedia_views": 7522,
+        "wikipedia_views_prior": 5850,
+        "hn_stories": 6,
         "hn_stories_prior": 8,
         "arxiv_papers": null,
         "pypi_downloads": 53772,
-        "momentum": 0.0845
+        "momentum": 0.0
       }
     },
     "edge-ai": {
-      "expectations_index": 46.1,
+      "expectations_index": 42.3,
       "evidence_index": 83.8,
       "raw": {
-        "wikipedia_views": 22413,
-        "wikipedia_views_prior": 24730,
-        "hn_stories": 28,
-        "hn_stories_prior": 39,
+        "wikipedia_views": 21265,
+        "wikipedia_views_prior": 24214,
+        "hn_stories": 24,
+        "hn_stories_prior": 34,
         "arxiv_papers": null,
         "pypi_downloads": 71495859,
-        "momentum": -0.1894
+        "momentum": -0.208
       }
     },
     "generative-ai": {
-      "expectations_index": 54.3,
+      "expectations_index": 46.3,
       "evidence_index": null,
       "raw": {
-        "wikipedia_views": 42468,
-        "wikipedia_views_prior": 76773,
-        "hn_stories": 65,
-        "hn_stories_prior": 62,
+        "wikipedia_views": 33126,
+        "wikipedia_views_prior": 65835,
+        "hn_stories": 53,
+        "hn_stories_prior": 75,
         "arxiv_papers": null,
         "pypi_downloads": null,
-        "momentum": -0.2387
+        "momentum": -0.4021
       }
     },
     "knowledge-graphs": {
-      "expectations_index": 49.1,
+      "expectations_index": 42.7,
       "evidence_index": 19.7,
       "raw": {
-        "wikipedia_views": 24750,
-        "wikipedia_views_prior": 29154,
-        "hn_stories": 41,
-        "hn_stories_prior": 47,
+        "wikipedia_views": 23572,
+        "wikipedia_views_prior": 28010,
+        "hn_stories": 28,
+        "hn_stories_prior": 46,
         "arxiv_papers": null,
         "pypi_downloads": 50897,
-        "momentum": -0.1381
+        "momentum": -0.2794
       }
     }
   },
   "errors": [
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22LLM+evaluation%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22quantum+machine+learning%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22physics-informed+neural+network%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22prompt+injection%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22causal+machine+learning%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22robot+foundation+model%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22neural+surrogate+model%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22code+generation+agent%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22neurosymbolic%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22LLM+agent%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22multimodal+large+language+model%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22world+model%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22large+language+model%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22synthetic+data%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0",
-    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22knowledge+graph%22+AND+submittedDate%3A%5B202607010000+TO+202609302359%5D&max_results=0"
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22LLM+evaluation%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22quantum+machine+learning%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22physics-informed+neural+network%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22prompt+injection%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22causal+machine+learning%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22robot+foundation+model%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22neural+surrogate+model%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22code+generation+agent%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22neurosymbolic%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22LLM+agent%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22multimodal+large+language+model%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22world+model%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22large+language+model%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22synthetic+data%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0",
+    "HTTP 500 https://export.arxiv.org/api/query?search_query=all%3A%22knowledge+graph%22+AND+submittedDate%3A%5B202608010000+TO+202610312359%5D&max_results=0"
   ]
 }
