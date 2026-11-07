@@ -10,7 +10,7 @@ function check(name, cond, detail) { if (cond) pass++; else fail++; if (!cond ||
 const version = fs.readFileSync(path.join(dir, "app.js"), "utf8").match(/var VERSION = "([^"]+)"/)[1];
 check("the app has a version", /^\d+\.\d+\.\d+$/.test(version), version);
 
-for (const file of ["index.html", "about.html"]) {
+for (const file of ["index.html", "about.html", "learn.html"]) {
   const html = fs.readFileSync(path.join(dir, file), "utf8");
   const local = [...html.matchAll(/<script src="([^"]+)"/g), ...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)]
     .map((m) => m[1]).filter((u) => !/^(https?:)?\/\//.test(u));

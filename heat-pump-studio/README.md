@@ -5,6 +5,20 @@
 Design a heat pump the way an engineer does, from the building to the compressor. It handles homes and larger
 commercial and industrial machines (up to megawatts). English, Spanish (Latin America) and Danish.
 
+## Learn
+
+`learn.html` introduces heat pumps for readers from about 15. It explains:
+- what a heat pump is, as a fridge working backwards that pumps heat "uphill";
+- the energy balance and COP;
+- the four steps of the cycle, with everyday comparisons;
+- the Carnot limit in kelvin, with a slider comparing it to a real heat pump;
+- the nine design equations: heat load, temperatures, enthalpy, mass flow, compressor work and efficiency, heat
+  exchanger area and pinch, compressor displacement, SCOP, and money and CO₂;
+- a glossary.
+
+Each equation has a worked example computed live with the studio's own code, for a renovated 150 m² house in
+Copenhagen.
+
 ## The design steps
 
 1. **Building.** Estimate the heat load from floor area, insulation level, indoor and design outdoor temperature, and

@@ -2,7 +2,7 @@
 // Every user-visible message goes through T(english, vars).
 (function () {
   "use strict";
-  var VERSION = "1.2.0";
+  var VERSION = "1.3.0";
   var I18 = window.HPSi18n, T = I18.T, fx = I18.fx, PR = window.HPSprops, CY = window.HPScycle, SY = window.HPSsystem, SE = window.HPSseasonal, CL = window.HPS_CLIMATE;
   var $ = function (id) { return document.getElementById(id); };
   $("ver").textContent = "v" + VERSION;

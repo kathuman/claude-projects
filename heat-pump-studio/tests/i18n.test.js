@@ -11,7 +11,7 @@ function check(name, cond, detail) { if (cond) pass++; else fail++; if (!cond ||
 
 // ---- page keys, with the English content of each element
 const english = {};
-for (const file of ["index.html", "about.html"]) {
+for (const file of ["index.html", "about.html", "learn.html"]) {
   const html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const m of html.matchAll(/<(\w+)([^>]*?)\sdata-i18n="([^"]+)"([^>]*)>([\s\S]*?)<\/\1>/g)) english[m[3]] = m[5];
   for (const m of html.matchAll(/data-i18n-attr="([^"]+)"/g)) m[1].split(",").forEach((pair) => { english[pair.split("=")[1]] = ""; });
@@ -20,7 +20,7 @@ const pageKeys = Object.keys(english);
 check("the pages have translatable text", pageKeys.length > 80, pageKeys.length + " keys");
 
 // ---- the script's messages: every string literal inside a T( … ) call, including both sides of a ternary
-const app = ["app.js", "src/extras.js"].map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join(";\n"), msgs = new Set();
+const app = ["app.js", "src/extras.js", "learn.js"].map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join(";\n"), msgs = new Set();
 for (let i = app.indexOf("T("); i >= 0; i = app.indexOf("T(", i + 2)) {
   if (/[\w.$]/.test(app[i - 1] || "")) continue;
   let depth = 0, j = i + 1, inVars = 0, args = [];

@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="ln.title">How a Heat Pump Works — Heat Pump Studio</title>
+  <meta data-i18n-attr="content=ln.meta" name="description" content="What a heat pump is, why it gives more heat than the electricity it uses, the four steps of its cycle, and the equations used to design one, explained step by step with a worked example." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css?v=1.3.0">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark">Heat Pump <span>Studio</span></div><span class="sub" data-i18n="ln.sub">how a heat pump works</span></div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="index.html" data-i18n="ln.back">← Design one</a>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <main class="learn">
+    <nav class="toc" aria-label="Contents">
+      <a href="#what" data-i18n="ln.toc1">1. What is a heat pump?</a>
+      <a href="#free" data-i18n="ln.toc2">2. Heat for (almost) free</a>
+      <a href="#steps" data-i18n="ln.toc3">3. The four steps</a>
+      <a href="#limit" data-i18n="ln.toc4">4. Why temperature matters</a>
+      <a href="#design" data-i18n="ln.toc5">5. Designing one, equation by equation</a>
+      <a href="#words" data-i18n="ln.toc6">6. Words to know</a>
+    </nav>
+
+    <h1 data-i18n="ln.h1">How a heat pump works</h1>
+    <p class="intro" data-i18n="ln.intro">A heat pump heats a house using a little electricity and a lot of free heat from outside — even when it is freezing. Here is how it does that, and the handful of equations an engineer uses to design one. You only need to know how to add, subtract, multiply and divide.</p>
+
+    <section id="what">
+      <h2 data-i18n="ln.what.h">1. What is a heat pump?</h2>
+      <p data-i18n="ln.what.p1">You already own one: your fridge. A fridge takes heat out of the food inside and pushes it out at the back — feel the back of a fridge and it is warm. A heat pump does exactly the same thing, but the other way round: it takes heat out of the cold air (or the ground, or water) outside and pushes it into your house.</p>
+      <p data-i18n="ln.what.p2">Wait — how can cold air contain heat? Because "cold" is only relative. Air at 0 °C still holds plenty of heat compared with something at −20 °C. Heat only stops when you reach absolute zero, −273 °C. So winter air is full of heat; it is just at a low temperature.</p>
+      <p data-i18n="ln.what.p3">Heat naturally flows from warm to cold, like water flowing downhill. A water pump can push water <b>uphill</b>; a heat pump pushes heat "uphill", from the cold outside to the warm inside. Pushing uphill takes work, and that work comes from electricity.</p>
+      <figure class="fig">
+        <svg viewBox="0 0 640 210" role="img" aria-labelledby="f1t">
+          <title id="f1t">Heat flows uphill through the heat pump</title>
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#ffcf4a"/></marker></defs>
+          <rect x="10" y="20" width="190" height="170" rx="12" class="f-cold"/>
+          <rect x="440" y="20" width="190" height="170" rx="12" class="f-hot"/>
+          <text x="105" y="50" class="f-h" data-i18n="ln.f1.out">Outside</text>
+          <text x="105" y="74" class="f-s" data-i18n="ln.f1.outT">cold air, −5 °C</text>
+          <text x="535" y="50" class="f-h" data-i18n="ln.f1.in">Inside</text>
+          <text x="535" y="74" class="f-s" data-i18n="ln.f1.inT">warm house, 21 °C</text>
+          <rect x="250" y="70" width="140" height="80" rx="10" class="f-box"/>
+          <text x="320" y="106" class="f-h" data-i18n="ln.f1.hp">Heat pump</text>
+          <text x="320" y="128" class="f-s" data-i18n="ln.f1.hp2">moves heat uphill</text>
+          <path d="M200 110 H240" class="f-arrow" marker-end="url(#ah)"/><path d="M394 110 H430" class="f-arrow" marker-end="url(#ah)"/>
+          <path d="M320 24 V60" class="f-arrow f-el" marker-end="url(#ah)"/>
+          <text x="330" y="16" class="f-s f-left" data-i18n="ln.f1.el">electricity</text>
+          <text x="105" y="150" class="f-s" data-i18n="ln.f1.free">free heat taken out</text>
+          <text x="535" y="150" class="f-s" data-i18n="ln.f1.give">all of it delivered</text>
+        </svg>
+      </figure>
+    </section>
+
+    <section id="free">
+      <h2 data-i18n="ln.free.h">2. Heat for (almost) free</h2>
+      <p data-i18n="ln.free.p1">An electric heater turns 1 kWh of electricity into exactly 1 kWh of heat. A heat pump does something smarter: it uses the electricity to <b>move</b> heat, not to make it. Moving heat takes much less energy than making it, so the same 1 kWh of electricity can deliver 3, 4 or even 5 kWh of heat.</p>
+      <p data-i18n="ln.free.p2">Energy can never appear from nowhere, so all the heat delivered must come from somewhere. It comes from two places: the outside, and the electricity. That is the first equation, the energy balance:</p>
+      <div class="eq">Q<sub>heat</sub> = Q<sub>source</sub> + W</div>
+      <p class="eqnote" data-i18n="ln.free.p3"><b>Q<sub>heat</sub></b> is the heat delivered to the house, <b>Q<sub>source</sub></b> the heat taken from outside and <b>W</b> the electrical work. All three are measured in kilowatts (kW): energy per second.</p>
+      <p data-i18n="ln.free.p4">How good a heat pump is, is measured by its <b>coefficient of performance</b>, the COP: how many kilowatts of heat you get for each kilowatt of electricity.</p>
+      <div class="eq">COP = <span class="frac"><span>Q<sub>heat</sub></span><span>W</span></span></div>
+      <div class="example" id="exFree"></div>
+    </section>
+
+    <section id="steps">
+      <h2 data-i18n="ln.steps.h">3. The four steps</h2>
+      <p data-i18n="ln.steps.p1">Inside the heat pump a special fluid, the <b>refrigerant</b>, goes round and round in a closed loop. The trick is that a liquid boils at a lower temperature when the pressure is low, and condenses at a higher temperature when the pressure is high. The heat pump uses this in four steps:</p>
+      <figure class="fig">
+        <svg viewBox="-80 0 800 300" role="img" aria-labelledby="f2t">
+          <title id="f2t">The four steps of the refrigerant cycle</title>
+          <path d="M170 70 H470" class="f-line f-cold-line"/><path d="M470 70 V230" class="f-line f-hot-line"/>
+          <path d="M470 230 H170" class="f-line f-liq-line"/><path d="M170 230 V70" class="f-line f-cold-line"/>
+          <circle cx="320" cy="70" r="34" class="f-box"/><text x="320" y="76" class="f-h">2</text>
+          <rect x="440" y="120" width="60" height="60" rx="8" class="f-box"/><text x="470" y="156" class="f-h">3</text>
+          <path d="M300 214 L340 246 L340 214 L300 246 Z" class="f-box"/><text x="320" y="270" class="f-h">4</text>
+          <rect x="140" y="120" width="60" height="60" rx="8" class="f-box"/><text x="170" y="156" class="f-h">1</text>
+          <text x="96" y="140" class="f-s f-right" data-i18n="ln.f2.s1">Evaporator</text>
+          <text x="96" y="158" class="f-s f-right" data-i18n="ln.f2.s1b">boils, takes heat in</text>
+          <text x="320" y="24" class="f-s" data-i18n="ln.f2.s2">Compressor: squeezes, gets hot</text>
+          <text x="512" y="140" class="f-s f-left" data-i18n="ln.f2.s3">Condenser</text>
+          <text x="512" y="158" class="f-s f-left" data-i18n="ln.f2.s3b">condenses, gives heat out</text>
+          <text x="320" y="292" class="f-s" data-i18n="ln.f2.s4">Expansion valve: pressure drops, gets cold</text>
+          <text x="250" y="152" class="f-s f-dim" data-i18n="ln.f2.low">low pressure</text>
+          <text x="390" y="152" class="f-s f-dim" data-i18n="ln.f2.high">high pressure</text>
+        </svg>
+      </figure>
+      <ol class="steps4">
+        <li data-i18n="ln.steps.l1"><b>Evaporate (take heat in).</b> At low pressure the refrigerant boils at a very low temperature, for example −20 °C. Outdoor air at −5 °C is warmer than that, so heat flows from the air into the refrigerant and makes it boil into a gas — just like water boiling on a stove takes heat from the flame.</li>
+        <li data-i18n="ln.steps.l2"><b>Compress (the electricity goes in here).</b> A compressor squeezes the gas to a high pressure. Squeezing a gas heats it up — feel a bicycle pump after pumping a tyre. The gas leaves hot, at perhaps 80 °C.</li>
+        <li data-i18n="ln.steps.l3"><b>Condense (give heat out).</b> The hot gas passes the water of the heating system. At high pressure it condenses back into a liquid at around 50 °C, giving its heat to the water, which goes to the radiators or the floor.</li>
+        <li data-i18n="ln.steps.l4"><b>Expand (cool down).</b> The liquid goes through an expansion valve, a tiny opening that drops the pressure. Like a spray can that feels cold when you spray it, the refrigerant becomes very cold, ready to take heat in again. And round it goes.</li>
+      </ol>
+    </section>
+
+    <section id="limit">
+      <h2 data-i18n="ln.limit.h">4. Why temperature matters</h2>
+      <p data-i18n="ln.limit.p1">The bigger the "hill" the heat must be pushed up, the more work it takes. The hill is the difference between the hot side (the heating water) and the cold side (outside). Physics sets a hard upper limit on the COP, found by the French engineer Sadi Carnot in 1824:</p>
+      <div class="eq">COP<sub>max</sub> = <span class="frac"><span>T<sub>hot</sub></span><span>T<sub>hot</sub> − T<sub>cold</sub></span></span></div>
+      <p class="eqnote" data-i18n="ln.limit.p2">Here the temperatures must be in <b>kelvin</b>: the temperature in °C plus 273. Kelvin starts at absolute zero, where there is no heat left at all.</p>
+      <div class="example" id="exCarnot"></div>
+      <p data-i18n="ln.limit.p3">A real heat pump reaches roughly half of the Carnot limit, because its parts are not perfect. But the lesson is clear: <b>keep the hill small</b>. Floor heating at 35 °C instead of radiators at 55 °C, or heat from the ground instead of freezing air, makes a big difference. Try it:</p>
+      <div class="widget" id="widget">
+        <div class="pair">
+          <label class="fld"><span data-i18n="ln.w.out">Outdoor temperature</span><span class="unit"><input type="range" id="wOut" min="-20" max="15" step="1" value="-5"> <output id="wOutO"></output></span></label>
+          <label class="fld"><span data-i18n="ln.w.flow">Heating water temperature</span><span class="unit"><input type="range" id="wFlow" min="30" max="65" step="1" value="45"> <output id="wFlowO"></output></span></label>
+        </div>
+        <div class="wbars" id="wBars"></div>
+        <p class="hint" data-i18n="ln.w.hint">The real COP comes from the same calculation as the studio: an R290 heat pump with typical heat exchangers and compressor.</p>
+      </div>
+    </section>
+
+    <section id="design">
+      <h2 data-i18n="ln.design.h">5. Designing one, equation by equation</h2>
+      <p data-i18n="ln.design.p1">Now let's design a heat pump for a real house, the way Heat Pump Studio does it: a renovated 150 m² house in Copenhagen, where the coldest design day is −12 °C, heated with low-temperature radiators at 45 °C. Every number below is calculated live by the studio's own equations.</p>
+
+      <h3 data-i18n="ln.d1.h">Step 1 — How much heat does the house need?</h3>
+      <p data-i18n="ln.d1.p">A house loses heat through its walls, windows, roof and air leaks, faster the colder it is outside. Engineers describe this with one number, <b>H</b>, the heat loss in watts for every degree of difference between inside and outside:</p>
+      <div class="eq">Φ = H × (T<sub>inside</sub> − T<sub>outside</sub>)</div>
+      <div class="example" id="ex1"></div>
+
+      <h3 data-i18n="ln.d2.h">Step 2 — Choose the temperatures</h3>
+      <p data-i18n="ln.d2.p">Heat only flows from warm to cold, and it needs a temperature gap to flow quickly. So the refrigerant must boil a bit <b>colder</b> than the outdoor air, and condense a bit <b>hotter</b> than the heating water:</p>
+      <div class="eq">T<sub>evap</sub> = T<sub>air</sub> − ΔT<sub>air</sub> − gap &nbsp;&nbsp;&nbsp; T<sub>cond</sub> = T<sub>water</sub> + gap</div>
+      <div class="example" id="ex2"></div>
+
+      <h3 data-i18n="ln.d3.h">Step 3 — Look up the energy in each kilogram</h3>
+      <p data-i18n="ln.d3.p">To count energy, engineers use <b>enthalpy</b>, written <b>h</b>: the energy carried by one kilogram of refrigerant, in kilojoules per kilogram (kJ/kg). It depends on the refrigerant's pressure and temperature, and is looked up in tables measured in laboratories (the studio uses CoolProp). We need it at the four points of the cycle:</p>
+      <div class="example" id="ex3"></div>
+
+      <h3 data-i18n="ln.d4.h">Step 4 — How much refrigerant must flow?</h3>
+      <p data-i18n="ln.d4.p">Each kilogram of refrigerant gives off (h<sub>2</sub> − h<sub>3</sub>) kilojoules in the condenser. To deliver the heat the house needs, enough kilograms must pass every second. That is the <b>mass flow</b>, ṁ:</p>
+      <div class="eq">ṁ = <span class="frac"><span>Q<sub>heat</sub></span><span>h<sub>2</sub> − h<sub>3</sub></span></span></div>
+      <div class="example" id="ex4"></div>
+
+      <h3 data-i18n="ln.d5.h">Step 5 — How much work does the compressor do?</h3>
+      <p data-i18n="ln.d5.p">The compressor adds (h<sub>2</sub> − h<sub>1</sub>) kilojoules to each kilogram. A perfect compressor would only need to reach h<sub>2s</sub>; a real one wastes some energy, described by its <b>isentropic efficiency</b> η (the Greek letter "eta"), typically 0.7:</p>
+      <div class="eq">W = ṁ × (h<sub>2</sub> − h<sub>1</sub>) &nbsp;&nbsp;&nbsp; h<sub>2</sub> = h<sub>1</sub> + <span class="frac"><span>h<sub>2s</sub> − h<sub>1</sub></span><span>η</span></span></div>
+      <div class="example" id="ex5"></div>
+
+      <h3 data-i18n="ln.d6.h">Step 6 — How big must the heat exchangers be?</h3>
+      <p data-i18n="ln.d6.p">The condenser and evaporator are heat exchangers: thin metal plates or fins with refrigerant on one side and water or air on the other. How much heat gets through depends on how well heat passes through the metal (<b>U</b>), how much surface there is (<b>A</b>) and the average temperature gap (<b>ΔT<sub>m</sub></b>):</p>
+      <div class="eq">Q = U × A × ΔT<sub>m</sub> &nbsp;&nbsp;&nbsp; so &nbsp;&nbsp;&nbsp; A = <span class="frac"><span>Q</span><span>U × ΔT<sub>m</sub></span></span></div>
+      <p data-i18n="ln.d6.p2">A small temperature gap means you need a large surface. Somewhere inside each heat exchanger the gap is smallest; engineers call that the <b>pinch</b>. If the gap there drops to zero or below, the design cannot work, however big you make it — the studio warns you when that happens.</p>
+      <div class="example" id="ex6"></div>
+
+      <h3 data-i18n="ln.d7.h">Step 7 — How big is the compressor?</h3>
+      <p data-i18n="ln.d7.p">Gas at low pressure takes up a lot of space. The compressor must suck in the refrigerant's volume every second: the mass flow times the volume of one kilogram, <b>v</b>. Dividing by its speed gives the volume it must sweep in each turn, its <b>displacement</b>:</p>
+      <div class="eq">displacement = <span class="frac"><span>ṁ × v</span><span>η<sub>vol</sub> × speed</span></span></div>
+      <div class="example" id="ex7"></div>
+
+      <h3 data-i18n="ln.d8.h">Step 8 — The whole year</h3>
+      <p data-i18n="ln.d8.p">The coldest day only happens a few hours a year. Most of the winter is milder, the hill is smaller and the COP is higher. To find the real average, the studio takes ten years of hourly weather, sorts the hours by outdoor temperature (one "bin" per degree), works out the heat and the electricity in each bin, and adds them up. The result is the <b>seasonal COP</b>, or SCOP:</p>
+      <div class="eq">SCOP = <span class="frac"><span>heat over the whole year</span><span>electricity over the whole year</span></span></div>
+      <div class="example" id="ex8"></div>
+
+      <h3 data-i18n="ln.d9.h">Step 9 — Money and CO₂</h3>
+      <p data-i18n="ln.d9.p">Finally the energy becomes money and emissions: multiply the kilowatt-hours by the price, or by the kilograms of CO₂ released for each kilowatt-hour. A gas boiler burns about 1.1 kWh of gas for every kWh of heat; a heat pump needs only about a quarter of a kWh of electricity.</p>
+      <div class="eq">cost = energy × price &nbsp;&nbsp;&nbsp; CO₂ = energy × emission factor</div>
+      <div class="example" id="ex9"></div>
+      <p class="cta"><a class="btn primary" href="index.html" data-i18n="ln.cta">Now design your own in the studio →</a></p>
+    </section>
+
+    <section id="words">
+      <h2 data-i18n="ln.words.h">6. Words to know</h2>
+      <dl class="words">
+        <dt data-i18n="ln.w1t">Refrigerant</dt><dd data-i18n="ln.w1d">The fluid that goes round inside the heat pump, boiling and condensing. Propane (R290) is a common modern one.</dd>
+        <dt data-i18n="ln.w2t">kW and kWh</dt><dd data-i18n="ln.w2d">A kilowatt (kW) is a rate: how fast energy flows. A kilowatt-hour (kWh) is an amount: 1 kW for one hour. Your electricity bill counts kWh.</dd>
+        <dt data-i18n="ln.w3t">COP and SCOP</dt><dd data-i18n="ln.w3d">How many kW of heat per kW of electricity, at one moment (COP) or averaged over a whole year (SCOP).</dd>
+        <dt data-i18n="ln.w4t">Kelvin</dt><dd data-i18n="ln.w4d">A temperature scale that starts at absolute zero, −273 °C. Add 273 to a temperature in °C to get kelvin.</dd>
+        <dt data-i18n="ln.w5t">Enthalpy (h)</dt><dd data-i18n="ln.w5d">The energy carried by one kilogram of fluid, in kJ/kg. Differences in enthalpy tell you how much heat or work goes in or out.</dd>
+        <dt data-i18n="ln.w6t">Evaporator and condenser</dt><dd data-i18n="ln.w6d">The two heat exchangers: the evaporator takes heat in from outside, the condenser gives heat out to the house.</dd>
+        <dt data-i18n="ln.w7t">Pinch</dt><dd data-i18n="ln.w7d">The place in a heat exchanger where the temperature gap between the two sides is smallest.</dd>
+        <dt data-i18n="ln.w8t">Flow temperature</dt><dd data-i18n="ln.w8d">The temperature of the water going out to the radiators or floor. The lower it is, the better the heat pump works.</dd>
+      </dl>
+    </section>
+  </main>
+</div>
+<script src="i18n-es.js?v=1.3.0"></script>
+<script src="i18n-da.js?v=1.3.0"></script>
+<script src="i18n.js?v=1.3.0"></script>
+<script src="data/refrigerants.js?v=1.3.0"></script>
+<script src="data/climate.js?v=1.3.0"></script>
+<script src="src/props.js?v=1.3.0"></script>
+<script src="src/cycle.js?v=1.3.0"></script>
+<script src="src/system.js?v=1.3.0"></script>
+<script src="src/seasonal.js?v=1.3.0"></script>
+<script src="learn.js?v=1.3.0"></script>
+</body>
+</html>
