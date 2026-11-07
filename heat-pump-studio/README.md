@@ -19,6 +19,17 @@ commercial and industrial machines (up to megawatts). English, Spanish (Latin Am
 Each equation has a worked example computed live with the studio's own code, for a renovated 150 m² house in
 Copenhagen.
 
+## Toy heat pump
+
+`toy.html` lets readers build a toy heat pump: they drag a compressor, an expansion valve and two coils (small or
+large) into a loop between two buckets of water. Decoy parts (a water pump, an electric heater) explain why they don't
+work, and swapping the compressor and valve reverses it. The run (`src/toy.js`, tested in `tests/toy.test.js`) holds
+the compressor's electrical power fixed and finds the condensing and evaporating temperatures from the coils' UA values
+with the studio's own cycle; the buckets lose heat to the room, freeze at 0 °C with latent heat, and high- and
+low-pressure switches stop the compressor. Experiments to try, safe home experiments, and a shopping list with three
+routes to a real one: a sealed school demonstrator, the toy from parts with a certified technician doing the
+refrigerant work, or a Peltier version with two pumps. Also explains how to measure the COP.
+
 ## The design steps
 
 1. **Building.** Estimate the heat load from floor area, insulation level, indoor and design outdoor temperature, and

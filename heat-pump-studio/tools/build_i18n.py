@@ -10,6 +10,8 @@ import translations_v12 as _v
 T.update(_v.T); H.update(_v.H)
 import translations_learn as _l
 T.update(_l.T); H.update(_l.H)
+import translations_toy as _y
+T.update(_y.T); H.update(_y.H)
 
 def js(var, label, idx):
     t = {k: v[idx] for k, v in T.items()}; h = {k: v[idx] for k, v in H.items()}

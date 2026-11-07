@@ -40,7 +40,7 @@
     });
     var t = document.querySelector("title[data-i18n]"); if (t && D.H[t.getAttribute("data-i18n")]) document.title = D.H[t.getAttribute("data-i18n")];
     // links between the app's pages keep the language even where the choice cannot be stored
-    doc.querySelectorAll("a[href]").forEach(function (a) { var h = a.getAttribute("href"); if (/^(index|about|learn)\.html|^\.\/?(#|$)/.test(h)) a.setAttribute("href", withLang(h)); });
+    doc.querySelectorAll("a[href]").forEach(function (a) { var h = a.getAttribute("href"); if (/^(index|about|learn|toy)\.html|^\.\/?(#|$)/.test(h)) a.setAttribute("href", withLang(h)); });
   }
   function hrefFor(l) {
     var q = new URLSearchParams(location.search); q.set("lang", l);

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="ty.title">Build a Toy Heat Pump — Heat Pump Studio</title>
+  <meta data-i18n-attr="content=ty.meta" name="description" content="Build a toy heat pump from a compressor, a valve and two coils, then run it between two buckets of water: one gets hot, the other freezes. Plus safe experiments to try at home." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css?v=1.4.0">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark">Heat Pump <span>Studio</span></div><span class="sub" data-i18n="ty.sub">toy heat pump</span></div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="index.html" data-i18n="ln.back">← Design one</a>
+      <a class="back-link" href="learn.html" data-i18n="nav.learn">Learn</a>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <main class="learn toy">
+    <h1 data-i18n="ty.h1">Build a toy heat pump</h1>
+    <p class="intro" data-i18n="ty.intro">Two buckets of water, a small compressor like the one in a fridge, an expansion valve and two copper coils. Put the parts in the right places and switch it on: one bucket gets hot while the other gets colder, until it starts to freeze. Then change the parts and see what happens.</p>
+
+    <section id="build">
+      <h2 data-i18n="ty.h.build">1. Build it</h2>
+      <p data-i18n="ty.how">Drag a part onto one of the four dashed places, or tap a part and then a place. Tap a placed part to take it back. The refrigerant flows clockwise, in the direction of the arrows.</p>
+      <div class="toy-grid">
+        <figure class="fig toy-rig">
+          <svg id="rig" viewBox="0 0 640 380" role="img" aria-labelledby="rigT">
+            <title id="rigT" data-i18n="ty.rigT">The toy heat pump: two buckets, two pipes and four places for parts</title>
+            <defs>
+              <marker id="tah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#8fd0f2"/></marker>
+              <clipPath id="clipL"><rect x="40" y="170" width="200" height="180" rx="4"/></clipPath>
+              <clipPath id="clipR"><rect x="400" y="170" width="200" height="180" rx="4"/></clipPath>
+            </defs>
+            <!-- buckets -->
+            <g id="bucketL">
+              <rect id="waterL" x="40" y="190" width="200" height="160" class="t-water"/>
+              <rect id="iceL" x="40" y="190" width="200" height="0" class="t-ice" clip-path="url(#clipL)"/>
+              <path d="M30 160 L44 352 Q140 362 236 352 L250 160" class="t-bucket"/>
+              <text x="140" y="374" class="t-lbl" data-i18n="ty.bucketL">left bucket</text>
+            </g>
+            <g id="bucketR">
+              <rect id="waterR" x="400" y="190" width="200" height="160" class="t-water"/>
+              <rect id="iceR" x="400" y="190" width="200" height="0" class="t-ice" clip-path="url(#clipR)"/>
+              <path d="M390 160 L404 352 Q500 362 596 352 L610 160" class="t-bucket"/>
+              <text x="500" y="374" class="t-lbl" data-i18n="ty.bucketR">right bucket</text>
+            </g>
+            <text id="tempL" x="140" y="338" class="t-temp">20.0 °C</text>
+            <text id="tempR" x="500" y="338" class="t-temp">20.0 °C</text>
+            <!-- the loop: top pipe left → right, down the right leads, bottom pipe right → left, up the left leads -->
+            <path id="pTop" d="M100 300 V40 H540 V300" class="t-pipe"/>
+            <path id="pBot" d="M480 300 V100 H160 V300" class="t-pipe"/>
+            <path id="fTop" d="M100 300 V40 H540 V300" class="t-flow"/>
+            <path id="fBot" d="M480 300 V100 H160 V300" class="t-flow"/>
+            <path d="M250 40 H262" class="t-dir" marker-end="url(#tah)"/><path d="M390 40 H402" class="t-dir" marker-end="url(#tah)"/>
+            <path d="M262 100 H250" class="t-dir" marker-end="url(#tah)"/><path d="M402 100 H390" class="t-dir" marker-end="url(#tah)"/>
+            <!-- the four places -->
+            <g class="slot" id="slot-top" data-slot="top" tabindex="0" role="button"><rect x="270" y="14" width="100" height="52" rx="8"/><g class="slot-in"></g></g>
+            <g class="slot" id="slot-bottom" data-slot="bottom" tabindex="0" role="button"><rect x="270" y="74" width="100" height="52" rx="8"/><g class="slot-in"></g></g>
+            <g class="slot" id="slot-left" data-slot="left" tabindex="0" role="button"><rect x="80" y="232" width="100" height="80" rx="8"/><g class="slot-in"></g></g>
+            <g class="slot" id="slot-right" data-slot="right" tabindex="0" role="button"><rect x="460" y="232" width="100" height="80" rx="8"/><g class="slot-in"></g></g>
+          </svg>
+        </figure>
+        <div class="toy-side">
+          <h3 data-i18n="ty.h.parts">Parts box</h3>
+          <div class="tray" id="tray"></div>
+          <div class="toy-btns">
+            <button class="btn" id="bShow" type="button" data-i18n="ty.show">Show me</button>
+            <button class="btn" id="bClear" type="button" data-i18n="ty.clear">Empty the rig</button>
+          </div>
+          <div class="toy-check" id="check" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="run">
+      <h2 data-i18n="ty.h.run">2. Run it</h2>
+      <div class="toy-set">
+        <label class="fld"><span data-i18n="ty.f.comp">Compressor</span>
+          <select id="sW"><option value="40" data-i18n="ty.c40">small, 40 W</option><option value="80" selected data-i18n="ty.c80">medium, 80 W (a fridge)</option><option value="120" data-i18n="ty.c120">large, 120 W</option></select></label>
+        <label class="fld"><span data-i18n="ty.f.fluid">Refrigerant</span>
+          <select id="sF"><option value="R134a" data-i18n="ty.r134a">R134a (older fridges)</option><option value="R290" data-i18n="ty.r290">R290, propane (new fridges)</option></select></label>
+        <label class="fld"><span data-i18n="ty.f.size">Each bucket holds</span>
+          <select id="sL"><option value="2">2 L</option><option value="5" selected>5 L</option><option value="10">10 L</option></select></label>
+        <label class="fld"><span data-i18n="ty.f.start">Water at the start</span>
+          <select id="sT"><option value="10">10 °C</option><option value="20" selected>20 °C</option><option value="30">30 °C</option></select></label>
+        <label class="fld"><span data-i18n="ty.f.ins">Buckets</span>
+          <select id="sI"><option value="0" data-i18n="ty.open">open plastic buckets</option><option value="1" data-i18n="ty.foam">in foam boxes</option></select></label>
+        <label class="fld"><span data-i18n="ty.f.speed">Speed</span>
+          <select id="sS"><option value="60" data-i18n="ty.s60">1 s = 1 minute</option><option value="300" selected data-i18n="ty.s300">1 s = 5 minutes</option><option value="1200" data-i18n="ty.s1200">1 s = 20 minutes</option></select></label>
+      </div>
+      <div class="toy-btns">
+        <button class="btn primary" id="bRun" type="button" disabled data-i18n="ty.run">Switch on</button>
+        <button class="btn" id="bReset" type="button" data-i18n="ty.reset">Start again</button>
+      </div>
+      <div class="toy-out" id="out"></div>
+      <div class="toy-charts">
+        <figure class="fig"><figcaption class="t-cap" data-i18n="ty.ch1">Water temperatures, °C</figcaption><canvas id="chT" height="220" aria-label="Water temperatures over time"></canvas><div class="t-legend" id="legT"></div></figure>
+        <figure class="fig"><figcaption class="t-cap" data-i18n="ty.ch2">COP: heat delivered ÷ electricity used</figcaption><canvas id="chC" height="220" aria-label="COP over time"></canvas><div class="t-legend" id="legC"></div></figure>
+      </div>
+      <ul class="toy-log" id="log" aria-live="polite"></ul>
+    </section>
+
+    <section id="try">
+      <h2 data-i18n="ty.h.try">3. Experiments to try</h2>
+      <ol class="toy-list">
+        <li data-i18n="ty.try1"><b>Watch the COP fall.</b> At the start both buckets are at the same temperature and the COP is high. As the gap between them grows, the heat pump has to push heat further "uphill" and the COP drops. That is why a heat pump works best with low radiator temperatures.</li>
+        <li data-i18n="ty.try2"><b>Small coils or large coils?</b> Build it with the small coils, then with the large ones. Larger coils need a smaller temperature difference to pass the same heat, so the refrigerant can condense at a lower temperature and evaporate at a higher one: the COP goes up.</li>
+        <li data-i18n="ty.try3"><b>A bigger compressor.</b> The large compressor heats faster but with a lower COP, and with small coils the pressure climbs until the safety switch stops it.</li>
+        <li data-i18n="ty.try4"><b>Freeze the cold bucket.</b> When the cold water reaches 0 °C it stays there while ice forms: freezing water gives up a lot of heat (334 kJ for every kilogram), so the heat pump keeps working on "free" heat from the ice.</li>
+        <li data-i18n="ty.try5"><b>Foam boxes.</b> Open buckets swap heat with the room, so the hot one stops rising and the cold one warms up again when the compressor stops. Insulate them and compare.</li>
+        <li data-i18n="ty.try6"><b>Build it backwards.</b> Swap the compressor and the valve. Now the left bucket gets hot. Air conditioners that also heat do exactly this, with a four-way valve that reverses the flow.</li>
+      </ol>
+    </section>
+
+    <section id="real">
+      <h2 data-i18n="ty.h.real">4. Try it for real, safely</h2>
+      <p data-i18n="ty.real.p">You can feel every part of the heat pump idea at home, without opening any machine.</p>
+      <div class="warnbox" data-i18n="ty.safety"><b>Never open a fridge, freezer or air conditioner, or cut its pipes.</b> The refrigerant is under pressure, can be flammable (propane and isobutane) and can cause frostbite, and only certified technicians are allowed to handle it. All the experiments below use sealed things or no refrigerant at all.</div>
+      <div class="cards toy-cards">
+        <div class="card"><h4 data-i18n="ty.x1h">Squeeze it: a bicycle pump</h4><p data-i18n="ty.x1">Cover the outlet of a bicycle pump with your finger and pump hard ten times. Feel the bottom of the pump: it is warm. Squeezing a gas heats it, just like the compressor heats the refrigerant.</p></div>
+        <div class="card"><h4 data-i18n="ty.x2h">Let it go: a rubber band</h4><p data-i18n="ty.x2">Stretch a thick rubber band quickly and touch it to your lip: it feels warm. Hold it stretched for ten seconds, let it go quickly and touch it again: it feels cool. Releasing it takes in heat, like the refrigerant after the valve.</p></div>
+        <div class="card"><h4 data-i18n="ty.x3h">Your fridge is a heat pump</h4><p data-i18n="ty.x3">Put a thermometer in the fridge and another next to the coil at the back (or underneath). Inside is about 5 °C, the back is warm: heat is being pumped out of the food into the kitchen. A plug-in energy meter shows how little electricity that takes.</p></div>
+        <div class="card"><h4 data-i18n="ty.x4h">A solid-state heat pump (with an adult)</h4><p data-i18n="ty.x4">A Peltier module is a small tile that pumps heat from one side to the other when electricity flows through it, with no moving parts. Put a cup of water on each side, run it from a 12 V supply for a few minutes and measure both cups: one warms, one cools. Always keep the hot side on a heat sink or in water, or it overheats in seconds.</p></div>
+      </div>
+    </section>
+
+    <section id="buy">
+      <h2 data-i18n="ty.h.buy">5. Shopping list: build the toy for real</h2>
+      <p data-i18n="ty.buy.p">There are three ways to build a real two-bucket heat pump and measure its COP. Prices are rough guides in euros (2026); shop around.</p>
+      <div class="buy-grid">
+        <div class="card buy">
+          <h4 data-i18n="ty.b1h">A. Ready to use: a sealed school heat pump</h4>
+          <p data-i18n="ty.b1p">The closest thing to the toy. Educational suppliers sell demonstration heat pumps with a small compressor, an expansion valve, two copper coils in water containers, pressure gauges and a sight glass, filled with refrigerant and sealed at the factory. You never touch the refrigerant.</p>
+          <ul>
+            <li data-i18n="ty.b1a">Heat pump demonstrator for schools, sealed and pre-filled (search for "heat pump demonstrator" at physics teaching suppliers) — about €900–2,500</li>
+            <li data-i18n="ty.b1b">Two digital thermometers with probes — about €10–25 each</li>
+            <li data-i18n="ty.b1c">A plug-in energy meter, to read the electricity used — about €15–30</li>
+            <li data-i18n="ty.b1d">A measuring jug and a stopwatch (a phone will do)</li>
+          </ul>
+          <p class="dim" data-i18n="ty.b1n">Best for a school: ask your physics department, many already have one.</p>
+        </div>
+        <div class="card buy">
+          <h4 data-i18n="ty.b2h">B. The toy from parts (refrigerant work by a technician)</h4>
+          <p data-i18n="ty.b2p">Exactly the parts in the toy. You can buy and arrange them, but joining the pipes, testing for leaks, pulling a vacuum and filling the refrigerant must be done by a certified refrigeration technician: the law requires it, and the gas is under high pressure and can be flammable.</p>
+          <ul>
+            <li data-i18n="ty.b2a"><b>Compressor:</b> a small hermetic fridge compressor, about 1/8 hp (80–100 W), for R290 or R134a — about €60–150</li>
+            <li data-i18n="ty.b2b"><b>Two coils:</b> soft copper refrigeration tube, 6 mm (1/4"), about 3 m for each coil, wound around a bottle — about €25–40</li>
+            <li data-i18n="ty.b2c"><b>Expansion valve:</b> a capillary tube matched to the compressor (or a small thermostatic expansion valve) — about €5–60</li>
+            <li data-i18n="ty.b2d"><b>Filter drier</b>, which keeps moisture out of the circuit — about €5–15</li>
+            <li data-i18n="ty.b2e"><b>Sight glass</b>, to watch the refrigerant bubble and turn liquid — about €10–20</li>
+            <li data-i18n="ty.b2f"><b>Two pressure gauges</b> (high and low side) with access valves — about €30–60</li>
+            <li data-i18n="ty.b2g"><b>High-pressure safety switch</b>, the same job as in the toy — about €15–30</li>
+            <li data-i18n="ty.b2j">A wooden board to mount it on, two 5 L buckets or foam boxes, two thermometers and an energy meter</li>
+            <li data-i18n="ty.b2i"><b>The technician's work:</b> brazing, pressure test with nitrogen, vacuum and charging (a few hundred grams of refrigerant) — ask for a quote</li>
+          </ul>
+        </div>
+        <div class="card buy">
+          <h4 data-i18n="ty.b3h">C. Build it yourself: a Peltier heat pump (with an adult)</h4>
+          <p data-i18n="ty.b3p">No refrigerant and no compressor: a Peltier module pumps heat electrically. It is less efficient than a compressor, but it tests the same idea with two buckets, and you can build it on a kitchen table in an afternoon.</p>
+          <ul>
+            <li data-i18n="ty.b3a"><b>Peltier module</b> TEC1-12706 (12 V, about 6 A), get two in case one breaks — about €5–10 each</li>
+            <li data-i18n="ty.b3b"><b>Two aluminium water blocks</b>, 40 × 40 mm (sold for PC water cooling) — about €5–10 each</li>
+            <li data-i18n="ty.b3c"><b>Two small 12 V submersible pumps</b> and 2 m of silicone tube that fits them — about €10–20</li>
+            <li data-i18n="ty.b3d"><b>12 V power supply</b>, at least 10 A, with screw terminals — about €20–30</li>
+            <li data-i18n="ty.b3e"><b>Thermal paste</b> and two small clamps or bolts to press the sandwich together — about €5–10</li>
+            <li data-i18n="ty.b3f"><b>DC power meter</b> (volts, amps, watts) between the supply and the module — about €10–20</li>
+            <li data-i18n="ty.b3g">Two insulated containers (foam boxes or 2 L food flasks), two thermometers, a measuring jug</li>
+          </ul>
+          <p data-i18n="ty.b3s"><b>How to put it together:</b> paste one water block on each face of the Peltier module and clamp them. Put a pump in each container and run its water through one block and back. Fill both containers with the same amount of water at the same temperature, switch on the pumps, then the module. One container warms and the other cools.</p>
+          <p class="dim" data-i18n="ty.b3n">Never run the module without water flowing on its hot side: it burns out in seconds. Keep the electrics away from the water and dry your hands.</p>
+        </div>
+      </div>
+      <h3 data-i18n="ty.h.measure">Measure your COP</h3>
+      <p data-i18n="ty.m1">Write down the water's mass (1 litre is 1 kg), both temperatures every 5 minutes, and the electricity. Then:</p>
+      <div class="calc" data-i18n="ty.m2">heat into the hot bucket (kJ) = mass (kg) × 4.19 × temperature rise (°C)<br>electricity (kJ) = watts × seconds ÷ 1000 &nbsp; (or kWh × 3600)<br>COP = heat into the hot bucket ÷ electricity</div>
+      <p data-i18n="ty.m3">Example: 5 kg of water warming by 10 °C takes in 5 × 4.19 × 10 = 210 kJ. If the meter shows 80 W for 20 minutes, that is 80 × 1200 ÷ 1000 = 96 kJ, so COP = 210 ÷ 96 = 2.2. Measure in the first half hour, before the buckets swap much heat with the room, and compare with the toy above. A Peltier module will give a heating COP of about 1.2–2; a compressor about 2–4.</p>
+      <p class="t-note" data-i18n="ty.real.note">The toy above is idealised: the compressor's power is held fixed, the coils have a fixed size, and pressure drops are left out. Its refrigerant cycle is computed with the same CoolProp property tables as the full designer.</p>
+    </section>
+  </main>
+</div>
+<script src="i18n-es.js?v=1.4.0"></script>
+<script src="i18n-da.js?v=1.4.0"></script>
+<script src="i18n.js?v=1.4.0"></script>
+<script src="data/refrigerants.js?v=1.4.0"></script>
+<script src="src/props.js?v=1.4.0"></script>
+<script src="src/cycle.js?v=1.4.0"></script>
+<script src="src/toy.js?v=1.4.0"></script>
+<script src="toy.js?v=1.4.0"></script>
+</body>
+</html>
