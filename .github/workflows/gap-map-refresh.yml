@@ -1,7 +1,9 @@
 name: AI Expectations Gap Map signal refresh
 
-# Collects the month's attention and usage signals for ai-expectations-gap-map/ and opens a pull request to review.
-# Merging it to main republishes the site.
+# Collects the month's attention and usage signals for ai-expectations-gap-map/, opens a pull request (kept as the
+# record of the update, with its summary) and merges it straight away, which republishes the site.
+# Every update is also kept in the repo: data/ledger.json (frozen forecasts per period), data/history.json
+# (snapshots) and data/updates/<period>.md (the summary). Analyst scores are re-reviewed by the quarterly issue.
 on:
   schedule:
     - cron: "17 5 3 * *"   # 05:17 UTC on the 3rd of every month
@@ -15,6 +17,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
 
 defaults:
   run:
@@ -48,7 +51,10 @@ jobs:
       - name: Read period
         id: period
         run: echo "label=$(python -c "import json;print(json.load(open('data/signals.json'))['period'])")" >> "$GITHUB_OUTPUT"
-      - name: Open pull request for review
+      - name: Keep the summary as a record of this update
+        run: mkdir -p data/updates && cp refresh-summary.md "data/updates/${{ steps.period.outputs.label }}.md"
+      - name: Open pull request
+        id: pr
         uses: peter-evans/create-pull-request@v7
         with:
           branch: gap-map-data-refresh/${{ steps.period.outputs.label }}
@@ -58,7 +64,18 @@ jobs:
             ai-expectations-gap-map/data/history.json
             ai-expectations-gap-map/data/ledger.json
             ai-expectations-gap-map/data/candidates.json
+            ai-expectations-gap-map/data/updates/*.md
           commit-message: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
           title: "AI Expectations Gap Map data: signal refresh for ${{ steps.period.outputs.label }}"
           body-path: ai-expectations-gap-map/refresh-summary.md
           labels: data-refresh
+      - name: Merge it (the data was validated above)
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge ${{ steps.pr.outputs.pull-request-number }} --merge --delete-branch --repo ${{ github.repository }}
+      - name: Rebuild the site
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST repos/${{ github.repository }}/pages/builds || echo "Pages build request failed; the next push will publish it."
