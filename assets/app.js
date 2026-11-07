@@ -10,6 +10,9 @@ const els = {
   grid: document.getElementById("grid"),
   earlyGrid: document.getElementById("earlyGrid"),
   earlySection: document.getElementById("earlySection"),
+  flagshipGrid: document.getElementById("flagshipGrid"),
+  flagshipSection: document.getElementById("flagshipSection"),
+  labHead: document.getElementById("labHead"),
   search: document.getElementById("searchInput"),
   tagFilter: document.getElementById("tagFilter"),
   stats: document.getElementById("stats"),
@@ -96,6 +99,7 @@ function renderStats() {
   const early = allProjects.filter(isEarly).length;
   const items = [
     { num: allProjects.length - early, label: "projects" },
+    { num: allProjects.filter(isFlagship).length, label: "flagships" },
     { num: early, label: "in early development" },
     { num: tagCount, label: "tags" },
   ];
@@ -152,18 +156,25 @@ function renderGrid() {
     return matchesTag && matchesQuery;
   });
 
-  // projects still in early development get their own section below the rest
+  // flagships first (in their "flagship" order), then the lab; early development gets its own section below
   els.grid.innerHTML = "";
   els.earlyGrid.innerHTML = "";
+  els.flagshipGrid.innerHTML = "";
   els.empty.hidden = filtered.length !== 0;
   const early = filtered.filter(isEarly);
-  for (const project of filtered.filter((p) => !isEarly(p))) els.grid.appendChild(buildCard(project));
+  const flagships = filtered.filter(isFlagship).sort((a, b) => a.flagship - b.flagship);
+  const lab = filtered.filter((p) => !isEarly(p) && !isFlagship(p));
+  for (const project of flagships) els.flagshipGrid.appendChild(buildCard(project));
+  els.flagshipSection.hidden = flagships.length === 0;
+  els.labHead.hidden = flagships.length === 0 || lab.length === 0;
+  for (const project of lab) els.grid.appendChild(buildCard(project));
   for (const project of early) els.earlyGrid.appendChild(buildCard(project));
   els.earlySection.hidden = early.length === 0;
   updateMoreButtons();
 }
 
 function isEarly(p) { return p.status === "early"; }
+function isFlagship(p) { return typeof p.flagship === "number" && !isEarly(p); }
 
 function buildCard(project) {
   const node = els.template.content.cloneNode(true);

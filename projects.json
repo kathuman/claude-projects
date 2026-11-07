@@ -1,7 +1,19 @@
 [
   {
+    "title": "Global Disruption Atlas",
+    "discipline": "supply-chain",
+    "flagship": 1,
+    "thumb": "assets/thumbs/global-disruption-atlas.webp",
+    "description": "A disruption decision lab: real chokepoint data in, an optimised and costed response out. A daily job fetches container-ship transits for 14 chokepoints from IMF PortWatch, plus GDACS alerts and USGS earthquakes; combine live conditions with dated historical events or labelled stress tests. Ships are routed over a sea-lane graph (tested never to cross land), the network is re-planned as a min-cost flow, and a day-by-day simulation shows how long the network survives a closure against how long recovery takes, and what each response lever costs. Includes a four-level guided tutorial.",
+    "date": "2026-10-24",
+    "tags": ["javascript", "supply-chain", "resilience", "optimization", "simulation", "live-data"],
+    "repoUrl": "https://github.com/kathuman/estay-dynamics",
+    "demoUrl": "https://kathuman.github.io/estay-dynamics/atlas/"
+  },
+  {
     "title": "Heat Pump Studio",
     "discipline": "mechanical",
+    "flagship": 4,
     "thumb": "assets/thumbs/heat-pump-studio.webp",
     "description": "Design a heat pump the way an engineer does, from the building to the compressor, for homes and for commercial and industrial machines up to megawatts. Estimate the heat load from floor area, insulation and the design outdoor temperature (17 city presets) or enter it; choose the heat source (outdoor air, ground boreholes, groundwater, waste heat) and the heating circuit (underfloor to 80 °C process heat); pick one of seven refrigerants (R290, R32, R410A, R134a, R1234yf, R1234ze(E), ammonia) and a rotary, scroll, screw or piston compressor. The single-stage cycle uses refrigerant properties from CoolProp tables, tested against CoolProp at 560 states and ten complete cycles (COP within 0.5 %), and appears live on pressure–enthalpy and temperature–entropy charts with the saturation dome, isotherms, the source and the heating water. Heat exchangers are split into zones (desuperheating, condensing, subcooling; evaporating, superheating) and sized from Q/(U·LMTD), which finds pinch problems inside them; the app also sizes the compressor displacement, air or brine flow, fan and pump power, boreholes (VDI 4640), refrigerant lines (copper, or steel for ammonia), the expansion valve and the charge, checks the room charge limit for flammable refrigerants (IEC 60335-2-40), and warns about hot discharge, high pressure ratio, near-critical condensing, flash gas and high GWP. A comparison table runs all seven refrigerants at the same conditions. Year-round performance follows the EN 14825 bin method on real climates (10 years of hourly temperatures for 17 cities, Open-Meteo/ERA5): SCOP, balance point, backup heater, weather compensation, defrost and cycling losses, hot water, and running costs, CO₂ and payback against a gas boiler. A live installation diagram draws the whole system (source equipment, refrigerant circuit with state points, heating circuit, backup heater, hot-water tank) with its design values. Plate heat exchangers and air coils are selected (plates, channel velocity, face area, rows). A printable A4 datasheet and a 13-step guided tour round it off. A Learn page explains heat pumps for readers from about 15: the energy balance, COP, the four steps of the cycle, the Carnot limit (with a slider), and the nine design equations, each with a worked example computed live. A toy heat pump page lets you build one from parts, run it between two buckets of water (one heats, the other freezes) and find a shopping list for building a real one. Designs are shareable by link. In English, Spanish and Danish. Tested core.",
     "date": "2026-11-06",
@@ -12,6 +24,7 @@
   {
     "title": "Turbine Lab",
     "discipline": "mechanical",
+    "flagship": 5,
     "thumb": "assets/thumbs/turbine-lab.webp",
     "description": "Explore the three classic water turbines — Pelton, Francis and Kaplan — as 3D models built in Blender: turn them, see through the casing, take them apart in an exploded view, and point at any part to learn what it does (every one is named and explained). Run them: head and flow sliders give live power from P = ρgQH·η, runner speed and specific speed (checked against each runner's band); the Pelton spear needle and jet, the Francis wicket gates and the Kaplan blade pitch move with the controls. An efficiency chart shows how each kind copes at part load (with a locked-blade propeller for contrast), and Euler's turbine equation shows why a Pelton bucket should move at half the jet speed. A head–flow selection chart lets you place your own site and recommends a turbine. The Kaplan model is an in-stream river unit (½ρAv³·Cp), and both Francis and Kaplan have a scaled-up 'wind twin' fed by air: a Water vs wind tab shows why that is a thought experiment — air is 816× lighter, needs 9.3× the speed for the same power, and 10 m/s of wind presses with only 6 mm of water. A Drawings page adds a technical drawing of each turbine on an A3 sheet. It has sections A–A, B–B and C–C through the runner centre at a standard scale, plus an isometric view, rendered from the Blender models with hatched cut faces and hidden lines removed. The sheet uses first-angle projection and has cutting-plane lines, dimensions, numbered balloons, a parts list with quantities and a title block. It can be printed, downloaded as SVG or shown in blueprint colours. In English, Spanish and Danish. Tested physics core.",
     "date": "2026-11-06",
@@ -32,17 +45,11 @@
   {
     "title": "Ripple — Supply Chain Distribution Game",
     "discipline": "supply-chain",
+    "flagship": 7,
     "thumb": "assets/thumbs/ripple.webp",
     "description": "A supply chain ordering game for classes. A team runs a chain from store to plant on one device, turn by turn behind a hand-over screen so each stage sees only its own numbers (or at an open table), with simulated players for any stage nobody holds; orders and shipments take time to travel, so small changes in customer demand become large swings upstream. The debrief charts the bullwhip and the stock and backlog of every stage, compares the team with the same chain played by typical players and by the best simple rule, reads each player's decision rule from their orders (how much of what was already on order they counted, how fast they corrected, how they forecast), replays the game with every stage counting more of its supply line, and shows time used beside cost. Configurable chain length, delays, costs and four demand patterns; saved after every decision; CSV export.",
     "date": "2026-10-24",
-    "tags": [
-      "javascript",
-      "supply-chain",
-      "game",
-      "system-dynamics",
-      "teaching",
-      "simulation"
-    ],
+    "tags": ["javascript", "supply-chain", "game", "system-dynamics", "teaching", "simulation"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/Beer-Distribution-Game",
     "demoUrl": "https://kathuman.github.io/claude-projects/Beer-Distribution-Game/"
   },
@@ -52,14 +59,7 @@
     "thumb": "assets/thumbs/ai-expectations-gap-map.webp",
     "description": "A board that replaces the hype-cycle curve with two measurable axes: market expectations and demonstrated value, for 27 AI technologies. The gap between them is the risk, and bubble size is the business impact if the technology delivers. Five scenario drivers (capability progress, capital availability, regulatory pressure, inference cost decline and enterprise data readiness) and six preset scenarios project the board forward with a two-stock model: evidence grows logistically, expectations adjust toward evidence plus a narrative premium. Lists show where a correction is most likely and what is underpriced, each with the signal that would confirm or kill the bet. Starting positions come from analyst scores, from public attention signals collected monthly (Wikipedia page views, Hacker News, arXiv, PyPI downloads), or a blend; a monthly job opens a pull request with the new signals and flags every score they contradict, and a quarterly issue prompts the analyst review. Every technology comes with a plain description and a supply chain example. Each month the board's forecasts are frozen in a ledger that is never rewritten, and a track record scores them as they come due against a forecast that nothing moves. The same job looks for rising AI terms the board does not track yet (Hacker News stories and arXiv papers) and lists them with a Wikipedia description, for the analyst to decide. Any view can be shared as a link.",
     "date": "2026-10-24",
-    "tags": [
-      "javascript",
-      "python",
-      "strategy",
-      "scenario-planning",
-      "data-visualization",
-      "simulation"
-    ],
+    "tags": ["javascript", "python", "strategy", "scenario-planning", "data-visualization", "simulation"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/ai-expectations-gap-map",
     "demoUrl": "https://kathuman.github.io/claude-projects/ai-expectations-gap-map/"
   },
@@ -69,20 +69,14 @@
     "thumb": "assets/thumbs/robot-configurator.webp",
     "description": "Describe the robot you want (a wheeled rover, a desktop arm, or a rover carrying an arm) and get designs you can build from parts sold in Denmark, Sweden or Norway. Every compatible combination of chassis, motor, wheel, driver, battery, regulator and controller (or frame, servos and power supply) is checked against motor torque on the slope, tyre grip, top speed, driver and regulator voltage and current, battery discharge, runtime, 3.3 V logic levels, free pins, servo holding torque at the required reach and tipping. The best designs are priced as landed cost, with each parcel's shipping, VAT, IOSS/VOEC or import duty and clearance fees, choosing the vendor mix exactly. Three proposals (lowest cost, most headroom on the cost–headroom frontier, quickest delivery) compare side by side; a chart shows every design by cost and headroom, any point can be picked, and any part swapped to see what it costs and which check stops it. Each design comes with its budget, a step-by-step build guide, power and signal wiring, and two Arduino sketches (a self-test and the robot program with speed control, obstacle avoidance, line following, measured moves, arm inverse kinematics and teach/replay, over USB, Bluetooth or a Wi-Fi phone page) that compile for Uno, Nano and ESP32 with no extra libraries. When nothing fits it says which checks block the closest designs and how far each requirement must move. Every price is either checked on the shop's own product page, with the link and the date, or marked as an estimate, and a weekly job follows every link; designs can be limited to checked prices. A drawing shows the rover from above with every board placed on the chassis (and a second deck when they do not fit) and the power wiring, and the arm from the side with its reach; a build pack puts everything on one page to print or save as PDF. A validation page runs the engine live on cases with a known answer, and a built robot can be measured against the model (the self-test prints the numbers to paste) and the result sent in to calibrate the models. In English, Danish, Swedish, Norwegian and Spanish.",
     "date": "2026-10-22",
-    "tags": [
-      "javascript",
-      "robotics",
-      "arduino",
-      "esp32",
-      "optimization",
-      "simulation"
-    ],
+    "tags": ["javascript", "robotics", "arduino", "esp32", "optimization", "simulation"],
     "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/robot-configurator",
     "demoUrl": "https://kathuman.github.io/claude-projects/robot-configurator/"
   },
   {
     "title": "Tierwise",
     "discipline": "supply-chain",
+    "flagship": 2,
     "thumb": "assets/thumbs/tierwise.webp",
     "description": "Multi-tier capacity planning for a food supply chain across latitudes. A final consumption forecast at eight consumption points (Mexico City to Manila) becomes the capacity each site needs, tier by tier: warehouses, packaging CMOs, final dosing CMOs, product manufacturing CMOs and raw ingredient CMOs, with several CMOs per tier and sourcing shares between them. Production lead times, quality release times, warehouse handling, safety stock and transit shift every requirement earlier; yields gross it up; the bill of materials converts packs to sachets to tonnes. Sites run from 52°N to 38°S, so demand and milk seasons run six months apart between hemispheres. The outlook is 36 months in monthly periods and 10 more years in yearly periods, each year keeping its busiest month. Load your own supply chain from CSV, Excel or JSON (with templates, decimal commas and errors by row), rename the tiers for another kind of chain, and share the whole plan as a link. Every site's load is traced exactly to the markets and customers behind it; the capacity to add is sized for a utilisation target and applied in one click; any two plans compare side by side as a heatmap of the change. Within capacity, a linear program solved in the browser by HiGHS plans the whole horizon with no site above its capacity: it builds stock ahead of peaks, re-sources among qualified lanes or any supplier, draws safety stock in a crunch, and reports fill rates, unmet demand and bottlenecks market by market. A Network Studio draws the chain by tier, with production sites, warehouses, consumption points and transport routes told apart: add sites, draw routes, drag them into order, edit them in an inspector, define your own parameters for sites and routes, undo anything, and save the diagram as SVG or PNG. A world map shows and edits the same network on the globe, with zoom, pan and routes along their great circles. Routes and parameters travel in every file. A latitude map, a capacity heatmap of 46 periods, tier, lead-time and forecast views, scenarios, an editor for every site and lane, a five-level tutorial with questions, and the whole app in English, Spanish and Danish. 670 tests.",
     "date": "2026-10-14",
@@ -96,15 +90,7 @@
     "thumb": "assets/thumbs/supply-pulse.webp",
     "description": "A system-dynamics simulator of a packaged food and dairy supply chain. Demand steps up, peaks for a season, or the plant stops for weeks, and you watch the delays of the chain turn reasonable decisions into empty shelves, amplification and expired stock. Forecasting, hiring and training people, QA release and shipping each add a delay. Batches are held by QA until their microbiological tests pass (positive release), some are rejected, and the lab can become the bottleneck in a surge; finished stock is aged first-in, first-out, and cases with too little shelf life left for retailers to accept are written off. Optional tiers add a distributor that orders from the plant and a key-ingredient supplier far upstream (milk powder, say) with its own lead time, capacity and outages; the line can be shared in campaigns with cleaning changeovers, and when stock is short an allocation rule decides whether priority customers are served first. The levers are overtime, QA expedited when stock runs low, and the planning policy: target cover, forecast smoothing, correction speed and the weight on the supply line. Each is measured on profit, fill rate, weeks short, bullwhip and waste against a saved baseline that sees the same random demand. The trade-offs are real: overtime ends the shortage after a demand step but makes more stock expire for a short-shelf-life product, and expediting QA pays in an outage only if shortages carry a penalty. A decision lab compares saved scenarios side by side, runs a scenario in 100 demand futures with percentile bands and a head-to-head count against the baseline, ranks which inputs matter most in a tornado, and searches 540 planning policies for the most profitable one that meets a fill-rate target, plotting the trade-off frontier. Ten ready-made scenarios, including premium nutrition, private-label snacks and a holiday peak, import of your own weekly or daily demand, a printable decision report, share links, CSV export, charts with hover read-outs and a table view behind each, a live stock-and-flow diagram and every equation with its value in any week. A play mode puts you in the planner's seat: set the production plan turn by turn, seeing only what a planner sees, then compare your two years with the planning rule on the same demand. A tutorial in three levels (beginner, intermediate, advanced) asks questions whose answers are checked against the model by tests. Fully available in English, Latin American Spanish and Danish, with Danish number formats. The model's tests check exact balance at the start, that every case is accounted for, that a smaller time step gives the same answers, and that the forecast matches its exact solution. 618 passing tests.",
     "date": "2026-10-13",
-    "tags": [
-      "javascript",
-      "web",
-      "simulation",
-      "system-dynamics",
-      "supply-chain",
-      "operations",
-      "education"
-    ],
+    "tags": ["javascript", "web", "simulation", "system-dynamics", "supply-chain", "operations", "education"],
     "repoUrl": "https://github.com/kathuman/supply-pulse",
     "demoUrl": "https://kathuman.github.io/supply-pulse/"
   },
@@ -203,6 +189,7 @@
   {
     "title": "Tube Flow",
     "discipline": "mechanical",
+    "flagship": 6,
     "thumb": "assets/thumbs/tube-flow.webp",
     "description": "A validated 3D lattice-Boltzmann flow lab on the GPU: spheres, STL shapes and NACA wing sections in a tube, in real fluids and units. The D3Q19 solver uses TRT/regularised collision, curved-wall interpolated bounce-back and mass-conserving inlet/outlet conditions, runs in a Web Worker, and is tested against Hagen–Poiseuille pipe flow, the Haberman–Sayre wall-corrected Stokes drag and a momentum balance. Pick a fluid, tube, sphere and speed (pipe flow or a moving sphere): it reports the Reynolds number, live drag and lift coefficients, Strouhal number, pressure drop and recirculation length, says when a case needs more resolution than the grid has, labels the regime from what it measures, and exports the time series as CSV. With WebGPU it runs the same scheme on the GPU (parity-tested against the CPU solver) on grids of over a million cells, resolving the wake's symmetry-breaking and vortex shedding — benchmarked against Johnson & Patel's sphere results (wake length, side force, Strouhal number). See it with dye released from a rake or the body, Q-criterion vortex surfaces, streamlines, tracers, time-averaged slices and a movable cross-section, and record it as video. An experiment workbench swaps the sphere for an ellipsoid, cylinder, disc, cube, a bar across the tube, a wing section (NACA airfoil, symmetric or cambered, at any angle of attack, wall to wall or of finite span — with C_L, L/D, thin-airfoil comparison, angle-of-attack sweeps for the lift curve, a side-on view of the profile, slices of speed, vorticity and pressure in the profile plane, and the surface pressure distribution C_p along the chord) or your own STL shape (tested cell for cell and against the exact sphere's Stokes drag), drives it with developed, uniform or pulsatile inflow at a chosen Womersley number, runs Reynolds sweeps plotted against Schiller–Naumann and the wall-corrected Stokes drag, saves and compares runs, and exports CSV, JSON and VTK for ParaView. Five guided labs (Stokes' law and the walls, the wake bubble, shape and drag, vortex shedding, pulsatile flow and the Womersley number) walk through classic experiments step by step, and a validation report — re-runnable in the browser — shows every check the solver passes, including a grid-convergence study (observed order of accuracy, Richardson extrapolation, GCI) and GPU/CPU parity.",
     "date": "2026-09-18",
@@ -273,6 +260,7 @@
   {
     "title": "Real Options for Network Design",
     "discipline": "supply-chain",
+    "flagship": 3,
     "thumb": "assets/thumbs/real-options-for-network-design.webp",
     "description": "Prices the flexibility in a supply network design against a fair baseline: commit now, the best fixed design, wait and see, stage and expand, and a lease with break clauses, each with its optimal policy on a binomial demand lattice; every owned site can also be sold, or mothballed and restarted, and the staged site can sell capacity back in steps. A network page values two correlated regions: a central hub that pools demand, two regional hubs, a pilot hub with a cheaper option on the second (a compound option), or waiting, with a 2D decision map and a correlation sweep. Calibrate volatility and growth from your own demand history, compare scenarios, print a decision report, and learn it with a beginner, intermediate and advanced tutorial illustrated with diagrams of every strategy and concept. Fully available in English and Latin American Spanish. A decision window separate from the asset life, build and expansion lead times, a 3PL that covers unmet demand up to a limit, a market ceiling, and a WACC or risk-neutral basis. A decision map of build and expansion triggers, payoff and NPV distributions over simulated paths, value against volatility, a sensitivity tornado, the equations, and shareable scenario links. 181 automated tests, including convergence to Black–Scholes and an exact reduction from the network to the single site.",
     "date": "2026-09-08",

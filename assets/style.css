@@ -189,7 +189,8 @@ body {
 
 .stats {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 12px 20px;
   margin-top: 24px;
   font-family: var(--font-mono);
 }
@@ -292,6 +293,13 @@ body {
   background: var(--bg-elev);
   color: var(--text);
 }
+
+/* Flagships, then "The lab" */
+.section-head h2 { margin: 0 0 4px; font-size: 1.35rem; }
+.section-head p { margin: 0 0 18px; color: var(--text-muted); max-width: 70ch; }
+.grid.grid-flagship { padding-bottom: 28px; }
+.grid-flagship .card { border-color: var(--accent); }
+.lab-head { padding-top: 22px; border-top: 1px dashed var(--border); }
 
 /* Early development: a separate section, and a badge on its cards */
 .early-section { margin-top: 8px; padding-top: 22px; border-top: 1px dashed var(--border); }
