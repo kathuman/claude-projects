@@ -34,7 +34,7 @@ jobs:
       - run: node tierwise/tests/i18n.test.js
       - run: node tierwise/tests/tour.test.js
       - name: The plan within capacity, the investment optimiser and the validation suite (HiGHS)
-        run: npm install --no-save --no-package-lock highs@1.15.3 && node tests/constrained.test.js && node tests/invest.test.js && node tests/api.test.js && node tests/priorities.test.js && node tests/validation.test.js
+        run: npm install --no-save --no-package-lock highs@1.15.3 && node tests/constrained.test.js && node tests/invest.test.js && node tests/api.test.js && node tests/priorities.test.js && node tests/stress.test.js && node tests/validation.test.js
         working-directory: tierwise
       - name: Syntax-check the page scripts
         run: for f in tierwise/src/*.js tierwise/*.js; do node --check "$f"; done

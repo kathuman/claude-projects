@@ -99,6 +99,20 @@ const server = http.createServer((req, res) => {
   check("what to do: every item has its receipt", (await w.$$("#prList li")).length === (await w.$$("#prList li details.receipt")).length && !(await w.$("#prList details.receipt b.no")));
   await w.close();
 
+  // ---- stress test: a site out for its time to recover, solved against the undisturbed plan, with both receipts
+  const sx = await open();
+  check("stress: the panel offers every site (19), starting three months before the year-2 peak, lasting the first one's time to recover (a warehouse, 2 months)", (await sx.$$("#sxTarget option")).length === 19 && /20\d\d/.test(await sx.$eval("#sxStart", (e) => e.options[e.selectedIndex].text)) && (await sx.inputValue("#sxMonths")) === "2", (await sx.$$("#sxTarget option")).length + " " + (await sx.inputValue("#sxMonths")));
+  await sx.selectOption("#sxTarget", "d-vlc");
+  check("stress: choosing a dosing site sets its time to recover", (await sx.inputValue("#sxMonths")) === "6");
+  await sx.click("#sxRun");
+  await sx.waitForFunction(() => document.querySelector("#sxOut .kpis") || /bad/.test(document.getElementById("sxStatus").innerHTML), null, { timeout: 600000 });
+  const sxt = await sx.textContent("#sxOut");
+  check("stress: Valencia out for 6 months loses sales, is priced, and has a time to survive", /Valencia Dosing out/.test(sxt) && /Sales lost/.test(sxt) && /Time to survive/.test(sxt) && /does not ride this out/.test(sxt), (await sx.textContent("#sxStatus")) + " " + sxt.slice(0, 200));
+  check("stress: the chart and both receipts are shown, and proved", !!(await sx.$("#sxOut svg path.sx-hit")) && (await sx.$$("#sxOut details.receipt")).length === 2 && !(await sx.$("#sxOut details.receipt b.no")));
+  await sx.selectOption("#sxKind", "demand");
+  check("stress: demand swaps capacity lost for a demand change and lists the consumption points", await sx.isVisible("#sxChgBox") && await sx.isHidden("#sxSevBox") && (await sx.$$("#sxTarget option")).length === 9);
+  await sx.close();
+
   // ---- the three steps at the top, and working offline once the page has been opened
   { const ctx = await browser.newContext({ viewport: { width: 1400, height: 1000 } }), o = await ctx.newPage(); o.on("pageerror", (e) => errors.push(e.message));
     await o.goto(URL0); await o.waitForSelector("#kpis *");

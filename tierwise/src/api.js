@@ -4,9 +4,9 @@
 // Worker (src/jobs.js); in Node it calls the engine directly with a loaded HiGHS (`direct`). A server can take its place
 // later behind the same interface.
 (function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory(require("./plan.js"), require("./constrained.js"), require("./invest.js"), require("./priorities.js"), require("./store.js"));
-  else root.TWApi = factory(root.TWPlan, root.TWConstrained, root.TWInvest, root.TWPriorities, root.TWStore);
-})(typeof self !== "undefined" ? self : this, function (P, K, IV, PR, S) {
+  if (typeof module === "object" && module.exports) module.exports = factory(require("./plan.js"), require("./constrained.js"), require("./invest.js"), require("./priorities.js"), require("./store.js"), require("./stress.js"));
+  else root.TWApi = factory(root.TWPlan, root.TWConstrained, root.TWInvest, root.TWPriorities, root.TWStore, root.TWStress);
+})(typeof self !== "undefined" ? self : this, function (P, K, IV, PR, S, ST) {
   "use strict";
   // what each kind of job does, given a loaded HiGHS: the same functions the workers call
   var KINDS = {
@@ -16,7 +16,9 @@
       if (r.ok) { try { r.verified = IV.verify(h, d.net, r, d.opts); } catch (e) { r.verified = { ok: false, errors: [String(e && e.message || e)] }; } }
       return r;
     },
-    priorities: function (h, d, progress) { return PR.analyse(h, d.net, d.opts, progress); }
+    priorities: function (h, d, progress) { return PR.analyse(h, d.net, d.opts, progress); },
+    stress: function (h, d, progress) { return ST.analyse(h, d.net, d.opts, progress); },
+    scan: function (h, d, progress) { return ST.scan(h, d.net, d.opts, progress); }
   };
   // a runner that calls the engine in this thread: for Node, tests and tools
   function direct(highs) {
@@ -38,6 +40,10 @@
       invest: function (net, opts) { return run("invest", { net: clone(net), opts: opts || {} }); },
       // what to do, ranked by the plan
       priorities: function (net, opts, progress) { return run("priorities", { net: clone(net), opts: opts || {} }, progress); },
+      // a stress test: one disruption (opts.disruption), solved against the undisturbed plan
+      stress: function (net, opts, progress) { return run("stress", { net: clone(net), opts: opts || {} }, progress); },
+      // every site and route out in turn for its time to recover: screened, the worst solved
+      scan: function (net, opts, progress) { return run("scan", { net: clone(net), opts: Object.assign({}, opts || {}, { scan: true }) }, progress); },
       // what changed between two networks
       diff: function (a, b) { return S.diff(a, b); },
       fingerprint: function (net) { return S.hashOf(JSON.stringify(net)); }

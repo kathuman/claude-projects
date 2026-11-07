@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.5.0</span>
+    <span class="ver" id="ver">v2.6.0</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -142,6 +142,26 @@
     <button class="btn" type="button" id="prRun" data-i18n="pr.run">Work out the priorities</button>
     <span class="solve-status" id="prStatus" aria-live="polite"></span>
     <div id="prList"></div>
+  </section>
+  <section class="panel" id="stressPanel">
+    <h2 data-i18n="sx.h">Stress test</h2>
+    <p class="panel-note" data-i18n="sx.note">What a disruption costs, and how long the network rides it out. A site or a route can fail, or demand can jump or fall. The disruption comes as a surprise: everything planned before it stays as planned, and from its first month the plan re-plans around it. Every figure is solved by the month-by-month plan, with its receipt.</p>
+    <div class="iv-ctl sx-ctl">
+      <label class="ctl inline"><span data-i18n="sx.kind">What happens</span><select class="choice" id="sxKind"></select></label>
+      <label class="ctl inline"><span data-i18n="sx.target">Where</span><select class="choice" id="sxTarget"></select></label>
+      <label class="ctl inline" id="sxSevBox"><span data-i18n="sx.sev">Capacity lost, %</span><input id="sxSev" class="num" inputmode="numeric" style="width:70px" value="100"></label>
+      <label class="ctl inline" id="sxChgBox" hidden><span data-i18n="sx.chg">Demand change, %</span><input id="sxChg" class="num" inputmode="decimal" style="width:70px" value="40"></label>
+      <label class="ctl inline"><span data-i18n="sx.start">Starts</span><select class="choice" id="sxStart"></select></label>
+      <label class="ctl inline"><span data-i18n="sx.months">Lasts, months</span><input id="sxMonths" class="num" inputmode="numeric" style="width:60px"></label>
+      <label class="ctl inline"><span data-i18n="sx.ramp">Then fades over, months</span><input id="sxRamp" class="num" inputmode="numeric" style="width:60px" value="0"></label>
+    </div>
+    <p class="panel-note" id="sxTtrNote"></p>
+    <div class="row sx-btns">
+      <button class="btn" type="button" id="sxRun" data-i18n="sx.run">Run this disruption</button>
+      <button class="btn" type="button" id="sxScan" data-i18n="sx.scan">Scan every site and route</button>
+      <span class="solve-status" id="sxStatus" aria-live="polite"></span>
+    </div>
+    <div id="sxOut"></div>
   </section>
   <section class="panel" id="servicePanel" hidden>
     <h2 data-i18n="sv.h">What reaches the shelves · within capacity</h2>
@@ -348,7 +368,7 @@
   </details>
 
   <footer class="foot">
-    Tierwise v<span id="ver2">2.5.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.6.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 
@@ -361,6 +381,7 @@
 <script src="src/constrained.js"></script>
 <script src="src/invest.js"></script>
 <script src="src/priorities.js"></script>
+<script src="src/stress.js"></script>
 <script src="src/api.js"></script>
 <script src="src/jobs.js"></script>
 <script src="app.js"></script>

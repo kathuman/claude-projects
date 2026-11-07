@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.5.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.6.0 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -43,11 +43,14 @@ server, but the code is layered so that a server can slot in behind the same int
 ## Roadmap
 
 Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 (world map), 2.3 (capacity investment),
-2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers), 2.4.1 and 2.5 (what to do; architecture and memory).
+2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers), 2.4.1 and 2.5 (what to do; architecture and memory), 2.6.0 (stress tests).
 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
-| 2.6 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
+| 2.6.0 ✓ | Stress tests | A site or route fails, or demand jumps or falls, as a surprise; lost sales and cost against the undisturbed plan; time to survive against time to recover; the largest surge with no lost sales; a scan of every site and route, screened then solved | Every figure shown is solved by the monthly plan, with a receipt; time to survive by halving matches trying every month |
+| 2.6.1 | Worst cases | The worst combination of up to three failures (greedy, labelled as such); random failures from a failure rate per site and route, with the 50th, 90th and 99th percentiles solved by the plan; results on the map; stress runs in the scenarios and the decision ledger | Percentiles checked by the plan, with the screen's error shown |
+| 2.6.2 | Buy resilience | Safety stock at a site and a second qualified supplier as actions in What to do, priced against the expected loss; a route delay as a disruption, and Atlas chokepoint scenarios opened as stress tests; Network Stress Test redirects here | Nothing with a negative verified value is recommended |
+| 2.7 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
 | 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
 | 3.1 | Real food networks | Several products, full bills of materials, shelf life, QA hold, CO₂; custom parameters such as certifications become solver constraints; new sites, closures, landed cost | A halal rule is enforced by the solver |
 | 4.0 | Plan by intent | Goals compiled to constraints; conflicts explained in words, with the price of relaxing each | Every infeasibility is explained |
@@ -435,6 +438,63 @@ changes as actions, and it takes a few minutes, because the example solves 39 pl
 | Watch | Cape Town's second line | +$1.4M on top of Valencia (it loses $1.8M alone), and it stops paying at 10% lower demand |
 | Watch | Hamilton's dryer | +$1.0M on top of both, and it stops paying at 10% lower demand |
 
+## Stress tests (`src/stress.js`, `src/stress-worker.js`)
+
+**What it asks.** What does a disruption cost, and can the network ride it out? Three kinds of disruption:
+
+| Kind | What changes |
+|---|---|
+| A site fails | It loses a share of its capacity (100% = out) |
+| A route fails | The lane loses that share of what it carried in the undisturbed plan |
+| Demand changes | One consumption point's demand, or every one's, rises or falls by a percentage |
+
+Each starts in a chosen month, lasts a number of months at full strength, and can then fade back over a ramp. The page
+starts three months before the busiest month of year 2, when stock is being built for the peak.
+
+**A disruption is a surprise.** The monthly plan sees the whole horizon, so left alone it would build stock ahead of a
+strike it "knows" is coming. Every production and shipment decision before the start is therefore held at the
+undisturbed plan's values (`opts.stress.fix` in `constrained.js`), and from the start the plan re-plans. It then knows
+how long the disruption will last, which makes it an optimistic planner: real ones learn the length as it unfolds.
+
+**What it reports**, each from the monthly plan with its receipt (two plans: undisturbed and disrupted):
+
+- **Sales lost:** the change in unmet demand from the start on, summed over the months (the plan may move a shortfall
+  between months). A fall in demand that leaves less unmet does not count as a gain.
+- **Cost:** the change in the plan's cost in present money: lost margin, less or more stock held, re-routing.
+- **When the loss lands:** lost sales by year. A disruption can eat stock the plan was building for a later peak and
+  lose its sales years later; the page says so when most of the loss falls after the disruption.
+- **Time to survive** against **time to recover** (sites and routes): the longest the disruption could last without
+  losing sales (within a thousandth of a month's demand), found by halving the range from 1 to 24 months. It assumes a
+  longer disruption never loses less, which holds because nothing before the start can change; a test checks it against
+  trying every month. Time to recover is an input. Its defaults are assumptions, by tier: raw ingredients 3 months,
+  product 6, dosing 6, packaging 4, warehouses 2, routes 1. A site's own `recovery` overrides them.
+- **The largest surge with no lost sales** (a demand surge): found by halving the range from 0 to +200%, to within 2
+  percentage points.
+
+**Scan every site and route.** Each one fails for its time to recover, from the chosen start. All are ranked first by a
+quick screen, a max-flow through the network month by month with no stock and no lead times. The worst 8 are then
+solved by the plan and ranked by what they cost, and the costliest 3 get their time to survive. A screened figure is a
+ranking, never an answer, and is shown as such. On the example, from May 2028, the screen's top 8 hold the plan's 3
+costliest outages; ranked by the screen alone, Cork Nutrition would come 8th, because most of what it costs comes years
+later, when the stock it ate was meant for the peak.
+
+**On the example** (from May 2028, the plan within capacity with qualified re-sourcing):
+
+| Outage, for its time to recover | Sales lost | Cost | Why |
+|---|---|---|---|
+| Johor Packaging, 4 months | 1.89M packs | $3.76M | The only packaging for Asia and the Middle East |
+| Penang Dosing, 6 months | 2.45M packs | $2.54M | Most of the loss lands in 2031–32 |
+| Cork Nutrition, 6 months | 2.24M packs | $1.92M | Over 90% of the loss lands in 2031–32; it saves $3.1M of stock it no longer holds |
+| Valencia Dosing, 6 months | 1.82M packs | $1.80M | Dhaka, São Paulo and Manila are hit hardest |
+
+None of the three costliest outages can be ridden out: the network lasts one or two months on its stock, against four to six
+months to recover.
+
+**Limits.** One disruption at a time in 2.6.0; combinations and random failures come in 2.6.1. The planner knows the
+disruption's length from its first month. A route's partial loss is measured against what it carried in the
+undisturbed plan, so a route the plan barely used loses little. Stress tests need real costs (pack value, unit cost
+and holding cost). A scan solves about 18 plans and takes two or three minutes.
+
 ## Receipts and the value of capacity (`src/constrained.js`)
 
 **Receipts.** Every result carries one, under a line at the top of its panel. It records the objective, the assumptions,
@@ -582,10 +642,13 @@ node tierwise/tests/invest.test.js # 57: the investment optimiser on chains with
                                    # priced again in the month-by-month plan
 node tierwise/tests/priorities.test.js
                                    # 17: what to do, on chains with known answers and the example (39 plans, several minutes)
+node tierwise/tests/stress.test.js # 27: stress tests on chains with known answers (an outage loses what it stops,
+                                   # a surprise changes nothing before it, halving matches every month, re-routing,
+                                   # surges and headroom), and the example's scan (about two minutes)
 node tierwise/tests/store.test.js  # 19: records, versions, the session, full or refused storage, the network diff
-node tierwise/tests/api.test.js    # 7: the application API returns what the engine does (needs HiGHS)
+node tierwise/tests/api.test.js    # 8: the application API returns what the engine does (needs HiGHS)
 node tierwise/tests/browser.test.js
-                                   # 43: the page in a real browser: three languages, memory, offline (needs Playwright)
+                                   # 48: the page in a real browser: three languages, memory, offline, a stress test (needs Playwright)
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json
 ```

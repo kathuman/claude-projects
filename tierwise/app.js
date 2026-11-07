@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.5.0";
+  var VERSION = "2.6.0";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -170,7 +170,7 @@
     renderViews();
   }
   function renderViews() {
-    renderDoor(); renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus(); renderPriorities();
+    renderDoor(); renderHeadline(); renderKpis(); renderOutlook(); renderSite(); renderHeat(); renderNeeds(); renderInvest(); renderTier(); renderLadder(); renderMultiples(); renderService(); renderSolveStatus(); renderPriorities(); sxFill(true); renderStress();
     if (window.TWStudio) window.TWStudio.render();
   }
   function renderSelection() { if (state.res && state.res.ok) { renderSite(); renderHeat(); } if (window.TWStudio) window.TWStudio.render(); }
@@ -542,6 +542,129 @@
     };
     each(box.querySelectorAll("[data-pr-do]"), function (b) { b.addEventListener("click", function () { decide(b.getAttribute("data-pr-do"), "do"); }); });
     each(box.querySelectorAll("[data-pr-not]"), function (b) { b.addEventListener("click", function () { decide(b.getAttribute("data-pr-not"), "not"); }); });
+  }
+
+  // ---- stress tests: a disruption (a site or route fails, or demand changes), or a scan of every site and route
+  var SX = window.TWStress;
+  function sxTargets() {
+    var k = $("sxKind").value, opts = [];
+    if (k === "demand") { opts.push(["all", T("Every consumption point")]); state.net.sites.forEach(function (s) { if (s.tier === "market") opts.push([s.id, nm(s)]); }); }
+    else SX.elements(state.net, state.csrc).forEach(function (e) {
+      if (e.kind !== k) return;
+      if (k === "site") { var s = byId(e.target); opts.push([e.target, nm(s) + " · " + tierOne(s.tier)]); }
+      else { var ab = e.target.split(">"), a = byId(ab[0]), b = byId(ab[1]); opts.push([e.target, (a ? nm(a) : ab[0]) + " → " + (b ? nm(b) : ab[1])]); }
+    });
+    return opts;
+  }
+  // the default start: three months before the busiest month of year 2, when stock is being built for the peak
+  function sxDefaultStart() {
+    if (!state.res || !state.res.ok) return 12;
+    var best = 12, bv = -1;
+    for (var m = 12; m < 24; m++) { var d = 0; state.net.sites.forEach(function (s) { if (s.tier === "market" && state.res.sites[s.id]) d += state.res.sites[s.id].demand[m]; }); if (d > bv) { bv = d; best = m; } }
+    return Math.max(0, best - 3);
+  }
+  function sxFill(keepTarget) {
+    var kind = $("sxKind"), was = kind.value || "site";
+    kind.innerHTML = [["site", T("A site fails")], ["route", T("A route fails")], ["demand", T("Demand changes")]].map(function (o) { return "<option value='" + o[0] + "'>" + esc(o[1]) + "</option>"; }).join("");
+    kind.value = was;
+    var tg = $("sxTarget"), prev = tg.value, list = sxTargets();
+    tg.innerHTML = list.map(function (o) { return "<option value='" + esc(o[0]) + "'>" + esc(o[1]) + "</option>"; }).join("");
+    if (keepTarget && list.some(function (o) { return o[0] === prev; })) tg.value = prev;
+    var st = $("sxStart"), sv = st.value;
+    if (st.options.length !== P.MONTHS) { var h = ""; for (var m = 0; m < P.MONTHS; m++) h += "<option value='" + m + "'>" + esc(monthLabel(m)) + "</option>"; st.innerHTML = h; st.value = String(sxDefaultStart()); }
+    else if (sv) st.value = sv;
+    var dem = kind.value === "demand";
+    $("sxSevBox").hidden = dem; $("sxChgBox").hidden = !dem;
+    if (!keepTarget || !$("sxMonths").value) $("sxMonths").value = dem ? 4 : SX.ttrOf(state.net, { kind: kind.value, target: tg.value });
+    sxNote();
+  }
+  function sxNote() {
+    var k = $("sxKind").value;
+    $("sxTtrNote").textContent = k === "demand" ? T("A surge reports the largest surge, over the same months, that loses no sales. A fall in demand loses no sales; it shows the stock left over.")
+      : T("Lasts defaults to the time to recover, which is an assumption: {list} months, by tier, unless a site sets its own. Change it to test another length.", { list: ["raw", "product", "dosing", "packaging", "warehouse"].map(function (t) { return tierOne(t) + " " + SX.TTR[t]; }).concat([T("route") + " " + SX.TTR.route]).join(", ") });
+  }
+  function sxDisruption() {
+    var k = $("sxKind").value, num = function (id) { var v = parseFloat(String($(id).value).replace(",", ".")); return isFinite(v) ? v : 0; };
+    var d = { kind: k, target: $("sxTarget").value, start: +$("sxStart").value || 0, months: Math.max(0, Math.round(num("sxMonths"))), ramp: Math.max(0, Math.round(num("sxRamp"))) };
+    if (k === "demand") d.change = num("sxChg") / 100; else d.severity = Math.max(0, Math.min(100, num("sxSev"))) / 100;
+    return d;
+  }
+  function sxNeedsMoney() { var c = state.net.config; return !(c.packValue > 0 && c.unitCost > 0 && c.holdingRate > 0); }
+  function runStress(scan) {
+    if (sxNeedsMoney()) { state.sx = { err: T("Stress tests need real costs: set a pack value, unit cost and holding cost under Capacity investment.") }; renderStress(); return; }
+    var key = solveKey(), d = sxDisruption(), o = { mode: state.csrc, hold: state.hold };
+    state.sx = { solving: true, n: 0, key: key, scan: scan }; renderStress();
+    var job = scan ? ENGINE.scan(JSON.parse(IO.toJSON(state.net)), Object.assign({ start: d.start }, o), prog) : ENGINE.stress(JSON.parse(IO.toJSON(state.net)), Object.assign({ disruption: d }, o), prog);
+    function prog(n) { if (state.sx && state.sx.solving) { state.sx.n = n; renderSxStatus(); } }
+    job.then(function (r) {
+      if (!r || !r.ok) { state.sx = { err: r && r.needsMoney ? T("Stress tests need real costs: set a pack value, unit cost and holding cost under Capacity investment.") : failed(r) }; renderStress(); return; }
+      state.sx = { res: r, key: key, scan: scan }; renderStress();
+    }, function (e) { if (!(e && e.superseded)) { state.sx = { err: failed() }; renderStress(); } });
+  }
+  function renderSxStatus() {
+    var p = state.sx || {}, st = $("sxStatus");
+    if (p.err) st.innerHTML = "<span class='bad'>" + esc(p.err) + "</span>";
+    else if (p.solving) st.innerHTML = "<span class='spin'></span>" + T("Solving plan {n}…", { n: p.n || 1 });
+    else if (p.res) st.textContent = p.key === solveKey() ? T("{n} plans solved in {s} s", { n: p.res.solves, s: fx(p.res.seconds, 0) }) : T("The network or settings have changed: work this out again.");
+    else st.textContent = "";
+    $("sxRun").disabled = $("sxScan").disabled = !!p.solving;
+  }
+  function sxWhat(d) {
+    var t = byId(d.target);
+    if (d.kind === "demand") return T("Demand {c} at {where}", { c: (d.change > 0 ? "+" : "") + Math.round(d.change * 100) + "%", where: d.target === "all" ? T("every consumption point") : t ? nm(t) : d.target });
+    var ab = d.target.split(">"), a = byId(ab[0]), b = byId(ab[1]), name = d.kind === "site" ? (t ? nm(t) : d.target) : (a ? nm(a) : ab[0]) + " → " + (b ? nm(b) : ab[1]);
+    return d.severity >= 1 ? T("{x} out", { x: name }) : T("{x} loses {p} of its capacity", { x: name, p: pct(d.severity) });
+  }
+  // fill rate month by month, undisturbed and disturbed, around the disruption
+  function sxChart(r, d) {
+    var tr = r.trace; if (!tr || tr.length < 2) return "";
+    var W = 640, H = 170, L = 40, R = 10, Tp = 10, B = 26, lo = Math.min(0.5, Math.floor(Math.min.apply(null, tr.map(function (x) { return x.stressed; })) * 10) / 10);
+    var xs = function (i) { return L + (W - L - R) * i / (tr.length - 1); }, ys = function (v) { return Tp + (H - Tp - B) * (1 - (v - lo) / (1 - lo)); };
+    var line = function (k) { return tr.map(function (x, i) { return (i ? "L" : "M") + xs(i).toFixed(1) + " " + ys(Math.max(lo, x[k])).toFixed(1); }).join(""); };
+    var i0 = tr.findIndex(function (x) { return x.month === d.start; }), i1 = tr.findIndex(function (x) { return x.month === d.start + d.months + d.ramp; });
+    var band = i0 >= 0 ? "<rect x='" + xs(i0).toFixed(1) + "' y='" + Tp + "' width='" + (xs(i1 >= 0 ? i1 : tr.length - 1) - xs(i0)).toFixed(1) + "' height='" + (H - Tp - B) + "' class='sx-band'/>" : "";
+    var ticks = [lo, (lo + 1) / 2, 1].map(function (v) { return "<line x1='" + L + "' x2='" + (W - R) + "' y1='" + ys(v).toFixed(1) + "' y2='" + ys(v).toFixed(1) + "' class='sx-grid'/><text x='" + (L - 6) + "' y='" + (ys(v) + 4).toFixed(1) + "' text-anchor='end'>" + pct(v) + "</text>"; }).join("");
+    var lab = [0, Math.floor((tr.length - 1) / 2), tr.length - 1].map(function (i) { return "<text x='" + xs(i).toFixed(1) + "' y='" + (H - 8) + "' text-anchor='" + (i === 0 ? "start" : i === tr.length - 1 ? "end" : "middle") + "'>" + esc(monthLabel(tr[i].month)) + "</text>"; }).join("");
+    return "<figure class='sx-chart'><svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='" + esc(T("Share of demand delivered each month, with and without the disruption")) + "'>" + band + ticks + lab +
+      "<path d='" + line("base") + "' class='sx-base'/><path d='" + line("stressed") + "' class='sx-hit'/></svg><figcaption><i class='sx-key sx-key-base'></i>" + esc(T("Undisturbed plan")) + " <i class='sx-key sx-key-hit'></i>" + esc(T("With the disruption")) + " · " + esc(T("share of demand delivered each month; the shaded months are the disruption")) + "</figcaption></figure>";
+  }
+  function sxOne(x) {
+    var d = x.disruption, r = x.result, cfg = state.net.config, tiles = [];
+    tiles.push({ l: T("Sales lost"), v: fq(r.lost), s: tierUnit("market"), st: r.lost > 1 ? "warning" : "" });
+    tiles.push({ l: T("Cost, present value"), v: r.costPV != null ? fc(r.costPV) : "–", s: T("change in the plan's cost") });
+    tiles.push({ l: T("Delivered, from the start"), v: pct(r.fill.stressed), s: T("undisturbed: {f}", { f: pct(r.fill.base) }) });
+    if (x.tts) tiles.push({ l: T("Time to survive"), v: x.tts.capped ? T("{n}+ months", { n: x.tts.months }) : T("{n} months", { n: x.tts.months }), s: T("time to recover: {n} months", { n: x.ttr }), st: x.survives ? "good" : "critical" });
+    if (x.headroom) tiles.push({ l: T("Largest surge with no lost sales"), v: (x.headroom.capped ? "≥ " : "") + "+" + Math.round(x.headroom.change * 100) + "%", s: T("for {n} months", { n: d.months }) });
+    if (d.kind === "demand" && d.change < 0) tiles.push({ l: T("Extra stock held"), v: fq(Math.max(0, r.extraStock)), s: T("a month on average, across the chain") });
+    var h = "<h3>" + esc(sxWhat(d)) + " · " + esc(T("from {w} for {n} months", { w: monthLabel(d.start), n: d.months })) + (d.ramp ? esc(T(", fading over {n} more", { n: d.ramp })) : "") + "</h3>";
+    h += "<div class='kpis'>" + tiles.map(function (t) { return '<div class="kpi-tile' + (t.st ? " status-" + t.st : "") + '"><div class="kpi-label">' + esc(t.l) + '</div><div class="kpi-value">' + esc(t.v) + '</div><div class="kpi-sub">' + esc(t.s) + "</div></div>"; }).join("") + "</div>";
+    var lines = [];
+    if (x.tts) lines.push(x.survives ? T("It rides this out: the network can last {a} months, and the site or route is back in {b}.", { a: x.tts.months, b: x.ttr }) : T("It does not ride this out: the network lasts {a} months without lost sales, and recovery takes {b}. The gap is {g} months.", { a: x.tts.months, b: x.ttr, g: x.ttr - x.tts.months }));
+    if (r.lost > 1 && r.lateShare > 0.3) {
+      var yrs = []; r.lostByYear.forEach(function (v, y) { if (v > r.lost * 0.1) yrs.push(cfg.startYear + y); });
+      lines.push(T("{p} of the lost sales come after the disruption is over, in {y}: it used up stock the plan was building for a later peak.", { p: pct(r.lateShare), y: yrs.join(", ") }));
+    }
+    if (r.markets.length) lines.push(T("Hit hardest: {list}.", { list: r.markets.slice(0, 3).map(function (m) { return T("{m} ({n} packs, {f} delivered)", { m: nm(byId(m.id)), n: fq(m.lost), f: pct(m.fill) }); }).join("; ") }));
+    if (lines.length) h += "<p class='sx-lines'>" + lines.map(esc).join(" ") + "</p>";
+    return h + sxChart(r, d) + receiptHtml(r.receipts[1], T("With the disruption")) + receiptHtml(r.receipts[0], T("Undisturbed plan"));
+  }
+  function sxScanHtml(x) {
+    var rows = x.items.map(function (e, i) {
+      var name = e.kind === "site" ? nm(byId(e.target)) + " · " + tierOne(byId(e.target).tier) : (function () { var ab = e.target.split(">"); return nm(byId(ab[0])) + " → " + nm(byId(ab[1])); })();
+      var p = e.proved, surv = e.tts ? (e.survives ? "<span class='ok'>" + esc(T("yes: {a} of {b} months", { a: e.tts.months, b: e.ttr })) + "</span>" : "<span class='bad'>" + esc(T("no: {a} of {b} months", { a: e.tts.months, b: e.ttr })) + "</span>") : "–";
+      return "<tr" + (i >= x.prove ? " class='sx-screened'" + (i >= x.prove + 12 ? " hidden" : "") : "") + "><td style='text-align:left'>" + esc(name) + "</td><td>" + e.ttr + "</td><td>" + (p ? fq(p.lost) : "<i>" + esc(T("screened: {n}", { n: fq(e.screened) })) + "</i>") + "</td><td>" + (p && p.costPV != null ? fc(p.costPV) : "–") + "</td><td>" + (p ? pct(p.fill.stressed) : "–") + "</td><td>" + surv + "</td><td>" + (p ? (p.proved ? "<span class='ok'>✓</span>" : "<span class='bad'>!</span>") : "") + "</td></tr>";
+    }).join("");
+    var more = x.items.length > x.prove + 12 ? "<button class='btn small' type='button' id='sxMore'>" + esc(T("Show all {n}", { n: x.items.length })) + "</button>" : "";
+    return "<h3>" + esc(T("Every site and route out for its time to recover, from {w}", { w: monthLabel(x.start) })) + "</h3>" +
+      "<p class='panel-note'>" + esc(T("All {n} are ranked first by a quick flow screen, which ignores stock and lead times; the worst {k} are then solved by the month-by-month plan and ranked by what they cost. Only solved figures are results: a screened one is a ranking, not an answer. The costliest {s} also get their time to survive.", { n: x.items.length, k: x.prove, s: SX.SURVIVE })) + "</p>" +
+      "<div class='table-scroll'><table class='sx-table'><thead><tr><th style='text-align:left'>" + esc(T("Site or route")) + "</th><th>" + esc(T("Recovers in, months")) + "</th><th>" + esc(T("Sales lost, packs")) + "</th><th>" + esc(T("Cost, present value")) + "</th><th>" + esc(T("Delivered")) + "</th><th>" + esc(T("Rides it out?")) + "</th><th>" + esc(T("Proved")) + "</th></tr></thead><tbody>" + rows + "</tbody></table></div>" + more + receiptHtml(x.receipt, T("Undisturbed plan"));
+  }
+  function renderStress() {
+    renderSxStatus();
+    var p = state.sx || {}, box = $("sxOut");
+    if (!p.res || p.key !== solveKey()) { box.innerHTML = ""; return; }
+    box.innerHTML = p.scan ? sxScanHtml(p.res) : sxOne(p.res);
+    var mb = $("sxMore"); if (mb) mb.addEventListener("click", function () { each(box.querySelectorAll("tr[hidden]"), function (tr) { tr.hidden = false; }); mb.remove(); });
   }
 
   // ---- the capacity investment optimiser: a one-shot solve (not re-run automatically on every edit)
@@ -1335,6 +1458,10 @@
     $("ivTerminal").addEventListener("change", function () { var v = num(this.value); state.net.config.terminalYears = isFinite(v) && v >= 0 ? Math.round(v) : 5; this.value = state.net.config.terminalYears; });
     $("ivRun").addEventListener("click", runInvest);
     $("prRun").addEventListener("click", runPriorities);
+    $("sxRun").addEventListener("click", function () { runStress(false); });
+    $("sxScan").addEventListener("click", function () { runStress(true); });
+    $("sxKind").addEventListener("change", function () { sxFill(false); });
+    $("sxTarget").addEventListener("change", function () { if ($("sxKind").value !== "demand") $("sxMonths").value = SX.ttrOf(state.net, { kind: $("sxKind").value, target: $("sxTarget").value }); });
     $("scSave").addEventListener("click", saveScenario);
     $("scName").addEventListener("keydown", function (e) { if (e.key === "Enter") saveScenario(); });
     $("ledExport").addEventListener("click", exportLedger);

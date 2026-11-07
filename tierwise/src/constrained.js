@@ -21,6 +21,9 @@
 // (so a long crunch draws it rather than lose sales) > re-routing 0.5 ≫ holding 0.02 a month > transport 0.0005 a transit day > making 0.001.
 // With a pack value, a unit cost and a holding rate, the objective is in money instead (see costsOf): a pack in stock costs
 // what it really costs against the margin a lost pack loses, and both are discounted, so stock is built only where it pays.
+// A stress test (src/stress.js) changes the inputs through opts.stress: `mul` scales a site's capacity or a market's demand
+// month by month, `laneMax` caps what a lane may ship in a month, and `fix` holds every production and shipment decision
+// made before the disruption at the undisturbed plan's values, so the plan cannot see a disruption coming.
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory(require("./plan.js"));
   else root.TWConstrained = factory(root.TWPlan);
@@ -86,11 +89,16 @@
     net.sites.forEach(function (s) {
       var r = base.sites[s.id], c = new Float64Array(Tn);
       for (var t = 0; t < Tn; t++) { var m = Math.min(M - 1, Math.max(0, t - W)); if (s.tier === "market") c[t] = r.demand[m] * pe.market / SC; else c[t] = (t < W ? Math.min(r.capacity[0], r.load[0] * API.WARMUP) : r.capacity[m]) * pe[s.tier] / SC; }
+      var mul = opts.stress && opts.stress.mul && opts.stress.mul[s.id];
+      if (mul) for (t = W; t < W + M; t++) c[t] *= Math.max(0, mul[t - W]);
       if (s.tier === "market") dem[s.id] = c; else cap[s.id] = c;
       if (s.tier === "warehouse") { var q = new Float64Array(Tn); for (t = 0; t < Tn; t++) q[t] = r.ss[Math.min(M - 1, Math.max(0, t - W))] / SC; ss[s.id] = q; }
     });
     // ---- LP text, written row by row
     var obj = [], rows = [], bounds = [], nRows = 0, W0 = W, capRows = {};
+    // decisions held at the undisturbed plan's values (before a disruption), and lane limits (during one)
+    var ST = opts.stress || {}, fixVals = ST.fix ? ST.fix.vals : null, fixUntil = ST.fix ? W + ST.fix.before : 0;
+    var fixed = function (name, t) { return fixVals && t < fixUntil && fixVals[name] != null ? Math.max(0, fixVals[name]) : null; };
     var CO = costsOf(cfg), disc = function (t) { return CO.rate ? Math.pow(1 + CO.rate, -Math.max(0, Math.min(t - W0, M - 1)) / 12) : 1; };
     function term(c, v) { return (c >= 0 ? " + " : " - ") + fmt(Math.abs(c)) + " " + v; }
     function fmt(c) { return c === 1 ? "1" : +c.toPrecision(12) + ""; }
@@ -148,7 +156,8 @@
           if (o.length) { capRows[s.id + "_" + t] = nRows; row(o, "<=", cap[s.id][t]); }
           if (ss[s.id][t] > 0) { row([term(1, Iv(i, t)), term(1, Sv(i, t))], ">=", ss[s.id][t] * pe.warehouse); obj.push(term(CO.safety * disc(t), Sv(i, t))); }
         } else {
-          bounds.push(" " + Pv(i, t) + " <= " + fmt(Math.max(0, cap[s.id][t])));
+          var fp = fixed(Pv(i, t), t);
+          bounds.push(" " + Pv(i, t) + (fp != null ? " = " + fmt(Math.min(fp, Math.max(0, cap[s.id][t]))) : " <= " + fmt(Math.max(0, cap[s.id][t]))));
           obj.push(term(COST.make, Pv(i, t)));
           if (s.tier !== "raw") {
             // input stock: J[t] = J[t−1] + arrivals − what making consumes
@@ -165,7 +174,11 @@
     // lanes: transport cost, and each lane's share of what the site is sent each month
     lanes.forEach(function (l) {
       var sib = inL[l.to];
+      var lm = ST.laneMax && ST.laneMax[l.from + ">" + l.to];
       for (var t = 0; t < Tn; t++) {
+        var fx = fixed(Xv(l.i, t), t);
+        if (fx != null) bounds.push(" " + Xv(l.i, t) + " = " + fmt(fx));
+        else if (lm && lm[t] != null) bounds.push(" " + Xv(l.i, t) + " <= " + fmt(Math.max(0, lm[t])));
         obj.push(term(COST.transport * Math.max(1, l.days), Xv(l.i, t)));
         if (sib.length < 2 && l.share >= 1) continue;
         var all = [[Xv(l.i, t), 1]]; sib.forEach(function (o) { all.push([Xv(o.i, t), -l.share]); });
@@ -293,7 +306,7 @@
       { id: "capacity", pass: worstC <= 1e-5, value: Math.max(0, worstC) }
     ];
     return { model: "monthly", objective: CO.money ? "money" : "penalty", solver: "HiGHS 1.15.3", method: METHODS[attempt - 1], status: r.Status, seconds: out.seconds, rows: out.size.rows, cols: out.size.cols,
-      input: hashOf(JSON.stringify([net, o.mode, o.hold])), assumptions: { packValue: cfg.packValue, unitCost: cfg.unitCost, holdingRate: cfg.holdingRate, discountRate: cfg.discountRate, mode: o.mode, hold: o.hold },
+      input: hashOf(JSON.stringify([net, o.mode, o.hold].concat(o.stress ? [o.stress] : []))), stress: o.stress || null, assumptions: { packValue: cfg.packValue, unitCost: cfg.unitCost, holdingRate: cfg.holdingRate, discountRate: cfg.discountRate, mode: o.mode, hold: o.hold },
       certificate: cert, checks: checks, proved: checks.every(function (c) { return c.pass; }) };
   }
   // solve with a loaded HiGHS instance (Node or a worker)
@@ -310,7 +323,9 @@
     out.capacityValue = capacityValue(net, b.meta, r);
     // what the plan costs in present money: the objective it minimises, converted out of its scaled units
     var CO = costsOf(net.config); out.planCostPV = CO.money ? r.ObjectiveValue * net.config.packValue * b.meta.scale / CO.unmet : null;
-    out.receipt = receipt(net, { mode: b.meta.mode, hold: b.meta.hold }, r, out, k, opts);
+    out.receipt = receipt(net, { mode: b.meta.mode, hold: b.meta.hold, stress: opts && opts.stress ? opts.stress.spec : null }, r, out, k, opts);
+    // the production and shipment decisions, for a stress test to hold before its disruption (in the LP's own units)
+    if (opts && opts.keep) { out.primal = {}; out.W = b.meta.W; out.laneIndex = {}; b.meta.lanes.forEach(function (l) { out.laneIndex[l.from + ">" + l.to] = l.i; }); Object.keys(r.Columns).forEach(function (n) { if (n.charAt(0) === "p" || n.charAt(0) === "x") out.primal[n] = r.Columns[n].Primal; }); }
     return out;
   }
   var API = { WARMUP: 1.1, COST: COST, costsOf: costsOf, certify: certify, hashOf: hashOf, MODES: MODES, split: split, packEq: packEq, lanesOf: lanesOf, build: build, read: read, solve: solve };

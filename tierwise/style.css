@@ -432,3 +432,20 @@ svg.map.world.picking, .mode-add svg.map.world{cursor:crosshair;}
 .door-n{position:absolute; left:12px; top:10px; width:22px; height:22px; border-radius:50%; background:var(--accent); color:var(--bg); font-weight:700; display:grid; place-items:center; font-size:13px;}
 .door-sum{font-size:13px; opacity:.85;}
 @media (max-width:700px){ .door{grid-template-columns:minmax(0,1fr);} }
+
+/* stress tests (2.6) */
+.sx-btns{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:6px 0 4px;}
+#sxOut h3{margin:16px 0 8px;}
+.sx-lines{line-height:1.55; margin:10px 0;}
+.sx-chart{margin:10px 0; max-width:720px;}
+.sx-chart svg{width:100%; height:auto; display:block;}
+.sx-chart text{font-family:var(--mono); font-size:10.5px; fill:var(--ink-faint);}
+.sx-grid{stroke:var(--line-soft); stroke-width:1;}
+.sx-band{fill:var(--warn); opacity:.12;}
+.sx-base{fill:none; stroke:var(--ink-faint); stroke-width:1.6; stroke-dasharray:4 3;}
+.sx-hit{fill:none; stroke:var(--bad); stroke-width:2.2;}
+.sx-chart figcaption{font-size:12.5px; color:var(--ink-faint); margin-top:4px;}
+.sx-key{display:inline-block; width:18px; height:0; vertical-align:middle; margin:0 5px 0 2px; border-top:2px solid var(--bad);}
+.sx-key-base{border-top:2px dashed var(--ink-faint);}
+.sx-table td, .sx-table th{white-space:nowrap;}
+.sx-table tr.sx-screened td{opacity:.7;}
