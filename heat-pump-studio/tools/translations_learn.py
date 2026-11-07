@@ -2,9 +2,16 @@
 # Spanish uses "tú" here: a friendlier voice for young readers than the studio's "usted".
 H = {
  "nav.learn": ("Aprende", "Lær"),
+ "about.h.author": ("Sobre el autor", "Om forfatteren"),
+ "about.author": ("Heat Pump Studio fue diseñado y desarrollado por <b>Daniel Alberto Sepulveda Estay, PhD</b>, fundador de <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Es <b>ingeniero mecánico</b> de formación, y este estudio se apoya en el núcleo de esa disciplina: la termodinámica, la transferencia de calor, la mecánica de fluidos y el diseño de máquinas; el ciclo del refrigerante, los intercambiadores de calor y el compresor son ingeniería mecánica clásica. Después aplicó esa formación a las operaciones y las cadenas de suministro, con experiencia en minería, distribución de bebidas, salud y manufactura farmacéutica, y a la investigación en dinámica de sistemas y diseño de redes.",
+                  "Heat Pump Studio er udviklet af <b>Daniel Alberto Sepulveda Estay, PhD</b>, grundlægger af <a href=\"https://kathuman.github.io/estay-dynamics/\" target=\"_blank\" rel=\"noopener\">Estay Dynamics</a>. Han er uddannet <b>maskiningeniør</b>, og studiet bygger på kernen i det fag: termodynamik, varmetransmission, strømningslære og maskinkonstruktion — kølekredsen, varmevekslerne og kompressoren er klassisk maskinteknik. Siden har han brugt den baggrund i drift og forsyningskæder, med erfaring fra minedrift, drikkevaredistribution, sundhedsvæsen og farmaceutisk produktion, og i forskning i systemdynamik og netværksdesign."),
+ "about.author2": ("Tiene un doctorado de la Universidad Técnica de Dinamarca (DTU) y un máster del Instituto Tecnológico de Massachusetts (MIT), y es miembro del consejo de la System Dynamics Society.",
+                   "Han har en ph.d. fra Danmarks Tekniske Universitet (DTU) og en MSc fra Massachusetts Institute of Technology (MIT) og er medlem af rådet i System Dynamics Society."),
+ "about.cite": ("<b>Para citar:</b> Sepulveda Estay, D. A. (2026). <em>Heat Pump Studio</em> (versión 1.3.1) [Software]. https://kathuman.github.io/claude-projects/heat-pump-studio/",
+                "<b>Citér som:</b> Sepulveda Estay, D. A. (2026). <em>Heat Pump Studio</em> (version 1.3.1) [Software]. https://kathuman.github.io/claude-projects/heat-pump-studio/"),
  "about.learn": ("¿Eres nuevo en bombas de calor? La página <a href=\"learn.html\">Aprende</a> explica qué son y recorre las ecuaciones de diseño con un ejemplo resuelto, para lectores desde unos 15 años.",
                  "Ny i varmepumper? Siden <a href=\"learn.html\">Lær</a> forklarer, hvad de er, og gennemgår dimensioneringsligningerne med et regneeksempel, for læsere fra ca. 15 år."),
- "about.ver": ("Heat Pump Studio, versión 1.3.0", "Heat Pump Studio version 1.3.0"),
+ "about.ver": ("Heat Pump Studio, versión 1.3.1", "Heat Pump Studio version 1.3.1"),
  "ln.title": ("Cómo funciona una bomba de calor — Heat Pump Studio", "Sådan virker en varmepumpe — Heat Pump Studio"),
  "ln.meta": ("Qué es una bomba de calor, por qué da más calor que la electricidad que usa, los cuatro pasos de su ciclo y las ecuaciones para diseñar una, explicadas paso a paso con un ejemplo resuelto.",
              "Hvad en varmepumpe er, hvorfor den giver mere varme end den strøm, den bruger, de fire trin i dens kredsløb og de ligninger, man dimensionerer den med, forklaret trin for trin med et regneeksempel."),
