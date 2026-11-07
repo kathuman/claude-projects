@@ -24,6 +24,19 @@ const els = {
 let allProjects = [];
 let activeTag = null;
 
+// disciplines, in the order of the filter tiles; each tile shows a small screenshot of one example project.
+// A project's "discipline" in projects.json is one of these ids; without one it counts as "other".
+const DISCIPLINES = [
+  { id: "supply-chain", label: "Supply chain", img: "assets/cat/supply-chain.webp", example: "Global Disruption Atlas" },
+  { id: "mechanical", label: "Mechanical engineering", img: "assets/cat/mechanical.webp", example: "Turbine Lab" },
+  { id: "other", label: "Others", img: "assets/cat/other.webp", example: "Epicycles" },
+];
+let activeCat = (() => {
+  try { const c = new URLSearchParams(location.search).get("cat"); return DISCIPLINES.some((d) => d.id === c) ? c : null; } catch (e) { return null; }
+})();
+els.cats = document.getElementById("cats");
+function disciplineOf(p) { return DISCIPLINES.some((d) => d.id === p.discipline) ? p.discipline : "other"; }
+
 // ---------------------------------------------------------------------------
 // Wire up static config-driven links
 // ---------------------------------------------------------------------------
@@ -68,6 +81,7 @@ fetch("projects.json", { cache: "no-store" })
   .then((data) => {
     allProjects = (data || []).slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     renderStats();
+    renderCats();
     renderTagFilters();
     renderGrid();
   })
@@ -93,6 +107,28 @@ function renderStats() {
   }
 }
 
+// the discipline tiles: All, then each discipline with its example picture and the number of projects
+function renderCats() {
+  const count = (id) => allProjects.filter((p) => disciplineOf(p) === id).length;
+  const tile = (id, label, img, example, n) =>
+    `<button type="button" class="cat${img ? "" : " cat-all"}" data-cat="${id}" aria-pressed="${(activeCat || "") === id}">` +
+    (img ? `<img src="${img}" alt="" width="96" height="60" title="Example: ${escapeHtml(example)}">` : `<span class="cat-all-mark" aria-hidden="true">✳</span>`) +
+    `<span class="cat-label">${escapeHtml(label)}</span><span class="cat-n">${n}</span></button>`;
+  els.cats.innerHTML = tile("", "All", null, null, allProjects.length) +
+    DISCIPLINES.map((d) => tile(d.id, d.label, d.img, d.example, count(d.id))).join("");
+}
+els.cats.addEventListener("click", (e) => {
+  const b = e.target.closest(".cat"); if (!b) return;
+  activeCat = b.dataset.cat || null;
+  for (const t of els.cats.querySelectorAll(".cat")) t.setAttribute("aria-pressed", String((activeCat || "") === t.dataset.cat));
+  try {
+    const q = new URLSearchParams(location.search);
+    if (activeCat) q.set("cat", activeCat); else q.delete("cat");
+    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+  } catch (err) { /* the filter still works without the address */ }
+  renderGrid();
+});
+
 // one dropdown: "All tags", then every tag in alphabetical order with the number of projects carrying it
 function renderTagFilters() {
   const counts = new Map();
@@ -110,6 +146,7 @@ function renderGrid() {
 
   const filtered = allProjects.filter((p) => {
     const matchesTag = !activeTag || (p.tags || []).includes(activeTag);
+    if (activeCat && disciplineOf(p) !== activeCat) return false;
     const haystack = `${p.title} ${p.description} ${(p.tags || []).join(" ")}`.toLowerCase();
     const matchesQuery = !query || haystack.includes(query);
     return matchesTag && matchesQuery;
@@ -132,6 +169,11 @@ function buildCard(project) {
   const node = els.template.content.cloneNode(true);
 
   node.querySelector(".card-title").textContent = project.title || "Untitled project";
+  if (project.thumb) {
+    const img = node.querySelector(".card-thumb");
+    img.src = project.thumb;
+    img.hidden = false;
+  }
   node.querySelector(".card-date").textContent = formatDate(project.date);
   node.querySelector(".card-desc").textContent = project.description || "";
   if (isEarly(project)) {

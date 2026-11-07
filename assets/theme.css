@@ -71,3 +71,28 @@ html, body { font-family: var(--font-sans); }
 .gh-link, .site-footer .consult { font-family: var(--font-head); font-weight: 600; letter-spacing: .03em; }
 .gh-link { text-transform: uppercase; border-radius: 8px; border-color: var(--border); }
 .gh-link:hover, .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- discipline tiles (top right of the hero) and card thumbnails ---------- */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: end; }
+.hero-main { min-width: 0; }
+.cats { display: flex; gap: 10px; align-self: start; margin-top: 6px; }
+.cat { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 120px; padding: 8px; background: var(--bg-elev); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font: inherit; text-align: left; position: relative; box-shadow: var(--shadow);
+  transition: border-color .15s, transform .15s; }
+.cat:hover { border-color: var(--accent); transform: translateY(-1px); }
+.cat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cat[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); }
+.cat img { width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); display: block; background: var(--chip-bg); }
+.cat-all { width: 84px; }
+.cat-all-mark { display: grid; place-items: center; aspect-ratio: 8 / 5; border-radius: 6px; border: 1px dashed var(--border); color: var(--accent); font-size: 22px; }
+.cat-label { font-family: var(--font-head); font-weight: 700; font-size: 13.5px; letter-spacing: .03em; line-height: 1.15; text-transform: uppercase; padding-right: 18px; }
+.cat-n { position: absolute; right: 8px; bottom: 8px; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+.cat[aria-pressed="true"] .cat-label { color: var(--accent); }
+.card-thumb { display: block; width: calc(100% + 40px); max-width: none; height: auto; aspect-ratio: 8 / 5; object-fit: cover; margin: -20px -20px 0;
+  border-radius: var(--radius) var(--radius) 0 0; border-bottom: 1px solid var(--border); background: var(--chip-bg); }
+.card-thumb[hidden] { display: none; }
+@media (max-width: 860px) {
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-top: 40px; }
+  .cats { overflow-x: auto; margin: 0 -16px; padding: 2px 16px 8px; scrollbar-width: thin; }
+  .cat { flex: 0 0 auto; }
+}

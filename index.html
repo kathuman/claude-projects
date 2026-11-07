@@ -36,9 +36,12 @@
 
   <main class="wrap">
     <section class="hero">
-      <h1>AI projects</h1>
-      <p class="hero-sub">A living log of apps, simulations and experiments built with AI — from quick one-offs to full projects.</p>
-      <div class="stats" id="stats" aria-live="polite"></div>
+      <div class="hero-main">
+        <h1>AI projects</h1>
+        <p class="hero-sub">A living log of apps, simulations and experiments built with AI — from quick one-offs to full projects.</p>
+        <div class="stats" id="stats" aria-live="polite"></div>
+      </div>
+      <nav class="cats" id="cats" aria-label="Filter by discipline"></nav>
     </section>
 
     <section class="controls">
@@ -62,7 +65,7 @@
       <div id="earlyGrid" class="grid" aria-live="polite"></div>
     </section>
 
-    <p id="emptyState" class="empty-state" hidden>No projects match that search.</p>
+    <p id="emptyState" class="empty-state" hidden>No projects match these filters.</p>
   </main>
 
   <footer class="site-footer">
@@ -73,6 +76,7 @@
 
   <template id="cardTemplate">
     <article class="card">
+      <img class="card-thumb" alt="" loading="lazy" decoding="async" width="480" height="300" hidden />
       <div class="card-top">
         <h3 class="card-title"></h3>
         <span class="card-date"></span>
