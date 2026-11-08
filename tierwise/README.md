@@ -48,16 +48,24 @@ Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
 | 2.6.0 ✓ | Stress tests | A site or route fails, or demand jumps or falls, as a surprise; lost sales and cost against the undisturbed plan; time to survive against time to recover; the largest surge with no lost sales; a scan of every site and route, screened then solved | Every figure shown is solved by the monthly plan, with a receipt; time to survive by halving matches trying every month |
-| 2.6.1 | Worst cases | The worst combination of up to three failures (greedy, labelled as such); random failures from a failure rate per site and route, with the 50th, 90th and 99th percentiles solved by the plan; results on the map; stress runs in the scenarios and the decision ledger | Percentiles checked by the plan, with the screen's error shown |
-| 2.6.2 | Buy resilience | Safety stock at a site and a second qualified supplier as actions in What to do, priced against the expected loss; a route delay as a disruption, and Atlas chokepoint scenarios opened as stress tests; Network Stress Test redirects here | Nothing with a negative verified value is recommended |
-| 2.7 | Ask the network | Plain-language questions answered through the real engine, opt-in, with the user's key | Every number traces to a tool call |
-| 3.0 | One model | Investment decomposed against the monthly plan (Benders), several near-equal designs instead of one, 500 sites, published benchmarks | Yearly and monthly answers agree within a stated gap |
+| 2.6.1 | Finish stress tests | Stress runs saved with the scenarios and in the decision ledger; the scan coloured on the map; a tutorial step; a site's own time to recover in the Studio; the worst combination of up to three failures (greedy, labelled as such) | The worst combination is priced by the monthly plan, with a receipt |
+| 2.7 | Tools for AI | An MCP server over the application API: load a network, plan, solve, stress, scan, priorities, invest, compare, explain a receipt; local first (stdio, `npx`), so the network stays on the machine; designed as one server for several Estay models, Tierwise first | In a scripted session, every number the model states matches a tool result |
+| 2.7.1 | The benchmark | About 50 planning questions with answers known from the model, put to frontier models with and without the tools; published, and run again for each new model | Published scores |
+| 2.8 | Buy resilience | Safety stock at a site and a second qualified supplier priced against a named disruption, shown as a break-even ("worth it if Johor fails more than once every N years"); a route delay as a disruption; Atlas chokepoint scenarios opened as stress tests; Network Stress Test redirects here | Nothing with a negative verified value is recommended |
+| 2.9 | Ask the network | Plain-language questions in the page, answered through the 2.7 tools, opt-in, with the user's key | Every number traces to a tool call |
+| 3.0 | One model | Several near-equal designs instead of one; published benchmarks; Benders decomposition against the monthly plan and 500 sites once a pilot network needs that size | Yearly and monthly answers agree within a stated gap |
 | 3.1 | Real food networks | Several products, full bills of materials, shelf life, QA hold, CO₂; custom parameters such as certifications become solver constraints; new sites, closures, landed cost | A halal rule is enforced by the solver |
 | 4.0 | Plan by intent | Goals compiled to constraints; conflicts explained in words, with the price of relaxing each | Every infeasibility is explained |
 | 4.1 | From mess to model | Contracts, emails and spreadsheets become a draft network, with a source for each field | Nothing is accepted without a person |
-| 5.0 | Plans as policies | Uncertainty built in, real-options triggers, an AI red team that hunts for the worst plausible disruption | The solver prices every attack |
+| 5.0 | Plans as policies | Uncertainty built in: random failures from a failure rate per site and route, with percentiles solved by the plan; real-options triggers; an AI red team that hunts for the worst plausible disruption | The solver prices every attack |
 | 6.0 | The living plan | Scheduled feeds (shipping, climate, milk prices), alerts when an assumption breaks, past predictions scored against outcomes | A public accuracy record |
-| 7.0 | Define the standard | An open benchmark for AI planners, an open receipt format, an MCP server; planning across companies without sharing their data (a research bet) | Published scores |
+| 7.0 | Define the standard | An open receipt format; planning across companies without sharing their data (a research bet) | Published scores |
+
+**Why this order (re-planned 2026-11-08).** The tools for AI come before the chat in the page: both need the same tool
+definitions, and an MCP server proves them without handling anyone's key in the browser. The benchmark moves up from
+7.0 because it needs only those tools. Random failures move to 5.0, where uncertainty belongs, because they need failure
+rates nobody has yet; resilience is priced against a named disruption instead, as a break-even. Beyond 3.0, pilot
+feedback decides the order.
 
 **A server** is not a numbered release. It arrives with the first of these: several people on one network, solves too
 slow for the browser, users who won't bring an AI key, live feeds that outgrow scheduled jobs, or the commercial launch.
@@ -490,7 +498,7 @@ later, when the stock it ate was meant for the peak.
 None of the three costliest outages can be ridden out: the network lasts one or two months on its stock, against four to six
 months to recover.
 
-**Limits.** One disruption at a time in 2.6.0; combinations and random failures come in 2.6.1. The planner knows the
+**Limits.** One disruption at a time in 2.6.0; the worst combination comes in 2.6.1, random failures in 5.0. The planner knows the
 disruption's length from its first month. A route's partial loss is measured against what it carried in the
 undisturbed plan, so a route the plan barely used loses little. Stress tests need real costs (pack value, unit cost
 and holding cost). A scan solves about 18 plans and takes two or three minutes.
