@@ -17,9 +17,9 @@
   "use strict";
   // the columns written for a site (the suppliers column is read, but routes are written as their own table)
   var COLS = ["id", "tier", "name", "country", "lat", "lon", "base", "growth", "longGrowth", "season", "launch", "ramp", "priority",
-    "capacity", "handling", "cover", "lead", "release", "yield", "expansions", "outages", "candidates", "order"];
+    "capacity", "handling", "cover", "lead", "release", "yield", "recovery", "expansions", "outages", "candidates", "order"];
   var RCOLS = ["from", "to", "share", "days", "mode"];
-  var NUM = { lat: 1, lon: 1, base: 1, growth: 1, longGrowth: 1, season: 1, ramp: 1, priority: 1, capacity: 1, handling: 1, cover: 1, lead: 1, release: 1, yield: 1 };
+  var NUM = { lat: 1, lon: 1, base: 1, growth: 1, longGrowth: 1, season: 1, ramp: 1, priority: 1, capacity: 1, handling: 1, cover: 1, lead: 1, release: 1, yield: 1, recovery: 1 };
   var ALIAS = {
     id: "id", siteid: "id", code: "id", tier: "tier", type: "tier", level: "tier", name: "name", site: "name", sitename: "name", country: "country",
     lat: "lat", latitude: "lat", lon: "lon", lng: "lon", long: "lon", longitude: "lon",
@@ -29,6 +29,7 @@
     lead: "lead", leadtime: "lead", leaddays: "lead", release: "release", releasetime: "release", releasedays: "release", yield: "yield",
     suppliers: "suppliers", sourcing: "suppliers", sources: "suppliers", supplier: "suppliers", expansions: "expansions", expansion: "expansions", outages: "outages", outage: "outages",
     candidates: "candidates", candidate: "candidates", candidateexpansions: "candidates",
+    recovery: "recovery", recoverymonths: "recovery", timetorecover: "recovery", ttr: "recovery",
     priority: "priority", order: "order", position: "order"
   };
   var RALIAS = { from: "from", supplier: "from", source: "from", origin: "from", to: "to", customer: "to", destination: "to", site: "to", share: "share", percent: "share",

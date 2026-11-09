@@ -70,6 +70,20 @@ const o = { mode: "qualified", hold: 6 };
   const mf = new ST.MaxFlow(4); mf.add(0, 1, 3); mf.add(0, 2, 2); mf.add(1, 3, 2); mf.add(2, 3, 3); mf.add(1, 2, 5);
   check("the screen's max-flow: a textbook network carries 5", mf.run(0, 3) === 5);
 
+  // ---- combinations: two failures at once, and the worst combination
+  const both = ST.session(highs, two, o).run(D({ kind: "combo", parts: [{ kind: "site", target: "pk", start: 14, months: 2 }, { kind: "site", target: "pk2", start: 14, months: 2 }] }));
+  check("two packaging sites that cover for each other: either alone loses nothing, both at once lose two months of demand", both.ok && Math.abs(both.m.lost - 2000) < 5 && ST.session(highs, two, o).run(D({ kind: "site", target: "pk2", start: 14, months: 2 })).m.lost < 2, both.m && both.m.lost);
+  check("a combination runs from its earliest start to its latest end", (() => { const c = D({ kind: "combo", parts: [{ kind: "site", target: "a", start: 5, months: 2 }, { kind: "site", target: "b", start: 8, months: 3, ramp: 2 }] }); return c.start === 5 && c.months === 8 && c.parts.length === 2; })());
+  // two complete chains side by side, each able to serve the whole market: no single failure costs anything
+  const twin = (() => {
+    const n = chain(40000), m = n.sites[0], extra = n.sites.slice(1).map((s) => Object.assign({}, s, { id: s.id + "2", name: s.name + "2", suppliers: s.suppliers ? [{ from: s.suppliers[0].from + "2", share: 100, days: 0 }] : undefined }));
+    m.suppliers = [{ from: "w", share: 50, days: 0 }, { from: "w2", share: 50, days: 0 }];
+    n.sites = n.sites.concat(extra); return n;
+  })();
+  const wc = ST.worst(highs, twin, Object.assign({ start: 14, k: 2 }, o));
+  check("worst combination, twin chains: no single failure costs anything, so it finds a pair that fails together", wc.ok && wc.steps.length === 2 && wc.steps.every((s) => s.pair) && wc.result.lost > 1000 && wc.result.proved, wc.ok ? wc.steps.map((s) => [s.name, Math.round(s.costPV)]) : wc.errors);
+  check("…the pair is one site from each chain", wc.ok && wc.steps.filter((s) => /2$/.test(s.target)).length === 1, wc.ok && wc.steps.map((s) => s.target));
+
   // ---- the example
   const net = N.build("base"), sc = ST.scan(highs, net, Object.assign({ start: 16 }, o)), names = sc.items.map((i) => i.name);
   if (process.env.VERBOSE) sc.items.slice(0, 10).forEach((i) => console.log("   ", i.name.padEnd(30), JSON.stringify({ screened: Math.round(i.screened), lost: i.proved && Math.round(i.proved.lost), cost: i.proved && Math.round(i.proved.costPV), late: i.proved && i.proved.lateShare, tts: i.tts, ttr: i.ttr })));
@@ -77,8 +91,12 @@ const o = { mode: "qualified", hold: 6 };
   check("example scan: solved items come first, in order of what they cost", sc.items.slice(0, ST.PROVE).every((i, k, a) => i.proved && (k === 0 || a[k - 1].proved.costPV >= i.proved.costPV)));
   check("example scan: the screen finds the plan's three costliest outages (Johor Packaging, Penang Dosing, Cork Nutrition)", ["Johor Packaging", "Penang Dosing", "Cork Nutrition"].every((n) => names.indexOf(n) >= 0 && names.indexOf(n) < 3), names.slice(0, 5));
   const cork = sc.items.find((i) => i.name === "Cork Nutrition");
-  check("example: Cork Nutrition out in 2028 loses most of its sales years later, when the stock it ate was meant for the peak", cork.proved.lateShare > 0.5, cork.proved.lateShare);
+  check("s-late-loss: example: Cork Nutrition out in 2028 loses most of its sales years later, when the stock it ate was meant for the peak", cork.proved.lateShare > 0.9, cork.proved.lateShare);
   check("example: the costliest three have a time to survive, and none outlasts its time to recover", sc.items.slice(0, ST.SURVIVE).every((i) => i.tts && i.survives === false && i.tts.months < i.ttr), sc.items.slice(0, 3).map((i) => [i.name, i.tts, i.ttr]));
+  const ww = ST.worst(highs, net, Object.assign({ start: 16 }, o));
+  if (process.env.VERBOSE && ww.ok) ww.steps.forEach((s) => console.log("    worst:", s.name, Math.round(s.costPV), "+" + Math.round(s.added), s.pair ? "(pair)" : ""));
+  check("example worst combination: three failures, each adding cost, starting with the costliest single one, all proved", ww.ok && ww.steps.length === 3 && ww.steps[0].name === sc.items[0].name && ww.steps.every((s, i, a) => s.added > 0 && s.proved && (i === 0 || s.costPV > a[i - 1].costPV)), ww.ok ? ww.steps.map((s) => [s.name, Math.round(s.costPV)]) : ww.errors);
+  check("example worst combination: it costs more than the costliest single failure", ww.ok && ww.result.costPV > sc.items[0].proved.costPV * 1.2, ww.ok && [ww.result.costPV, sc.items[0].proved.costPV]);
   console.log(pass + "/" + (pass + fail) + " checks passed (" + sc.solves + " plans in the scan, " + sc.seconds.toFixed(0) + " s)");
   process.exit(fail ? 1 : 0);
 })();

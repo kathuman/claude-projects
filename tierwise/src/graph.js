@@ -13,7 +13,7 @@
   var ROLE = { market: "consumption", warehouse: "warehouse", packaging: "production", dosing: "production", product: "production", raw: "production" };
   var MODES = ["road", "sea", "rail", "air"];
   // built-in fields a custom parameter may not take the name of (they are columns of the site table)
-  var RESERVED = ["id", "tier", "name", "country", "lat", "lon", "base", "growth", "longGrowth", "season", "launch", "ramp", "capacity", "handling", "cover", "lead", "release", "yield",
+  var RESERVED = ["id", "tier", "name", "country", "lat", "lon", "base", "growth", "longGrowth", "season", "launch", "ramp", "capacity", "handling", "cover", "lead", "release", "yield", "recovery",
     "suppliers", "expansions", "outages", "priority", "order", "from", "to", "share", "days", "mode"];
   var TYPES = ["number", "text", "bool", "choice"];
 

@@ -1,6 +1,6 @@
 # Tierwise — multi-tier capacity planning for a food supply chain
 
-**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.6.0 · English, Español, Dansk.**
+**Live: https://kathuman.github.io/claude-projects/tierwise/ · version 2.6.1 · English, Español, Dansk.**
 
 Tierwise turns a final consumption forecast into the capacity that each site of a six-tier food supply chain needs,
 and shows when it needs it. The outlook covers 36 months in monthly periods, then 10 more years in yearly periods.
@@ -43,12 +43,12 @@ server, but the code is layered so that a server can slot in behind the same int
 ## Roadmap
 
 Done: 1.1 (explain and share), 2.0 (within capacity), 2.1 (Network Studio), 2.2 (world map), 2.3 (capacity investment),
-2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers), 2.4.1 and 2.5 (what to do; architecture and memory), 2.6.0 (stress tests).
+2.3.1 (investment economics), 2.3.2 and 2.3.3 (the first parts of 2.4), 2.4 (honest numbers), 2.4.1 and 2.5 (what to do; architecture and memory), 2.6.0 and 2.6.1 (stress tests, the worst combination).
 
 | Version | Theme | What it adds | Must be true to ship |
 |---|---|---|---|
 | 2.6.0 ✓ | Stress tests | A site or route fails, or demand jumps or falls, as a surprise; lost sales and cost against the undisturbed plan; time to survive against time to recover; the largest surge with no lost sales; a scan of every site and route, screened then solved | Every figure shown is solved by the monthly plan, with a receipt; time to survive by halving matches trying every month |
-| 2.6.1 | Finish stress tests | Stress runs saved with the scenarios and in the decision ledger; the scan coloured on the map; a tutorial step; a site's own time to recover in the Studio; the worst combination of up to three failures (greedy, labelled as such) | The worst combination is priced by the monthly plan, with a receipt |
+| 2.6.1 ✓ | Finish stress tests | Stress runs saved with the scenarios and in the decision ledger; the scan coloured on the map; a tutorial step; a site's own time to recover in the Studio; the worst combination of up to three failures (greedy, labelled as such) | The worst combination is priced by the monthly plan, with a receipt |
 | 2.7 | Tools for AI | An MCP server over the application API: load a network, plan, solve, stress, scan, priorities, invest, compare, explain a receipt; local first (stdio, `npx`), so the network stays on the machine; designed as one server for several Estay models, Tierwise first | In a scripted session, every number the model states matches a tool result |
 | 2.7.1 | The benchmark | About 50 planning questions with answers known from the model, put to frontier models with and without the tools; published, and run again for each new model | Published scores |
 | 2.8 | Buy resilience | Safety stock at a site and a second qualified supplier priced against a named disruption, shown as a break-even ("worth it if Johor fails more than once every N years"); a route delay as a disruption; Atlas chokepoint scenarios opened as stress tests; Network Stress Test redirects here | Nothing with a negative verified value is recommended |
@@ -486,6 +486,19 @@ ranking, never an answer, and is shown as such. On the example, from May 2028, t
 costliest outages; ranked by the screen alone, Cork Nutrition would come 8th, because most of what it costs comes years
 later, when the stock it ate was meant for the peak.
 
+**The worst combination.** Up to three failures from the same start, each for its time to recover, found one at a
+time: the costliest single failure, then the one that adds most on top of it, and so on. Each step screens every
+remaining site and route on top of those chosen and solves the most damaging four with the plan. When nothing adds more
+than a hundredth of a month's sales on its own, because two sites cover for each other, it screens pairs instead, so a
+redundant pair is not missed. It is a bad combination, not a proved worst one, and the page says so. On the example,
+from May 2028: Johor Packaging ($3.76M), then Valencia Dosing (+$1.85M), then Rosario Dosing (+$6.92M): $12.5M in all.
+Rosario alone costs $0.96M; with Valencia also out, nothing covers for it.
+
+**Around the results.** A result can be recorded in the decision ledger with its receipts. After a scan, the Studio and
+the world map can colour sites by what their outage costs (grey where a site was only screened). A site's own time to
+recover is set in the Studio inspector, or as a `recovery` column in a file (also read as `ttr`). Saved scenarios and the
+last session keep the disruption in the form.
+
 **On the example** (from May 2028, the plan within capacity with qualified re-sourcing):
 
 | Outage, for its time to recover | Sales lost | Cost | Why |
@@ -498,10 +511,10 @@ later, when the stock it ate was meant for the peak.
 None of the three costliest outages can be ridden out: the network lasts one or two months on its stock, against four to six
 months to recover.
 
-**Limits.** One disruption at a time in 2.6.0; the worst combination comes in 2.6.1, random failures in 5.0. The planner knows the
+**Limits.** Combinations are searched greedily, three failures at most; random failures come in 5.0. The planner knows the
 disruption's length from its first month. A route's partial loss is measured against what it carried in the
 undisturbed plan, so a route the plan barely used loses little. Stress tests need real costs (pack value, unit cost
-and holding cost). A scan solves about 18 plans and takes two or three minutes.
+and holding cost). A scan solves about 18 plans and the worst combination about 17; each takes one to three minutes.
 
 ## Receipts and the value of capacity (`src/constrained.js`)
 
@@ -641,22 +654,22 @@ Each step sets up the page, highlights what it is about and quotes live numbers.
 node tierwise/tests/plan.test.js   # 61: the engine, tracing, capacity to add, custom tiers
 node tierwise/tests/graph.test.js  # 41: sites and routes, the tier rule, column order, problems, parameters, undo
 node tierwise/tests/geo.test.js    # 16: the world projection, great-circle routes over the date line, map views
-node tierwise/tests/io.test.js     # 59: CSV / Excel / JSON round trips, routes tables, custom parameters, errors by row
+node tierwise/tests/io.test.js     # 60: CSV / Excel / JSON round trips, routes tables, custom parameters, errors by row
 node tierwise/tests/i18n.test.js   # 19: every text, page key and engine message in Spanish and Danish
-node tierwise/tests/tour.test.js   # 443: every step in three languages, and every claim the tutorial makes
+node tierwise/tests/tour.test.js   # 456: every step in three languages, and every claim the tutorial makes
 cd tierwise && npm install --no-save highs@1.15.3 && node tests/constrained.test.js
                                    # 55: the plan within capacity on chains with known answers, and the example
 node tierwise/tests/invest.test.js # 57: the investment optimiser on chains with known answers, and the example,
                                    # priced again in the month-by-month plan
 node tierwise/tests/priorities.test.js
                                    # 17: what to do, on chains with known answers and the example (39 plans, several minutes)
-node tierwise/tests/stress.test.js # 27: stress tests on chains with known answers (an outage loses what it stops,
+node tierwise/tests/stress.test.js # 33: stress tests on chains with known answers (an outage loses what it stops,
                                    # a surprise changes nothing before it, halving matches every month, re-routing,
-                                   # surges and headroom), and the example's scan (about two minutes)
+                                   # surges and headroom, a redundant pair), and the example's scan and worst combination
 node tierwise/tests/store.test.js  # 19: records, versions, the session, full or refused storage, the network diff
 node tierwise/tests/api.test.js    # 8: the application API returns what the engine does (needs HiGHS)
 node tierwise/tests/browser.test.js
-                                   # 48: the page in a real browser: three languages, memory, offline, a stress test (needs Playwright)
+                                   # 52: the page in a real browser: three languages, memory, offline, stress tests (needs Playwright)
 node tierwise/tests/validation.test.js
                                    # the validation report's 8 cases (23 checks) → tests/validation-results.json
 ```

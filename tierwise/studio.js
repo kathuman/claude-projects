@@ -39,8 +39,17 @@
     var opts = def.type === "choice" ? def.options : all.filter(function (x, i) { return all.indexOf(x) === i; });
     var i = opts.indexOf(v); return i >= 0 && i < 6 ? CAT[i] : "#7f93a8";
   }
+  // the cost of a site's outage in the latest stress scan, as one of five reds; grey when it was only screened
+  var REDS = ["#5a2a2a", "#7a2f2f", "#a33838", "#cc4343", "#ff6b6b"];
+  function stressColour(s) {
+    var sc = A.stressCost ? A.stressCost() : null, x = sc && sc[s.id]; if (!x) return null;
+    if (x.cost == null) return "#4a5a6e";
+    var hi = 0; Object.keys(sc).forEach(function (k) { if (sc[k].cost > hi) hi = sc[k].cost; });
+    return REDS[Math.min(4, Math.floor(hi > 0 ? Math.max(0, x.cost) / hi * 5 : 0))];
+  }
   function siteFill(s, def, all) {
     var mode = colourMode(), vw = A.view(), r = vw && vw.sites ? vw.sites[s.id] : null;
+    if (mode === "stress") { var c0 = stressColour(s); return c0 ? shade(c0) : "#0b2846"; }
     if (mode === "status" && r) {
       if (s.tier === "market") return A.cap() ? (r.fill < 0.999 ? "#8a2d2d" : "#14523c") : "#16324f";
       var u = r.peakUtil; return A.cap() ? (r.firstBinding >= 0 ? "#6b5214" : "#14523c") : u > 1 + 1e-9 ? "#8a2d2d" : u >= 0.9 ? "#6b5214" : "#14523c";
@@ -144,6 +153,7 @@
       "<span><i class='lg-route'></i>" + T("Route by road") + "</span><span><i class='lg-route sea'></i>" + T("by sea") + "</span><span><i class='lg-route rail'></i>" + T("by rail") + "</span><span><i class='lg-route air'></i>" + T("by air") + "</span><span class='lg-note'>" + T("width: share of what the site buys") + "</span>";
     if (colourMode() === "status") h += A.cap() ? "<span><i class='sq' style='background:#6b5214'></i>" + T("At capacity at some point") + "</span><span><i class='sq' style='background:#8a2d2d'></i>" + T("Demand not fully met") + "</span>"
       : "<span><i class='sq' style='background:#14523c'></i>" + T("Under 90% at peak") + "</span><span><i class='sq' style='background:#6b5214'></i>" + T("Above 90% at peak") + "</span><span><i class='sq' style='background:#8a2d2d'></i>" + T("Short at some point") + "</span>";
+    if (colourMode() === "stress") h += "<span>" + T("Cost of the site's outage, from the stress scan:") + " <i class='sq' style='background:" + REDS[0] + "'></i><i class='sq' style='background:" + REDS[2] + "'></i><i class='sq' style='background:" + REDS[4] + "'></i> " + T("low to high") + "</span><span><i class='sq' style='background:#4a5a6e'></i>" + T("screened only") + "</span>";
     if (def) {
       var vals = def.type === "bool" ? [true, false] : def.type === "choice" ? def.options : net().sites.map(function (s) { return s.custom ? s.custom[def.key] : null; }).filter(function (v, i, a) { return v != null && a.indexOf(v) === i; }).slice(0, 7);
       if (def.type === "number") { var nums = vals.filter(function (v) { return typeof v === "number"; }); h += "<span>" + esc(pLabel(def)) + ": " + (nums.length ? H.fq(Math.min.apply(null, nums)) + " <i class='sq ramp'></i> " + H.fq(Math.max.apply(null, nums)) : "–") + "</span>"; }
@@ -267,8 +277,8 @@
   // ---- inspector
   var FIELDS = {
     market: [["base", "Base demand, a month", "num"], ["growth", "Growth % (yrs 1–3)", "num"], ["longGrowth", "Growth % (yrs 4–13)", "num"], ["season", "Season swing %", "num"], ["launch", "Launch (YYYY-MM)", "month"], ["ramp", "Ramp months", "num"], ["priority", "Priority (1–3)", "num"]],
-    warehouse: [["capacity", "Throughput a month", "num"], ["handling", "Handling days", "num"], ["cover", "Cover weeks", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify[:opex])", "cand"]],
-    cmo: [["capacity", "Capacity a month", "num"], ["lead", "Lead time, days", "num"], ["release", "Release time, days", "num"], ["yield", "Yield %", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify[:opex])", "cand"]]
+    warehouse: [["capacity", "Throughput a month", "num"], ["handling", "Handling days", "num"], ["cover", "Cover weeks", "num"], ["recovery", "Recovers in, months (stress tests)", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify[:opex])", "cand"]],
+    cmo: [["capacity", "Capacity a month", "num"], ["lead", "Lead time, days", "num"], ["release", "Release time, days", "num"], ["yield", "Yield %", "num"], ["recovery", "Recovers in, months (stress tests)", "num"], ["expansions", "Expansions (YYYY-MM:+amount)", "exp"], ["candidates", "Candidate expansions (label:add:capex:build:qualify[:opex])", "cand"]]
   };
   function input(f, label, v, type, extra) {
     return "<label class='fi'><span>" + label + "</span><input data-f='" + f + "' value='" + esc(v == null ? "" : v) + "'" + (type === "num" ? " inputmode='decimal'" : "") + (extra || "") + "></label>";
@@ -329,7 +339,7 @@
         else if (f === "launch") { if (!v) delete t.launch; else { var li = A.monthIndex(v); if (isFinite(li)) t.launch = li; } }
         else if (f === "expansions") t.expansions = A.parseExpansions(v);
         else if (f === "candidates") t.candidates = A.parseCandidates(v);
-        else if (v === "" && ["ramp", "longGrowth", "cover", "handling", "priority"].indexOf(f) >= 0) delete t[f];
+        else if (v === "" && ["ramp", "longGrowth", "cover", "handling", "priority", "recovery"].indexOf(f) >= 0) delete t[f];
         else { var x = A.num(v); if (isFinite(x)) t[f] = x; }
       }, structural);
     });
@@ -369,7 +379,7 @@
   }
   function fillSelects() {
     var cb = $("studioColor"), keep = colourMode();
-    cb.innerHTML = "<option value='tier'>" + T("Tier") + "</option><option value='status'>" + T("Status in the plan") + "</option>" + G.params(net(), "sites").map(function (d) { return "<option value='p:" + esc(d.key) + "'>" + esc(pLabel(d)) + "</option>"; }).join("");
+    cb.innerHTML = "<option value='tier'>" + T("Tier") + "</option><option value='status'>" + T("Status in the plan") + "</option>" + (A.stressCost && A.stressCost() ? "<option value='stress'>" + T("Cost of an outage (stress scan)") + "</option>" : "") + G.params(net(), "sites").map(function (d) { return "<option value='p:" + esc(d.key) + "'>" + esc(pLabel(d)) + "</option>"; }).join("");
     cb.value = keep; if (cb.value !== keep) { st().colorBy = "tier"; cb.value = "tier"; }
     $("studioHighlight").value = st().highlight || "all";
     $("studioDays").checked = !!st().showDays;
@@ -409,6 +419,7 @@
   }
   function brightFill(s, def, all) {
     var mode = colourMode(), vw = A.view(), r = vw && vw.sites ? vw.sites[s.id] : null;
+    if (mode === "stress") return stressColour(s) || "#33475e";
     if (mode === "status" && r) {
       if (s.tier === "market") return A.cap() ? (r.fill < 0.999 ? "#e34948" : "#1baf7a") : H.TCOL.market;
       return A.cap() ? (r.firstBinding >= 0 ? "#eda100" : "#1baf7a") : r.peakUtil > 1 + 1e-9 ? "#e34948" : r.peakUtil >= 0.9 ? "#eda100" : "#1baf7a";

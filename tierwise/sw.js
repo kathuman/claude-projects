@@ -1,7 +1,7 @@
 // Tierwise — works offline once it has been opened. The page's own files are fetched fresh whenever the network is there
 // (so a new version arrives at once) and kept as a copy for when it is not. The solver and the Excel library come from
 // CDNs at fixed versions, so a copy of them never goes stale and is used first.
-var CACHE = "tierwise-2.6.0", SHELL = ["./", "index.html", "style.css", "app.js", "studio.js", "i18n.js", "i18n-es.js", "i18n-da.js", "tour.js", "tour-content.js", "tour-content-es.js", "tour-content-da.js",
+var CACHE = "tierwise-2.6.1", SHELL = ["./", "index.html", "style.css", "app.js", "studio.js", "i18n.js", "i18n-es.js", "i18n-da.js", "tour.js", "tour-content.js", "tour-content-es.js", "tour-content-da.js",
   "about.html", "validation.html", "assets/land.json", "src/plan.js", "src/network.js", "src/graph.js", "src/geo.js", "src/io.js", "src/store.js", "src/constrained.js", "src/invest.js", "src/priorities.js", "src/stress.js",
   "src/api.js", "src/jobs.js", "src/solve-worker.js", "src/invest-worker.js", "src/priorities-worker.js", "src/stress-worker.js", "src/validation.js", "src/validation-worker.js"];
 var PINNED = /^https:\/\/(cdn\.jsdelivr\.net\/npm\/highs@1\.15\.3\/|cdnjs\.cloudflare\.com\/ajax\/libs\/xlsx\/0\.18\.5\/|fonts\.(googleapis|gstatic)\.com\/)/;

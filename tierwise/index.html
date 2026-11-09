@@ -17,7 +17,7 @@
 <header class="topbar">
   <div class="brand">
     <a class="mark" href="./">TIER<span>WISE</span></a>
-    <span class="ver" id="ver">v2.6.0</span>
+    <span class="ver" id="ver">v2.6.1</span>
     <span class="sub" data-i18n="nav.sub">MULTI-TIER CAPACITY PLANNING · FOOD SUPPLY CHAIN</span>
   </div>
   <div class="header-actions">
@@ -120,7 +120,7 @@
         <ul>
           <li><code>id</code>, <code>tier</code> (<code>market</code>, <code>warehouse</code>, <code>packaging</code>, <code>dosing</code>, <code>product</code> or <code>raw</code>), <code>name</code>, <code>country</code>, <code>lat</code>, <code>lon</code> (decimal degrees, south and west negative).</li>
           <li>Consumption points: <code>base</code> (demand a month), <code>growth</code> and <code>longGrowth</code> (% a year in years 1–3 and after), <code>season</code> (± %), <code>launch</code> (YYYY-MM) and <code>ramp</code> (months).</li>
-          <li>Every other site: <code>capacity</code> (a month, in its tier's unit). Warehouses: <code>handling</code> (days) and <code>cover</code> (weeks of safety stock). CMOs: <code>lead</code> and <code>release</code> (days) and <code>yield</code> (%).</li>
+          <li>Every other site: <code>capacity</code> (a month, in its tier's unit). Warehouses: <code>handling</code> (days) and <code>cover</code> (weeks of safety stock). CMOs: <code>lead</code> and <code>release</code> (days) and <code>yield</code> (%). Any site may have <code>recovery</code>: its time to recover in months, for stress tests.</li>
           <li><code>suppliers</code>: sites of the tier directly above, as <code>id:share</code>, separated by <code>|</code>; add <code>:days</code> to set a lane's transit time instead of estimating it from the distance.</li>
           <li><code>expansions</code> as <code>YYYY-MM:+amount</code> and <code>outages</code> as <code>YYYY-MM:months:loss%</code>, separated by <code>|</code>.</li>
           <li><code>candidates</code> for the investment optimiser, as <code>label:add:capex:build:qualify</code>, separated by <code>|</code> (build and qualify in months); add <code>:opex</code> for a running cost a year.</li>
@@ -159,6 +159,7 @@
     <div class="row sx-btns">
       <button class="btn" type="button" id="sxRun" data-i18n="sx.run">Run this disruption</button>
       <button class="btn" type="button" id="sxScan" data-i18n="sx.scan">Scan every site and route</button>
+      <button class="btn" type="button" id="sxWorst" data-i18n="sx.worst">Find the worst combination</button>
       <span class="solve-status" id="sxStatus" aria-live="polite"></span>
     </div>
     <div id="sxOut"></div>
@@ -368,7 +369,7 @@
   </details>
 
   <footer class="foot">
-    Tierwise v<span id="ver2">2.6.0</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
+    Tierwise v<span id="ver2">2.6.1</span> · <span data-i18n="ft.by">by Daniel Alberto Sepulveda Estay, PhD</span> · <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a> · <a href="about.html" data-i18n="ft.about">About and citation</a> · <a href="validation.html" data-i18n="ft.validation">Validation</a> · <a href="../" data-i18n="ft.all">All projects</a>
   </footer>
 </main>
 

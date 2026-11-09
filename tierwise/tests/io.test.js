@@ -160,5 +160,10 @@ check("refused: JSON that is not a network", !IO.fromJSON("{\"a\":1}").ok && !IO
 }
 check("load picks the reader by file name and content", IO.load("n.json", IO.toJSON(N.build("base"))).ok && IO.load("n.csv", IO.toCSV(N.build("base"))).ok && IO.load("n.txt", IO.toJSON(N.build("base"))).ok && !IO.load("n.xlsx", new ArrayBuffer(4)).ok);
 
+{ // 2.6.1: a site's own time to recover, for stress tests, travels in every file and reads under its other names
+  const n = N.build("base"); n.sites.find((s) => s.id === "d-vlc").recovery = 9;
+  const back = IO.fromCSV(IO.toCSV(n)), j = IO.fromJSON(IO.toJSON(n)), alias = IO.fromCSV(IO.toCSV(n).replace(",recovery,", ",ttr,"));
+  check("a site's time to recover round-trips through CSV and JSON, and reads as ttr", back.ok && back.net.sites.find((s) => s.id === "d-vlc").recovery === 9 && j.net.sites.find((s) => s.id === "d-vlc").recovery === 9 && alias.ok && alias.net.sites.find((s) => s.id === "d-vlc").recovery === 9, alias.errors);
+}
 console.log(pass + "/" + (pass + fail) + " checks passed");
 process.exit(fail ? 1 : 0);

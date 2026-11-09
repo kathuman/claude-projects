@@ -18,7 +18,8 @@
     },
     priorities: function (h, d, progress) { return PR.analyse(h, d.net, d.opts, progress); },
     stress: function (h, d, progress) { return ST.analyse(h, d.net, d.opts, progress); },
-    scan: function (h, d, progress) { return ST.scan(h, d.net, d.opts, progress); }
+    scan: function (h, d, progress) { return ST.scan(h, d.net, d.opts, progress); },
+    worst: function (h, d, progress) { return ST.worst(h, d.net, d.opts, progress); }
   };
   // a runner that calls the engine in this thread: for Node, tests and tools
   function direct(highs) {
@@ -44,6 +45,8 @@
       stress: function (net, opts, progress) { return run("stress", { net: clone(net), opts: opts || {} }, progress); },
       // every site and route out in turn for its time to recover: screened, the worst solved
       scan: function (net, opts, progress) { return run("scan", { net: clone(net), opts: Object.assign({}, opts || {}, { scan: true }) }, progress); },
+      // the worst combination of up to three failures from one start (greedy, with a pair look-ahead)
+      worst: function (net, opts, progress) { return run("worst", { net: clone(net), opts: Object.assign({}, opts || {}, { worst: true }) }, progress); },
       // what changed between two networks
       diff: function (a, b) { return S.diff(a, b); },
       fingerprint: function (net) { return S.hashOf(JSON.stringify(net)); }

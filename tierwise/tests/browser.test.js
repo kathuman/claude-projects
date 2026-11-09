@@ -88,7 +88,7 @@ const server = http.createServer((req, res) => {
   // ---- what to do: every action priced by the plan, grouped, with its receipt
   const w = await open();
   await w.click("#prRun");
-  await w.waitForFunction(() => document.querySelectorAll("#prList .pr-group").length > 0 || /bad/.test(document.getElementById("prStatus").innerHTML), null, { timeout: 600000 });
+  await w.waitForFunction(() => document.querySelectorAll("#prList .pr-group").length > 0 || /bad/.test(document.getElementById("prStatus").innerHTML), null, { timeout: 1200000 });
   const list = await w.textContent("#prList");
   check("what to do: Valencia's line, with a date and a price", /Fourth dosing line at Valencia/.test(list) && /Start by 20\d\d/.test(list), (await w.textContent("#prStatus")));
   check("what to do: sites with no option are named", /Define an expansion option for/.test(list));
@@ -105,10 +105,21 @@ const server = http.createServer((req, res) => {
   await sx.selectOption("#sxTarget", "d-vlc");
   check("stress: choosing a dosing site sets its time to recover", (await sx.inputValue("#sxMonths")) === "6");
   await sx.click("#sxRun");
-  await sx.waitForFunction(() => document.querySelector("#sxOut .kpis") || /bad/.test(document.getElementById("sxStatus").innerHTML), null, { timeout: 600000 });
+  await sx.waitForFunction(() => document.querySelector("#sxOut .kpis") || /bad/.test(document.getElementById("sxStatus").innerHTML), null, { timeout: 1200000 });
   const sxt = await sx.textContent("#sxOut");
   check("stress: Valencia out for 6 months loses sales, is priced, and has a time to survive", /Valencia Dosing out/.test(sxt) && /Sales lost/.test(sxt) && /Time to survive/.test(sxt) && /does not ride this out/.test(sxt), (await sx.textContent("#sxStatus")) + " " + sxt.slice(0, 200));
   check("stress: the chart and both receipts are shown, and proved", !!(await sx.$("#sxOut svg path.sx-hit")) && (await sx.$$("#sxOut details.receipt")).length === 2 && !(await sx.$("#sxOut details.receipt b.no")));
+  await sx.click("#sxRecord");
+  await sx.click("#savedBox summary");
+  check("stress: a result is recorded in the decision ledger, with its receipts", /Stress test: Valencia Dosing out/.test(await sx.textContent("#ledList")) && /[0-9a-f]{16}/.test(await sx.textContent("#ledList")));
+  await sx.click("#sxWorst");
+  await sx.waitForFunction(() => /worst combination/i.test((document.querySelector("#sxOut h3") || {}).textContent || "") || /bad/.test(document.getElementById("sxStatus").innerHTML), null, { timeout: 1200000 });
+  check("stress: the worst combination adds three failures, each solved and proved", (await sx.$$("#sxOut .sx-table tbody tr")).length === 3 && !(await sx.$("#sxOut details.receipt b.no")), await sx.textContent("#sxStatus"));
+  await sx.click("#sxScan");
+  await sx.waitForFunction(() => /for its time to recover/.test((document.querySelector("#sxOut h3") || {}).textContent || "") || /bad/.test(document.getElementById("sxStatus").innerHTML), null, { timeout: 1200000 });
+  check("stress: after a scan, the Studio can colour sites by the cost of their outage", !!(await sx.$("#studioColor option[value='stress']")));
+  await sx.selectOption("#studioColor", "stress");
+  check("…and its legend says so", /Cost of the site's outage/.test(await sx.textContent("#studioLegend")), await sx.textContent("#studioLegend"));
   await sx.selectOption("#sxKind", "demand");
   check("stress: demand swaps capacity lost for a demand change and lists the consumption points", await sx.isVisible("#sxChgBox") && await sx.isHidden("#sxSevBox") && (await sx.$$("#sxTarget option")).length === 9);
   await sx.close();

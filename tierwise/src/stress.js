@@ -5,6 +5,7 @@
 //   site    a site loses `severity` (0–1) of its capacity
 //   route   a lane loses `severity` of what it carried in the undisturbed plan
 //   demand  a market's demand (or every market's, target "all") changes by `change` (+0.5 = half as much again; −0.3)
+//   combo   several of these at once (`parts`), from the earliest start to the latest end
 // It starts at month `start`, lasts `months` at full strength, then fades back over `ramp` months.
 //
 // A disruption is a surprise. The plan sees the whole horizon, so left alone it would build stock ahead of a strike it
@@ -28,7 +29,7 @@
   "use strict";
   // time to recover by tier, in months: assumptions, shown as such and editable for each disruption
   var TTR = { raw: 3, product: 6, dosing: 6, packaging: 4, warehouse: 2, route: 1 };
-  var TOL = 0.001, MAX_MONTHS = 24, MAX_CHANGE = 2, PROVE = 8, SURVIVE = 3, LEAD_IN = 3, AFTER = 6;
+  var TOL = 0.001, MAX_MONTHS = 24, MAX_CHANGE = 2, PROVE = 8, SURVIVE = 3, LEAD_IN = 3, AFTER = 6, MAX_K = 3, COMBO_PROVE = 4, GAIN = 0.01;
   var KINDS = ["site", "route", "demand"];
 
   function siteOf(net, id) { for (var i = 0; i < net.sites.length; i++) if (net.sites[i].id === id) return net.sites[i]; return null; }
@@ -56,27 +57,35 @@
     return f;
   }
   function clean(d) {
+    if (d.kind === "combo") {
+      var parts = (d.parts || []).map(clean), s0 = parts.length ? Math.min.apply(null, parts.map(function (p) { return p.start; })) : 0;
+      var end = parts.length ? Math.max.apply(null, parts.map(function (p) { return p.start + p.months + p.ramp; })) : s0;
+      return { kind: "combo", parts: parts, start: s0, months: end - s0, ramp: 0 };
+    }
     var o = { kind: KINDS.indexOf(d.kind) >= 0 ? d.kind : "site", target: d.target, start: Math.max(0, Math.round(d.start || 0)), months: Math.max(0, Math.round(d.months || 0)), ramp: Math.max(0, Math.round(d.ramp || 0)) };
     if (o.kind === "demand") o.change = +d.change || 0; else o.severity = Math.max(0, Math.min(1, d.severity != null ? +d.severity : 1));
     return o;
   }
   // the solver options for a disruption, given the undisturbed plan (solved with keep: true)
   function optionsFor(net, base, d, o) {
-    var f = profile(d), M = P.MONTHS, st = { mul: {}, laneMax: {}, fix: { vals: base.primal, before: d.start }, spec: d };
-    if (d.kind === "site") {
-      var m1 = new Float64Array(M); for (var m = 0; m < M; m++) m1[m] = 1 - d.severity * f[m]; st.mul[d.target] = m1;
-    } else if (d.kind === "demand") {
-      net.sites.forEach(function (s) {
-        if (s.tier !== "market" || (d.target !== "all" && d.target !== s.id)) return;
-        var m2 = new Float64Array(M); for (var m = 0; m < M; m++) m2[m] = Math.max(0, 1 + d.change * f[m]); st.mul[s.id] = m2;
+    var M = P.MONTHS, st = { mul: {}, laneMax: {}, fix: { vals: base.primal, before: d.start }, spec: d }, ok = true;
+    // two parts on the same site multiply; two on the same lane keep the lower limit
+    var scale = function (id, m, x) { var a = st.mul[id]; if (!a) { a = st.mul[id] = new Float64Array(M); a.fill(1); } a[m] *= x; };
+    (d.kind === "combo" ? d.parts : [d]).forEach(function (p) {
+      var f = profile(p);
+      if (p.kind === "site") { for (var m = 0; m < M; m++) if (f[m] > 0) scale(p.target, m, 1 - p.severity * f[m]); }
+      else if (p.kind === "demand") net.sites.forEach(function (s) {
+        if (s.tier !== "market" || (p.target !== "all" && p.target !== s.id)) return;
+        for (var m = 0; m < M; m++) if (f[m] > 0) scale(s.id, m, Math.max(0, 1 + p.change * f[m]));
       });
-    } else {
-      var li = base.laneIndex[d.target], cap = {};
-      if (li == null) return null;
-      for (var m3 = 0; m3 < M; m3++) if (f[m3] > 0) { var t = m3 + base.W, v = base.primal["x" + li + "_" + t] || 0; cap[t] = Math.max(0, v) * (1 - d.severity * f[m3]); }
-      st.laneMax[d.target] = cap;
-    }
-    return { mode: o.mode, hold: o.hold, stress: st };
+      else {
+        var li = base.laneIndex[p.target], cap = st.laneMax[p.target] || {};
+        if (li == null) { ok = false; return; }
+        for (var m3 = 0; m3 < M; m3++) if (f[m3] > 0) { var t = m3 + base.W, v = Math.max(0, base.primal["x" + li + "_" + t] || 0) * (1 - p.severity * f[m3]); cap[t] = cap[t] != null ? Math.min(cap[t], v) : v; }
+        st.laneMax[p.target] = cap;
+      }
+    });
+    return ok ? { mode: o.mode, hold: o.hold, stress: st } : null;
   }
   function sumA(a, from, to) { var s = 0; for (var i = Math.max(0, from); i < Math.min(a.length, to); i++) s += a[i]; return s; }
   // what the disruption did, against the undisturbed plan
@@ -188,16 +197,19 @@
     }
     // packs a disruption would cost, by the screen: lost delivery in each hit month, against the same month undisturbed
     function loss(d) {
-      var f = profile(d), tot = 0;
+      var parts = d.kind === "combo" ? d.parts : [d], fs = parts.map(profile), tot = 0;
       for (var m = 0; m < P.MONTHS; m++) {
-        if (!(f[m] > 0)) continue;
-        var cm = {}, dm = {}, lo = {};
-        if (d.kind === "site") cm[d.target] = 1 - d.severity * f[m];
-        else if (d.kind === "route") lo[d.target] = (1 - d.severity * f[m]) > 0 ? Infinity : 0;
-        else net.sites.forEach(function (s) { if (s.tier === "market" && (d.target === "all" || d.target === s.id)) dm[s.id] = Math.max(0, 1 + d.change * f[m]); });
+        var hit = false, cm = {}, dm = {}, lo = {};
+        parts.forEach(function (p, i) {
+          var f = fs[i][m]; if (!(f > 0)) return; hit = true;
+          if (p.kind === "site") cm[p.target] = (cm[p.target] != null ? cm[p.target] : 1) * (1 - p.severity * f);
+          else if (p.kind === "route") { if (1 - p.severity * f <= 0) lo[p.target] = 0; }
+          else net.sites.forEach(function (s) { if (s.tier === "market" && (p.target === "all" || p.target === s.id)) dm[s.id] = (dm[s.id] != null ? dm[s.id] : 1) * Math.max(0, 1 + p.change * f); });
+        });
+        if (!hit) continue;
         var a = deliver(m, {}, {}, {}), b = deliver(m, cm, dm, lo), want = 0;
-        if (d.kind === "demand") { net.sites.forEach(function (s) { if (s.tier === "market") want += base.sites[s.id].demand[m] * (dm[s.id] != null ? dm[s.id] : 1); }); tot += Math.max(0, want - b) - Math.max(0, wantOf(m) - a); }
-        else tot += Math.max(0, a - b);
+        net.sites.forEach(function (s) { if (s.tier === "market") want += base.sites[s.id].demand[m] * (dm[s.id] != null ? dm[s.id] : 1); });
+        tot += Math.max(0, want - b) - Math.max(0, wantOf(m) - a);
       }
       return tot;
     }
@@ -243,5 +255,54 @@
     return { ok: true, start: start, items: items, prove: prove, receipt: b.receipt, solves: S.solves(), seconds: (Date.now() - t0) / 1000 };
   }
 
-  return { TTR: TTR, TOL: TOL, MAX_MONTHS: MAX_MONTHS, PROVE: PROVE, SURVIVE: SURVIVE, KINDS: KINDS, ttrOf: ttrOf, elements: elements, profile: profile, clean: clean, optionsFor: optionsFor, session: session, analyse: analyse, screener: screener, scan: scan, MaxFlow: MaxFlow };
+  // the worst combination of up to k failures, all from the same start, each for its time to recover. Found one failure at
+  // a time (greedy): the costliest single one, then the one that adds most on top of it, and so on. Each step screens
+  // every remaining site and route on top of the ones chosen, and solves the most damaging few with the monthly plan.
+  // When no single addition costs anything (two sites that cover for each other), it screens pairs instead. A good
+  // combination, not a proved worst one: the page says so.
+  function worst(highs, net, opts, progress) {
+    opts = opts || {}; var t0 = Date.now(), o = { mode: opts.mode, hold: opts.hold }, k = Math.max(1, Math.min(MAX_K, Math.round(opts.k || MAX_K)));
+    if (!K.costsOf(net.config).money) return { ok: false, needsMoney: true };
+    var start = Math.max(0, Math.round(opts.start || 0)), sc = screener(net, o.mode || "qualified"); if (!sc) return { ok: false, errors: ["The network is not valid."] };
+    var S = session(highs, net, o, progress), b = S.baseline(); if (!b.ok) return b;
+    var pool = elements(net, o.mode).map(function (e) { return { kind: e.kind, target: e.target, tier: e.tier, name: e.name, d: clean({ kind: e.kind, target: e.target, start: start, months: ttrOf(net, e), severity: 1 }) }; });
+    // an addition counts only if it costs more than a hundredth of a month's sales (re-routing alone costs a few dollars)
+    var monthValue = 0; Object.keys(b.sites).forEach(function (id) { if (b.sites[id].site.tier === "market") monthValue += b.sites[id].demand[Math.min(P.MONTHS - 1, start)] * net.config.packValue; });
+    var counts = function (cost) { return cost > prevCost + GAIN * monthValue; };
+    var chosen = [], steps = [], prevCost = 0, last = null;
+    for (var step = 0; step < k && pool.length; step++) {
+      var combo = function (e) { return clean({ kind: "combo", parts: chosen.map(function (c) { return c.d; }).concat([e.d]) }); };
+      pool.forEach(function (e) { e.screened = sc.loss(combo(e)); });
+      pool.sort(function (a, c) { return c.screened - a.screened; });
+      var best = null;
+      pool.slice(0, step === 0 ? PROVE : COMBO_PROVE).forEach(function (e) {
+        var r = S.run(combo(e)); if (!r.ok) return;
+        if (!best || r.m.costPV > best.r.m.costPV) best = { e: e, r: r };
+      });
+      var add = function (e, r, pair) {
+        chosen.push(e); pool = pool.filter(function (x) { return x !== e; }); last = r;
+        steps.push({ kind: e.kind, target: e.target, tier: e.tier, name: e.name, ttr: e.d.months, costPV: r.m.costPV, added: r.m.costPV - prevCost, lost: r.m.lost, fill: r.m.fill, proved: r.m.proved, receipts: r.m.receipts, pair: !!pair });
+        prevCost = r.m.costPV;
+      };
+      if (best && counts(best.r.m.costPV)) { add(best.e, best.r); continue; }
+      // nothing adds on its own: redundant sites cover for each other, so look for a pair that fails together
+      if (step + 2 > k) break;
+      var pairs = [];
+      for (var i = 0; i < pool.length; i++) for (var j = i + 1; j < pool.length; j++) {
+        var two = clean({ kind: "combo", parts: chosen.map(function (c) { return c.d; }).concat([pool[i].d, pool[j].d]) });
+        pairs.push({ a: pool[i], b: pool[j], d: two, screened: sc.loss(two) });
+      }
+      pairs.sort(function (x, y) { return y.screened - x.screened; });
+      var bp = null;
+      pairs.slice(0, COMBO_PROVE).forEach(function (q) { if (!(q.screened > 0)) return; var r = S.run(q.d); if (r.ok && (!bp || r.m.costPV > bp.r.m.costPV)) bp = { q: q, r: r }; });
+      if (!bp || !counts(bp.r.m.costPV)) break;
+      var one = S.run(clean({ kind: "combo", parts: chosen.map(function (c) { return c.d; }).concat([bp.q.a.d]) }));
+      add(bp.q.a, one, true); add(bp.q.b, bp.r, true); step++;
+    }
+    if (!last) return { ok: false, errors: ["No failure costs anything from this start."] };
+    var d = clean({ kind: "combo", parts: chosen.map(function (c) { return c.d; }) });
+    return { ok: true, start: start, disruption: d, steps: steps, result: brief(last), greedy: true, solves: S.solves(), seconds: (Date.now() - t0) / 1000 };
+  }
+
+  return { MAX_K: MAX_K, worst: worst, TTR: TTR, TOL: TOL, MAX_MONTHS: MAX_MONTHS, PROVE: PROVE, SURVIVE: SURVIVE, KINDS: KINDS, ttrOf: ttrOf, elements: elements, profile: profile, clean: clean, optionsFor: optionsFor, session: session, analyse: analyse, screener: screener, scan: scan, MaxFlow: MaxFlow };
 });

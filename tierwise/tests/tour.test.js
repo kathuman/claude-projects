@@ -62,9 +62,10 @@ const CLAIMS = {
   }
 };
 // claims about the plan within capacity (c-…) need the solver: tests/constrained.test.js checks them by name
-const ctest = fs.readFileSync(path.join(__dirname, "constrained.test.js"), "utf8");
+const ctest = fs.readFileSync(path.join(__dirname, "constrained.test.js"), "utf8"), stest = fs.readFileSync(path.join(__dirname, "stress.test.js"), "utf8");
 steps.filter((s) => s.quiz).forEach((s) => {
-  if (/^c-/.test(s.quiz.claim)) check("claim " + s.quiz.claim + " (" + s.id + ") is checked by the constrained tests", ctest.indexOf('check("' + s.quiz.claim + ":") >= 0);
+  if (/^s-/.test(s.quiz.claim)) check("claim " + s.quiz.claim + " (" + s.id + ") is checked by the stress tests", stest.indexOf('check("' + s.quiz.claim + ":") >= 0);
+  else if (/^c-/.test(s.quiz.claim)) check("claim " + s.quiz.claim + " (" + s.id + ") is checked by the constrained tests", ctest.indexOf('check("' + s.quiz.claim + ":") >= 0);
   else check("claim " + s.quiz.claim + " (" + s.id + ") holds", CLAIMS[s.quiz.claim] && CLAIMS[s.quiz.claim]());
 });
 steps.filter((s) => s.setup && s.setup.cap).forEach((s) => check("step " + s.id + " plans within capacity with a valid rule", ["fixed", "qualified", "any"].indexOf(s.setup.cap.mode) >= 0 && s.setup.cap.hold >= 0));

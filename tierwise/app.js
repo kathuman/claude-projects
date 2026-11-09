@@ -5,7 +5,7 @@
 // the example network in src/network.js (TWNetwork), words in i18n.js (TWi18n).
 (function () {
   "use strict";
-  var VERSION = "2.6.0";
+  var VERSION = "2.6.1";
   var P = window.TWPlan, N = window.TWNetwork, IO = window.TWIO, I = window.TWi18n, T = I.T, fx = I.fx;
   var SVGNS = "http://www.w3.org/2000/svg";
   var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
@@ -590,15 +590,26 @@
     return d;
   }
   function sxNeedsMoney() { var c = state.net.config; return !(c.packValue > 0 && c.unitCost > 0 && c.holdingRate > 0); }
+  // put a saved disruption back into the form (from a scenario or the last session)
+  function sxSetForm(d) {
+    if (!d || !d.kind || d.kind === "combo") return;
+    $("sxKind").value = d.kind; sxFill(false);
+    if (d.target != null) $("sxTarget").value = d.target;
+    if (d.start != null) $("sxStart").value = String(d.start);
+    $("sxMonths").value = d.months != null ? d.months : $("sxMonths").value; $("sxRamp").value = d.ramp || 0;
+    if (d.kind === "demand") $("sxChg").value = Math.round((d.change || 0) * 100); else $("sxSev").value = Math.round((d.severity != null ? d.severity : 1) * 100);
+  }
   function runStress(scan) {
     if (sxNeedsMoney()) { state.sx = { err: T("Stress tests need real costs: set a pack value, unit cost and holding cost under Capacity investment.") }; renderStress(); return; }
     var key = solveKey(), d = sxDisruption(), o = { mode: state.csrc, hold: state.hold };
-    state.sx = { solving: true, n: 0, key: key, scan: scan }; renderStress();
-    var job = scan ? ENGINE.scan(JSON.parse(IO.toJSON(state.net)), Object.assign({ start: d.start }, o), prog) : ENGINE.stress(JSON.parse(IO.toJSON(state.net)), Object.assign({ disruption: d }, o), prog);
+    state.sx = { solving: true, n: 0, key: key, scan: scan === true }; renderStress();
+    var net = JSON.parse(IO.toJSON(state.net));
+    var job = scan === "worst" ? ENGINE.worst(net, Object.assign({ start: d.start }, o), prog) : scan ? ENGINE.scan(net, Object.assign({ start: d.start }, o), prog) : ENGINE.stress(net, Object.assign({ disruption: d }, o), prog);
     function prog(n) { if (state.sx && state.sx.solving) { state.sx.n = n; renderSxStatus(); } }
     job.then(function (r) {
       if (!r || !r.ok) { state.sx = { err: r && r.needsMoney ? T("Stress tests need real costs: set a pack value, unit cost and holding cost under Capacity investment.") : failed(r) }; renderStress(); return; }
-      state.sx = { res: r, key: key, scan: scan }; renderStress();
+      state.sx = { res: r, key: key, scan: scan === true }; renderStress();
+      if (scan === true && window.TWStudio) window.TWStudio.render();
     }, function (e) { if (!(e && e.superseded)) { state.sx = { err: failed() }; renderStress(); } });
   }
   function renderSxStatus() {
@@ -607,9 +618,10 @@
     else if (p.solving) st.innerHTML = "<span class='spin'></span>" + T("Solving plan {n}…", { n: p.n || 1 });
     else if (p.res) st.textContent = p.key === solveKey() ? T("{n} plans solved in {s} s", { n: p.res.solves, s: fx(p.res.seconds, 0) }) : T("The network or settings have changed: work this out again.");
     else st.textContent = "";
-    $("sxRun").disabled = $("sxScan").disabled = !!p.solving;
+    $("sxRun").disabled = $("sxScan").disabled = $("sxWorst").disabled = !!p.solving;
   }
   function sxWhat(d) {
+    if (d.kind === "combo") return d.parts.map(sxWhat).join(" + ");
     var t = byId(d.target);
     if (d.kind === "demand") return T("Demand {c} at {where}", { c: (d.change > 0 ? "+" : "") + Math.round(d.change * 100) + "%", where: d.target === "all" ? T("every consumption point") : t ? nm(t) : d.target });
     var ab = d.target.split(">"), a = byId(ab[0]), b = byId(ab[1]), name = d.kind === "site" ? (t ? nm(t) : d.target) : (a ? nm(a) : ab[0]) + " → " + (b ? nm(b) : ab[1]);
@@ -659,11 +671,34 @@
       "<p class='panel-note'>" + esc(T("All {n} are ranked first by a quick flow screen, which ignores stock and lead times; the worst {k} are then solved by the month-by-month plan and ranked by what they cost. Only solved figures are results: a screened one is a ranking, not an answer. The costliest {s} also get their time to survive.", { n: x.items.length, k: x.prove, s: SX.SURVIVE })) + "</p>" +
       "<div class='table-scroll'><table class='sx-table'><thead><tr><th style='text-align:left'>" + esc(T("Site or route")) + "</th><th>" + esc(T("Recovers in, months")) + "</th><th>" + esc(T("Sales lost, packs")) + "</th><th>" + esc(T("Cost, present value")) + "</th><th>" + esc(T("Delivered")) + "</th><th>" + esc(T("Rides it out?")) + "</th><th>" + esc(T("Proved")) + "</th></tr></thead><tbody>" + rows + "</tbody></table></div>" + more + receiptHtml(x.receipt, T("Undisturbed plan"));
   }
+  // a stress result into the decision ledger, with the receipts behind it
+  function sxRecord(title, m, receipts) {
+    if (recordDecision({ action: "stress", title: title, lost: m.lost, costPV: m.costPV, receipts: receipts.map(function (r) { return r.input; }) })) { state.sxRecorded = state.sx; renderStress(); }
+  }
+  function sxRecordBtn() { return state.sxRecorded === state.sx ? "<p class='ok'>✓ " + esc(T("Recorded in the decision ledger")) + "</p>" : "<p><button class='btn small' type='button' id='sxRecord'>" + esc(T("Record in the decision ledger")) + "</button></p>"; }
+  // the worst combination: each failure added, what it added, and the whole combination as one result
+  function sxWorstHtml(x) {
+    var rows = x.steps.map(function (s, i) {
+      var name = s.kind === "site" ? nm(byId(s.target)) + " · " + tierOne(byId(s.target).tier) : (function () { var ab = s.target.split(">"); return nm(byId(ab[0])) + " → " + nm(byId(ab[1])); })();
+      return "<tr><td>" + (i + 1) + "</td><td style='text-align:left'>" + esc(name) + (s.pair ? " <i>" + esc(T("(found as a pair)")) + "</i>" : "") + "</td><td>" + s.ttr + "</td><td>+" + fc(s.added) + "</td><td>" + fc(s.costPV) + "</td><td>" + fq(s.lost) + "</td><td>" + (s.proved ? "<span class='ok'>✓</span>" : "<span class='bad'>!</span>") + "</td></tr>";
+    }).join("");
+    var one = { disruption: x.disruption, result: x.result };
+    return "<h3>" + esc(T("The worst combination found, from {w}", { w: monthLabel(x.start) })) + "</h3>" +
+      "<p class='panel-note'>" + esc(T("Found one failure at a time: the costliest single failure, then the one that adds most on top of it, and so on, each solved by the month-by-month plan. When nothing adds on its own, because two sites cover for each other, it looks for a pair. A bad combination, then, but not proved to be the worst.")) + "</p>" +
+      "<div class='table-scroll'><table class='sx-table'><thead><tr><th>#</th><th style='text-align:left'>" + esc(T("Site or route")) + "</th><th>" + esc(T("Recovers in, months")) + "</th><th>" + esc(T("Adds")) + "</th><th>" + esc(T("Cost so far")) + "</th><th>" + esc(T("Sales lost, packs")) + "</th><th>" + esc(T("Proved")) + "</th></tr></thead><tbody>" + rows + "</tbody></table></div>" +
+      sxOne(one);
+  }
   function renderStress() {
     renderSxStatus();
     var p = state.sx || {}, box = $("sxOut");
     if (!p.res || p.key !== solveKey()) { box.innerHTML = ""; return; }
-    box.innerHTML = p.scan ? sxScanHtml(p.res) : sxOne(p.res);
+    box.innerHTML = (p.scan ? sxScanHtml(p.res) : p.res.steps ? sxWorstHtml(p.res) : sxOne(p.res)) + sxRecordBtn();
+    var rb = $("sxRecord");
+    if (rb) rb.addEventListener("click", function () {
+      var r = p.res;
+      if (p.scan) { var top = r.items.filter(function (e) { return e.proved; })[0]; sxRecord(T("Stress scan from {w}: costliest outage {x}", { w: monthLabel(r.start), x: top ? (top.kind === "site" ? nm(byId(top.target)) : top.name) : "–" }), top ? top.proved : { lost: 0, costPV: 0 }, top ? top.proved.receipts : [r.receipt]); }
+      else sxRecord(sxWhat(r.disruption) + " · " + T("from {w} for {n} months", { w: monthLabel(r.disruption.start), n: r.disruption.months }), r.result, r.result.receipts);
+    });
     var mb = $("sxMore"); if (mb) mb.addEventListener("click", function () { each(box.querySelectorAll("tr[hidden]"), function (tr) { tr.hidden = false; }); mb.remove(); });
   }
 
@@ -1088,7 +1123,7 @@
   // ---- memory: the session is saved as you go, scenarios are kept as versions, decisions are recorded with their receipts
   var ST = window.TWStore.open((function () { try { return window.TWStore.browser(window.localStorage); } catch (e) { return null; } })() || window.TWStore.memory());
   var asTimer = null, restoring = false;
-  function sessionData() { return { net: JSON.parse(IO.toJSON(state.net)), scenario: state.scenario, custom: state.custom ? state.custom.name : null, mode: state.mode, csrc: state.csrc, hold: state.hold }; }
+  function sessionData() { return { net: JSON.parse(IO.toJSON(state.net)), scenario: state.scenario, custom: state.custom ? state.custom.name : null, mode: state.mode, csrc: state.csrc, hold: state.hold, stress: $("sxKind").value ? sxDisruption() : null }; }
   function autosave() { if (restoring) return; clearTimeout(asTimer); asTimer = setTimeout(function () { ST.autosave(sessionData()); }, 500); }
   // on opening the page without a link: resume the last session, unless it was the untouched example with nothing switched on
   function resume() {
@@ -1098,6 +1133,7 @@
     state.mode = s.mode === "cap" ? "cap" : "plan"; state.csrc = s.csrc || "qualified"; state.hold = s.hold != null ? s.hold : 6;
     $("csrc").value = state.csrc; $("hold").value = String(state.hold);
     if (s.scenario && N.SCENARIOS[s.scenario] && IO.toJSON(N.build(s.scenario)) === IO.toJSON(s.net)) load(s.scenario); else useCustom(s.net, s.custom || T("your last session"));
+    sxSetForm(s.stress);
     each(document.querySelectorAll("#capMode button"), function (b) { b.classList.toggle("active", b.getAttribute("data-v") === state.mode); });
     $("capOpts").hidden = state.mode !== "cap";
     restoring = false; render();
@@ -1111,7 +1147,7 @@
       return "<tr><th style='text-align:left'>" + esc(x.name) + "</th><td style='text-align:left'>" + T("{n} versions · saved {d}", { n: x.versions, d: new Date(x.latest.created).toLocaleString(I.lang === "en" ? undefined : I.lang) }) + "</td><td>" +
         "<button class='btn small' data-sc-open='" + esc(x.name) + "' type='button'>" + T("Open") + "</button> <button class='btn small' data-sc-diff='" + esc(x.name) + "' type='button'>" + T("Compare with the plan on screen") + "</button> <button class='btn small' data-sc-del='" + esc(x.name) + "' type='button'>" + (delArm === x.name ? T("Delete every version?") : T("Delete")) + "</button></td></tr>";
     }).join("") + "</tbody></table>" : "<p class='lanes'>" + T("No saved scenarios yet.") + "</p>";
-    each($("scList").querySelectorAll("[data-sc-open]"), function (b) { b.addEventListener("click", function () { var r = ST.latest("scenario", b.getAttribute("data-sc-open")); useCustom(r.data.net, r.name); $("scDiff").innerHTML = ""; }); });
+    each($("scList").querySelectorAll("[data-sc-open]"), function (b) { b.addEventListener("click", function () { var r = ST.latest("scenario", b.getAttribute("data-sc-open")); useCustom(r.data.net, r.name); sxSetForm(r.data.stress); $("scDiff").innerHTML = ""; }); });
     each($("scList").querySelectorAll("[data-sc-diff]"), function (b) { b.addEventListener("click", function () { showDiff(b.getAttribute("data-sc-diff")); }); });
     // no browser dialogs: deleting takes a second click
     each($("scList").querySelectorAll("[data-sc-del]"), function (b) { b.addEventListener("click", function () { var n = b.getAttribute("data-sc-del"); if (delArm === n) { ST.remove("scenario", n); delArm = null; $("scDiff").innerHTML = ""; } else delArm = n; renderSaved(); }); });
@@ -1119,7 +1155,7 @@
   }
   function saveScenario() {
     var name = $("scName").value.trim(); if (!name) { $("scName").focus(); return; }
-    var r = ST.put("scenario", name, { net: JSON.parse(IO.toJSON(state.net)), mode: state.csrc, hold: state.hold }, { app: VERSION });
+    var r = ST.put("scenario", name, { net: JSON.parse(IO.toJSON(state.net)), mode: state.csrc, hold: state.hold, stress: sxDisruption() }, { app: VERSION });
     if (!r.ok) dataMsg(esc(T("The browser's storage is full: export your scenarios as files, then delete old ones.")), "bad");
     $("scName").value = ""; renderSaved();
   }
@@ -1142,7 +1178,8 @@
     var list = ST.all("decision");
     $("ledList").innerHTML = list.length ? "<ul class='lanes'>" + list.map(function (r) {
       var d = r.data, when = new Date(r.created).toLocaleDateString(I.lang === "en" ? undefined : I.lang), text;
-      if (d.action === "expansions") text = T("Added the optimiser's expansions: {x}; verified NPV {v}", { x: d.items.map(function (i) { return i.label; }).join(", "), v: d.verifiedNpv != null ? fc(d.verifiedNpv) : "–" });
+      if (d.action === "stress") text = T("Stress test: {a}; sales lost {l}, cost {c}", { a: d.title, l: fq(d.lost), c: d.costPV != null ? fc(d.costPV) : "–" });
+      else if (d.action === "expansions") text = T("Added the optimiser's expansions: {x}; verified NPV {v}", { x: d.items.map(function (i) { return i.label; }).join(", "), v: d.verifiedNpv != null ? fc(d.verifiedNpv) : "–" });
       else text = (d.choice === "do" ? T("Decided to do: {a}", { a: d.title }) : T("Decided not now: {a}", { a: d.title })) + (d.npv != null ? " · " + fc(d.npv) : "");
       return "<li>" + esc(when) + " · " + esc(text) + " · <code>" + esc((d.receipts || [])[0] || d.network) + "</code></li>";
     }).join("") + "</ul>" : "<p class='lanes'>" + T("No decisions recorded yet. Record one from What to do, or by adding the optimiser's expansions.") + "</p>";
@@ -1460,6 +1497,7 @@
     $("prRun").addEventListener("click", runPriorities);
     $("sxRun").addEventListener("click", function () { runStress(false); });
     $("sxScan").addEventListener("click", function () { runStress(true); });
+    $("sxWorst").addEventListener("click", function () { runStress("worst"); });
     $("sxKind").addEventListener("change", function () { sxFill(false); });
     $("sxTarget").addEventListener("change", function () { if ($("sxKind").value !== "demand") $("sxMonths").value = SX.ttrOf(state.net, { kind: $("sxKind").value, target: $("sxTarget").value }); });
     $("scSave").addEventListener("click", saveScenario);
@@ -1515,9 +1553,16 @@
       return c;
     }).filter(function (x) { return x.label && isFinite(x.add) && x.add > 0 && isFinite(x.capex) && x.capex >= 0; });
   }
+  // the latest stress scan, for colouring the Studio and the map: the cost of each site's outage (solved), or only its
+  // screen rank. Null when there is no scan for the network and settings on screen.
+  function stressCost() {
+    var p = state.sx; if (!p || !p.res || !p.scan || p.key !== solveKey()) return null;
+    var out = {}; p.res.items.forEach(function (e) { if (e.kind === "site") out[e.target] = { cost: e.proved ? e.proved.costPV : null, screened: e.screened }; });
+    return out;
+  }
   var api = {
     h: { esc: esc, nm: nm, country: country, tierName: tierName, tierShort: tierShort, tierOne: tierOne, tierUnit: tierUnit, unitOf: unitOf, fq: fq, pct: pct, latLabel: latLabel, row: row, TCOL: TCOL },
-    view: VR, cap: CAP, edit: edit, num: num, renderAll: render, download: download, fileBase: fileBase, parseExpansions: parseExpansions, candidatesText: candidatesText, parseCandidates: parseCandidates,
+    view: VR, cap: CAP, stressCost: stressCost, edit: edit, num: num, renderAll: render, download: download, fileBase: fileBase, parseExpansions: parseExpansions, candidatesText: candidatesText, parseCandidates: parseCandidates,
     monthText: function (i) { return IO.monthText(i, state.net.config); }, monthIndex: function (v) { return IO.monthIndex(v, state.net.config); },
     undo: function () { restore(hist.undo(state.net)); }, redo: function () { restore(hist.redo(state.net)); }, canUndo: function () { return hist.canUndo(); }, canRedo: function () { return hist.canRedo(); }
   };

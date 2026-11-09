@@ -5,7 +5,7 @@ let pass = 0, fail = 0;
 function check(name, cond, detail) { if (cond) pass++; else fail++; if (!cond || process.env.VERBOSE) console.log((cond ? "ok   " : "FAIL ") + name + (detail !== undefined ? "  → " + JSON.stringify(detail) : "")); }
 (async () => {
   const highs = await loadHighs({ print: () => {}, printErr: () => {} }), api = A.create(A.direct(highs)), net = N.build("base"), o = { mode: "qualified", hold: 6 };
-  check("the API offers solve, invest, priorities, stress and scan as jobs", A.KINDS.join() === "solve,invest,priorities,stress,scan");
+  check("the API offers solve, invest, priorities, stress, scan and worst as jobs", A.KINDS.join() === "solve,invest,priorities,stress,scan,worst");
   check("the requirement plan is instant and the same as the engine's", api.plan(net).ok && api.plan(net).sites["d-vlc"].load[0] === require("../src/plan.js").plan(net).sites["d-vlc"].load[0]);
   const s = await api.solve(net, o);
   check("solve: the same plan, the same receipt, as calling the engine itself", s.ok && s.receipt.proved && s.receipt.input === K.solve(highs, net, o).receipt.input && Math.abs(s.fill - 0.8682) < 0.001, s.fill);

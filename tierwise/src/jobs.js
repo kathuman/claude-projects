@@ -3,7 +3,7 @@
 // and finished results are cached by their input, so asking again for the same thing is instant.
 (function (root) {
   "use strict";
-  var SCRIPTS = { solve: "src/solve-worker.js", invest: "src/invest-worker.js", priorities: "src/priorities-worker.js", stress: "src/stress-worker.js", scan: "src/stress-worker.js" }, CACHE = 8;
+  var SCRIPTS = { solve: "src/solve-worker.js", invest: "src/invest-worker.js", priorities: "src/priorities-worker.js", stress: "src/stress-worker.js", scan: "src/stress-worker.js", worst: "src/stress-worker.js" }, CACHE = 8;
   function runner(scripts) {
     scripts = scripts || SCRIPTS;
     var workers = {}, live = {}, seq = 0, cache = [];
