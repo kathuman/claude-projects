@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Tech University Atlas</title>
+  <meta name="description" content="What the Tech University Atlas shows, which universities count as technical, where the data comes from and how exact it is." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 34 34%22><circle cx=%2217%22 cy=%2217%22 r=%2215%22 fill=%22%230a2f52%22 stroke=%22%237dd3fc%22 stroke-width=%222%22/><ellipse cx=%2217%22 cy=%2217%22 rx=%226.5%22 ry=%2215%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%221.4%22/><circle cx=%2222%22 cy=%2212%22 r=%223%22 fill=%22%23c98500%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
+  --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
+  --mono:'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --head:'Rajdhani', 'Arial Narrow', sans-serif;
+  --body:'Barlow', 'Helvetica Neue', Arial, sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--body);}
+body{background-image:linear-gradient(rgba(125,211,252,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,.05) 1px, transparent 1px); background-size:28px 28px;}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 20px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#0d3a63,#0a2f52);}
+.brand{display:flex; align-items:baseline; gap:10px;}
+.brand .mark{font-family:var(--head); font-weight:700; font-size:22px; letter-spacing:.04em;}
+.brand .mark span{color:var(--accent);}
+.brand .sub{font-family:var(--mono); font-size:11px; color:var(--ink-faint); letter-spacing:.03em;}
+.actions{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto;}
+.back-link{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:6px; white-space:nowrap;}
+button.back-link{background:transparent; cursor:pointer; font-family:var(--head);}
+.back-link:hover{color:var(--accent); border-color:var(--accent);}
+select.lang{font-family:var(--head); font-weight:600; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-dim); background:var(--panel-2); padding:5px 8px; border:1px solid var(--line); border-radius:6px; cursor:pointer;}
+select.lang:hover{color:var(--accent); border-color:var(--accent);}
+main{max-width:980px; margin:0 auto; padding:34px 22px 10px;}
+.eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
+h1{font-family:var(--head); font-weight:700; font-size:40px; letter-spacing:.02em; margin:8px 0 12px;}
+.lede{font-size:18px; line-height:1.6; color:var(--ink-dim); max-width:760px; margin:0 0 22px;}
+h2{font-family:var(--head); font-weight:700; font-size:20px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 12px;}
+p{line-height:1.65; color:var(--ink-dim); margin:0 0 12px;}
+b{color:var(--ink);}
+a{color:var(--accent);}
+.open{display:inline-block; font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.06em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink); text-decoration:none; padding:10px 16px; border-radius:8px;}
+.open:hover{filter:brightness(1.08);}
+.cols{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:28px;}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px;}
+.card ul{list-style:none; margin:0; padding:0;}
+.card li{padding:10px 0; border-bottom:1px dashed var(--line-soft); line-height:1.55; color:var(--ink-dim);}
+.card li:last-child{border-bottom:none;}
+.card li b{display:block; font-family:var(--head); font-weight:600; font-size:15px; letter-spacing:.04em; margin-bottom:2px;}
+.cite{font-size:13px; color:var(--ink-faint); margin-top:16px;}
+.foot{max-width:980px; margin:30px auto 0; padding:18px 22px 40px; border-top:1px solid var(--line-soft); font-size:13px; color:var(--ink-faint); line-height:1.7;}
+.foot .consult{display:block; color:var(--ink); font-weight:600; margin-bottom:4px;}
+.foot a{color:var(--accent);}
+.maths{margin-top:22px;}
+.maths .intro{margin-bottom:6px;}
+.step{padding:14px 0; border-top:1px dashed var(--line-soft);}
+.step h3{font-family:var(--head); font-weight:700; font-size:17px; letter-spacing:.04em; margin:0 0 8px; color:var(--ink);}
+.step p{margin:0 0 10px;}
+.math{font-family:'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size:18px; line-height:1.9; color:var(--ink); background:var(--panel-2); border:1px solid var(--line-soft); border-left:3px solid var(--accent); border-radius:8px; padding:10px 16px; margin:4px 0 12px; overflow-x:auto;}
+.math i{font-style:italic;}
+@media (max-width:760px){ .math{font-size:16px;} }
+@media (max-width:760px){ .cols{grid-template-columns:1fr;} h1{font-size:32px;} .lede{font-size:16px;} .brand .sub{display:none;} }
+</style>
+<style>
+.tiers{list-style:none; margin:6px 0 0; padding:0; display:grid; gap:6px;}
+.tiers li{display:flex; align-items:center; gap:10px; color:var(--ink-dim); border:0; padding:0;}
+.tiers .sw{width:12px; height:12px; border-radius:50%; flex:none;}
+.tiers .n{font-family:var(--mono); color:var(--ink); margin-left:auto;}
+.basis{display:grid; gap:12px; margin-top:4px;}
+.basis div{border-left:3px solid var(--accent); padding:2px 0 2px 12px;}
+.basis b{display:block; font-family:var(--head); font-weight:600; font-size:15px; letter-spacing:.04em;}
+.basis .n{font-family:var(--mono); color:var(--accent); font-size:13px;}
+.card + .card{margin-top:22px;}
+.wide{margin-top:22px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">Tech University <span>Atlas</span></div>
+    <div class="sub">ABOUT THE APP</div>
+  </div>
+  <div class="actions">
+    <a class="back-link" href="./">Open the atlas</a>
+    <a class="back-link" href="../">← Projects</a>
+  </div>
+</header>
+
+<main>
+  <div class="eyebrow">About the app</div>
+  <h1>Tech University Atlas</h1>
+  <p class="lede">Where are the world's technical universities, and how do they rank? This atlas puts the 242 technical universities in the QS World University Rankings 2027 on a spinning globe and a flat map, coloured by rank, so you can see at a glance where engineering education is strongest and how it spreads across 68 countries.</p>
+  <p><a class="open" href="./">Open the atlas →</a></p>
+
+  <div class="cols">
+    <section class="card">
+      <h2>What it does</h2>
+      <ul>
+        <li><b>Shows them on a globe or a map</b>The 3D globe spins and raises a column at each university, taller for a better rank. The flat map uses the Equal Earth projection, which keeps every country at its true size. Drag, scroll to zoom, and click any point.</li>
+        <li><b>Filters them</b>By rank tier, by why a university counts as technical, by country, or by typing part of a name, such as Delft, Monterrey, ETH or IIT. The counts and the list follow every filter.</li>
+        <li><b>Tells you about each one</b>Click a point or a row in the list: its name, country, QS 2027 rank, where it sits, whether that spot is the main campus or only the city, and why it is on the list.</li>
+        <li><b>Light or dark</b>Dark by default, like the rest of the AI Projects site; the sun button switches to a light map and remembers your choice.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Colours: the rank tiers</h2>
+      <p>Each point is coloured by its QS 2027 rank. A rank published as a band, such as 601–610, is placed by its first number.</p>
+      <ul class="tiers">
+        <li><span class="sw" style="background:#3987e5"></span>Top 100<span class="n">16</span></li>
+        <li><span class="sw" style="background:#d95926"></span>101–300<span class="n">33</span></li>
+        <li><span class="sw" style="background:#199e70"></span>301–600<span class="n">56</span></li>
+        <li><span class="sw" style="background:#c98500"></span>601–1000<span class="n">60</span></li>
+        <li><span class="sw" style="background:#d55181"></span>1001 and below<span class="n">77</span></li>
+      </ul>
+      <p style="margin-top:12px">The five colours were checked to stay apart for the most common kinds of colour blindness, and the list beside the map gives every rank as text.</p>
+    </section>
+  </div>
+
+  <section class="card wide">
+    <h2>Which universities count as technical?</h2>
+    <p>The rankings do not label universities as technical, so the atlas uses three simple tests. A university is included if it passes any of them; the shape of its point shows which one.</p>
+    <div class="basis">
+      <div><b>Its English name contains “tech” <span class="n">186</span></b>Massachusetts Institute of Technology, Delft University of Technology, Georgia Tech. Shown as a plain dot.</div>
+      <div><b>Its name contains “tec”, accents ignored <span class="n">14</span></b>Names in Spanish, Portuguese or Italian, such as Tecnológico de Monterrey or Politecnico di Milano. Shown with a ring.</div>
+      <div><b>It is technical without saying so in English <span class="n">42</span></b>Its name in its own language means technical university or polytechnic (ETH Zurich, TU Wien, RWTH Aachen); it belongs to a national network of technical universities (TU9, TU Austria, 4TU, Nordic Five Tech, the Malaysian Technical University Network); or it teaches only one engineering field, such as mining, petroleum, aerospace or telecoms. Shown as a square.</div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Where the data comes from</h2>
+      <p><b>Ranks:</b> the QS World University Rankings 2027, published on 18 June 2026, which rank 1,504 institutions. The atlas keeps each rank exactly as published. It is not affiliated with or endorsed by QS.</p>
+      <p><b>Locations:</b> the coordinates were compiled by Claude, an AI model, not looked up by a mapping service. 210 points sit on the main campus; for 32 only the city was certain, and those are marked “city-level” in the list. A point can be off by a few streets, so check a precise location before relying on it.</p>
+      <p><b>Country outlines:</b> Natural Earth, simplified to about 50 metres. The globe is drawn with globe.gl.</p>
+    </section>
+
+    <section class="card">
+      <h2>Author</h2>
+      <p>Tech University Atlas was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+      <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a></p>
+      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Tech University Atlas: technical universities in the QS World University Rankings 2027</em> (version 1.0.0) [Software]. https://kathuman.github.io/claude-projects/tech-uni-atlas/</p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <span class="consult">Tech University Atlas v1.0.0 · <a href="./">Open the atlas</a></span>
+  <span>The technical universities in the QS World University Rankings 2027 on a globe and a map. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
+</footer>
+</body>
+</html>

@@ -162,6 +162,7 @@ Beer-Distribution-Game/index.html  — https://kathuman.github.io/claude-project
 epicycles/index.html               — https://kathuman.github.io/claude-projects/epicycles/
 turbine-lab/index.html             — https://kathuman.github.io/claude-projects/turbine-lab/
 heat-pump-studio/index.html        — https://kathuman.github.io/claude-projects/heat-pump-studio/
+tech-uni-atlas/index.html          — https://kathuman.github.io/claude-projects/tech-uni-atlas/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules

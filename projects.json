@@ -11,6 +11,16 @@
     "demoUrl": "https://kathuman.github.io/estay-dynamics/atlas/"
   },
   {
+    "title": "Tech University Atlas",
+    "discipline": "other",
+    "thumb": "assets/thumbs/tech-university-atlas.webp",
+    "description": "Where the world's technical universities are, and how they rank. The 242 technical universities in the QS World University Rankings 2027, in 68 countries, on a spinning 3D globe (a column at each university, taller for a better rank) and a flat Equal Earth map, coloured by rank tier. A university counts as technical if its English name contains “tech”, if its name contains “tec” (Tecnológico, Politecnico), or if it is technical without saying so in English: its own-language name means technical university (ETH Zurich, TU Wien, RWTH Aachen), it belongs to a national technical-university network (TU9, 4TU, Nordic Five Tech and others), or it teaches a single engineering field. Filter by tier, reason, country or name; click any point or row for its rank, location (main campus or city-level) and why it is listed. Coordinates were compiled by Claude, and the about page says how exact they are. Dark or light blueprint theme; tested data.",
+    "date": "2026-11-10",
+    "tags": ["javascript", "web", "data-visualization", "maps", "3d", "education"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/tech-uni-atlas",
+    "demoUrl": "https://kathuman.github.io/claude-projects/tech-uni-atlas/"
+  },
+  {
     "title": "Heat Pump Studio",
     "discipline": "mechanical",
     "flagship": 4,

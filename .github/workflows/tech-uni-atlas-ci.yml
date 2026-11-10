@@ -1,0 +1,28 @@
+name: Tech University Atlas tests
+
+# The data (every record valid, no duplicates, reasons match names, the about page's counts) and the release
+# (every local file loads with the app's version, so no stale cached file runs with a new page).
+on:
+  push:
+    paths:
+      - 'tech-uni-atlas/**'
+      - '.github/workflows/tech-uni-atlas-ci.yml'
+  pull_request:
+    paths:
+      - 'tech-uni-atlas/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tech-uni-atlas/tests/data.test.js
+      - run: node tech-uni-atlas/tests/release.test.js
+      - name: Syntax-check the page scripts
+        run: for f in tech-uni-atlas/*.js tech-uni-atlas/data/*.js; do node --check "$f"; done
+        shell: bash
