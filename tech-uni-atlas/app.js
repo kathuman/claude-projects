@@ -1,7 +1,7 @@
 // Tech University Atlas — the technical universities in the QS World University Rankings 2027 on a 3D globe and a 2D
 // Equal Earth map, filtered by rank tier, inclusion basis, country and name. Data in data/; theme tokens in style.css.
 (function () {
-  const VERSION = "1.0.0";   // also the ?v= on every local file in index.html and about.html (tests/release.test.js)
+  const VERSION = "1.0.1";   // also the ?v= on every local file in index.html and about.html (tests/release.test.js)
   const $ = id => document.getElementById(id);
   $("ver").textContent = "v" + VERSION;
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
