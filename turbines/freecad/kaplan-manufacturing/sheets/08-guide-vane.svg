@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" width="420mm" height="297mm">
+<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="#333" stroke-width="0.18"/></pattern><pattern id="hatch2" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="#333" stroke-width="0.18"/></pattern><pattern id="concrete" patternUnits="userSpaceOnUse" width="4" height="4"><circle cx="1" cy="1" r="0.25" fill="#333"/><circle cx="3" cy="2.6" r="0.18" fill="#333"/><path d="M2 3.4 l0.5 -0.4 l0.3 0.5 z" fill="#333"/></pattern></defs>
+<rect x="0" y="0" width="420" height="297" fill="#fff"/>
+<path d="M58.00 35.00 L59.71 35.00 M59.71 35.00 L66.57 35.00 M68.29 35.00 L71.71 35.00 M71.71 35.00 L75.14 35.00 M75.14 35.00 L78.57 35.00 M80.29 35.00 L83.71 35.00 M83.71 35.00 L87.14 35.00 M87.14 35.00 L100.00 35.00 L114.57 35.00 M114.57 35.00 L118.00 35.00 M118.00 35.00 L121.00 35.00 L123.14 35.00 M123.14 35.00 L126.57 35.00 M126.57 35.00 L130.00 35.00 M130.00 35.00 L133.43 35.00 M135.14 35.00 L138.57 35.00 M138.57 35.00 L142.00 35.00 M58.00 35.00 L58.00 35.00 M58.00 175.00 L58.00 175.00 M58.00 175.00 L59.71 175.00 M59.71 175.00 L63.14 175.00 M64.86 175.00 L68.29 175.00 M70.00 175.00 L73.43 175.00 M73.43 175.00 L76.86 175.00 M80.29 175.00 L85.43 175.00 M87.14 175.00 L94.86 175.00 L102.57 175.00 M104.29 175.00 L114.57 175.00 M116.29 175.00 L119.71 175.00 M123.14 175.00 L126.57 175.00 M126.57 175.00 L130.00 175.00 M130.00 175.00 L140.29 175.00 M140.29 175.00 L142.00 175.00 M58.00 35.00 L58.00 175.00" fill="none" stroke="#666" stroke-width="0.2" stroke-dasharray="1.6 0.9"/>
+<path d="M58.00 35.00 L58.00 175.00 M58.00 35.00 L79.00 35.00 L100.00 35.00 L121.00 35.00 L142.00 35.00 M142.00 35.00 L142.00 175.00 M58.00 175.00 L79.00 175.00 L100.00 175.00 L121.00 175.00 L142.00 175.00 M142.00 35.00 L142.00 35.00 M59.71 35.00 L59.71 35.00 M66.57 35.00 L68.29 35.00 M71.71 35.00 L71.71 35.00 M75.14 35.00 L75.14 35.00 M78.57 35.00 L79.00 35.00 L80.29 35.00 M83.71 35.00 L83.71 35.00 M87.14 35.00 L87.14 35.00 M114.57 35.00 L114.57 35.00 M118.00 35.00 L118.00 35.00 M123.14 35.00 L123.14 35.00 M126.57 35.00 L126.57 35.00 M130.00 35.00 L130.00 35.00 M133.43 35.00 L135.14 35.00 M138.57 35.00 L138.57 35.00 M142.00 175.00 L142.00 175.00 M142.00 35.00 L142.00 175.00 M59.71 175.00 L59.71 175.00 M63.14 175.00 L64.86 175.00 M68.29 175.00 L70.00 175.00 M73.43 175.00 L73.43 175.00 M76.86 175.00 L79.00 175.00 L80.29 175.00 M85.43 175.00 L87.14 175.00 M102.57 175.00 L104.29 175.00 M114.57 175.00 L116.29 175.00 M119.71 175.00 L121.00 175.00 L123.14 175.00 M126.57 175.00 L126.57 175.00 M130.00 175.00 L130.00 175.00 M140.29 175.00 L140.29 175.00" fill="none" stroke="#111" stroke-width="0.35" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="100.00" y="189.00" font-size="3.4" text-anchor="middle" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">VIEW ON THE PLATE</text>
+<text x="100.00" y="193.00" font-size="2.3" text-anchor="middle" font-weight="400" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">scale 1:5</text>
+<line x1="58.00" y1="176.00" x2="58.00" y2="182.50" stroke="#111" stroke-width="0.18"/>
+<line x1="142.00" y1="176.00" x2="142.00" y2="182.50" stroke="#111" stroke-width="0.18"/>
+<line x1="58.00" y1="181.00" x2="142.00" y2="181.00" stroke="#111" stroke-width="0.18"/>
+<path d="M58.00 181.00 L60.50 180.20 L60.50 181.80 Z" fill="#111"/>
+<path d="M142.00 181.00 L139.50 181.80 L139.50 180.20 Z" fill="#111"/>
+<text x="100.00" y="180.00" font-size="2.6" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">420</text>
+<line x1="143.00" y1="35.00" x2="149.50" y2="35.00" stroke="#111" stroke-width="0.18"/>
+<line x1="143.00" y1="175.00" x2="149.50" y2="175.00" stroke="#111" stroke-width="0.18"/>
+<line x1="148.00" y1="35.00" x2="148.00" y2="175.00" stroke="#111" stroke-width="0.18"/>
+<path d="M148.00 35.00 L148.80 37.50 L147.20 37.50 Z" fill="#111"/>
+<path d="M148.00 175.00 L147.20 172.50 L148.80 172.50 Z" fill="#111"/>
+<text x="147.00" y="105.00" font-size="2.6" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace" transform="rotate(-90 147.00 105.00)">700</text>
+<path d="M58.00 208.00 L79.00 208.00 L100.00 208.00 L121.00 208.00 L142.00 208.00 M142.00 208.00 L142.00 202.00 M58.00 208.00 L58.00 202.00 M58.00 202.00 L79.00 202.00 L100.00 202.00 L121.00 202.00 L142.00 202.00" fill="none" stroke="#666" stroke-width="0.2" stroke-dasharray="1.6 0.9"/>
+<path d="M58.00 208.00 L79.00 208.00 L100.00 208.00 L121.00 208.00 L142.00 208.00 M142.00 208.00 L142.00 202.00 M58.00 202.00 L79.00 202.00 L100.00 202.00 L121.00 202.00 L142.00 202.00 M58.00 208.00 L58.00 202.00" fill="none" stroke="#111" stroke-width="0.35" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="100.00" y="215.00" font-size="3.4" text-anchor="middle" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">EDGE VIEW</text>
+<text x="100.00" y="219.00" font-size="2.3" text-anchor="middle" font-weight="400" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">plate t = 30 · scale 1:5</text>
+<text x="250.00" y="30.00" font-size="3.4" text-anchor="start" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">NOTES</text>
+<text x="250.00" y="35.00" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1. Plate S355J2+N, t = 30 mm (from the model), profile cut by</text>
+<text x="250.00" y="38.20" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">plasma or waterjet; edges ground to R 3.</text>
+<text x="250.00" y="42.40" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2. 8 off, at 45° spacing about the runner axis; welded both sides</text>
+<text x="250.00" y="45.60" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">to the bulb and the duct with fillet welds a = 8, EN ISO 5817 level</text>
+<text x="250.00" y="48.80" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">B.</text>
+<text x="250.00" y="53.00" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">3. Flatness 2 mm over the plate; position of each vane ±3 mm, angle</text>
+<text x="250.00" y="56.20" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">±0.5°, checked against the bulb axis before welding.</text>
+<rect x="20" y="10" width="390" height="277" fill="none" stroke="#111" stroke-width="0.7"/>
+<line x1="210.00" y1="3.00" x2="210.00" y2="10.00" stroke="#111" stroke-width="0.5"/>
+<line x1="210.00" y1="287.00" x2="210.00" y2="294.00" stroke="#111" stroke-width="0.5"/>
+<line x1="13.00" y1="148.50" x2="20.00" y2="148.50" stroke="#111" stroke-width="0.5"/>
+<line x1="410.00" y1="148.50" x2="417.00" y2="148.50" stroke="#111" stroke-width="0.5"/>
+<rect x="230.0" y="249.0" width="180.0" height="38" fill="#fff" stroke="#111" stroke-width="0.7"/>
+<line x1="230.00" y1="262.00" x2="410.00" y2="262.00" stroke="#111" stroke-width="0.3"/>
+<line x1="230.00" y1="270.50" x2="410.00" y2="270.50" stroke="#111" stroke-width="0.3"/>
+<line x1="230.00" y1="279.00" x2="410.00" y2="279.00" stroke="#111" stroke-width="0.3"/>
+<line x1="275.00" y1="262.00" x2="275.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<line x1="320.00" y1="262.00" x2="320.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<line x1="365.00" y1="262.00" x2="365.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<text x="233.00" y="255.50" font-size="4.4" font-weight="700" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">GUIDE VANE</text>
+<text x="233.00" y="260.00" font-size="2.4" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Flat plate vane between bulb and duct, 8 off</text>
+<text x="231.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Drawing no.</text>
+<text x="231.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TL-KAP-008</text>
+<text x="276.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Sheet</text>
+<text x="276.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">9 / 13</text>
+<text x="321.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Scale (A3)</text>
+<text x="321.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1:5</text>
+<text x="366.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Rev.</text>
+<text x="366.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">A</text>
+<text x="231.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Material</text>
+<text x="231.50" y="277.70" font-size="2.1" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">S355J2+N plate, EN 10025-2</text>
+<text x="276.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Mass</text>
+<text x="276.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">69 kg</text>
+<text x="321.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Units</text>
+<text x="321.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">mm</text>
+<text x="366.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Date</text>
+<text x="366.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2026-11-06</text>
+<text x="231.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">General tol.</text>
+<text x="231.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">ISO 2768-mK</text>
+<text x="276.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Welds</text>
+<text x="276.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">ISO 13920-BF</text>
+<text x="321.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Projection</text>
+<text x="321.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace"></text>
+<text x="366.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Drawn</text>
+<text x="366.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Turbine Lab</text>
+<path d="M337.00 282.10 L344.00 280.70 L344.00 285.90 L337.00 284.50 Z" fill="none" stroke="#111" stroke-width="0.3"/>
+<circle cx="349.00" cy="283.30" r="2.6" fill="none" stroke="#111" stroke-width="0.3"/><circle cx="349.00" cy="283.30" r="0.9" fill="none" stroke="#111" stroke-width="0.3"/>
+<rect x="230.0" y="243.0" width="180.0" height="6" fill="#fff4d6" stroke="#111" stroke-width="0.3"/>
+<text x="232.00" y="247.10" font-size="2.0" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TEACHING MODEL — materials, tolerances and wall thicknesses are assumptions. Not for construction.</text>
+</svg>

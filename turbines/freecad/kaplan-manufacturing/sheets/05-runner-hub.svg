@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" width="420mm" height="297mm">
+<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="#333" stroke-width="0.18"/></pattern><pattern id="hatch2" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="#333" stroke-width="0.18"/></pattern><pattern id="concrete" patternUnits="userSpaceOnUse" width="4" height="4"><circle cx="1" cy="1" r="0.25" fill="#333"/><circle cx="3" cy="2.6" r="0.18" fill="#333"/><path d="M2 3.4 l0.5 -0.4 l0.3 0.5 z" fill="#333"/></pattern></defs>
+<rect x="0" y="0" width="420" height="297" fill="#fff"/>
+<path d="M108.33 126.67 L123.67 121.33 L140.33 113.33 L153.67 104.67 L157.00 100.00 L153.67 95.33 L140.33 86.67 L123.67 78.67 L108.33 73.33 L100.33 71.33 L87.00 70.67 L73.67 71.33 L63.00 73.33 L63.00 126.67 L73.67 128.67 L87.00 129.33 L100.33 128.67 L108.33 126.67 Z M67.00 123.35 L67.00 76.65 L72.35 75.65 L74.14 75.31 L87.00 74.67 L99.74 75.31 L107.19 77.17 L122.14 82.37 L138.37 90.16 L150.85 98.27 L152.08 100.00 L150.85 101.73 L138.37 109.84 L122.14 117.63 L107.19 122.83 L99.74 124.69 L87.00 125.33 L74.14 124.69 L67.00 123.35 Z" fill="url(#hatch)" fill-rule="evenodd" stroke="#111" stroke-width="0.55"/>
+<path d="M123.67 78.67 L108.33 73.33 M123.67 121.33 L108.33 126.67 M108.33 73.33 L100.33 71.33 M108.33 126.67 L100.33 128.67 M100.33 128.67 L87.00 129.33 M73.67 128.67 L87.00 129.33 M63.00 126.67 L73.67 128.67 M63.00 73.33 L63.00 126.67 M63.00 73.33 L73.67 71.33 M73.67 71.33 L87.00 70.67 M100.33 71.33 L87.00 70.67 M140.33 86.67 L123.67 78.67 M153.67 95.33 L140.33 86.67 M157.00 100.00 L153.67 95.33 M157.00 100.00 L153.67 104.67 M153.67 104.67 L140.33 113.33 M140.33 113.33 L123.67 121.33 M67.00 76.65 L67.00 123.35 M67.00 123.35 L74.14 124.69 M74.14 124.69 L87.00 125.33 M99.74 124.69 L87.00 125.33 M107.19 122.83 L99.74 124.69 M122.14 117.63 L107.19 122.83 M138.37 109.84 L122.14 117.63 M150.85 101.73 L138.37 109.84 M152.08 100.00 L150.85 101.73 M152.08 100.00 L150.85 98.27 M150.85 98.27 L138.37 90.16 M138.37 90.16 L122.14 82.37 M122.14 82.37 L107.19 77.17 M107.19 77.17 L99.74 75.31 M99.74 75.31 L87.00 74.67 M74.14 75.31 L87.00 74.67 M67.00 76.65 L74.14 75.31 M74.14 124.69 L74.14 124.50 L74.14 123.93 L74.14 123.01 L74.14 121.73 L74.14 120.12 L74.14 118.20 L74.14 116.00 L74.14 113.56 L74.14 110.92 L74.14 108.10 L74.14 105.17 L74.14 102.15 L74.14 99.10 L74.14 96.07 M87.00 125.33 L87.00 125.14 L87.00 124.56 L87.00 123.61 L87.00 122.29 L87.00 120.64 L87.00 118.67 L87.00 116.42 L87.00 113.92 L87.00 111.20 L87.00 108.32 L87.00 105.30 L87.00 102.21 L87.00 99.08 L87.00 95.96 M99.74 124.69 L99.74 124.50 L99.74 123.94 L99.74 123.01 L99.74 121.73 L99.74 120.12 L99.74 118.20 L99.74 116.01 L99.74 113.57 L99.74 110.92 L99.74 108.11 L99.74 105.17 L99.74 102.15 L99.74 99.10 L99.74 96.07 M107.19 122.83 L107.19 122.66 L107.19 122.14 L107.19 121.28 L107.19 120.09 L107.19 118.61 L107.19 116.83 L107.19 114.80 L107.19 112.54 L107.19 110.10 L107.19 107.50 L107.19 104.78 L107.19 101.99 L107.19 99.17 L107.19 96.36 M122.14 117.63 L122.14 117.49 L122.14 117.09 L122.14 116.43 L122.14 115.52 L122.14 114.37 L122.14 113.00 L122.14 111.43 L122.14 109.69 L122.14 107.80 L122.14 105.79 L122.14 103.69 L122.14 101.54 L122.14 99.36 L122.14 97.19 M138.37 109.84 L138.37 109.76 L138.37 109.54 L138.37 109.17 L138.37 108.66 L138.37 108.02 L138.37 107.25 L138.37 106.38 L138.37 105.41 L138.37 104.35 L138.37 103.23 L138.37 102.06 L138.37 100.86 L138.37 99.64 L138.37 98.43 M150.85 101.73 L150.85 101.71 L150.85 101.67 L150.85 101.61 L150.85 101.52 L150.85 101.41 L150.85 101.27 L150.85 101.12 L150.85 100.95 L150.85 100.76 L150.85 100.57 L150.85 100.36 L150.85 100.15 L150.85 99.94 L150.85 99.73 M150.85 99.73 L150.85 99.56 L150.85 99.39 L150.85 99.23 L150.85 99.08 L150.85 98.94 L150.85 98.81 L150.85 98.69 L150.85 98.58 L150.85 98.49 L150.85 98.41 L150.85 98.35 L150.85 98.31 L150.85 98.28 L150.85 98.27 M138.37 98.43 L138.37 97.46 L138.37 96.52 L138.37 95.61 L138.37 94.75 L138.37 93.94 L138.37 93.19 L138.37 92.51 L138.37 91.91 L138.37 91.38 L138.37 90.95 L138.37 90.61 L138.37 90.36 L138.37 90.21 L138.37 90.16 M122.14 97.19 L122.14 95.45 L122.14 93.76 L122.14 92.14 L122.14 90.59 L122.14 89.14 L122.14 87.80 L122.14 86.58 L122.14 85.50 L122.14 84.56 L122.14 83.78 L122.14 83.17 L122.14 82.73 L122.14 82.46 L122.14 82.37 M107.19 96.36 L107.19 94.11 L107.19 91.92 L107.19 89.82 L107.19 87.81 L107.19 85.93 L107.19 84.20 L107.19 82.62 L107.19 81.22 L107.19 80.01 L107.19 79.00 L107.19 78.21 L107.19 77.63 L107.19 77.29 L107.19 77.17 M99.74 96.07 L99.74 93.63 L99.74 91.27 L99.74 88.99 L99.74 86.82 L99.74 84.79 L99.74 82.91 L99.74 81.20 L99.74 79.69 L99.74 78.38 L99.74 77.29 L99.74 76.43 L99.74 75.81 L99.74 75.43 L99.74 75.31 M87.00 95.96 L87.00 93.47 L87.00 91.04 L87.00 88.70 L87.00 86.48 L87.00 84.39 L87.00 82.47 L87.00 80.72 L87.00 79.16 L87.00 77.82 L87.00 76.70 L87.00 75.82 L87.00 75.18 L87.00 74.80 L87.00 74.67 M74.14 96.07 L74.14 93.64 L74.14 91.27 L74.14 88.99 L74.14 86.82 L74.14 84.79 L74.14 82.91 L74.14 81.21 L74.14 79.69 L74.14 78.38 L74.14 77.29 L74.14 76.43 L74.14 75.81 L74.14 75.44 L74.14 75.31" fill="none" stroke="#111" stroke-width="0.35" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="110.00" y="144.33" font-size="3.4" text-anchor="middle" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">SECTION</text>
+<text x="110.00" y="148.33" font-size="2.3" text-anchor="middle" font-weight="400" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">on the axis · scale 1:15</text>
+<line x1="23.00" y1="100.00" x2="197.00" y2="100.00" stroke="#666" stroke-width="0.18" stroke-dasharray="7 1.2 1 1.2"/>
+<line x1="63.00" y1="130.33" x2="63.00" y2="136.83" stroke="#111" stroke-width="0.18"/>
+<line x1="157.00" y1="130.33" x2="157.00" y2="136.83" stroke="#111" stroke-width="0.18"/>
+<line x1="63.00" y1="135.33" x2="157.00" y2="135.33" stroke="#111" stroke-width="0.18"/>
+<path d="M63.00 135.33 L65.50 134.53 L65.50 136.13 Z" fill="#111"/>
+<path d="M157.00 135.33 L154.50 136.13 L154.50 134.53 Z" fill="#111"/>
+<text x="110.00" y="134.33" font-size="2.6" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1410</text>
+<line x1="158.00" y1="70.67" x2="166.50" y2="70.67" stroke="#111" stroke-width="0.18"/>
+<line x1="158.00" y1="129.33" x2="166.50" y2="129.33" stroke="#111" stroke-width="0.18"/>
+<line x1="165.00" y1="70.67" x2="165.00" y2="129.33" stroke="#111" stroke-width="0.18"/>
+<path d="M165.00 70.67 L165.80 73.17 L164.20 73.17 Z" fill="#111"/>
+<path d="M165.00 129.33 L164.20 126.83 L165.80 126.83 Z" fill="#111"/>
+<text x="164.00" y="100.00" font-size="2.6" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace" transform="rotate(-90 164.00 100.00)">Ø880</text>
+<text x="250.00" y="18.00" font-size="3.4" text-anchor="start" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">PROFILE COORDINATES</text>
+<text x="250.00" y="22.50" font-size="2.1" text-anchor="start" font-weight="400" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Axial position a from the upstream end; outer surface of the model (cast wall 60 mm assumed).</text>
+<rect x="250.00" y="25.00" width="58.00" height="48.40" fill="none" stroke="#111" stroke-width="0.35"/>
+<text x="255.00" y="27.99" font-size="2.0240000000000005" text-anchor="middle" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Pt</text>
+<line x1="260.00" y1="25.00" x2="260.00" y2="73.40" stroke="#111" stroke-width="0.18"/>
+<text x="282.80" y="27.99" font-size="2.0240000000000005" text-anchor="end" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Axial a</text>
+<line x1="284.00" y1="25.00" x2="284.00" y2="73.40" stroke="#111" stroke-width="0.18"/>
+<text x="306.80" y="27.99" font-size="2.0240000000000005" text-anchor="end" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Ø = 2r</text>
+<line x1="250.00" y1="29.40" x2="308.00" y2="29.40" stroke="#111" stroke-width="0.3"/>
+<text x="255.00" y="32.39" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1</text>
+<text x="282.80" y="32.39" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">910.0</text>
+<text x="306.80" y="32.39" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">640.0</text>
+<line x1="250.00" y1="33.80" x2="308.00" y2="33.80" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="36.79" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2</text>
+<text x="282.80" y="36.79" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">680.0</text>
+<text x="306.80" y="36.79" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">800.0</text>
+<line x1="250.00" y1="38.20" x2="308.00" y2="38.20" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="41.19" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">3</text>
+<text x="282.80" y="41.19" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">560.0</text>
+<text x="306.80" y="41.19" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">860.0</text>
+<line x1="250.00" y1="42.60" x2="308.00" y2="42.60" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="45.59" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">4</text>
+<text x="282.80" y="45.59" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">360.0</text>
+<text x="306.80" y="45.59" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">880.0</text>
+<line x1="250.00" y1="47.00" x2="308.00" y2="47.00" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="49.99" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">5</text>
+<text x="282.80" y="49.99" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">160.0</text>
+<text x="306.80" y="49.99" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">860.0</text>
+<line x1="250.00" y1="51.40" x2="308.00" y2="51.40" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="54.39" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">6</text>
+<text x="282.80" y="54.39" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="306.80" y="54.39" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">800.0</text>
+<line x1="250.00" y1="55.80" x2="308.00" y2="55.80" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="58.79" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">7</text>
+<text x="282.80" y="58.79" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="306.80" y="58.79" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<line x1="250.00" y1="60.20" x2="308.00" y2="60.20" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="63.19" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">8</text>
+<text x="282.80" y="63.19" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1410.0</text>
+<text x="306.80" y="63.19" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<line x1="250.00" y1="64.60" x2="308.00" y2="64.60" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="67.59" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">9</text>
+<text x="282.80" y="67.59" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1360.0</text>
+<text x="306.80" y="67.59" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">140.0</text>
+<line x1="250.00" y1="69.00" x2="308.00" y2="69.00" stroke="#111" stroke-width="0.18"/>
+<text x="255.00" y="71.99" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">10</text>
+<text x="282.80" y="71.99" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1160.0</text>
+<text x="306.80" y="71.99" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">400.0</text>
+<text x="250.00" y="140.00" font-size="3.4" text-anchor="start" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TRUNNION SEATS</text>
+<rect x="250.00" y="143.00" width="78.00" height="27.60" fill="none" stroke="#111" stroke-width="0.35"/>
+<text x="256.00" y="146.13" font-size="2.0240000000000005" text-anchor="middle" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Seat</text>
+<line x1="262.00" y1="143.00" x2="262.00" y2="170.60" stroke="#111" stroke-width="0.18"/>
+<text x="282.80" y="146.13" font-size="2.0240000000000005" text-anchor="end" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Angle θ</text>
+<line x1="284.00" y1="143.00" x2="284.00" y2="170.60" stroke="#111" stroke-width="0.18"/>
+<text x="304.80" y="146.13" font-size="2.0240000000000005" text-anchor="end" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Axial x</text>
+<line x1="306.00" y1="143.00" x2="306.00" y2="170.60" stroke="#111" stroke-width="0.18"/>
+<text x="326.80" y="146.13" font-size="2.0240000000000005" text-anchor="end" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Radius</text>
+<line x1="250.00" y1="147.60" x2="328.00" y2="147.60" stroke="#111" stroke-width="0.3"/>
+<text x="256.00" y="150.73" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1</text>
+<text x="282.80" y="150.73" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">99.2°</text>
+<text x="304.80" y="150.73" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="326.80" y="150.73" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">420.0</text>
+<line x1="250.00" y1="152.20" x2="328.00" y2="152.20" stroke="#111" stroke-width="0.18"/>
+<text x="256.00" y="155.33" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2</text>
+<text x="282.80" y="155.33" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">171.2°</text>
+<text x="304.80" y="155.33" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="326.80" y="155.33" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">420.0</text>
+<line x1="250.00" y1="156.80" x2="328.00" y2="156.80" stroke="#111" stroke-width="0.18"/>
+<text x="256.00" y="159.93" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">3</text>
+<text x="282.80" y="159.93" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">243.2°</text>
+<text x="304.80" y="159.93" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="326.80" y="159.93" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">420.0</text>
+<line x1="250.00" y1="161.40" x2="328.00" y2="161.40" stroke="#111" stroke-width="0.18"/>
+<text x="256.00" y="164.53" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">4</text>
+<text x="282.80" y="164.53" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">315.2°</text>
+<text x="304.80" y="164.53" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="326.80" y="164.53" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">420.0</text>
+<line x1="250.00" y1="166.00" x2="328.00" y2="166.00" stroke="#111" stroke-width="0.18"/>
+<text x="256.00" y="169.13" font-size="2.2" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">5</text>
+<text x="282.80" y="169.13" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">27.2°</text>
+<text x="304.80" y="169.13" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">0.0</text>
+<text x="326.80" y="169.13" font-size="2.2" text-anchor="end" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">420.0</text>
+<text x="250.00" y="175.60" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1. Cast G20Mn5+QT (EN 10293); casting tolerance ISO 8062-3 DCTG 10;</text>
+<text x="250.00" y="178.80" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">MT of machined surfaces (ISO 17638), UT of seat zones.</text>
+<text x="250.00" y="183.00" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2. Seat bores H7 on radial axes at the angles above, true position</text>
+<text x="250.00" y="186.20" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Ø0.1 mm to the hub axis; seat faces square to their axis within 0.05</text>
+<text x="250.00" y="189.40" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">mm.</text>
+<text x="250.00" y="193.60" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">3. Hub interior (pitch mechanism) and the shaft flange are not in</text>
+<text x="250.00" y="196.80" font-size="2.3" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">the model; to be designed.</text>
+<rect x="20" y="10" width="390" height="277" fill="none" stroke="#111" stroke-width="0.7"/>
+<line x1="210.00" y1="3.00" x2="210.00" y2="10.00" stroke="#111" stroke-width="0.5"/>
+<line x1="210.00" y1="287.00" x2="210.00" y2="294.00" stroke="#111" stroke-width="0.5"/>
+<line x1="13.00" y1="148.50" x2="20.00" y2="148.50" stroke="#111" stroke-width="0.5"/>
+<line x1="410.00" y1="148.50" x2="417.00" y2="148.50" stroke="#111" stroke-width="0.5"/>
+<rect x="230.0" y="249.0" width="180.0" height="38" fill="#fff" stroke="#111" stroke-width="0.7"/>
+<line x1="230.00" y1="262.00" x2="410.00" y2="262.00" stroke="#111" stroke-width="0.3"/>
+<line x1="230.00" y1="270.50" x2="410.00" y2="270.50" stroke="#111" stroke-width="0.3"/>
+<line x1="230.00" y1="279.00" x2="410.00" y2="279.00" stroke="#111" stroke-width="0.3"/>
+<line x1="275.00" y1="262.00" x2="275.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<line x1="320.00" y1="262.00" x2="320.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<line x1="365.00" y1="262.00" x2="365.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<text x="233.00" y="255.50" font-size="4.4" font-weight="700" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">RUNNER HUB</text>
+<text x="233.00" y="260.00" font-size="2.4" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Cast hub with five trunnion seats</text>
+<text x="231.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Drawing no.</text>
+<text x="231.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TL-KAP-005</text>
+<text x="276.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Sheet</text>
+<text x="276.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">6 / 13</text>
+<text x="321.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Scale (A3)</text>
+<text x="321.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1:15</text>
+<text x="366.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Rev.</text>
+<text x="366.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">A</text>
+<text x="231.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Material</text>
+<text x="231.50" y="277.70" font-size="2.1" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">G20Mn5+QT cast steel, EN 10293</text>
+<text x="276.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Mass</text>
+<text x="276.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">1.48 t</text>
+<text x="321.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Units</text>
+<text x="321.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">mm</text>
+<text x="366.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Date</text>
+<text x="366.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2026-11-06</text>
+<text x="231.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">General tol.</text>
+<text x="231.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">ISO 2768-mK</text>
+<text x="276.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Welds</text>
+<text x="276.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">ISO 13920-BF</text>
+<text x="321.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Projection</text>
+<text x="321.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace"></text>
+<text x="366.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Drawn</text>
+<text x="366.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Turbine Lab</text>
+<path d="M337.00 282.10 L344.00 280.70 L344.00 285.90 L337.00 284.50 Z" fill="none" stroke="#111" stroke-width="0.3"/>
+<circle cx="349.00" cy="283.30" r="2.6" fill="none" stroke="#111" stroke-width="0.3"/><circle cx="349.00" cy="283.30" r="0.9" fill="none" stroke="#111" stroke-width="0.3"/>
+<rect x="230.0" y="243.0" width="180.0" height="6" fill="#fff4d6" stroke="#111" stroke-width="0.3"/>
+<text x="232.00" y="247.10" font-size="2.0" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TEACHING MODEL — materials, tolerances and wall thicknesses are assumptions. Not for construction.</text>
+</svg>

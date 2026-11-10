@@ -5,3 +5,7 @@ node_modules/
 
 # Blender autosave backups
 *.blend1
+
+# FreeCAD backups and Python caches
+*.FCBak
+__pycache__/

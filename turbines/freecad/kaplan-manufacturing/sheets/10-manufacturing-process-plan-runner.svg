@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 297" width="420mm" height="297mm">
+<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="#333" stroke-width="0.18"/></pattern><pattern id="hatch2" patternUnits="userSpaceOnUse" width="1.6" height="1.6" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="1.6" stroke="#333" stroke-width="0.18"/></pattern><pattern id="concrete" patternUnits="userSpaceOnUse" width="4" height="4"><circle cx="1" cy="1" r="0.25" fill="#333"/><circle cx="3" cy="2.6" r="0.18" fill="#333"/><path d="M2 3.4 l0.5 -0.4 l0.3 0.5 z" fill="#333"/></pattern></defs>
+<rect x="0" y="0" width="420" height="297" fill="#fff"/>
+<text x="26.00" y="21.00" font-size="3.2" text-anchor="start" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Item 5 — Runner blade (5 off)</text>
+<rect x="26.00" y="23.00" width="185.00" height="41.40" fill="none" stroke="#111" stroke-width="0.35"/>
+<text x="30.50" y="26.13" font-size="1.794" text-anchor="middle" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Op</text>
+<line x1="35.00" y1="23.00" x2="35.00" y2="64.40" stroke="#111" stroke-width="0.18"/>
+<text x="36.20" y="26.13" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Work centre</text>
+<line x1="65.00" y1="23.00" x2="65.00" y2="64.40" stroke="#111" stroke-width="0.18"/>
+<text x="66.20" y="26.13" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Operation</text>
+<line x1="175.00" y1="23.00" x2="175.00" y2="64.40" stroke="#111" stroke-width="0.18"/>
+<text x="176.20" y="26.13" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Check</text>
+<line x1="26.00" y1="27.60" x2="211.00" y2="27.60" stroke="#111" stroke-width="0.3"/>
+<text x="30.50" y="30.73" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">10</text>
+<text x="36.20" y="30.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Pattern shop</text>
+<text x="66.20" y="30.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">3D-printed sand mould from step/blade.step with 4 mm machining allowance on both faces</text>
+<text x="176.20" y="30.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Mould dims</text>
+<line x1="26.00" y1="32.20" x2="211.00" y2="32.20" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="35.33" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">20</text>
+<text x="36.20" y="35.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Foundry</text>
+<text x="66.20" y="35.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Cast CA6NM; one test bar per heat</text>
+<text x="176.20" y="35.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Chem. analysis</text>
+<line x1="26.00" y1="36.80" x2="211.00" y2="36.80" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="39.93" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">30</text>
+<text x="36.20" y="39.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Heat treatment</text>
+<text x="66.20" y="39.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Normalise 1000–1050 °C, temper 590–620 °C</text>
+<text x="176.20" y="39.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Hardness, tensile</text>
+<line x1="26.00" y1="41.40" x2="211.00" y2="41.40" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="44.53" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">40</text>
+<text x="36.20" y="44.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">NDT</text>
+<text x="66.20" y="44.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Visual, PT (ISO 3452), UT of root (ASTM A609); weld-repair to procedure and re-heat-treat</text>
+<text x="176.20" y="44.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">NDT report</text>
+<line x1="26.00" y1="46.00" x2="211.00" y2="46.00" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="49.13" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">50</text>
+<text x="36.20" y="49.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">5-axis milling</text>
+<text x="66.20" y="49.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Rough then finish both faces and edges to the CAD model; leave root datum</text>
+<text x="176.20" y="49.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">CMM vs CAD ±1.0</text>
+<line x1="26.00" y1="50.60" x2="211.00" y2="50.60" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="53.73" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">60</text>
+<text x="36.20" y="53.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Bench</text>
+<text x="66.20" y="53.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Blend edges, polish to Ra ≤ 3.2 µm; mark blade number</text>
+<text x="176.20" y="53.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Templates G–K</text>
+<line x1="26.00" y1="55.20" x2="211.00" y2="55.20" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="58.33" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">70</text>
+<text x="36.20" y="58.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Machine shop</text>
+<text x="66.20" y="58.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Machine the root face and bolt holes to the trunnion</text>
+<text x="176.20" y="58.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Datum check</text>
+<line x1="26.00" y1="59.80" x2="211.00" y2="59.80" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="62.93" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">80</text>
+<text x="36.20" y="62.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Inspection</text>
+<text x="66.20" y="62.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Final PT; weigh each blade; blades within 1 % of each other</text>
+<text x="176.20" y="62.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Mass record</text>
+<text x="26.00" y="72.40" font-size="3.2" text-anchor="start" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Item 6 — Blade trunnion (5 off)</text>
+<rect x="26.00" y="74.40" width="185.00" height="27.60" fill="none" stroke="#111" stroke-width="0.35"/>
+<text x="30.50" y="77.53" font-size="1.794" text-anchor="middle" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Op</text>
+<line x1="35.00" y1="74.40" x2="35.00" y2="102.00" stroke="#111" stroke-width="0.18"/>
+<text x="36.20" y="77.53" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Work centre</text>
+<line x1="65.00" y1="74.40" x2="65.00" y2="102.00" stroke="#111" stroke-width="0.18"/>
+<text x="66.20" y="77.53" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Operation</text>
+<line x1="175.00" y1="74.40" x2="175.00" y2="102.00" stroke="#111" stroke-width="0.18"/>
+<text x="176.20" y="77.53" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Check</text>
+<line x1="26.00" y1="79.00" x2="211.00" y2="79.00" stroke="#111" stroke-width="0.3"/>
+<text x="30.50" y="82.13" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">10</text>
+<text x="36.20" y="82.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Forge</text>
+<text x="66.20" y="82.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Open-die forge 42CrMo4 disc</text>
+<text x="176.20" y="82.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Forging cert.</text>
+<line x1="26.00" y1="83.60" x2="211.00" y2="83.60" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="86.73" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">20</text>
+<text x="36.20" y="86.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Heat treatment</text>
+<text x="66.20" y="86.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Quench and temper to 900–1100 MPa</text>
+<text x="176.20" y="86.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Hardness</text>
+<line x1="26.00" y1="88.20" x2="211.00" y2="88.20" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="91.33" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">30</text>
+<text x="36.20" y="91.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">NDT</text>
+<text x="66.20" y="91.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">UT to EN 10228-3 class 3</text>
+<text x="176.20" y="91.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">UT report</text>
+<line x1="26.00" y1="92.80" x2="211.00" y2="92.80" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="95.93" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">40</text>
+<text x="36.20" y="95.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">CNC lathe</text>
+<text x="66.20" y="95.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Turn all over to drawing TL-KAP-004; seat to h7</text>
+<text x="176.20" y="95.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Seat Ø, flatness</text>
+<line x1="26.00" y1="97.40" x2="211.00" y2="97.40" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="100.53" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">50</text>
+<text x="36.20" y="100.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Machining centre</text>
+<text x="66.20" y="100.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Drill and tap bolt pattern, pin bore</text>
+<text x="176.20" y="100.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Positions</text>
+<text x="26.00" y="110.00" font-size="3.2" text-anchor="start" font-weight="700" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Item 4 — Runner hub (1 off)</text>
+<rect x="26.00" y="112.00" width="185.00" height="32.20" fill="none" stroke="#111" stroke-width="0.35"/>
+<text x="30.50" y="115.13" font-size="1.794" text-anchor="middle" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Op</text>
+<line x1="35.00" y1="112.00" x2="35.00" y2="144.20" stroke="#111" stroke-width="0.18"/>
+<text x="36.20" y="115.13" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Work centre</text>
+<line x1="65.00" y1="112.00" x2="65.00" y2="144.20" stroke="#111" stroke-width="0.18"/>
+<text x="66.20" y="115.13" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Operation</text>
+<line x1="175.00" y1="112.00" x2="175.00" y2="144.20" stroke="#111" stroke-width="0.18"/>
+<text x="176.20" y="115.13" font-size="1.794" text-anchor="start" font-weight="600" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Check</text>
+<line x1="26.00" y1="116.60" x2="211.00" y2="116.60" stroke="#111" stroke-width="0.3"/>
+<text x="30.50" y="119.73" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">10</text>
+<text x="36.20" y="119.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Pattern shop</text>
+<text x="66.20" y="119.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Pattern and cores from the hub profile (TL-KAP-005), 60 mm wall</text>
+<text x="176.20" y="119.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Pattern dims</text>
+<line x1="26.00" y1="121.20" x2="211.00" y2="121.20" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="124.33" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">20</text>
+<text x="36.20" y="124.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Foundry</text>
+<text x="66.20" y="124.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Cast G20Mn5; heat treat (QT)</text>
+<text x="176.20" y="124.33" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Cert., hardness</text>
+<line x1="26.00" y1="125.80" x2="211.00" y2="125.80" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="128.93" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">30</text>
+<text x="36.20" y="128.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">NDT</text>
+<text x="66.20" y="128.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">UT of seat zones, MT after machining</text>
+<text x="176.20" y="128.93" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">NDT report</text>
+<line x1="26.00" y1="130.40" x2="211.00" y2="130.40" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="133.53" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">40</text>
+<text x="36.20" y="133.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Vertical lathe</text>
+<text x="66.20" y="133.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Turn outer profile and the shaft flange face</text>
+<text x="176.20" y="133.53" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Profile ±0.5</text>
+<line x1="26.00" y1="135.00" x2="211.00" y2="135.00" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="138.13" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">50</text>
+<text x="36.20" y="138.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Horizontal boring</text>
+<text x="66.20" y="138.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Bore 5 trunnion seats H7 at 72°, faces square</text>
+<text x="176.20" y="138.13" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">True position Ø0.1</text>
+<line x1="26.00" y1="139.60" x2="211.00" y2="139.60" stroke="#111" stroke-width="0.18"/>
+<text x="30.50" y="142.73" font-size="1.95" text-anchor="middle" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">60</text>
+<text x="36.20" y="142.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Assembly</text>
+<text x="66.20" y="142.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Fit trunnions and blades; set blade angle ±0.1°; balance G6.3 (ISO 21940-11)</text>
+<text x="176.20" y="142.73" font-size="1.95" text-anchor="start" font-weight="400" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Balance report</text>
+<rect x="20" y="10" width="390" height="277" fill="none" stroke="#111" stroke-width="0.7"/>
+<line x1="210.00" y1="3.00" x2="210.00" y2="10.00" stroke="#111" stroke-width="0.5"/>
+<line x1="210.00" y1="287.00" x2="210.00" y2="294.00" stroke="#111" stroke-width="0.5"/>
+<line x1="13.00" y1="148.50" x2="20.00" y2="148.50" stroke="#111" stroke-width="0.5"/>
+<line x1="410.00" y1="148.50" x2="417.00" y2="148.50" stroke="#111" stroke-width="0.5"/>
+<rect x="230.0" y="249.0" width="180.0" height="38" fill="#fff" stroke="#111" stroke-width="0.7"/>
+<line x1="230.00" y1="262.00" x2="410.00" y2="262.00" stroke="#111" stroke-width="0.3"/>
+<line x1="230.00" y1="270.50" x2="410.00" y2="270.50" stroke="#111" stroke-width="0.3"/>
+<line x1="230.00" y1="279.00" x2="410.00" y2="279.00" stroke="#111" stroke-width="0.3"/>
+<line x1="275.00" y1="262.00" x2="275.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<line x1="320.00" y1="262.00" x2="320.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<line x1="365.00" y1="262.00" x2="365.00" y2="287.00" stroke="#111" stroke-width="0.3"/>
+<text x="233.00" y="255.50" font-size="4.4" font-weight="700" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">MANUFACTURING PROCESS PLAN — RUNNER</text>
+<text x="233.00" y="260.00" font-size="2.4" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Operation sequence for items 4, 5 and 6</text>
+<text x="231.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Drawing no.</text>
+<text x="231.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TL-KAP-010</text>
+<text x="276.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Sheet</text>
+<text x="276.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">11 / 13</text>
+<text x="321.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Scale (A3)</text>
+<text x="321.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">—</text>
+<text x="366.50" y="265.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Rev.</text>
+<text x="366.50" y="269.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">A</text>
+<text x="231.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Material</text>
+<text x="231.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">—</text>
+<text x="276.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Mass</text>
+<text x="276.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">—</text>
+<text x="321.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Units</text>
+<text x="321.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">mm</text>
+<text x="366.50" y="273.50" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Date</text>
+<text x="366.50" y="277.70" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">2026-11-06</text>
+<text x="231.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">General tol.</text>
+<text x="231.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">ISO 2768-mK</text>
+<text x="276.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Welds</text>
+<text x="276.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">ISO 13920-BF</text>
+<text x="321.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Projection</text>
+<text x="321.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace"></text>
+<text x="366.50" y="282.00" font-size="1.9" font-weight="400" text-anchor="start" fill="#666" font-family="'IBM Plex Mono', 'Consolas', monospace">Drawn</text>
+<text x="366.50" y="286.20" font-size="2.6" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">Turbine Lab</text>
+<path d="M337.00 282.10 L344.00 280.70 L344.00 285.90 L337.00 284.50 Z" fill="none" stroke="#111" stroke-width="0.3"/>
+<circle cx="349.00" cy="283.30" r="2.6" fill="none" stroke="#111" stroke-width="0.3"/><circle cx="349.00" cy="283.30" r="0.9" fill="none" stroke="#111" stroke-width="0.3"/>
+<rect x="230.0" y="243.0" width="180.0" height="6" fill="#fff4d6" stroke="#111" stroke-width="0.3"/>
+<text x="232.00" y="247.10" font-size="2.0" font-weight="600" text-anchor="start" fill="#111" font-family="'IBM Plex Mono', 'Consolas', monospace">TEACHING MODEL — materials, tolerances and wall thicknesses are assumptions. Not for construction.</text>
+</svg>

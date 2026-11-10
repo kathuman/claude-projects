@@ -1,0 +1,171 @@
+{
+ "date": "2026-11-06",
+ "rev": "A",
+ "bom": [
+  {
+   "item": 1,
+   "part": "Duct (shroud)",
+   "qty": 1,
+   "material": "S355J2+N plate, EN 10025-2",
+   "process": "Rolled plate segments, welded, stiffened",
+   "unit_kg": 7647.9,
+   "mass_basis": "16 mm skin + 15 % stiffeners, full 360\u00b0"
+  },
+  {
+   "item": 2,
+   "part": "Bulb nacelle",
+   "qty": 1,
+   "material": "S355J2+N plate, EN 10025-2",
+   "process": "Formed plates, welded, watertight",
+   "unit_kg": 487.8,
+   "mass_basis": "12 mm shell + 20 % frames"
+  },
+  {
+   "item": 3,
+   "part": "Guide vane",
+   "qty": 8,
+   "material": "S355J2+N plate, EN 10025-2",
+   "process": "Plate, cut and formed",
+   "unit_kg": 69.2,
+   "mass_basis": "model volume"
+  },
+  {
+   "item": 4,
+   "part": "Runner hub",
+   "qty": 1,
+   "material": "G20Mn5+QT cast steel, EN 10293",
+   "process": "Cast, machined",
+   "unit_kg": 1477.7,
+   "mass_basis": "60 mm cast wall"
+  },
+  {
+   "item": 5,
+   "part": "Runner blade",
+   "qty": 5,
+   "material": "CA6NM (13Cr-4Ni), ASTM A743",
+   "process": "Cast, 5-axis machined",
+   "unit_kg": 104.7,
+   "mass_basis": "model volume"
+  },
+  {
+   "item": 6,
+   "part": "Blade trunnion",
+   "qty": 5,
+   "material": "42CrMo4+QT, EN 10083-3",
+   "process": "Forged, turned",
+   "unit_kg": 35.6,
+   "mass_basis": "model volume"
+  },
+  {
+   "item": 7,
+   "part": "Gravity base",
+   "qty": 1,
+   "material": "Concrete C35/45, B500B rebar",
+   "process": "Precast, reinforced",
+   "unit_kg": 24694.4,
+   "mass_basis": "model volume"
+  },
+  {
+   "item": 8,
+   "part": "Support pylon",
+   "qty": 1,
+   "material": "S355J2+N plate, EN 10025-2",
+   "process": "Welded box section",
+   "unit_kg": 391.5,
+   "mass_basis": "20 mm plate box"
+  }
+ ],
+ "blade": {
+  "r_min": 379.9519274565583,
+  "r_max": 985.8708147051686,
+  "hub_r": 440.0,
+  "sections": [
+   {
+    "r": 428.4254384364471,
+    "chord": 534.1865670629552,
+    "beta": 42.301857630309414,
+    "tmax": 39.74265392055111,
+    "tmid": 36.26194378914559,
+    "tpos": 0.0625
+   },
+   {
+    "r": 592.023537993572,
+    "chord": 694.805080746658,
+    "beta": 33.54622198489567,
+    "tmax": 41.53347209482223,
+    "tmid": 36.79981965358829,
+    "tpos": 0.9625
+   },
+   {
+    "r": 755.6216375506967,
+    "chord": 756.0060330127819,
+    "beta": 27.8210340469269,
+    "tmax": 42.13388644440397,
+    "tmid": 37.00725637683428,
+    "tpos": 0.9625
+   },
+   {
+    "r": 925.2789259803076,
+    "chord": 641.0947632527241,
+    "beta": 21.11996252106799,
+    "tmax": 41.641219977651986,
+    "tmid": 39.10271738806553,
+    "tpos": 0.1375
+   }
+  ]
+ },
+ "sheets": [
+  {
+   "no": "TL-KAP-000",
+   "title": "KAPLAN TURBINE \u2014 MANUFACTURING PLANS"
+  },
+  {
+   "no": "TL-KAP-001",
+   "title": "GENERAL ASSEMBLY"
+  },
+  {
+   "no": "TL-KAP-002",
+   "title": "RUNNER ASSEMBLY"
+  },
+  {
+   "no": "TL-KAP-003",
+   "title": "RUNNER BLADE"
+  },
+  {
+   "no": "TL-KAP-004",
+   "title": "BLADE TRUNNION"
+  },
+  {
+   "no": "TL-KAP-005",
+   "title": "RUNNER HUB"
+  },
+  {
+   "no": "TL-KAP-006",
+   "title": "BULB NACELLE"
+  },
+  {
+   "no": "TL-KAP-007",
+   "title": "DUCT (SHROUD)"
+  },
+  {
+   "no": "TL-KAP-008",
+   "title": "GUIDE VANE"
+  },
+  {
+   "no": "TL-KAP-009",
+   "title": "SUPPORT PYLON AND GRAVITY BASE"
+  },
+  {
+   "no": "TL-KAP-010",
+   "title": "MANUFACTURING PROCESS PLAN \u2014 RUNNER"
+  },
+  {
+   "no": "TL-KAP-011",
+   "title": "MANUFACTURING PROCESS PLAN \u2014 STRUCTURE"
+  },
+  {
+   "no": "TL-KAP-012",
+   "title": "ASSEMBLY SEQUENCE, INSPECTION AND TEST PLAN"
+  }
+ ]
+}
