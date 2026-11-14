@@ -6,9 +6,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-var VERSION = "1.0.0";
+var VERSION = "1.1.0";
 const I = window.ESi18n, T = I.T, fx = I.fx;
-const C = window.ESClock, P = window.ESParts;
+const C = window.ESClock, P = window.ESParts, GE = window.ESGears;
 const D = C.derive(), SP = D.spec, PERIOD = SP.pendulum.period, P0 = C.pose(0, D);
 const RESERVE = D.powerReserveHours * 3600;   // seconds of running from fully wound
 const DICT = I.lang === "es" ? window.ESC_ES : I.lang === "da" ? window.ESC_DA : null;
@@ -201,7 +201,7 @@ canvas.addEventListener("pointermove", (ev) => {
 });
 canvas.addEventListener("pointerleave", () => { S.hover = null; $("hover").hidden = true; });
 
-function select(k, fly) {
+function select(k, fly, stay) {
   S.sel = k;
   const p = part(k);
   $("card").hidden = false; $("cardName").textContent = p.name; $("cardRole").textContent = p.role;
@@ -222,7 +222,8 @@ function select(k, fly) {
       flyTo(c.clone().add(dir.multiplyScalar(dist)).toArray(), c.toArray());
     }
   }
-  if (S.tab !== "part") showTab("part");
+  if (S.tab !== "part" && !stay) showTab("part");
+  markTrain();
 }
 
 // ---------------------------------------------------------------- the rail
@@ -324,6 +325,125 @@ function renderPart() {
     "<p class='part-role'>" + esc(p.role) + "</p><p class='lede'>" + esc(p.text) + "</p>" + (where ? "<p class='fine'>" + esc(where) + "</p>" : "") +
     (f.length ? table([T("Fact"), T("Value")], f) : "");
 }
+// ---------------------------------------------------------------- the gear-train drawing
+const ESC_GEO = window.ESEscapement.geometry(D);   // the anchor and pallets, traced from the motion
+const GEARS = GE.list(D), GBY = {}; GEARS.forEach((g) => { GBY[g.id] = g; });
+function gearName(id) { const tr = DICT && DICT.N && DICT.N[id]; return tr || GBY[id].name; }
+// how long each arbor takes for one turn, and which way it turns (1 clockwise, -1 anticlockwise)
+const TURN = { barrel: [D.barrelTurnSeconds, -1], centre: [D.centreTurnSeconds, 1], third: [D.escapeTurnSeconds / D.perEscape.third, -1],
+  escape: [D.escapeTurnSeconds, 1], minuteWheel: [D.centreTurnSeconds * SP.motion.minuteWheel / SP.motion.cannon, -1], hourWheel: [D.centreTurnSeconds * D.hourRatio, 1] };
+function turnOf(g) { return TURN[g.id === "hourWheel" ? "hourWheel" : g.arbor]; }
+// the pose angle that turns each gear, as on the model ([key, measured from t = 0])
+const GEAR_ANGLE = { great: ["barrel"], centrePinion: ["centre", 1], centre: ["centre", 1], thirdPinion: ["third"], third: ["third"], escapePinion: ["escape"], escape: ["escape"],
+  cannon: ["cannon", 1], minuteWheel: ["minuteWheel", 1], minutePinion: ["minuteWheel", 1], hourWheel: ["hourWheel"] };
+const TRAIN_SETS = {
+  going: { gears: ["great", "centrePinion", "third", "escapePinion", "escape", "centre", "thirdPinion"], box: [-68, -84, 152, 162], anchor: true },
+  motion: { gears: ["hourWheel", "cannon", "minuteWheel", "minutePinion"], box: [-16, -21, 44, 42], hands: true }
+};
+S.trainSet = "going"; S.mesh = null;
+// drawn back to front, as the wheels sit between the plates
+const ZORDER = { great: 8, centrePinion: 8.1, third: 14, escapePinion: 14.1, escape: 24, centre: 30, thirdPinion: 30.1, cannon: 1, minuteWheel: 2, minutePinion: 3, hourWheel: 4 };
+function ptsPath(pts) { return "M" + pts.map((p) => p[0].toFixed(2) + " " + (-p[1]).toFixed(2)).join("L") + "Z"; }
+function drawTrain() {
+  const set = TRAIN_SETS[S.trainSet], [bx, by, bw, bh] = set.box, A = D.arbors;
+  const ids = set.gears.slice().sort((a, b) => ZORDER[a] - ZORDER[b]);
+  let h = "";
+  ids.forEach((id) => {
+    const g = GBY[id], a = A[g.arbor], dm = GE.dims(g), cls = g.kind === "pinion" ? "pin" : g.kind === "escape" ? "esc" : "whl";
+    const shape = ptsPath(GE.outline(g)) + GE.windows(g).map(ptsPath).join("");
+    h += "<g class='gear " + cls + "' data-g='" + id + "' transform='translate(" + a.x.toFixed(2) + " " + (-a.y).toFixed(2) + ")'>" +
+      "<g class='rot'><path d='" + shape + "' fill-rule='evenodd'/></g>" +
+      (dm.pitchD ? "<circle class='pitch' r='" + (dm.pitchD / 2).toFixed(2) + "'/>" : "") + "<circle class='arb' r='0.9'/></g>";
+  });
+  if (set.anchor) {
+    const pa = A.pallet, EG = ESC_GEO;
+    h += "<g class='gear anc' data-g='anchor' transform='translate(" + pa.x.toFixed(2) + " " + (-pa.y).toFixed(2) + ")'><g class='rot'>" +
+      "<path d='" + EG.arms.map(ptsPath).join("") + "'/><circle class='hubc' r='" + EG.hubRadius + "'/>" +
+      "<path class='pal' d='" + ptsPath(EG.entry) + ptsPath(EG.exit) + "'/></g><circle class='arb' r='0.9'/></g>";
+  }
+  if (set.hands) h += "<g class='hand' data-h='hourHand'><path d='M0 1.5L0 -7'/></g><g class='hand' data-h='minuteHand'><path d='M0 2L0 -11.5'/></g>";
+  // labels: name, teeth and how fast (and which way) the arbor turns
+  const LAB = S.trainSet === "going"
+    ? { great: [0, -76, "middle"], centre: [-27, 4, "end"], third: [41, 24, "start"], escape: [21, 50, "start"], anchor: [0, 71, "middle"] }
+    : { hourWheel: [-15, 15.5, "start"], cannon: [-15, -14, "start"], minuteWheel: [27, 15.5, "end"] };
+  Object.keys(LAB).forEach((id) => {
+    const [x, y, an] = LAB[id];
+    let l1, l2 = "";
+    if (id === "anchor") l1 = part("anchor").name;
+    else { const g = GBY[id], tn = turnOf(g); l1 = gearName(id); l2 = T("{n} teeth", { n: g.teeth }) + " · " + (tn[1] > 0 ? "↻ " : "↺ ") + dur(tn[0]); }
+    h += "<text x='" + x + "' y='" + (-y) + "' text-anchor='" + an + "'><tspan class='n'>" + esc(l1) + "</tspan>" +
+      (l2 ? "<tspan x='" + x + "' dy='1.2em'>" + esc(l2) + "</tspan>" : "") + "</text>";
+  });
+  const svg = $("trainSvg");
+  svg.setAttribute("viewBox", bx + " " + (-(by + bh)) + " " + bw + " " + bh);
+  svg.style.setProperty("--u", (bw / 150).toFixed(4));   // line widths and text scale with the view
+  svg.innerHTML = h;
+  svg.querySelectorAll(".gear").forEach((el) => {
+    el.addEventListener("click", () => { const id = el.dataset.g; select(id === "anchor" ? "anchor" : GBY[id].part, false, true); });
+  });
+  document.querySelectorAll("#segTrain button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === S.trainSet));
+  renderSteps(); spinTrain(); markTrain();
+}
+function spinTrain() {
+  const svg = $("trainSvg"); if (!svg) return;
+  svg.querySelectorAll(".gear").forEach((el) => {
+    const id = el.dataset.g;
+    let a;
+    if (id === "anchor") a = pose.anchor;
+    else { const ga = GEAR_ANGLE[id]; a = pose[ga[0]] - (ga[1] ? P0[ga[0]] : 0); }
+    el.firstChild.setAttribute("transform", "rotate(" + (a * 180 / Math.PI).toFixed(3) + ")");
+  });
+  svg.querySelectorAll(".hand").forEach((el) => { el.setAttribute("transform", "rotate(" + (pose[el.dataset.h] * 180 / Math.PI).toFixed(3) + ")"); });
+}
+function markTrain() {
+  const svg = $("trainSvg"); if (!svg) return;
+  const lit = S.mesh ? S.mesh.split(",") : [];
+  svg.querySelectorAll(".gear").forEach((el) => {
+    const id = el.dataset.g, k = id === "anchor" ? "anchor" : GBY[id].part;
+    el.classList.toggle("lit", lit.indexOf(id) >= 0);
+    el.classList.toggle("sel", k === S.sel && !lit.length);
+  });
+  document.querySelectorAll("#meshSteps li").forEach((li) => li.classList.toggle("now", li.dataset.m === S.mesh));
+}
+function stepLi(m, title, body, res) {
+  return "<li data-m='" + m + "'><b>" + esc(title) + "</b> " + esc(body) + (res ? "<span class='res'>" + esc(res) + "</span>" : "") + "</li>";
+}
+function renderSteps() {
+  const centres = (a, b) => T("Their centres are {c} mm apart: ({w} + {p}) × {m} mm ÷ 2.", { c: fx((a.teeth + b.teeth) * a.module / 2, 2), w: a.teeth, p: b.teeth, m: fx(a.module, 1) });
+  const up = (w, p) => {
+    const a = GBY[w], b = GBY[p], r = a.teeth / b.teeth;
+    return stepLi(w + "," + p, T("{a} drives {b}", { a: gearName(w), b: gearName(p) }),
+      T("{w} teeth push {p} leaves round, so every turn of the first gives {r} turns of the second, the other way round.", { w: a.teeth, p: b.teeth, r: fx(r, r % 1 ? 2 : 0) }) + " " + centres(a, b),
+      dur(turnOf(a)[0]) + " → " + dur(turnOf(b)[0]));
+  };
+  const down = (w, p) => {
+    const a = GBY[w], b = GBY[p];
+    return stepLi(w + "," + p, T("{a} drives {b}", { a: gearName(w), b: gearName(p) }),
+      T("Here the small gear drives the big one, so the motion slows down: {p} leaves ÷ {w} teeth = 1/{r}.", { p: a.teeth, w: b.teeth, r: fx(b.teeth / a.teeth, 0) }) + " " + centres(a, b),
+      dur(turnOf(a)[0]) + " → " + dur(turnOf(b)[0]));
+  };
+  let h;
+  if (S.trainSet === "going") {
+    h = up("great", "centrePinion") + up("centre", "thirdPinion") + up("third", "escapePinion") +
+      stepLi("escape,anchor", T("The escape wheel and the pallets"),
+        T("Its {z} teeth pass the pallets one per full swing of the pendulum ({s}), so the escape wheel turns once in {e}. This is where the time is set; each ratio above only multiplies it.", { z: GBY.escape.teeth, s: dur(PERIOD), e: dur(D.escapeTurnSeconds) }),
+        dur(D.escapeTurnSeconds) + " × 12 × 10 = " + dur(D.centreTurnSeconds));
+  } else {
+    h = down("cannon", "minuteWheel") + down("minutePinion", "hourWheel") +
+      stepLi("cannon,hourWheel", T("Both hands on one arbor"),
+        T("The cannon pinion carries the minute hand and the hour wheel rides on it carrying the hour hand. The motion goes out through two meshes and comes back, so both hands turn clockwise."),
+        dur(D.centreTurnSeconds) + " × 3 × 4 = " + dur(D.centreTurnSeconds * D.hourRatio));
+  }
+  $("meshSteps").innerHTML = h;
+  $("meshSteps").querySelectorAll("li").forEach((li) => {
+    li.tabIndex = 0;
+    const on = () => { S.mesh = li.dataset.m; markTrain(); }, off = () => { S.mesh = null; markTrain(); };
+    li.addEventListener("mouseenter", on); li.addEventListener("focus", on);
+    li.addEventListener("mouseleave", off); li.addEventListener("blur", off);
+  });
+}
+document.querySelectorAll("#segTrain button").forEach((b) => b.addEventListener("click", () => { S.trainSet = b.dataset.v; S.mesh = null; drawTrain(); }));
+
 function renderTrain() {
   const tr = SP.train, mo = SP.motion, rows = [
     ["barrel", "—", tr[0].wheel, D.barrelTurnSeconds, ACW()],
@@ -428,6 +548,7 @@ function loop(now) {
   controls.update();
   paint();
   updateUI(false);
+  if (S.tab === "train") spinTrain();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
@@ -436,7 +557,7 @@ controls.addEventListener("start", () => { tween = null; });
 // ---------------------------------------------------------------- start
 buildParts();
 setSpeed(1); setPlaying(true);
-renderTrain(); renderTime(); renderEsc(); renderPower();
+renderTrain(); drawTrain(); renderTime(); renderEsc(); renderPower();
 $("rngLen").value = D.pendulumLength;
 $("rngLen").addEventListener("input", renderTime);
 select(S.sel, false);

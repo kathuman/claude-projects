@@ -184,23 +184,7 @@ def pinion(bm, leaves, module, z, length=3.2):
     prism(bm, outline, z - length / 2, z + length / 2)
 
 
-def escape_outline(teeth, r_tip, r_root):
-    """Graham escape-wheel teeth: a radial leading face, a narrow tip, a concave back (clockwise rotation)."""
-    pts, pitch = [], TAU / teeth
-    for k in range(teeth):
-        a = TAU * k / teeth
-        # going counter-clockwise: the leading face (radial) at angle a rises from the root to the tip
-        pts.append((r_root * math.cos(a), r_root * math.sin(a)))
-        pts.append((r_tip * math.cos(a + 0.004), r_tip * math.sin(a + 0.004)))
-        pts.append((r_tip * math.cos(a + 0.045), r_tip * math.sin(a + 0.045)))
-        for j in range(1, 6):   # the concave back, down to the root
-            s = j / 6
-            rr = r_tip - (r_tip - r_root) * (s ** 0.6)
-            b = a + 0.045 + (0.62 * pitch - 0.045) * s
-            pts.append((rr * math.cos(b), rr * math.sin(b)))
-        b = a + 0.62 * pitch
-        pts.append((r_root * math.cos(b + 0.15 * pitch), r_root * math.sin(b + 0.15 * pitch)))
-    return pts
+ESC = D["escapement"]   # the escape wheel's teeth and the anchor, traced from the motion by src/escapement.js
 
 
 def part(name, build, mat, origin=(0.0, 0.0), parent=None, depth_origin=0.0):
@@ -354,7 +338,7 @@ third_ob.location = (*pivots["third"], 0)
 
 def escape_wheel(bm):
     cylinder(bm, 0, 0, 1.0, -PT - 0.6, DEPTH + PT + 0.6, 16)
-    outer = escape_outline(T[3]["wheel"], S["escapeTipRadius"], S["escapeRootRadius"])
+    outer = [tuple(p) for p in ESC["wheel"]]   # Graham teeth: leaning forward, undercut backs
     rim_in = S["escapeRootRadius"] - 2.0
     inner = [(rim_in * x / math.hypot(x, y), rim_in * y / math.hypot(x, y)) for x, y in outer]
     z = T[3]["z"]
@@ -376,18 +360,15 @@ ZE = T[3]["z"]
 
 
 def anchor(bm):
+    """The Graham anchor: a hub on the pallet arbor, two arms curved about it, and the pallets at their ends. The
+    pallets' locking faces are arcs about the arbor and their impulse faces are where the teeth slide (src/escapement.js)."""
     cylinder(bm, 0, 0, 1.0, -PT - 6, DEPTH + PT + 0.6, 16)    # the pallet arbor (reaches back for the crutch)
-    tube(bm, 0, 0, 3.6, 0.9, ZE - 1.2, ZE + 1.2, 28)
-    half = (S["anchorSpan"] * TAU / T[3]["wheel"]) / 2
-    for side in (-1, 1):
-        ang = -math.pi / 2 + side * (math.pi / 2 - half) * 1.0   # direction from the arbor to the pallet
-        tip = (R_ARM * math.cos(ang), R_ARM * math.sin(ang))
-        bar(bm, (0, 0), (tip[0] * 0.86, tip[1] * 0.86), 3.4, ZE - 1.0, ZE + 1.0)
-        # the pallet: a band concentric with the arbor (deadbeat locking faces), with a bevelled impulse face
-        a0, a1 = ang - 0.10, ang + 0.10
-        outer = [((R_ARM + 1.1) * math.cos(a0 + (a1 - a0) * i / 8), (R_ARM + 1.1) * math.sin(a0 + (a1 - a0) * i / 8)) for i in range(9)]
-        inner = [((R_ARM - 1.1) * math.cos(a1 - (a1 - a0) * i / 8), (R_ARM - 1.1) * math.sin(a1 - (a1 - a0) * i / 8)) for i in range(9)]
-        prism(bm, outer + inner, ZE - 1.4, ZE + 1.4)
+    tube(bm, 0, 0, ESC["hubRadius"], 0.9, ZE - 1.2, ZE + 1.2, 28)
+    for arm in ESC["arms"]:
+        prism(bm, [tuple(p) for p in arm], ZE - 0.9, ZE + 0.9)
+    th = ESC["palletThickness"] / 2
+    for pallet in (ESC["entry"], ESC["exit"]):
+        prism(bm, [tuple(p) for p in pallet], ZE - th, ZE + th)
 
 
 anchor_ob = part("Anchor (pallets)", anchor, "steel")

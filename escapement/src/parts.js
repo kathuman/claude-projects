@@ -37,7 +37,7 @@
       text: "A pinion of 8 leaves and a wheel of 72 teeth. Each mesh of a big wheel with a small pinion multiplies the speed, so the third wheel turns once every six minutes, in the opposite direction to the centre wheel." },
     escape: { nodes: ["Escape wheel"], group: "train", name: "Escape wheel",
       role: "The last wheel of the train, released half a tooth per beat.",
-      text: "30 pointed teeth on a 6-leaf pinion. The spring's force reaches it through the train, but the anchor's pallets hold it still most of the time; each time the pendulum passes the middle it is let go for half a tooth. With one full swing per second it turns once every 30 seconds." },
+      text: "30 pointed teeth, leaning forward so only their tips touch the pallets, on a 6-leaf pinion. The spring's force reaches it through the train, but the anchor's pallets hold it still most of the time; each time the pendulum passes the middle it is let go for half a tooth. With one full swing per second it turns once every 30 seconds." },
     anchor: { nodes: ["Anchor (pallets)"], group: "escapement", name: "Anchor and pallets",
       role: "Locks and releases the escape wheel, and pushes the pendulum.",
       text: "The anchor rocks with the pendulum. Its two pallets span seven and a half teeth and take turns blocking the escape wheel. In Graham's deadbeat design the locking faces are arcs centred on the anchor's pivot, so a resting tooth does not push the wheel back (no recoil): the wheel stands dead still. As the pendulum passes the middle, a tooth slides along a pallet's slanted impulse face and gives the anchor a small push." },

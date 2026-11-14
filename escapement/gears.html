@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="g.title">Making the gears — Escapement</title>
+  <meta data-i18n-attr="content=g.meta" name="description" content="How to make every gear of the Escapement skeleton clock: tooth form, materials, tools and step-by-step methods, with a dimensioned drawing, cutting data, dividing-head settings and SVG and DXF files for each gear." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css?v=1.1.0">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark">Escape<span>ment</span></div><span class="sub" data-i18n="g.sub">making the gears</span></div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="index.html" data-i18n="about.back">← Back to the clock</a>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+  <main class="mk">
+    <h1 data-i18n="g.h1">Making the gears</h1>
+    <p class="lede" data-i18n="g.lede">Every gear of the clock — seven wheels and five pinions — with what you need to make it, taken from the same specification as the 3D model. Follow the traditional route with a lathe, a dividing head and form cutters, or download any gear as a 1:1 drawing (SVG or DXF) to cut it by machine.</p>
+    <p class="warnbox" data-i18n="g.warn">These are workshop notes worked out from the model, not a certified drawing. Check every figure against your own tools and stock, try each pair of gears together before you drill the plates, and work safely: eye protection at the lathe and the grinder, and care with hot steel and quenching oil.</p>
+    <div class="runbar no-print">
+      <button class="btn primary" id="dlAll" data-i18n="g.dlall">Download all gears (DXF)</button>
+      <button class="btn" id="btnPrint" data-i18n="g.print">Print this page</button>
+    </div>
+
+    <h2 data-i18n="g.h.summary">All the gears</h2>
+    <div class="tablewrap"><div id="summary"></div></div>
+
+    <h2 data-i18n="g.h.form">The tooth form</h2>
+    <p data-i18n="g.form1">The size of a tooth is set by its <b>module</b> m: the pitch diameter divided by the number of teeth. Two gears mesh only if they have the same module, and their arbors then sit half the sum of their pitch diameters apart. Clock gears do not use the involute teeth of machine gears but a <b>cycloidal</b> form: the flanks are straight and radial below the pitch circle and the tips are rounded above it. It runs with little friction and without oil on the teeth, and it suits pinions with very few leaves.</p>
+    <p data-i18n="g.form2">In this clock a wheel tooth stands 1.35 m above the pitch circle (addendum) and the space goes 1.6 m below it (dedendum); the tooth is 1.4 m wide at the pitch circle. A pinion leaf has 0.95 m, 1.4 m and 1.1 m. The model draws a simplified version of this form. To cut real teeth, use cutters made to the cycloidal standard (BS 978 part 2) for the module and the number of teeth; their form is close to the one drawn here.</p>
+    <div class="formfig" id="formFig"></div>
+
+    <h2 data-i18n="g.h.materials">Materials</h2>
+    <ul class="facts">
+      <li data-i18n="g.mat1"><b>Wheels:</b> free-machining brass (CZ120 / CuZn39Pb3), hard-rolled sheet in the thickness listed for each wheel. Hard brass keeps its shape when the wheel is crossed out.</li>
+      <li data-i18n="g.mat2"><b>Pinions and arbors:</b> silver steel (drill rod, O1 / 115CrV3), hardened and tempered after the leaves are cut, then polished. Each pinion is cut on its own arbor.</li>
+      <li data-i18n="g.mat3"><b>Escape wheel:</b> hard brass (as in most English clocks) or steel (as in the model). It must be light, so its rim and spokes are thin.</li>
+      <li data-i18n="g.mat4"><b>Ratchet wheel and click:</b> ground flat stock (gauge plate, O1), hardened and tempered to blue.</li>
+    </ul>
+
+    <h2 data-i18n="g.h.tools">Tools</h2>
+    <p data-i18n="g.tools">A small lathe with a <b>cutting arbor</b> (a mandrel that holds a wheel blank by its centre hole); a <b>dividing head</b> or a division plate to turn the blank by exactly one tooth at a time; <b>wheel and pinion cutters</b> for each module and tooth range (or a single-point fly cutter ground to the tooth space); a <b>depthing tool</b> to try two gears together; a piercing saw, needle files and drills for the crossing out; and polishing sticks. Instead of cutting by hand, the files on this page can be cut by wire EDM, CNC milling or laser.</p>
+
+    <h2 data-i18n="g.h.how">How each kind is made</h2>
+    <div class="howgrid">
+      <section class="how" id="how-wheel">
+        <h3 data-i18n="g.how.wheel.h">A wheel</h3>
+        <ol>
+          <li data-i18n="g.how.wheel.1">Saw a disc from the sheet a little larger than the blank diameter and drill the centre hole just under size.</li>
+          <li data-i18n="g.how.wheel.2">Mount it on the cutting arbor; turn the edge to the tip diameter and face both sides to the thickness.</li>
+          <li data-i18n="g.how.wheel.3">Set the cutter exactly at centre height and the depth of cut to the full tooth depth.</li>
+          <li data-i18n="g.how.wheel.4">Cut one tooth space, index round by the setting given for the wheel, and repeat; each space is cut in a single pass. Remove the burrs.</li>
+          <li data-i18n="g.how.wheel.5">Mark out the crossing out (rim, spokes and hub), drill a hole in each opening, saw to just inside the lines and file to them.</li>
+          <li data-i18n="g.how.wheel.6">Open the centre hole to fit its collet, then rivet (stake) the wheel onto the brass collet on its pinion arbor so that it runs true.</li>
+          <li data-i18n="g.how.wheel.7">Polish, and try it with its pinion in the depthing tool: it should turn freely with a little shake and no catching.</li>
+        </ol>
+      </section>
+      <section class="how" id="how-pinion">
+        <h3 data-i18n="g.how.pinion.h">A pinion</h3>
+        <ol>
+          <li data-i18n="g.how.pinion.1">Turn the arbor from silver steel between centres, leaving the pinion length at the tip diameter and the pivots oversize.</li>
+          <li data-i18n="g.how.pinion.2">Cut the leaves with a pinion cutter of the right module and leaf count, indexing as for a wheel.</li>
+          <li data-i18n="g.how.pinion.3">Harden: heat to bright cherry red (about 790 °C) and quench in oil.</li>
+          <li data-i18n="g.how.pinion.4">Clean it bright and temper to dark straw or purple (about 250–280 °C), so the leaves are hard but not brittle.</li>
+          <li data-i18n="g.how.pinion.5">Polish the leaves with a polishing stick and fine abrasive until they shine; most of the train's friction is here.</li>
+          <li data-i18n="g.how.pinion.6">Turn the pivots to size, then burnish them.</li>
+        </ol>
+      </section>
+      <section class="how" id="how-escape">
+        <h3 data-i18n="g.how.escape.h">The escape wheel</h3>
+        <ol>
+          <li data-i18n="g.how.escape.1">Prepare the blank as for a wheel, turned to the tip diameter.</li>
+          <li data-i18n="g.how.escape.2">Cut the teeth in two passes: one cut forms the leading faces, leaning about 12° forward of radial so that only the tip touches a pallet, and a second forms the undercut backs. The teeth must point in the direction the wheel turns: clockwise seen from the dial.</li>
+          <li data-i18n="g.how.escape.3">All the tips must be sharp, the same height and evenly spaced: run the wheel against a fixed pointer and correct any high tip.</li>
+          <li data-i18n="g.how.escape.4">Cross it out lightly, so the wheel is easy for the pallets to stop and start, and polish the leading faces where they touch the pallets.</li>
+        </ol>
+      </section>
+      <section class="how" id="how-ratchet">
+        <h3 data-i18n="g.how.ratchet.h">The ratchet wheel</h3>
+        <ol>
+          <li data-i18n="g.how.ratchet.1">Turn the steel blank to the tip diameter and file the square hole to fit the barrel arbor's square.</li>
+          <li data-i18n="g.how.ratchet.2">Cut the saw teeth with a fly cutter: one radial face, which the click catches, and one sloping face, which it rides over when the clock is wound.</li>
+          <li data-i18n="g.how.ratchet.3">Harden and temper it to blue, like the click, so neither wears.</li>
+        </ol>
+      </section>
+    </div>
+    <p data-i18n="g.cannon">The <b>cannon pinion</b> is a pinion cut on a short steel tube. It is not fixed to the centre arbor but held on it by friction (a light spring or a slight pinch in the tube), so the hands can be turned to set the time.</p>
+
+    <h2 data-i18n="g.h.files">Cutting by machine</h2>
+    <p data-i18n="g.files">Each gear can be downloaded as an SVG or a DXF drawing at 1:1 in millimetres, seen from the front (from the dial). In the DXF the layer CUT holds the cut lines: the tooth outline, the openings and the centre hole. The layer REFERENCE holds the pitch circle, which is not to be cut. Wire EDM gives the best teeth at these small modules. A laser can cut the larger wheels from thin brass, but its kerf rounds small teeth, so check a sample under a magnifier. For a 3D-printed model, scale the whole clock three times, plates and arbor positions included.</p>
+
+    <h2 data-i18n="g.h.gears">Each gear</h2>
+    <div id="cards"></div>
+
+    <h2 data-i18n="g.h.anchor">The anchor and pallets</h2>
+    <p data-i18n="g.anchor">The anchor is not a gear, but the escape wheel only works with it. Its two pallets are traced from the clock's motion: each locking face is an arc about the pallet arbor (so a resting tooth cannot push the wheel back), and each impulse face is the path the tooth tips sweep while the pendulum passes the middle. Make the pallets as separate pieces of hardened steel, polished on their faces (or set jewels in their place), held in the arms so they can be adjusted, and set the depth so each tooth drops onto the locking faces with the smallest safe lock.</p>
+    <div id="anchorCard"></div>
+
+    <h2 data-i18n="g.h.plates">Plate holes and depthing</h2>
+    <p data-i18n="g.plates">Drill the two plates pinned together, so the holes line up, at these positions measured from the centre arbor (x to the right, y up, seen from the front). The distances are the theoretical centre distances; try each pair in the depthing tool first and move a hole slightly if the gears bind or run too loose.</p>
+    <div class="tablewrap"><div id="plates"></div></div>
+  </main>
+</div>
+<script src="i18n-es.js?v=1.1.0"></script>
+<script src="i18n-da.js?v=1.1.0"></script>
+<script src="i18n.js?v=1.1.0"></script>
+<script src="src/clock.js?v=1.1.0"></script>
+<script src="src/escapement.js?v=1.1.0"></script>
+<script src="src/parts.js?v=1.1.0"></script>
+<script src="src/gears.js?v=1.1.0"></script>
+<script src="gears-page.js?v=1.1.0"></script>
+</body>
+</html>

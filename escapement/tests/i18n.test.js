@@ -11,7 +11,7 @@ function check(name, cond, detail) { if (cond) pass++; else fail++; if (!cond ||
 
 // ---- page keys, with the English content of each element
 const english = {};
-for (const file of ["index.html", "about.html"]) {
+for (const file of ["index.html", "about.html", "gears.html"]) {
   const html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const m of html.matchAll(/<(\w+)([^>]*?)\sdata-i18n="([^"]+)"([^>]*)>([\s\S]*?)<\/\1>/g)) english[m[3]] = m[5];
   for (const m of html.matchAll(/data-i18n-attr="([^"]+)"/g)) m[1].split(",").forEach((pair) => { english[pair.split("=")[1]] = ""; });
@@ -20,7 +20,7 @@ const pageKeys = Object.keys(english);
 check("the pages have translatable text", pageKeys.length > 40, pageKeys.length + " keys");
 
 // ---- the script's messages: every string literal inside a T( … ) call, including both sides of a ternary
-const app = ["app.js"].map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join(";\n"), msgs = new Set();
+const app = ["app.js", "gears-page.js"].map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join(";\n"), msgs = new Set();
 for (let i = app.indexOf("T("); i >= 0; i = app.indexOf("T(", i + 2)) {
   if (/[\w.$]/.test(app[i - 1] || "")) continue;
   let depth = 0, j = i + 1, inVars = 0, args = [];
@@ -60,6 +60,9 @@ for (const [lang, D] of Object.entries(DICTS)) {
   check(lang + ": every part has a translated name, role and explanation", !missing.length, missing.join(", "));
   check(lang + ": no part translation is left over", !extra.length, extra.join(", "));
   check(lang + ": part explanations are translated, not copied", keys.every((k) => !P[k] || (P[k][1] !== PA.PARTS[k].role && P[k][2] !== PA.PARTS[k].text)));
+  const GE = require("../src/gears.js"), ids = GE.list().map((g) => g.id), N = D.N || {};
+  const nm = ids.filter((k) => !N[k]), nx = Object.keys(N).filter((k) => !ids.includes(k));
+  check(lang + ": every gear has a translated name", !nm.length && !nx.length, nm.concat(nx).join(", "));
   const gm = PA.GROUPS.filter((g) => !G[g.id]).map((g) => g.id), gx = Object.keys(G).filter((k) => !PA.GROUPS.some((g) => g.id === k));
   check(lang + ": every group name is translated", !gm.length && !gx.length, gm.concat(gx).join(", "));
 }

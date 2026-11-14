@@ -1,7 +1,8 @@
 name: Escapement tests
 
 # The clock's specification and kinematics (pendulum length and period, gear ratios, meshing distances and clearances,
-# deadbeat stepping, hands keeping time), the parts catalogue against the exported model (every mesh named, every
+# deadbeat stepping, hands keeping time), the escapement's geometry (no tooth ever passes into a pallet over whole
+# beats; locking faces are arcs about the pallet arbor), the gears' cutting data, dividing settings and SVG/DXF files, the parts catalogue against the exported model (every mesh named, every
 # moving node present and turning about its own arbor, the same parts moved as the Blender drivers), the Spanish and
 # Danish translations, and the release checks (cache-busting versions on every script and on the model).
 on:
@@ -17,7 +18,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,6 +26,8 @@ jobs:
           node-version: 22
       - run: node escapement/tests/clock.test.js
       - run: node escapement/tests/parts.test.js
+      - run: node escapement/tests/gears.test.js
+      - run: node escapement/tests/escapement.test.js
       - run: node escapement/tests/i18n.test.js
       - run: node escapement/tests/release.test.js
       - name: The Blender spec file matches src/clock.js
