@@ -1,0 +1,35 @@
+name: Escapement tests
+
+# The clock's specification and kinematics (pendulum length and period, gear ratios, meshing distances and clearances,
+# deadbeat stepping, hands keeping time), the parts catalogue against the exported model (every mesh named, every
+# moving node present and turning about its own arbor, the same parts moved as the Blender drivers), the Spanish and
+# Danish translations, and the release checks (cache-busting versions on every script and on the model).
+on:
+  push:
+    paths:
+      - 'escapement/**'
+      - '.github/workflows/escapement-ci.yml'
+  pull_request:
+    paths:
+      - 'escapement/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node escapement/tests/clock.test.js
+      - run: node escapement/tests/parts.test.js
+      - run: node escapement/tests/i18n.test.js
+      - run: node escapement/tests/release.test.js
+      - name: The Blender spec file matches src/clock.js
+        run: node escapement/tools/spec_json.js > /tmp/spec.json && diff <(node -e "console.log(JSON.stringify(require('/tmp/spec.json')))") <(node -e "console.log(JSON.stringify(require('./escapement/blender/spec.json')))")
+        shell: bash
+      - name: Syntax-check the page scripts
+        run: for f in escapement/src/*.js escapement/*.js escapement/tools/*.js; do node --check "$f"; done
+        shell: bash

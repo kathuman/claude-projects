@@ -1,0 +1,167 @@
+{
+ "spec": {
+  "pendulum": {
+   "period": 1,
+   "amplitude": 0.05235987755982988,
+   "bobRadius": 26,
+   "bobThickness": 12
+  },
+  "train": [
+   {
+    "id": "barrel",
+    "wheel": 96,
+    "module": 0.7,
+    "z": 8
+   },
+   {
+    "id": "centre",
+    "pinion": 12,
+    "wheel": 80,
+    "module": 0.6,
+    "z": 30
+   },
+   {
+    "id": "third",
+    "pinion": 8,
+    "wheel": 72,
+    "module": 0.6,
+    "z": 14
+   },
+   {
+    "id": "escape",
+    "pinion": 6,
+    "wheel": 30,
+    "z": 24
+   }
+  ],
+  "escapeTipRadius": 18,
+  "escapeRootRadius": 14.5,
+  "anchorSpan": 7.5,
+  "layout": {
+   "centre": [
+    0,
+    0
+   ],
+   "barrel": 180,
+   "third": 40,
+   "escape": "vertical"
+  },
+  "motion": {
+   "cannon": 12,
+   "minuteWheel": 36,
+   "module1": 0.5,
+   "minutePinion": 8,
+   "hourWheel": 32,
+   "module2": 0.6
+  },
+  "mainspring": {
+   "turns": 6,
+   "barrelRadius": 27,
+   "arborRadius": 5,
+   "coils": 9,
+   "strip": 0.45
+  },
+  "plates": {
+   "depth": 40,
+   "thickness": 3
+  },
+  "start": {
+   "h": 10,
+   "m": 8,
+   "s": 30
+  }
+ },
+ "arbors": {
+  "centre": {
+   "x": 0,
+   "y": 0
+  },
+  "barrel": {
+   "x": 4.6291649007769944e-15,
+   "y": -37.8
+  },
+  "third": {
+   "x": 16.969592895724634,
+   "y": 20.22357329834102
+  },
+  "escape": {
+   "x": 0,
+   "y": 36.33546074064188
+  },
+  "pallet": {
+   "x": 0,
+   "y": 61.79130486335758
+  },
+  "minuteWheel": {
+   "x": 12,
+   "y": 0
+  }
+ },
+ "meshes": [
+  {
+   "wheel": "barrel",
+   "pinion": "centre",
+   "module": 0.7,
+   "wheelTeeth": 96,
+   "pinionTeeth": 12,
+   "distance": 37.8,
+   "ratio": 8,
+   "z": 8
+  },
+  {
+   "wheel": "centre",
+   "pinion": "third",
+   "module": 0.6,
+   "wheelTeeth": 80,
+   "pinionTeeth": 8,
+   "distance": 26.4,
+   "ratio": 10,
+   "z": 30
+  },
+  {
+   "wheel": "third",
+   "pinion": "escape",
+   "module": 0.6,
+   "wheelTeeth": 72,
+   "pinionTeeth": 6,
+   "distance": 23.4,
+   "ratio": 12,
+   "z": 14
+  }
+ ],
+ "pallets": {
+  "entry": {
+   "x": -12.727922061357855,
+   "y": 49.06338280199974
+  },
+  "exit": {
+   "x": 12.727922061357855,
+   "y": 49.06338280199974
+  },
+  "radius": 17.999999999999993
+ },
+ "palletDistance": 25.455844122715707,
+ "pendulumLength": 248.40534639153293,
+ "perEscape": {
+  "escape": 1,
+  "third": 0.08333333333333333,
+  "centre": 0.008333333333333333,
+  "barrel": 0.0010416666666666667
+ },
+ "hourRatio": 12,
+ "impulse": 0.12,
+ "pitch": {
+  "barrel": {
+   "wheel": 33.599999999999994
+  },
+  "centre": {
+   "wheel": 24
+  },
+  "third": {
+   "wheel": 21.599999999999998
+  },
+  "escape": {
+   "wheel": 0
+  }
+ }
+}

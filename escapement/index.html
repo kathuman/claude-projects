@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="title">Escapement — How a Pendulum Clock Works</title>
+  <meta data-i18n-attr="content=meta" name="description" content="A spring-driven skeleton clock with a Graham deadbeat escapement and a half-second pendulum, running live in 3D: click any part to learn what it does, follow the power from the mainspring to the pendulum, and see the numbers behind the gear train." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2242%22 r=%2232%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%228%22/><path d=%22M50 42 L50 20 M50 42 L64 50%22 stroke=%22%23ffcf4a%22 stroke-width=%228%22 stroke-linecap=%22round%22/><path d=%22M50 74 L50 92%22 stroke=%22%237dd3fc%22 stroke-width=%226%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css?v=1.0.0">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">Escape<span>ment</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub" data-i18n="sub">how a spring and a pendulum keep time</span>
+    </div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail">
+      <h2 data-i18n="h.run">Run</h2>
+      <div class="runbar">
+        <button class="btn primary" id="btnPlay" data-i18n="run.pause">Pause</button>
+        <button class="btn" id="btnBeat" data-i18n="run.beat">One beat</button>
+        <button class="btn" id="btnNow" data-i18n="run.now">Show the time now</button>
+      </div>
+      <div class="seg" id="segSpeed" role="group" data-i18n-attr="aria-label=h.speed" aria-label="Speed">
+        <button data-v="0.25">¼×</button><button data-v="1">1×</button><button data-v="60">60×</button><button data-v="3600">3600×</button>
+      </div>
+      <p class="hint" id="speedHint"></p>
+      <label class="check"><input type="checkbox" id="chkSound" /> <span data-i18n="run.sound">Tick sound</span></label>
+
+      <h2 data-i18n="h.view">View</h2>
+      <div class="seg" id="segView" role="group" data-i18n-attr="aria-label=h.view" aria-label="View">
+        <button data-v="whole" data-i18n="view.whole">Whole</button><button data-v="escapement" data-i18n="view.escapement">Escapement</button><button data-v="train" data-i18n="view.train">Train</button><button data-v="dial" data-i18n="view.dial">Dial</button>
+      </div>
+      <label class="check"><input type="checkbox" id="chkPath" /> <span data-i18n="view.path">Show the power path</span></label>
+      <label class="check"><input type="checkbox" id="chkInside" /> <span data-i18n="view.inside">See inside (hide the front plate, dial and hands)</span></label>
+      <ol class="path" id="pathList" hidden></ol>
+
+      <h2 data-i18n="h.parts">Parts</h2>
+      <p class="hint" data-i18n="parts.hint">Click a part in the picture or in this list.</p>
+      <div id="partsList"></div>
+    </aside>
+
+    <main class="main">
+      <div class="stage" id="stage">
+        <canvas id="cv" data-i18n-attr="aria-label=stage.label" aria-label="The clock in 3D: drag to turn it, scroll to zoom, click a part"></canvas>
+        <div class="loading" id="loading" data-i18n="stage.loading">Loading the clock…</div>
+        <div class="stage-note" id="stageNote" data-i18n="stage.note">drag to turn · scroll to zoom · click a part</div>
+        <div class="hover" id="hover" hidden></div>
+        <div class="readout" id="readout"></div>
+        <div class="card" id="card" hidden>
+          <div class="card-name" id="cardName"></div>
+          <div class="card-role" id="cardRole"></div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="part" aria-selected="true" data-i18n="tab.part">The part</button>
+          <button role="tab" data-tab="time" aria-selected="false" data-i18n="tab.time">Keeping time</button>
+          <button role="tab" data-tab="esc" aria-selected="false" data-i18n="tab.esc">The escapement</button>
+          <button role="tab" data-tab="train" aria-selected="false" data-i18n="tab.train">Gear train</button>
+          <button role="tab" data-tab="power" aria-selected="false" data-i18n="tab.power">Power</button>
+        </div>
+
+        <div class="tabpane" data-pane="part">
+          <div id="partBody"></div>
+        </div>
+
+        <div class="tabpane" data-pane="time" hidden>
+          <p class="lede" data-i18n="time.lede">A pendulum takes the same time for every swing, whether the swing is wide or narrow (as long as it is small), and that time depends only on its length. The clock counts swings: everything else in it only carries power to the pendulum and counts.</p>
+          <div class="eq">T = 2π √(L / g)</div>
+          <div class="ctl calc">
+            <div class="row"><span data-i18n="time.len">Pendulum length L</span><output id="outLen"></output></div>
+            <input type="range" id="rngLen" min="100" max="1000" step="any" value="248.4" />
+          </div>
+          <div id="timeBody"></div>
+          <p class="fine" data-i18n="time.fine">L is measured from the suspension to the bob's centre of oscillation; g = 9.80665 m/s². The calculator does not change the model: it shows what a different pendulum would do to this clock.</p>
+        </div>
+
+        <div class="tabpane" data-pane="esc" hidden>
+          <p class="lede" data-i18n="esc.lede">The escapement is where the spring's steady push meets the pendulum's regular swing. It does two jobs at once: it lets the train move only one step per beat, and it gives the pendulum a small push each beat to make up for friction and air.</p>
+          <ol class="phases" id="phases">
+            <li data-ph="lock"><b data-i18n="esc.p1.h">Locked.</b> <span data-i18n="esc.p1">A tooth rests on the locking face of one pallet. That face is an arc centred on the anchor's pivot, so as the pendulum swings on, the tooth just slides along it and the wheel stays dead still — no recoil. That is what “deadbeat” means.</span></li>
+            <li data-ph="impulse"><b data-i18n="esc.p2.h">Unlock and impulse.</b> <span data-i18n="esc.p2">Near the middle of the swing the pallet slides clear of the tooth. The spring's force turns the wheel, and the tooth pushes across the pallet's slanted impulse face: a small push to the anchor, through the crutch, to the pendulum.</span></li>
+            <li data-ph="drop"><b data-i18n="esc.p3.h">Drop and lock again.</b> <span data-i18n="esc.p3">The wheel has turned half a tooth when another tooth drops onto the other pallet's locking face and stops. One beat is done; the next swing repeats it on the other side.</span></li>
+          </ol>
+          <div id="escBody"></div>
+          <p class="fine" data-i18n="esc.fine">In this model the motion follows the rules of a deadbeat escapement (still while locked, half a tooth during each impulse) rather than a simulation of the contact forces, so the pallets do not visibly touch each tooth.</p>
+        </div>
+
+        <div class="tabpane" data-pane="train" hidden>
+          <p class="lede" data-i18n="train.lede">Each mesh pairs a big wheel with a small pinion, so every arbor turns faster than the one before it, and in the opposite direction. The pendulum sets how fast the escape wheel may turn; the ratios fix every other speed.</p>
+          <div id="trainBody"></div>
+        </div>
+
+        <div class="tabpane" data-pane="power" hidden>
+          <p class="lede" data-i18n="power.lede">The mainspring is the only source of energy. It pushes on the barrel all the time; the escapement lets that push out in small steps, and almost all of it ends up as heat from friction in the pivots and teeth and as the pendulum's push against the air.</p>
+          <div id="powerBody"></div>
+          <div class="runbar"><button class="btn" id="btnWind" data-i18n="power.wind">Wind the clock</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="i18n-es.js?v=1.0.0"></script>
+<script src="i18n-da.js?v=1.0.0"></script>
+<script src="i18n.js?v=1.0.0"></script>
+<script src="src/clock.js?v=1.0.0"></script>
+<script src="src/parts.js?v=1.0.0"></script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script type="module" src="app.js?v=1.0.0"></script>
+</body>
+</html>
