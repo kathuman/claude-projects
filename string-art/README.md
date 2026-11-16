@@ -8,7 +8,7 @@ preview, and gives you everything needed to build the piece by hand: a nail temp
 instructions, and a threading mode that calls out the next nail. Everything runs in the browser; pictures are never
 uploaded. English, Spanish (Latin America) and Danish.
 
-Version 1.0.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
+Version 1.1.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
 
 ## Using it
 
@@ -24,6 +24,25 @@ Version 1.0.0. Part of the [AI Projects](https://kathuman.github.io/claude-proje
 5. **Build.** Print the nail template (A4 or A3 pages, or one SVG sheet) at actual size and check the 100 mm square;
    download the winding instructions, the sequence as CSV, the preview as PNG, or a project file; then open the
    threading mode at the board.
+6. **Or wind it with a machine.** The winding-machine page (machine.html) takes the last result or a project file,
+   checks a turntable-and-guide machine against it, estimates the winding time, plays the winding back with a
+   true-size close-up of each wrap, and downloads the G-code.
+
+## The winding machine
+
+A turntable carries the board; a thread guide (a thin tube) moves only in and out along one radius above the rim, and
+up and down. Three axes in the G-code: **X** the board's turn in degrees (X = i · 360/N puts nail i under the guide),
+**Y** the guide's distance from the nail circle in mm (negative inside), **Z** its height above the board. To wind a
+line the board turns until the gap beside the next nail is under the guide (which waits inside the ring, so the
+thread lies across the open middle), the guide goes out through the gap, the board turns one nail, and the guide comes
+back in on the other side: the thread is round the nail. The wrap ends on the side facing the following nail, and each
+later wrap on a nail is laid a little higher.
+
+`src/machine/` is pure and tested: `config.ts` (the machine, defaults for a 600 mm / 240-nail board), `toolpath.ts`
+(moves, timing, position at any time), `motion.ts` (trapezoidal moves), `checks.ts` (gap, clearances, nail height,
+lines that rub the neighbouring nail, thread-speed cap) and `gcode.ts` (GRBL/Marlin, M0 for tie-on, checks and tie-off,
+G92 to keep X within ten turns). The tests read the G-code back and confirm it wraps exactly the sequence's nails,
+passing only through gaps.
 
 ## Setup
 
@@ -103,12 +122,13 @@ reproduces the sequence exactly (re-decoding the original photo might not, in an
 - `src/core/`: pure functions with no DOM, unit-tested in Node: geometry, Wu rasteriser, line cache, darkness model,
   solver interface, greedy solver, metrics, preprocessing, CLAHE, background check, importance mask, threading view.
 - `src/worker/`: the solver worker and its typed message protocol (discriminated unions, transferred arrays).
+- `src/machine/`: the winding machine (see above).
 - `src/export/`: winding instructions, CSV, the nail template (SVG and tiled pages), the project file.
-- `src/ui/`: the page (main.ts), crop editor, parameters and presets, preview and loupe, threading mode, storage,
+- `src/ui/`: the page (main.ts), the machine page (machine.ts, machine-sim.ts), crop editor, parameters and presets, preview and loupe, threading mode, storage,
   image loading, languages (i18n*.ts).
-- `web/`: the page sources (index.html, about.html).
+- `web/`: the page sources (index.html, about.html, machine.html).
 - `app/`: the built page that GitHub Pages serves.
-- `tests/`: Vitest, 90 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
+- `tests/`: Vitest, 108 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
   about 5 s on a laptop; peak memory about 225 MB).
 
 ## License

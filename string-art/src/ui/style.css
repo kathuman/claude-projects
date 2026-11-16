@@ -152,3 +152,31 @@ body.tm-open{overflow:hidden;}
 .doc .eq{font-family:'Cambria Math','STIX Two Math','Times New Roman',serif; font-size:19px; color:var(--ink); background:var(--panel-2); border-left:3px solid var(--accent); border-radius:4px; padding:10px 14px; margin:8px 0 12px; overflow-x:auto; white-space:pre; line-height:1.5;}
 .doc .eq i{color:var(--accent);}
 .doc sub,.doc sup{font-size:.72em;}
+
+/* ---- 1.1: the winding-machine page */
+.mcols{grid-template-columns:320px minmax(0,1fr);}
+.mgroup{font-family:var(--head); font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin:14px 0 6px;}
+.mfield{display:grid; grid-template-columns:1fr auto auto; gap:4px 6px; align-items:center; font-size:13px; margin-bottom:6px;}
+.mfield .tip{grid-column:1 / -1;}
+.minput{display:flex; align-items:center; gap:4px;}
+.minput input{width:78px; font-family:var(--mono); font-size:12.5px; padding:4px 6px; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:5px; text-align:right;}
+.minput .unit{font-family:var(--mono); font-size:11px; color:var(--ink-faint); min-width:38px;}
+.mstage{position:relative; max-width:min(100%, 74vh);}
+.mstage canvas{width:100%; aspect-ratio:1; display:block; border-radius:10px; background:#0b2742; box-shadow:0 0 0 1px var(--line);}
+.mhud{position:absolute; left:10px; top:10px; font-size:12.5px; line-height:1.45; background:rgba(4,22,40,.78); border:1px solid var(--line); border-radius:6px; padding:6px 9px; pointer-events:none; max-width:60%;}
+.mhud .mono{font-family:var(--mono); font-size:11.5px; color:var(--ink-dim);}
+.mhud b{color:var(--warn); font-weight:600;}
+.mzoom{position:absolute; right:10px; bottom:10px; margin:0; width:min(34%, 220px);}
+.mzoom canvas{width:100%; aspect-ratio:1; display:block; border-radius:50%; box-shadow:0 0 0 2px var(--accent), 0 6px 20px rgba(0,0,0,.5);}
+.mzoom figcaption{font-family:var(--mono); font-size:10.5px; color:var(--ink-faint); text-align:center; margin-top:3px;}
+.mscrub{width:100%; max-width:min(100%, 74vh); accent-color:var(--accent); margin:10px 0 4px; display:block;}
+.badbox{border-left:3px solid var(--bad); background:var(--panel); padding:7px 9px; border-radius:4px; font-size:12.5px; line-height:1.45; margin:6px 0;}
+.mtext{font-size:13.5px; max-width:720px;}
+.msteps{padding-left:20px;}
+.msteps li{margin-bottom:4px;}
+.msteps b{color:var(--ink);}
+a.btn{text-decoration:none; display:inline-block;}
+@media (max-width: 760px){
+  .mcols{grid-template-columns:1fr;}
+  .mhud{position:static; max-width:none; margin-top:8px;}
+}

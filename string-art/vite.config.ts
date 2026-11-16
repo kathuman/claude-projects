@@ -12,7 +12,7 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "../app", emptyOutDir: true, target: "es2022", sourcemap: false,
-    rollupOptions: { input: { main: here + "web/index.html", about: here + "web/about.html" } }
+    rollupOptions: { input: { main: here + "web/index.html", about: here + "web/about.html", machine: here + "web/machine.html" } }
   },
   worker: { format: "es" },
   test: { root: here, include: ["tests/**/*.test.ts"], environment: "node", testTimeout: 120_000 }

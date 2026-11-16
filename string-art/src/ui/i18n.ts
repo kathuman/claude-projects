@@ -70,7 +70,7 @@ export function apply(scope: ParentNode = document): void {
   // links between the app's pages keep the language even where the choice cannot be stored
   scope.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((a) => {
     const h = a.getAttribute("href")!;
-    if (/^(index|about)\.html/.test(h)) a.setAttribute("href", withLang(h));
+    if (/^(index|about|machine)\.html/.test(h)) a.setAttribute("href", withLang(h));
   });
 }
 
