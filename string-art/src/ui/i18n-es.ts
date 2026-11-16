@@ -4,6 +4,16 @@ import type { Dict } from "./i18n";
 
 export const ES: Dict = {
   T: {
+    "Project loaded: the solver reproduced the saved sequence exactly ({n} lines).": "Proyecto cargado: el cálculo reprodujo exactamente la secuencia guardada ({n} líneas).",
+    "Project loaded, but this run differs from the saved sequence. It was probably saved with another version of the app.": "Proyecto cargado, pero este cálculo difiere de la secuencia guardada. Probablemente se guardó con otra versión de la aplicación.",
+    "That project file is damaged: its picture does not match its fingerprint.": "Ese archivo de proyecto está dañado: su imagen no coincide con su huella.",
+    "That project was saved by a newer version of the app.": "Ese proyecto se guardó con una versión más nueva de la aplicación.",
+    "That is not a String Art project file.": "Ese no es un archivo de proyecto de String Art.",
+    "String Art nail template · {n} nails · {d} mm board": "Plantilla de clavos de String Art · {n} clavos · tablero de {d} mm",
+    "100 mm × 100 mm: check with a ruler": "100 mm × 100 mm: compruébalo con una regla",
+    "row {r}, column {c}": "fila {r}, columna {c}",
+    "{n} pages of {paper} for a {d} mm board.": "{n} páginas {paper} para un tablero de {d} mm.",
+    "Print these pages at actual size (100 %, no scaling), check the 100 mm square with a ruler, then trim and tape the pages together, matching the crosses in the shaded overlaps.": "Imprime estas páginas a tamaño real (100 %, sin escalar), comprueba el cuadrado de 100 mm con una regla y luego recorta y une las páginas con cinta, haciendo coincidir las cruces de las franjas sombreadas que se solapan.",
     "Sample portrait": "Retrato de ejemplo",
     "The sample could not be loaded.": "No se pudo cargar el ejemplo.",
     "{n}, numbered 0 to {m} clockwise; nail 0 at the top": "{n}, numerados del 0 al {m} en sentido horario; el clavo 0 arriba",
@@ -77,6 +87,15 @@ export const ES: Dict = {
     "What does this do?": "¿Qué hace esto?"
   },
   H: {
+    "in.project": "Abrir un proyecto",
+    "in.projNote": "Un proyecto guarda la imagen tal como la vio el cálculo, no la foto original. Para cambiar el recorte, los ajustes o las marcas del pincel, vuelve a subir la foto.",
+    "h.template": "Plantilla de clavos",
+    "tpl.hint": "Las posiciones de los clavos a tamaño real, numeradas, para pegar sobre el tablero. Imprime a tamaño real (100 %, no “ajustar a la página”) y comprueba el cuadrado de 100 mm con una regla.",
+    "tpl.paper": "Papel",
+    "tpl.pages": "Páginas para imprimir",
+    "tpl.svg": "Una sola hoja (SVG)",
+    "dl.png": "Vista previa (PNG)",
+    "dl.project": "Archivo del proyecto",
     "dl.instructions": "Descargar las instrucciones de enrollado",
     "dl.csv": "Secuencia (CSV)",
     "brush.hint": "Pinta sobre la vista Objetivo. Las zonas cálidas cuentan hasta tres veces más y atraen más líneas; las frías cuentan apenas una quinta parte. Úsalo para los ojos, una boca o un borde que importe.",
@@ -134,6 +153,6 @@ export const ES: Dict = {
     "about.h.private": "Tus imágenes se quedan contigo",
     "about.private": "Todo se ejecuta en tu navegador. Las imágenes nunca se suben.",
     "about.h.status": "Lo que falta",
-    "about.status": "Esta es la versión 0.3: el cálculo, la vista previa en vivo y las medidas de calidad, y la preparación de la imagen — recortarla, acercarla y girarla, brillo, contraste y gamma, un refuerzo de contraste local, un pincel de importancia y una comprobación que avisa de las imágenes que no funcionarán bien; y, después de un cálculo, instrucciones de enrollado para descargar e imprimir, y la secuencia en CSV. Falta: una plantilla de clavos imprimible a tamaño real y las demás exportaciones; y un modo a pantalla completa que anuncia el siguiente clavo mientras enrollas."
+    "about.status": "Esta es la versión 0.4: el cálculo, la vista previa en vivo y las medidas de calidad, y la preparación de la imagen — recortarla, acercarla y girarla, brillo, contraste y gamma, un refuerzo de contraste local, un pincel de importancia y una comprobación que avisa de las imágenes que no funcionarán bien; una plantilla de clavos a tamaño real, repartida en páginas A4 o A3; y, después de un cálculo, instrucciones de enrollado para imprimir, la secuencia en CSV, la vista previa en PNG y un archivo de proyecto que se recarga exactamente. Falta: un modo a pantalla completa que anuncia el siguiente clavo mientras enrollas, ajustes guardados y preajustes."
   }
 };

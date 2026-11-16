@@ -6,12 +6,15 @@ by hand. Everything runs in the browser; nothing is uploaded.
 
 **Live:** https://kathuman.github.io/claude-projects/string-art/
 
-**Status:** version 0.3.0, milestone 3 of 5. Upload a picture (or use the drawn sample); move, zoom and turn it under
-the board circle; adjust brightness, contrast and gamma, or boost local contrast with CLAHE; paint what matters with
-the importance brush; heed the background check; set every solver parameter; run the solver in a Web Worker with live
-progress, pause, resume and cancel; watch the thread go on at true thickness; compare it side by side with the target;
-and read the quality numbers. In English, Spanish and Danish. Still to come: exports including a 1:1 nail template and
-printable winding instructions (M4); the threading mode, saved settings and presets (M5).
+**Status:** version 0.4.0, milestone 4 of 5. Upload a picture (or use the sample portrait); move, zoom and turn it
+under the board circle; adjust brightness, contrast and gamma, or boost local contrast with CLAHE; paint what matters
+with the importance brush; heed the background check; set every solver parameter; run the solver in a Web Worker
+with live progress, pause, resume and cancel; watch the thread go on at true thickness; and read the quality numbers.
+Exports: a nail template at true size (one SVG sheet, or A4/A3 pages with overlaps, alignment crosses and a 100 mm
+calibration square placed clear of the nails); printable winding instructions (blocks of 10 with checkboxes that
+remember progress); the sequence as CSV; the preview as PNG; and a project file that stores the processed target with
+its hash, so reloading reproduces the sequence exactly. In English, Spanish and Danish. Still to come (M5): the
+threading mode, saved settings and presets.
 
 Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
 
@@ -62,6 +65,7 @@ committed alongside the source. The page's source is `web/index.html` plus `src/
 - `src/core/checks.ts`: the background check (low contrast; busy border, measured on a fixed 128-px copy).
 - `src/core/mask.ts`: the importance mask and its multiplicative Gaussian brush.
 - `src/worker/`: the solver worker and its typed message protocol.
+- `src/export/`: winding instructions, CSV, the nail template (SVG and tiled pages), the project file.
 - `src/ui/`: the page (main.ts), crop editor, parameters, thread preview, image loading, languages (i18n*.ts).
 - `web/`: the page sources (index.html, about.html).
 - `app/`: the built page that GitHub Pages serves. CI rebuilds it and fails if the committed copy differs.

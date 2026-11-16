@@ -9,13 +9,15 @@ import { buildTarget, linearLuminance, NO_ADJUSTMENT, type Crop, type Prep, type
 import type { StopReason } from "../core/solver";
 import type { DoneResult, FromWorker, ToWorker } from "../worker/protocol";
 import { CropEditor, rgbaCanvas, ZOOM_MAX, ZOOM_MIN } from "./crop";
-import { T, apply, fx, int, locale, mountSwitch } from "./i18n";
+import { LANGS, T, apply, fx, int, lang, locale, mountSwitch } from "./i18n";
 import { loadImageFile, loadSample } from "./image";
 import { DEFAULT_UI, buildParams, type UiParams } from "./params";
 import { ThreadPreview, drawTargetWithMask } from "./preview";
 import { VERSION } from "./version";
 import { instructionsHtml } from "../export/instructions";
 import { sequenceCsv } from "../export/csv";
+import { templatePages, templatePrintHtml, templateSvg, type Paper } from "../export/template";
+import { loadProject, saveProject } from "../export/project";
 
 apply();
 mountSwitch();
@@ -36,16 +38,21 @@ const state = {
   paused: false,
   maxLines: 0,
   runParams: null as UiParams | null,
+  runPrep: null as Prep | null,
+  expectSeq: null as Uint16Array | null,   // a loaded project's sequence, to confirm the re-run matches
+  paper: "A4" as Paper,
   result: null as DoneResult | null
 };
 
 const preview = new ThreadPreview($<HTMLCanvasElement>("threadCanvas"));
-const params = buildParams($("params"), DEFAULT_UI, (p) => { if (p.workingRes !== state.targetRes) scheduleTarget(); setButtons(); });
+const params = buildParams($("params"), DEFAULT_UI, (p) => { if (p.workingRes !== state.targetRes && state.src) scheduleTarget(); setButtons(); tplInfo(); });
 const crop = new CropEditor($<HTMLCanvasElement>("cropCanvas"), (c) => { state.prep.crop = c; syncCropControls(c); scheduleTarget(); });
 
 // ---------------------------------------------------------------- the picture
 function setSource(img: Rgba, name: string): void {
   state.src = { lum: linearLuminance(img), width: img.width, height: img.height };
+  state.expectSeq = null;
+  $("projNote").hidden = true;
   $("srcName").textContent = name;
   $("inputHint").hidden = true;
   $("editPanel").hidden = false;
@@ -198,6 +205,7 @@ function run(): void {
   const p: UiParams = params.get();
   if (p.workingRes !== state.targetRes) rebuildTarget();
   state.jobId++; state.running = true; state.paused = false; state.result = null; state.maxLines = p.maxLines; state.runParams = p;
+  state.runPrep = JSON.parse(JSON.stringify(state.prep)) as Prep;
   $("downloads").hidden = true;
   setBrush("off");
   preview.reset(p.nails, state.targetRes, p.marginPx, p.boardMm, p.threadMm, p.darkness);
@@ -236,6 +244,13 @@ function onWorker(m: FromWorker): void {
       finish();
       setBar(1);
       status(stopText(m.result.stopReason, m.result.steps), m.result.stopReason === "cancelled" ? "warn" : "good");
+      if (state.expectSeq) {
+        const want = state.expectSeq, got = m.result.sequences[0].sequence;
+        const same = got.length === want.length && got.every((v, i) => v === want[i]);
+        status(same ? T("Project loaded: the solver reproduced the saved sequence exactly ({n} lines).", { n: int(m.result.steps) })
+          : T("Project loaded, but this run differs from the saved sequence. It was probably saved with another version of the app."), same ? "good" : "warn");
+        state.expectSeq = null;
+      }
       showMetrics(m.result);
       $("downloads").hidden = m.result.steps === 0;
       break;
@@ -275,7 +290,7 @@ function setButtons(): void {
   $<HTMLButtonElement>("btnCancel").disabled = !state.running;
   $("btnPause").textContent = state.paused ? T("Resume") : T("Pause");
   params.disable(state.running);
-  for (const id of ["file", "btnSample", "zoom", "rotate", "btnCropReset", "brightness", "contrast", "gamma", "clahe", "claheClip", "btnAdjReset", "brushSize", "btnMaskClear"])
+  for (const id of ["projFile", "file", "btnSample", "zoom", "rotate", "btnCropReset", "brightness", "contrast", "gamma", "clahe", "claheClip", "btnAdjReset", "brushSize", "btnMaskClear"])
     ($(id) as HTMLInputElement).disabled = state.running;
   document.querySelectorAll<HTMLButtonElement>("#segBrush button").forEach((b) => { b.disabled = state.running; });
   $("cropCanvas").style.pointerEvents = state.running ? "none" : "";
@@ -328,6 +343,76 @@ function instructionsDoc(): string | null {
 }
 const fileBase = () => `string-art-${state.runParams!.nails}-nails-${state.result!.steps}-lines`;
 $("btnInstructions").addEventListener("click", () => { const doc = instructionsDoc(); if (doc) save(fileBase() + ".html", doc, "text/html"); });
+$("btnPng").addEventListener("click", () => {
+  preview.full.toBlob((b) => {
+    if (!b) return;
+    const url = URL.createObjectURL(b), a = document.createElement("a");
+    a.href = url; a.download = fileBase() + ".png"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }, "image/png");
+});
+function projectText(): string | null {
+  const r = state.result, p = state.runParams;
+  if (!r || !p || !state.target) return null;
+  return saveProject({ params: p, prep: state.runPrep ?? state.prep, res: state.targetRes, target: state.target, mask: state.mask,
+    sequence: r.sequences[0].sequence, version: VERSION, saved: new Date().toISOString() });
+}
+$("btnProject").addEventListener("click", () => { const t = projectText(); if (t) save(fileBase() + ".json", t, "application/json"); });
+$<HTMLInputElement>("projFile").addEventListener("change", async (ev) => {
+  const input = ev.target as HTMLInputElement, f = input.files?.[0];
+  input.value = "";
+  if (!f) return;
+  try {
+    const pr = loadProject(await f.text());
+    state.src = null;
+    params.set({ ...pr.file.params, workingRes: pr.file.res });
+    state.prep = pr.file.prep;
+    state.target = pr.target; state.targetRes = pr.file.res; state.mask = pr.mask;
+    const mask = circleMask(makeGeometry(pr.file.params.nails, pr.file.res, pr.file.params.marginPx));
+    state.check = checkTarget(pr.target, pr.file.res, mask);
+    $("srcName").textContent = f.name;
+    $("inputHint").hidden = true; $("editPanel").hidden = false; $("projNote").hidden = false;
+    drawTargetWithMask($<HTMLCanvasElement>("targetSmall"), pr.target, null, pr.file.res);
+    redrawTargetView(); showChecks(state.check);
+    state.expectSeq = pr.sequence;
+    run();
+  } catch (e) {
+    const code = e instanceof Error ? e.message : "";
+    status(code === "bad-hash" ? T("That project file is damaged: its picture does not match its fingerprint.")
+      : code === "newer-format" ? T("That project was saved by a newer version of the app.") : T("That is not a String Art project file."), "bad");
+  }
+});
+
+// ---------------------------------------------------------------- the nail template
+function tplLabels() {
+  const p = params.get();
+  return {
+    title: T("String Art nail template · {n} nails · {d} mm board", { n: p.nails, d: p.boardMm }),
+    calibration: T("100 mm × 100 mm: check with a ruler"),
+    page: (r: number, c: number) => T("row {r}, column {c}", { r, c })
+  };
+}
+function tplInfo(): void {
+  const p = params.get(), n = templatePages({ nails: p.nails, boardMm: p.boardMm, labels: tplLabels() }, state.paper).length;
+  $("tplInfo").textContent = T("{n} pages of {paper} for a {d} mm board.", { n, paper: state.paper, d: p.boardMm });
+}
+document.querySelectorAll<HTMLButtonElement>("#segPaper button").forEach((b) => b.addEventListener("click", () => {
+  state.paper = b.dataset.v as Paper;
+  document.querySelectorAll("#segPaper button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  tplInfo();
+}));
+$("btnTplPages").addEventListener("click", () => {
+  const p = params.get(), d = { nails: p.nails, boardMm: p.boardMm, labels: tplLabels() };
+  save(`string-art-template-${p.nails}-nails-${p.boardMm}mm-${state.paper}.html`,
+    templatePrintHtml(templatePages(d, state.paper), state.paper, d.labels.title,
+      T("Print these pages at actual size (100 %, no scaling), check the 100 mm square with a ruler, then trim and tape the pages together, matching the crosses in the shaded overlaps."), LANGS[lang].html),
+    "text/html");
+});
+$("btnTplSvg").addEventListener("click", () => {
+  const p = params.get();
+  save(`string-art-template-${p.nails}-nails-${p.boardMm}mm.svg`, templateSvg({ nails: p.nails, boardMm: p.boardMm, labels: tplLabels() }), "image/svg+xml");
+});
+
 $("btnCsv").addEventListener("click", () => {
   const r = state.result, p = state.runParams;
   if (r && p) save(fileBase() + ".csv", sequenceCsv(r.sequences[0].sequence, p.nails, p.boardMm), "text/csv");
@@ -341,5 +426,6 @@ function setView(v: string): void {
 document.querySelectorAll<HTMLButtonElement>("#segView button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.v!)));
 
 setButtons();
+tplInfo();
 // test hook for the browser checks
-(window as unknown as { __sa: unknown }).__sa = { state, params, crop, run, setBrush, instructionsDoc, setSample: () => $("btnSample").click() };
+(window as unknown as { __sa: unknown }).__sa = { state, params, crop, run, setBrush, instructionsDoc, projectText, setSample: () => $("btnSample").click() };

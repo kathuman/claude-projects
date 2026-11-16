@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <script type="module" crossorigin src="./assets/main-BrgC6W6K.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/version-B0J5wjcN.js">
+  <script type="module" crossorigin src="./assets/main-D7q8AZYO.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/version-CCLoGjHT.js">
   <link rel="stylesheet" crossorigin href="./assets/version-CnmyQX9U.css">
 </head>
 <body>
@@ -34,8 +34,10 @@
       <div class="runbar">
         <label class="btn primary upload"><input type="file" id="file" accept="image/jpeg,image/png,image/webp" /><span data-i18n="in.upload">Upload a picture</span></label>
         <button class="btn" id="btnSample" data-i18n="in.sample">Use the sample</button>
+        <label class="btn upload"><input type="file" id="projFile" accept=".json,application/json" /><span data-i18n="in.project">Open a project</span></label>
       </div>
       <p class="src-name" id="srcName"></p>
+      <p class="fine" id="projNote" hidden data-i18n="in.projNote">A project keeps the picture as the solver saw it, not the original photo. To change the crop, the adjustments or the brush marks, upload the photo again.</p>
       <p class="hint" id="inputHint" data-i18n="in.hint">Choose a picture: a face or object with strong contrast against a plain background works best. Nothing is uploaded anywhere; everything runs in your browser.</p>
 
       <div id="editPanel" hidden>
@@ -70,6 +72,16 @@
     <section class="col side params">
       <h2 data-i18n="h.params">Parameters</h2>
       <div id="params"></div>
+      <h2 data-i18n="h.template">Nail template</h2>
+      <p class="fine" data-i18n="tpl.hint">The nail positions at true size, numbered, to tape to the board. Print at actual size (100 %, not “fit to page”) and check the 100 mm square with a ruler.</p>
+      <div class="seg seg-block" id="segPaper" role="group" data-i18n-attr="aria-label=tpl.paper" aria-label="Paper">
+        <button data-v="A4" aria-pressed="true">A4</button><button data-v="A3" aria-pressed="false">A3</button>
+      </div>
+      <div class="runbar">
+        <button class="btn" id="btnTplPages" data-i18n="tpl.pages">Pages to print</button>
+        <button class="btn" id="btnTplSvg" data-i18n="tpl.svg">One sheet (SVG)</button>
+      </div>
+      <p class="fine" id="tplInfo"></p>
     </section>
 
     <main class="col out">
@@ -92,6 +104,8 @@
       <div class="runbar" id="downloads" hidden>
         <button class="btn primary" id="btnInstructions" data-i18n="dl.instructions">Download winding instructions</button>
         <button class="btn" id="btnCsv" data-i18n="dl.csv">Sequence (CSV)</button>
+        <button class="btn" id="btnPng" data-i18n="dl.png">Preview (PNG)</button>
+        <button class="btn" id="btnProject" data-i18n="dl.project">Project file</button>
       </div>
       <h2 data-i18n="h.metrics">Result</h2>
       <table class="metrics"><tbody id="metrics"></tbody></table>

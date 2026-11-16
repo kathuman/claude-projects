@@ -3,6 +3,16 @@ import type { Dict } from "./i18n";
 
 export const DA: Dict = {
   T: {
+    "Project loaded: the solver reproduced the saved sequence exactly ({n} lines).": "Projekt indlæst: beregningen gentog den gemte rækkefølge præcist ({n} linjer).",
+    "Project loaded, but this run differs from the saved sequence. It was probably saved with another version of the app.": "Projekt indlæst, men denne beregning afviger fra den gemte rækkefølge. Det er nok gemt med en anden version af appen.",
+    "That project file is damaged: its picture does not match its fingerprint.": "Projektfilen er beskadiget: billedet passer ikke til dets fingeraftryk.",
+    "That project was saved by a newer version of the app.": "Projektet er gemt med en nyere version af appen.",
+    "That is not a String Art project file.": "Det er ikke en String Art-projektfil.",
+    "String Art nail template · {n} nails · {d} mm board": "String Art-sømskabelon · {n} søm · plade på {d} mm",
+    "100 mm × 100 mm: check with a ruler": "100 mm × 100 mm: kontrollér med en lineal",
+    "row {r}, column {c}": "række {r}, kolonne {c}",
+    "{n} pages of {paper} for a {d} mm board.": "{n} sider i {paper} til en plade på {d} mm.",
+    "Print these pages at actual size (100 %, no scaling), check the 100 mm square with a ruler, then trim and tape the pages together, matching the crosses in the shaded overlaps.": "Udskriv siderne i faktisk størrelse (100 %, ingen skalering), kontrollér kvadratet på 100 mm med en lineal, og klip og tape så siderne sammen, så krydsene i de skraverede overlap passer.",
     "Sample portrait": "Eksempelportræt",
     "The sample could not be loaded.": "Eksemplet kunne ikke indlæses.",
     "{n}, numbered 0 to {m} clockwise; nail 0 at the top": "{n}, nummereret 0 til {m} med uret; søm 0 øverst",
@@ -76,6 +86,15 @@ export const DA: Dict = {
     "What does this do?": "Hvad gør denne?"
   },
   H: {
+    "in.project": "Åbn et projekt",
+    "in.projNote": "Et projekt gemmer billedet, som beregningen så det, ikke det originale foto. Upload fotoet igen for at ændre beskæringen, justeringerne eller penselstrøgene.",
+    "h.template": "Sømskabelon",
+    "tpl.hint": "Sømmenes placering i fuld størrelse, nummereret, til at tape på pladen. Udskriv i faktisk størrelse (100 %, ikke “tilpas til side”), og kontrollér kvadratet på 100 mm med en lineal.",
+    "tpl.paper": "Papir",
+    "tpl.pages": "Sider til udskrift",
+    "tpl.svg": "Ét ark (SVG)",
+    "dl.png": "Forhåndsvisning (PNG)",
+    "dl.project": "Projektfil",
     "dl.instructions": "Hent viklevejledningen",
     "dl.csv": "Rækkefølge (CSV)",
     "brush.hint": "Mal på visningen Mål. Varme områder tæller op til tre gange så meget og får flere linjer; kolde områder tæller ned til en femtedel. Brug den til øjne, en mund eller en kant, der betyder noget.",
@@ -133,6 +152,6 @@ export const DA: Dict = {
     "about.h.private": "Dine billeder bliver hos dig",
     "about.private": "Alt kører i din browser. Billeder bliver aldrig uploadet.",
     "about.h.status": "Det, der mangler",
-    "about.status": "Dette er version 0.3: beregningen, den levende forhåndsvisning og kvalitetstallene samt forberedelse af billedet — beskæring, zoom og drejning, lysstyrke, kontrast og gamma, lokal kontrastforstærkning, en vigtighedspensel og et tjek, der advarer om billeder, som ikke vil fungere godt; og efter en beregning en viklevejledning til at hente og udskrive samt rækkefølgen som CSV. Mangler endnu: en printbar sømskabelon i fuld størrelse og de øvrige eksporter; og en fuldskærmstilstand, der siger det næste søm, mens du vikler."
+    "about.status": "Dette er version 0.4: beregningen, den levende forhåndsvisning og kvalitetstallene samt forberedelse af billedet — beskæring, zoom og drejning, lysstyrke, kontrast og gamma, lokal kontrastforstærkning, en vigtighedspensel og et tjek, der advarer om billeder, som ikke vil fungere godt; en sømskabelon i fuld størrelse fordelt på A4- eller A3-sider; og efter en beregning en viklevejledning til udskrift, rækkefølgen som CSV, forhåndsvisningen som PNG og en projektfil, der kan genindlæses præcist. Mangler endnu: en fuldskærmstilstand, der siger det næste søm, mens du vikler, gemte indstillinger og forvalg."
   }
 };
