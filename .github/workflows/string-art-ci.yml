@@ -37,6 +37,7 @@ jobs:
           if [ -n "$(git status --porcelain -- app)" ]; then
             echo "string-art/app/ differs from a fresh build: run npm run build in string-art/ and commit app/"
             git status --porcelain -- app
+            git --no-pager diff -- app | head -60
             exit 1
           fi
         shell: bash
