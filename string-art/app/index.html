@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="title">String Art — One Thread, One Picture</title>
+  <meta data-i18n-attr="content=meta" name="description" content="Turn a picture into string art: one continuous thread wound between nails on a circular frame. The app finds the order of nails that best reproduces the picture and shows a realistic preview, all in your browser." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2242%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%226%22/><path d=%22M50 8 L86 71 L14 71 Z M50 8 L50 92 M14 29 L86 71 M86 29 L14 71%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%223%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <script type="module" crossorigin src="./assets/main-D4D3f_YW.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/version-DVQLhZzD.js">
+  <link rel="stylesheet" crossorigin href="./assets/version-PA4COSsE.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">String <span>Art</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub" data-i18n="sub">one thread, one picture</span>
+    </div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="about.html" data-i18n="nav.about">About</a>
+      <a class="back-link" href="../../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <div class="cols">
+    <aside class="col side input">
+      <h2 data-i18n="h.picture">Picture</h2>
+      <div class="runbar">
+        <label class="btn primary upload"><input type="file" id="file" accept="image/jpeg,image/png,image/webp" /><span data-i18n="in.upload">Upload a picture</span></label>
+        <button class="btn" id="btnSample" data-i18n="in.sample">Use the sample</button>
+      </div>
+      <p class="src-name" id="srcName"></p>
+      <canvas class="thumb" id="targetSmall" width="1" height="1" data-i18n-attr="aria-label=in.thumb" aria-label="The picture as the solver sees it"></canvas>
+      <p class="hint" id="inputHint" data-i18n="in.hint">Choose a picture: a face or object with strong contrast against a plain background works best. Nothing is uploaded anywhere; everything runs in your browser.</p>
+      <p class="fine" data-i18n="in.note">The picture is cropped to the middle square and shown as the darkness the thread has to make. Cropping, rotating, brightness and contrast controls, and a brush to mark important areas, come in the next version.</p>
+    </aside>
+
+    <section class="col side params">
+      <h2 data-i18n="h.params">Parameters</h2>
+      <div id="params"></div>
+    </section>
+
+    <main class="col out">
+      <div class="out-bar">
+        <div class="runbar">
+          <button class="btn primary" id="btnRun" data-i18n="run.run">Run</button>
+          <button class="btn" id="btnPause" data-i18n="run.pause">Pause</button>
+          <button class="btn" id="btnCancel" data-i18n="run.cancel">Cancel</button>
+        </div>
+        <div class="seg" id="segView" role="group" data-i18n-attr="aria-label=view.label" aria-label="Show">
+          <button data-v="thread" aria-pressed="true" data-i18n="view.thread">Thread</button><button data-v="target" aria-pressed="false" data-i18n="view.target">Target</button><button data-v="both" aria-pressed="false" data-i18n="view.both">Side by side</button>
+        </div>
+      </div>
+      <div class="stage" id="stage" data-view="thread">
+        <figure class="thr"><canvas id="threadCanvas" width="400" height="400" data-i18n-attr="aria-label=view.threadLabel" aria-label="Preview of the thread on the board"></canvas><figcaption data-i18n="view.threadCap">thread, drawn at true thickness</figcaption></figure>
+        <figure class="tgt"><canvas id="targetCanvas" width="1" height="1" data-i18n-attr="aria-label=view.targetLabel" aria-label="The target the solver aims for"></canvas><figcaption data-i18n="view.targetCap">target darkness</figcaption></figure>
+      </div>
+      <div class="bar" id="bar"><i></i></div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <h2 data-i18n="h.metrics">Result</h2>
+      <table class="metrics"><tbody id="metrics"></tbody></table>
+      <details class="log"><summary data-i18n="log.summary">Solver log</summary><pre id="log"></pre></details>
+    </main>
+  </div>
+</div>
+</body>
+</html>

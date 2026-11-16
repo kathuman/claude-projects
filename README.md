@@ -164,6 +164,7 @@ turbine-lab/index.html             — https://kathuman.github.io/claude-project
 heat-pump-studio/index.html        — https://kathuman.github.io/claude-projects/heat-pump-studio/
 tech-uni-atlas/index.html          — https://kathuman.github.io/claude-projects/tech-uni-atlas/
 escapement/index.html              — https://kathuman.github.io/claude-projects/escapement/
+string-art/ (built into app/)       — https://kathuman.github.io/claude-projects/string-art/
 ```
 
 `warehouse-model` and `network-stress-test` are multi-file projects (several JS modules

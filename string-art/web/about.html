@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="about.title">About String Art</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark">String <span>Art</span></div></div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="index.html" data-i18n="about.back">← Back to the app</a>
+      <a class="back-link" href="../../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+  <main class="doc">
+    <h1 data-i18n="about.h1">About String Art</h1>
+    <p class="ver" id="aboutVer"></p>
+    <p data-i18n="about.p1">String Art turns a picture into instructions for a classic piece of craft: nails around a circular board and one black thread wound from nail to nail, thousands of times, until the crossings of the thread draw the picture. The app works out the order of the nails and shows what the finished piece will look like.</p>
+    <h2 data-i18n="about.h.how">How it chooses the lines</h2>
+    <p data-i18n="about.how">The picture becomes a map of how dark each spot must be. Starting from one nail, the app tries every line it is allowed to wind next and keeps the one that brings the simulated board closest to that map, then carries on from where that line ends. Thread darkens the board the way real thread does: each pass hides a fraction of whatever white is still showing, so crossings get darker but never more than black. It stops when it reaches the most lines you allow, or when no line improves the picture any more.</p>
+    <h2 data-i18n="about.h.numbers">The numbers</h2>
+    <p data-i18n="about.numbers">RMSE measures how far the simulated board is from the target, pixel by pixel (0 is a perfect match). SSIM compares local brightness, contrast and structure (1 is identical); because thread is a fine texture of lines, the app also gives SSIM after a slight blur, closer to what you see from a few steps away. The thread length is the sum of all the lines, with 10 % more for winding round the nails and slack.</p>
+    <h2 data-i18n="about.h.private">Your pictures stay with you</h2>
+    <p data-i18n="about.private">Everything runs in your browser. Pictures are never uploaded.</p>
+    <h2 data-i18n="about.h.status">What is still to come</h2>
+    <p data-i18n="about.status">This is version 0.2: the solver, the live preview and the quality numbers. Still to come: cropping and adjusting the picture and marking important areas; a printable nail template at true size, step-by-step winding instructions and other exports; and a full-screen mode that calls out the next nail while you wind.</p>
+  </main>
+</div>
+<script type="module" src="../src/ui/about.ts"></script>
+</body>
+</html>

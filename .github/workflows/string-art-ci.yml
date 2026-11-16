@@ -1,0 +1,42 @@
+name: String Art tests
+
+# The string-art core: nail geometry, Wu chords, the darkness model, the greedy solver (synthetic recovery, constraints,
+# determinism, pause/cancel) and the N=240, K=3000 benchmark; image preparation; the Spanish and Danish translations;
+# a TypeScript type check; and a check that the committed build in string-art/app/ matches the source (GitHub Pages
+# serves app/ as committed, with no build step).
+on:
+  push:
+    paths:
+      - 'string-art/**'
+      - '.github/workflows/string-art-ci.yml'
+  pull_request:
+    paths:
+      - 'string-art/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: string-art
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: string-art/package-lock.json
+      - run: npm ci --no-fund --no-audit
+      - run: npm run typecheck
+      - run: npm test
+      - name: The committed build is up to date
+        run: |
+          npm run build
+          if [ -n "$(git status --porcelain -- app)" ]; then
+            echo "string-art/app/ differs from a fresh build: run npm run build in string-art/ and commit app/"
+            git status --porcelain -- app
+            exit 1
+          fi
+        shell: bash
