@@ -7,12 +7,15 @@
 //   tight    a line that leaves a nail at a shallow angle rubs the neighbouring nail and is pulled out of line; the
 //            sequence's minimum nail skip decides how many there are
 //   speed    the board turns slower than its axis limit because the spool cannot pay thread out faster
+//   tension  the winding tension must keep the longest line straight, must not bend the busiest nail of this piece,
+//            and the thread must be strong enough for the peak tension (hardware/tension.ts)
 
 import { gapMm, pitchMm, xSpeedLimit, zTopMm, type MachineConfig } from "./config";
+import { tension } from "../hardware/tension";
 import type { Plan } from "./toolpath";
 
 export type Level = "ok" | "warn" | "error";
-export interface Check { code: "gap" | "inside" | "outside" | "height" | "tight" | "speed"; level: Level; v: Record<string, number> }
+export interface Check { code: "gap" | "inside" | "outside" | "height" | "tight" | "speed" | "tension"; level: Level; v: Record<string, number> }
 
 /** Distance from point (px, py) to the segment (ax, ay)–(bx, by). */
 function segDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
@@ -70,6 +73,14 @@ export function machineChecks(sequence: ArrayLike<number>, c: MachineConfig, pla
 
   const vx = xSpeedLimit(c);
   out.push({ code: "speed", level: "ok", v: { limit: vx, axis: c.xSpeed, capped: vx < c.xSpeed ? 1 : 0 } });
+
+  const n = Math.max(1, plan.maxWraps), tr = tension(c, undefined, n);
+  const weak = tr.thread.breaking < tr.required.cone, breaks = tr.thread.breaking * 0.55 < tr.peak.cone;
+  const bends = c.tensionN > tr.nailLimit, sags = c.tensionN < tr.sag.minT;
+  out.push({
+    code: "tension", level: breaks ? "error" : weak || bends || sags ? "warn" : "ok",
+    v: { t: c.tensionN, n, limit: tr.nailLimit, minT: tr.sag.minT, breaking: tr.thread.breaking, required: tr.required.cone, peak: tr.peak.cone, weak: weak ? 1 : 0, bends: bends ? 1 : 0, sags: sags ? 1 : 0 }
+  });
   return out;
 }
 

@@ -83,7 +83,7 @@ describe("layout", () => {
 
 describe("CAD output", () => {
   it("has every printed part as an STL that matches its listed size and sits on the bed", () => {
-    expect(parts.parts.length).toBeGreaterThanOrEqual(12);
+    expect(parts.parts.length).toBeGreaterThanOrEqual(13);
     for (const p of parts.parts) {
       const f = join(pub, p.file);
       expect(existsSync(f), p.file).toBe(true);
@@ -95,12 +95,25 @@ describe("CAD output", () => {
       expect(p.volume).toBeGreaterThan(0);
     }
   });
+  it("prints every part the right way up: its centre of mass in the lower half", () => {
+    for (const p of parts.parts) {
+      const b = readFileSync(join(pub, p.file)), n = b.readUInt32LE(80);
+      let V = 0, Z = 0;
+      for (let i = 0; i < n; i++) {
+        const v = [0, 1, 2].map((t) => [0, 1, 2].map((k) => b.readFloatLE(84 + i * 50 + 12 + t * 12 + k * 4)));
+        const [a, c, d] = v, vol = (a[0] * (c[1] * d[2] - c[2] * d[1]) - a[1] * (c[0] * d[2] - c[2] * d[0]) + a[2] * (c[0] * d[1] - c[1] * d[0])) / 6;
+        V += vol; Z += (vol * (a[2] + c[2] + d[2])) / 4;
+      }
+      expect(V / 1000, p.id).toBeCloseTo(p.volume, 0);
+      expect(Z / V / p.size[2], p.id).toBeLessThanOrEqual(0.52);
+    }
+  });
   it("has an assembly GLB with named parts and the FreeCAD model", () => {
     const b = readFileSync(join(pub, "machine.glb"));
     expect(b.toString("ascii", 0, 4)).toBe("glTF");
     const j = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString()) as { nodes: { name?: string }[] };
     const names = j.nodes.map((n) => n.name ?? "");
-    for (const n of ["W_base", "W_platter", "B_nail_board", "N_nails", "P_turntable_pulley", "P_guide_arm", "T_brass_guide_tube", "M_x_motor"]) expect(names).toContain(n);
+    for (const n of ["W_base", "W_platter", "B_nail_board", "N_nails", "P_turntable_pulley", "P_guide_arm", "T_brass_guide_tube", "M_x_motor", "T_thread_cone", "P_tensioner_bracket"]) expect(names).toContain(n);
     expect(b.length).toBeLessThan(4e6);
     expect(existsSync(join(pub, "string-art-machine.FCStd"))).toBe(true);
   });

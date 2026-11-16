@@ -38,6 +38,7 @@ export interface MachineConfig {
   ySteps: number;           // steps per mm of guide travel
   zSteps: number;           // steps per mm of guide height
   pauseEvery: number;       // stop (M0) after every this many lines so the winding can be checked; 0 = never
+  tensionN: number;         // thread tension leaving the guide, set at the tensioner (src/hardware/tension.ts)
 }
 
 export type MachineKey = Exclude<keyof MachineConfig, "nails" | "boardMm" | "threadMm">;
@@ -52,7 +53,7 @@ export const DEFAULT_MACHINE: MachineConfig = {
   nailMm: 1.5, nailHeightMm: 18,
   guideMm: 2.5, insideMm: 8, outsideMm: 6, zStartMm: 3, layerMm: 0.3,
   xSpeed: 60, xAccel: 120, ySpeed: 40, yAccel: 400, zSpeed: 10, zAccel: 100, threadSpeed: 400,
-  xSteps: 71.111, ySteps: 80, zSteps: 400, pauseEvery: 0
+  xSteps: 71.111, ySteps: 80, zSteps: 400, pauseEvery: 0, tensionN: 0.25
 };
 
 /** Degrees between neighbouring nails. */

@@ -20,7 +20,7 @@ EXPECTED = {
         ("A_y_belt", "P_guide_arm"), ("A_y_belt", "A_y_pulley"), ("A_y_belt", "A_y_idler"),
         ("A_x_belt", "P_turntable_pulley"), ("A_x_belt", "A_x_pulley_20t"),
         ("A_mgn9_rail", "A_mgn9h_carriage"), ("A_mgn12_rail", "A_mgn12h_carriage"),
-        ("T_thread_spool", "P_spool_holder"),
+        ("T_thread_cone", "P_cone_stand"), ("A_tension_discs", "P_tensioner_bracket"),
         ("T_ptfe_tube", "P_dancer_arm"), ("T_ptfe_tube", "P_dancer_bracket"),
     ]
 }

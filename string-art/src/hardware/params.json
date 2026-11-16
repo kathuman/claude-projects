@@ -9,5 +9,16 @@
   "guide": { "tubeOD": 2.5, "tubeID": 1.6, "tubeLength": 40, "armReach": 60, "ptfeOD": 4, "ptfeID": 2 },
   "motor": { "size": 42.3, "length": 48, "shaft": 5, "shaftLength": 24, "holdingTorque": 0.45, "torqueAtSpeed": 0.3 },
   "electronics": { "supplyV": 12, "supplyA": 5 },
-  "materials": { "plywoodDensity": 650 }
+  "materials": { "plywoodDensity": 650 },
+  "spool": { "_comment": "a thread cone standing still; the thread comes off over its top through an eyelet, then a disc tensioner", "coneBase": 60, "coneTop": 40, "coneHeight": 75, "eyeletAbove": 42 },
+  "tension": {
+    "_comment": "inputs of the thread-tension calculation (src/hardware/tension.ts); friction coefficients, steel strength and thread strengths are typical values, not measurements",
+    "path": [ { "id": "dancer", "angle": 1.5708, "mu": 0.25 }, { "id": "ptfe", "angle": 3.0, "mu": 0.1 }, { "id": "tip", "angle": 1.5708, "mu": 0.2 } ],
+    "busiestWraps": 25, "minSkip": 20, "embed": 1.5, "nailYield": 400, "nailYieldHard": 600, "nailSafety": 1.5,
+    "sagLimitMm": 0.1,
+    "pinSpool": { "massFull": 0.125, "rOuter": 25, "rCore": 10, "massEmpty": 0.025, "rOuterEmpty": 11 },
+    "coneVariation": 0.15, "stickSlip": 1.3,
+    "safety": 3, "knotEfficiency": 0.55, "packing": 0.6, "practicalMinMm": 0.15,
+    "fibres": { "polyester": { "density": 1380, "tenacity": 0.40 }, "nylon": { "density": 1140, "tenacity": 0.45 }, "cotton": { "density": 1540, "tenacity": 0.22 } }
+  }
 }

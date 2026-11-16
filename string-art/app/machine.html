@@ -9,11 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <script type="module" crossorigin src="./assets/machine-BXCRLz27.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/version-CJEb4Ypl.js">
-  <link rel="modulepreload" crossorigin href="./assets/config-FBRDSFyF.js">
-  <link rel="modulepreload" crossorigin href="./assets/store-Dslk4PR3.js">
-  <link rel="stylesheet" crossorigin href="./assets/version-DexkIPbJ.css">
+  <script type="module" crossorigin src="./assets/machine-BzWjHx5f.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/version-CDVf1l3d.js">
+  <link rel="modulepreload" crossorigin href="./assets/tension-BvM2CuSM.js">
+  <link rel="modulepreload" crossorigin href="./assets/instructions-DzoJYlWP.js">
+  <link rel="stylesheet" crossorigin href="./assets/version-Cw1afWp9.css">
 </head>
 <body>
 <div class="app">
@@ -69,6 +69,64 @@
         <button class="btn primary" id="mcGcode" data-i18n="mc.gcode">Download G-code</button>
       </div>
       <p class="fine" data-i18n="mc.gcodeHint">For GRBL (or Marlin) on three axes. The file starts with the controller settings and the steps to set up; it stops for you to tie the thread on and off.</p>
+
+      <section class="wind" id="wind">
+        <h2 data-i18n="wd.h">Wind it with your machine</h2>
+        <p class="fine" id="wdNoSerial" hidden data-i18n="wd.noSerial">Driving the machine needs Chrome or Edge on a computer: they can talk to its controller over USB. You can still download the G-code and send it with any G-code sender.</p>
+        <div class="runbar" id="wdConnectBar">
+          <button class="btn primary" id="wdConnect" data-i18n="wd.connect">Connect the machine</button>
+          <span class="wstate" id="wdState"></span>
+        </div>
+        <div id="wdPanel" hidden>
+          <div class="wnotice" id="wdNotice" role="alert" hidden></div>
+          <div class="wgrid">
+            <div class="wbox">
+              <h3 class="mgroup" data-i18n="wd.h.setup">Set up</h3>
+              <div class="runbar">
+                <button class="btn" id="wdHome" data-i18n="wd.home">Home</button>
+                <button class="btn" id="wdUnlock" data-i18n="wd.unlock">Unlock</button>
+                <button class="btn" id="wdSettings" data-i18n="wd.settings">Send the settings</button>
+              </div>
+              <div class="jog" role="group" data-i18n-attr="aria-label=wd.jog" aria-label="Jog">
+                <span class="jl">X</span><button class="btn" data-jog="X-" data-i18n="wd.prevNail">◀ one nail</button><button class="btn" data-jog="X+" data-i18n="wd.nextNail">one nail ▶</button>
+                <span class="jl">Y</span><button class="btn" data-jog="Y-" data-i18n="wd.in">◀ in</button><button class="btn" data-jog="Y+" data-i18n="wd.out">out ▶</button>
+                <span class="jl">Z</span><button class="btn" data-jog="Z-" data-i18n="wd.down">▼ down</button><button class="btn" data-jog="Z+" data-i18n="wd.up">up ▲</button>
+              </div>
+              <div class="seg" id="wdStep" role="group" data-i18n-attr="aria-label=wd.step" aria-label="Jog step">
+                <button data-v="0.1" aria-pressed="false">0.1 mm</button><button data-v="1" aria-pressed="true">1 mm</button><button data-v="10" aria-pressed="false">10 mm</button>
+              </div>
+              <div class="runbar wzero"><button class="btn" id="wdZero" data-i18n="wd.zero">Guide is above nail 0: set zero</button></div>
+            </div>
+            <div class="wbox">
+              <h3 class="mgroup" data-i18n="wd.h.wind">Wind</h3>
+              <div class="runbar">
+                <label class="wfrom"><span data-i18n="wd.from">From line</span> <input type="number" id="wdFrom" min="1" step="1" value="1" /></label>
+                <button class="btn primary" id="wdStart" data-i18n="wd.start">Start</button>
+              </div>
+              <div class="runbar">
+                <button class="btn" id="wdPause" data-i18n="wd.pause">Pause</button>
+                <button class="btn primary" id="wdResume" data-i18n="wd.resume">Resume</button>
+                <button class="btn" id="wdStop" data-i18n="wd.stop">Stop</button>
+              </div>
+              <div class="runbar">
+                <label class="wfrom"><span data-i18n="wd.back">Go back</span> <input type="number" id="wdBackN" min="1" step="1" value="3" /> <span data-i18n="wd.lines">lines</span></label>
+                <button class="btn" id="wdBack" data-i18n="wd.backBtn">Go back</button>
+              </div>
+              <div class="runbar">
+                <span class="jl" data-i18n="wd.speed">Speed</span>
+                <button class="btn" id="wdSlower">−10 %</button><button class="btn" id="wdFeed100">100 %</button><button class="btn" id="wdFaster">+10 %</button>
+                <output id="wdFeed" class="wfeed"></output>
+              </div>
+              <div class="bar" id="wdBar"><i></i></div>
+              <p class="fine" id="wdProgress"></p>
+            </div>
+          </div>
+          <details class="log"><summary data-i18n="wd.console">Controller console</summary>
+            <pre id="wdLog"></pre>
+            <div class="runbar"><input type="text" id="wdCmd" class="wcmd" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder=wd.cmdHint,aria-label=wd.cmdHint" placeholder="A G-code or $ command" aria-label="A G-code or $ command" /><button class="btn" id="wdSend" data-i18n="wd.send">Send</button><button class="btn" id="wdDisconnect" data-i18n="wd.disconnect">Disconnect</button></div>
+          </details>
+        </div>
+      </section>
 
       <h2 data-i18n="mc.h.checks">Checks</h2>
       <div id="mcChecks" role="status" aria-live="polite"></div>

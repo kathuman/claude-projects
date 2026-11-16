@@ -6,47 +6,7 @@ import { moveFraction, moveTime } from "../src/machine/motion";
 import { KINDS, nailX, planToolpath, positionAt, wrap180, wrapDir } from "../src/machine/toolpath";
 import { lineClearance, machineChecks, safeSkip } from "../src/machine/checks";
 import { toGcode } from "../src/machine/gcode";
-
-/** A random valid sequence: each step jumps at least minSkip nails. */
-function randomSeq(n: number, nails: number, minSkip: number, seed = 1): Uint16Array {
-  let s = seed >>> 0;
-  const rnd = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 2 ** 32; };
-  const out = new Uint16Array(n + 1);
-  out[0] = Math.floor(rnd() * nails);
-  for (let k = 1; k <= n; k++) {
-    const d = minSkip + Math.floor(rnd() * (nails - 2 * minSkip + 1));
-    out[k] = (out[k - 1] + d) % nails;
-  }
-  return out;
-}
-
-/** Read the G-code back like a controller would and list the nails the guide wraps. */
-function wrappedNails(gcode: string, c: MachineConfig): { nails: number[]; offGap: number; badWidth: number; m0: number; maxX: number } {
-  const p = pitchDeg(c), pos = { X: 0, Y: 0, Z: c.nailHeightMm };
-  const nails: number[] = [];
-  let xOut = NaN, offGap = 0, badWidth = 0, m0 = 0, maxX = 0;
-  for (const raw of gcode.split("\n")) {
-    const line = raw.split(";")[0].trim();
-    if (line.startsWith("M0")) m0++;
-    const r = /^G92 X(-?[\d.]+)/.exec(line);
-    if (r) { const nx = Number(r[1]); if (Math.abs(nx - pos.X) % 360 > 2e-3 && 360 - (Math.abs(nx - pos.X) % 360) > 2e-3) badWidth++; pos.X = nx; continue; }
-    const m = /^G1 ([XYZ])(-?[\d.]+)/.exec(line);
-    if (!m) continue;
-    const ax = m[1] as "X" | "Y" | "Z", v = Number(m[2]);
-    if (ax === "Y") {
-      const atGap = Math.abs(pos.X / p - 0.5 - Math.round(pos.X / p - 0.5)) < 1e-3;
-      if (pos.Y < 0 && v > 0) { xOut = pos.X; if (!atGap) offGap++; }
-      if (pos.Y > 0 && v < 0) {
-        if (!atGap) offGap++;
-        if (Math.abs(Math.abs(pos.X - xOut) - p) > 1e-3) badWidth++;
-        nails.push(((Math.round((pos.X + xOut) / 2 / p) % c.nails) + c.nails) % c.nails);
-      }
-    }
-    pos[ax] = v;
-    if (ax === "X") maxX = Math.max(maxX, Math.abs(v));
-  }
-  return { nails, offGap, badWidth, m0, maxX };
-}
+import { randomSeq, readBack } from "./gcode-reader";
 
 describe("motion profile", () => {
   it("times a trapezoid and a triangle", () => {
@@ -85,7 +45,7 @@ describe("toolpath", () => {
   });
 
   it("wraps exactly the nails of the sequence, going in and out only through gaps one nail apart", () => {
-    const g = wrappedNails(toGcode(seq, plan, c, { version: "test", date: "today" }), c);
+    const g = readBack(toGcode(seq, plan, c, { version: "test", date: "today" }), c);
     expect(g.nails).toEqual(Array.from(seq.slice(1)));
     expect(g.offGap).toBe(0);
     expect(g.badWidth).toBe(0);
@@ -149,7 +109,7 @@ describe("G-code", () => {
     for (let k = 0; k <= L; k++) seq[k] = (k * 101) % 240;          // always the same way round
     const plan = planToolpath(seq, c);
     expect(plan.turnDeg).toBeGreaterThan(100000);
-    const r = wrappedNails(toGcode(seq, plan, c, { version: "t", date: "d" }), c);
+    const r = readBack(toGcode(seq, plan, c, { version: "t", date: "d" }), c);
     expect(r.nails).toEqual(Array.from(seq.slice(1)));
     expect(r.offGap).toBe(0);
     expect(r.badWidth).toBe(0);
@@ -159,7 +119,7 @@ describe("G-code", () => {
   const seq = randomSeq(450, c.nails, 20, 3);
   const g = toGcode(seq, planToolpath(seq, c), c, { version: "1.1.0", date: "2026-11-16" });
   it("pauses for the tie-on, every 100 lines and at the end, and labels every line", () => {
-    expect(wrappedNails(g, c).m0).toBe(1 + 4 + 1);
+    expect(readBack(g, c).m0).toBe(1 + 4 + 1);
     expect(g.match(/^; line \d+ of 450:/gm)!.length).toBe(450);
     expect(g).toContain(`tie the thread to nail ${seq[0]}`);
     expect(g).toContain(`tie the thread off at nail ${seq[450]}`);

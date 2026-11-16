@@ -35,8 +35,9 @@ export function boughtParts(): Bought[] {
     { group: elec, name: T("Wire, connectors and a project box"), spec: T("4-wire motor cables, Dupont leads"), qty: 1, eur: 15 },
     { group: thread, name: T("Brass tube"), spec: T("2.5 mm outside, 1.6 mm inside, cut to 40 mm"), qty: 1, eur: 3 },
     { group: thread, name: T("PTFE tube"), spec: T("4 × 2 mm, 0.5 m"), qty: 1, eur: 3 },
-    { group: thread, name: T("Felt washer, spring and wing nut"), spec: T("for the spool brake"), qty: 1, eur: 3 },
-    { group: thread, name: T("Black thread"), spec: T("about 0.25 mm, 3,000 m or more per piece"), qty: 1, eur: 10 },
+    { group: thread, name: T("Thread tension discs"), spec: T("two Ø 16 mm discs, a spring and a wing nut on an M4 bolt, as on a sewing machine"), qty: 1, eur: 4 },
+    { group: thread, name: T("Hex bolt M8 × 60"), spec: T("the pin the thread cone stands on"), qty: 1, eur: 1 },
+    { group: thread, name: T("Black polyester thread on a cone"), spec: T("0.15 to 0.3 mm (0.25 mm usual), 3,000 m or more per piece"), qty: 1, eur: 10 },
     { group: thread, name: T("Filament PETG"), spec: T("about 0.5 kg for all printed parts"), qty: 1, eur: 12 }
   ];
 }
@@ -53,7 +54,8 @@ export function printedNames(): Record<string, { name: string; note: string }> {
     z_motor_mount: { name: T("Height motor mount"), note: T("On top of the extrusion.") },
     z_carriage: { name: T("Height carriage with shelf"), note: T("PETG, 5 walls, 40 % infill. Shelf down; the gussets need no support.") },
     guide_arm: { name: T("Guide arm"), note: T("Press the brass tube in from below; the PTFE tube pushes into the socket on top.") },
-    spool_holder: { name: T("Spool holder"), note: T("Tap the pin's end M4 for the brake nut.") },
+    cone_stand: { name: T("Cone stand"), note: T("The thread cone stands on it, on an M8 bolt; the thread comes off over the top.") },
+    tensioner_bracket: { name: T("Eyelet and tension bracket"), note: T("Above the cone: the eyelet for the thread and the M4 post for the tension discs (tap it M4).") },
     dancer_bracket: { name: T("Dancer bracket"), note: T("Carries the dancer's pivot and the thread-break switch.") },
     dancer_arm: { name: T("Dancer arm"), note: T("Rides on the thread; if the thread breaks it drops onto the switch.") }
   };
@@ -68,7 +70,7 @@ export function modelNames(): Record<string, string> {
     mgn9_rail: T("Guide rail, MGN9"), mgn9h_carriage: T("Guide rail carriage"), z_motor_leadscrew: T("Height motor with lead screw"),
     y_motor: T("Guide motor"), x_motor: T("Turntable motor"), y_pulley: T("Guide belt pulley"), y_idler: T("Guide belt idler"),
     y_belt: T("Guide belt"), x_pulley_20t: T("Motor pulley, 20 teeth"), x_belt: T("Turntable belt"),
-    brass_guide_tube: T("Brass guide tube"), ptfe_tube: T("PTFE tube for the thread"), thread_spool: T("Thread spool"),
+    brass_guide_tube: T("Brass guide tube"), ptfe_tube: T("PTFE tube for the thread"), thread_cone: T("Thread cone"), tension_discs: T("Tension discs"), cone_pin: T("Cone pin, M8 bolt"),
     break_switch: T("Thread-break switch"), controller_box: T("Controller: Arduino Uno with CNC Shield"), power_supply: T("Power supply"),
     foot: T("Foot")
   };
@@ -86,7 +88,7 @@ export function assemblySteps(): string[] {
     T("<b>Tower.</b> Bolt the extrusion upright with the two feet, fit the MGN12 rail on its front face and the height motor on top."),
     T("<b>Carriage.</b> Bolt the height carriage to the rail carriage and the lead-screw nut to its tab. Fit the MGN9 rail under the shelf, the guide motor and its pulley on the shelf, and the idler at the front."),
     T("<b>Guide.</b> Deburr and round both ends of the brass tube, press it into the guide arm, and bolt the arm under the MGN9 carriage. Loop the belt round the pulley and the idler and clamp both ends in the arm."),
-    T("<b>Thread path.</b> Fit the spool holder with its felt brake, and the dancer bracket with the arm and the switch so the switch closes when the arm drops. Run the PTFE tube from the dancer to the guide arm."),
+    T("<b>Thread path.</b> Fit the cone stand with its M8 bolt and the eyelet bracket above it, with the tension discs on their post. Fit the dancer bracket with the arm and the switch so the switch closes when the arm drops, and run the PTFE tube from the dancer to the guide arm. The thread goes up from the cone through the eyelet, between the discs, through the dancer eye and the tube."),
     T("<b>Switches and wiring.</b> Fit the home switches where the guide and the carriage reach them at the back and the top, then wire everything as in the diagram.")
   ];
 }
@@ -99,7 +101,7 @@ export function calibrationSteps(): string[] {
     T("<b>Homing.</b> Send $H. The guide rises, moves back to its switch, and the board turns until the magnet passes the sensor."),
     T("<b>Work zero.</b> Clamp a board on, jog the guide's tip exactly above nail 0, just clear of its top, and send G10 L20 P1 X0 Y0 Z18 (18 = the nail height). GRBL remembers it."),
     T("<b>Dry run.</b> Without thread, run the demo pattern's G-code at half speed (feed override 50 %). Watch the tube pass through the gaps and round the nails."),
-    T("<b>Thread.</b> Tie the thread on, set the spool brake just firm enough to keep the dancer arm up, and wind your first piece.")
+    T("<b>Tension.</b> Tie the thread on and turn the tension discs' wing nut until the thread leaving the guide just lifts a 25 g weight (0.25 N; see Thread tension above). Then wind your first piece.")
   ];
 }
 
@@ -109,6 +111,7 @@ export function grblComment(setting: string): string {
     case "$0": return T("step pulse, µs");
     case "$1": return T("keep the motors powered when idle, so the board cannot drift");
     case "$5": return T("limit switches: normally open");
+    case "$10": return T("status shows the work position and buffer use");
     case "$20": return T("no soft limits: the board turns many times");
     case "$21": return T("no hard limits");
     case "$22": return T("homing on");

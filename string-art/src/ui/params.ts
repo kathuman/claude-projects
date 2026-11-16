@@ -3,6 +3,7 @@
 
 import { DEFAULT_PARAMS, type SolverParams } from "../core/solver";
 import { T, fx, int } from "./i18n";
+import { MIN_THREAD_MM } from "../hardware/tension";
 
 export interface UiParams extends SolverParams { workingRes: number }
 
@@ -24,7 +25,7 @@ function defs(): Def[] {
   return [
     { key: "boardMm", label: T("Board diameter"), tip: T("Diameter of the nail circle on the real board. A bigger board shows finer detail and uses more thread."), min: 200, max: 1500, step: 10, unit: "mm", digits: 0 },
     { key: "nails", label: T("Nails"), tip: T("How many nails around the circle. More nails give finer detail but take longer to wind."), min: 100, max: 400, step: 1, digits: 0 },
-    { key: "threadMm", label: T("Thread diameter"), tip: T("Thicker thread darkens faster: each line covers more of the board."), min: 0.1, max: 1, step: 0.01, unit: "mm", digits: 2 },
+    { key: "threadMm", label: T("Thread diameter"), tip: T("Thicker thread darkens faster: each line covers more of the board. At least 0.15 mm, so the winding machine cannot break it."), min: MIN_THREAD_MM, max: 1, step: 0.01, unit: "mm", digits: 2 },
     { key: "maxLines", label: T("Most lines"), tip: T("The most lines to wind. The solver stops earlier if no line improves the picture any more."), min: 500, max: 8000, step: 100, digits: 0 },
     { key: "minSkip", label: T("Minimum nail skip"), tip: T("No line may join nails closer than this. Short lines near the rim only add clutter."), min: 1, max: (p) => Math.floor(p.nails / 2), step: 1, digits: 0 },
     { key: "maxReuse", label: T("Uses per line"), tip: T("How many times the thread may join the same two nails."), min: 1, max: 5, step: 1, digits: 0 },

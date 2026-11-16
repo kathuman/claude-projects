@@ -80,13 +80,17 @@ export function drive(p: Params = PARAMS, m: MachineConfig = DEFAULT_MACHINE): D
 /** GRBL's step pulse limit on an Arduino Uno (about 30 kHz); stay well under it. */
 export const GRBL_MAX_RATE = 30000;
 
-/** The GRBL settings for this machine, as `$n=value` with a comment each. */
-export function grblSettings(m: MachineConfig = DEFAULT_MACHINE, dr: Drive = drive()): [string, string][] {
+/**
+ * The GRBL settings for a machine configuration, as `$n=value` with an English comment each (the build page shows them
+ * translated). The steps come from the configuration, which the tests check against the drive above.
+ */
+export function grblSettings(m: MachineConfig = DEFAULT_MACHINE): [string, string][] {
   const f = (v: number) => String(Math.round(v * 1000) / 1000);
   return [
     ["$0=10", "step pulse, µs"],
     ["$1=255", "keep the motors powered when idle, so the board cannot drift"],
     ["$5=0", "limit switches: normally open"],
+    ["$10=2", "status shows the work position and buffer use"],
     ["$20=0", "no soft limits: the board turns many times"],
     ["$21=0", "no hard limits"],
     ["$22=1", "homing on"],
@@ -94,9 +98,9 @@ export function grblSettings(m: MachineConfig = DEFAULT_MACHINE, dr: Drive = dri
     ["$24=50", "homing feed, °/min or mm/min"],
     ["$25=1500", "homing seek, °/min or mm/min"],
     ["$27=2", "pull-off after homing, mm"],
-    [`$100=${f(dr.xSteps)}`, "X steps per degree of board turn"],
-    [`$101=${f(dr.ySteps)}`, "Y steps per mm"],
-    [`$102=${f(dr.zSteps)}`, "Z steps per mm"],
+    [`$100=${f(m.xSteps)}`, "X steps per degree of board turn"],
+    [`$101=${f(m.ySteps)}`, "Y steps per mm"],
+    [`$102=${f(m.zSteps)}`, "Z steps per mm"],
     [`$110=${Math.round(xSpeedLimit(m) * 60)}`, "X top speed, °/min"],
     [`$111=${Math.round(m.ySpeed * 60)}`, "Y top speed, mm/min"],
     [`$112=${Math.round(m.zSpeed * 60)}`, "Z top speed, mm/min"],

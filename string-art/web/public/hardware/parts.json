@@ -105,22 +105,34 @@
    "size": [
     24.9,
     87.0,
-    24.0
+    22.0
    ],
-   "volume": 16.7,
-   "triangles": 1548
+   "volume": 21.9,
+   "triangles": 1532
   },
   {
-   "id": "spool_holder",
+   "id": "cone_stand",
    "qty": 1,
-   "file": "stl/spool_holder.stl",
+   "file": "stl/cone_stand.stl",
+   "size": [
+    64.0,
+    40.0,
+    70.0
+   ],
+   "volume": 38.6,
+   "triangles": 696
+  },
+  {
+   "id": "tensioner_bracket",
+   "qty": 1,
+   "file": "stl/tensioner_bracket.stl",
    "size": [
     40.0,
-    50.0,
-    90.0
+    40.0,
+    46.0
    ],
-   "volume": 15.7,
-   "triangles": 836
+   "volume": 13.6,
+   "triangles": 856
   },
   {
    "id": "dancer_bracket",

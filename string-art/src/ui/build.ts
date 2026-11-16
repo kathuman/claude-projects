@@ -6,6 +6,7 @@ import { drive, grblSettings, GRBL_MAX_RATE, PARAMS } from "../hardware/drive";
 import { motorHang } from "../hardware/layout";
 import { assemblySteps, boughtParts, calibrationSteps, grblComment, modelNames, printedNames } from "./build-data";
 import { baseDrawing, platterDrawing, wiringDrawing } from "./build-drawings";
+import { tensionSection } from "./build-tension";
 import { T, apply, fx, int, mountSwitch } from "./i18n";
 import { VERSION } from "./version";
 
@@ -63,6 +64,7 @@ fetch("hardware/parts.json").then((r) => r.json() as Promise<PartsFile>).then((p
 $("bdBase").innerHTML = baseDrawing("screen");
 $("bdPlatter").innerHTML = platterDrawing("screen");
 $("bdWiring").innerHTML = wiringDrawing();
+$("bdTension").innerHTML = tensionSection();
 function save(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: "image/svg+xml" })), a = document.createElement("a");
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();

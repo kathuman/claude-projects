@@ -11,6 +11,7 @@ import { T, apply, fx, int, mountSwitch } from "./i18n";
 import { loadLast } from "./store";
 import { MachineSim } from "./machine-sim";
 import { VERSION } from "./version";
+import { mountWind } from "./wind";
 
 apply();
 mountSwitch();
@@ -34,6 +35,7 @@ function groups(): Group[] {
       { key: "guideMm", label: T("Guide tube diameter"), unit: "mm", step: 0.1, tip: T("The outside diameter of the tube tip that passes between the nails.") },
       { key: "insideMm", label: T("Waits inside the ring by"), unit: "mm", step: 0.5, tip: T("How far inside the nail circle the guide waits while the board turns.") },
       { key: "outsideMm", label: T("Goes outside the ring by"), unit: "mm", step: 0.5, tip: T("How far outside the nail circle the guide goes to wrap a nail.") },
+      { key: "tensionN", label: T("Winding tension"), unit: "N", step: 0.05, tip: T("How hard the thread is pulled as it leaves the guide, set at the disc tensioner. About 0.25 N: the thread should just lift 25 g. The build page shows the working.") },
       { key: "zStartMm", label: T("First wrap height"), unit: "mm", step: 0.5, tip: T("The height of the first wrap on each nail, above the board.") },
       { key: "layerMm", label: T("Rise per wrap"), unit: "mm", step: 0.05, tip: T("Each later wrap on the same nail is laid this much higher. About the thread diameter.") }
     ] },
@@ -159,6 +161,14 @@ function checkText(c: Check): string {
       ? T("No line rubs a neighbouring nail: the closest passes {w} mm clear.", { w: fx(v.worst, 2) })
       : T("{n} of {l} lines leave a nail at a shallow angle and rub the next nail, which pulls them slightly out of line (by up to {w} mm). Lines that skip at least {s} nails are clear; this piece's smallest skip is {m}. To avoid it, set the minimum nail skip in the app to {s}.",
         { n: int(v.tight), l: int(v.lines), w: fx(-v.worst, 2), s: v.safeSkip, m: v.minSkip });
+    case "tension": {
+      const parts = [T("Winding at {t} N: the longest line needs at least {m} N to lie straight, and the busiest nail ({n} wraps) bends above about {l} N. The thread breaks at about {b} N; the highest tension while winding is about {p} N.",
+        { t: fx(v.t, 2), m: fx(v.minT, 2), n: int(v.n), l: fx(v.limit, 2), b: fx(v.breaking, 1), p: fx(v.peak, 2) })];
+      if (v.bends) parts.push(T("Lower the tension, or use 2 mm nails."));
+      if (v.sags) parts.push(T("Raise the tension a little."));
+      if (v.weak) parts.push(T("The thread is too thin to be safe: it should hold at least {r} N. Use 0.15 mm polyester or thicker.", { r: fx(v.required, 1) }));
+      return parts.join(" ");
+    }
     case "speed": return v.capped
       ? T("The board turns at {v} °/s at most: any faster and the rim would pull thread off the spool faster than {t} mm/s.", { v: fx(v.limit, 0), t: int(cfg.threadSpeed) })
       : T("The board turns at up to {v} °/s.", { v: fx(v.limit, 0) });
@@ -267,5 +277,14 @@ $("mcGcode").addEventListener("click", () => {
     status(T("No result from the app in this browser yet, so here is a demo pattern. Make a piece in the app, or open a project file."));
   }
 })();
+// ---------------------------------------------------------------- driving the machine over USB
+mountWind({
+  piece: () => piece,
+  plan: () => plan,
+  cfg: () => cfg,
+  follow: (time) => { if (playing) setPlaying(false); seek(time); },
+  canWind: () => !!piece && !!plan && worstLevel(checks) !== "error"
+});
+
 // test hook for the browser checks
 (window as unknown as { __mc: unknown }).__mc = { get plan() { return plan; }, get cfg() { return cfg; }, seek, setPlaying, checks: () => checks };

@@ -234,7 +234,7 @@ for k in (1, 2):
     pl = App.Placement(V(0, 0, 0), App.Rotation(V(0, 0, 1), 120 * k))
     tb_pl.append(pl)
 # the first stands at +X; the other two at 120° and 240°
-printed("turn_button", tb, rot=[((0, 1, 0), 0)], qty=3, extra_positions=tb_pl)
+printed("turn_button", tb, rot=[((1, 0, 0), 180)], qty=3, extra_positions=tb_pl)   # tab on the bed: no overhang
 
 def hall_holder():
     y = -PL["magnetRadius"]
@@ -314,38 +314,63 @@ bought("A", "y_belt", fuse(box(YMOTOR[0] + 6.4, IDLER[1], belt_z - 3, YMOTOR[0] 
 def guide_arm():
     # bolts under the MGN9H carriage and reaches over the nails; at its tip a clamp for the brass guide tube with a
     # push-fit socket for the PTFE tube on top; a clamp on its side grips the Y belt
-    pad = box(-10, CARR_Y - 20, ARM_Z0, 10, CARR_Y + 20, ARM_Z1)
-    beam = box(-7, TUBE_Y - 7, ARM_Z0, 7, CARR_Y, ARM_Z1)
-    rib = box(-2, TUBE_Y + 8, ARM_Z0 - 6, 2, CARR_Y - 20, ARM_Z0)
+    # one flat underside (prints without supports); the beam is 14 mm deep for stiffness instead of a rib
+    pad = box(-10, CARR_Y - 20, ARM_Z0 - 4, 10, CARR_Y + 20, ARM_Z1)
+    beam = box(-7, TUBE_Y - 7, ARM_Z0 - 4, 7, CARR_Y, ARM_Z1)
     socket = cyl(6, ARM_Z1, ARM_Z1 + 8, 0, TUBE_Y)
     strand = YMOTOR[0] - 6.4 - 0.7                       # the belt's inner run
-    clamp = box(10, CARR_Y - 8, ARM_Z0, strand + 4, CARR_Y + 8, belt_z + 4)
-    s = fuse(pad, beam, rib, socket, clamp)
-    hs = [cyl(G["tubeOD"] / 2 + 0.1, ARM_Z0 - 1, ARM_Z1 + 1, 0, TUBE_Y),                     # tube, a press fit
+    clamp = box(10, CARR_Y - 8, ARM_Z0 - 4, strand + 4, CARR_Y + 8, belt_z + 4)
+    s = fuse(pad, beam, socket, clamp)
+    hs = [cyl(G["tubeOD"] / 2 + 0.1, ARM_Z0 - 5, ARM_Z1 + 1, 0, TUBE_Y),                     # tube, a press fit
           cyl(G["ptfeOD"] / 2 + 0.1, ARM_Z1 - 1, ARM_Z1 + 9, 0, TUBE_Y),                     # PTFE socket
           box(strand - 0.8, CARR_Y - 9, belt_z - 3.2, strand + 0.8, CARR_Y + 9, belt_z + 3.2)]
     for dx in (-7.5, 7.5):
         for dy in (-8, 8):
-            hs.append(cyl(1.7, ARM_Z0 - 1, ARM_Z1 + 1, dx, CARR_Y + dy))
+            hs.append(cyl(1.7, ARM_Z0 - 5, ARM_Z1 + 1, dx, CARR_Y + dy))
     return cut(s, *hs)
 
 printed("guide_arm", guide_arm())
 bought("T", "brass_guide_tube", cut(cyl(G["tubeOD"] / 2, TUBE_TIP, TUBE_TIP + G["tubeLength"], 0, TUBE_Y), cyl(G["tubeID"] / 2, TUBE_TIP - 1, TUBE_TIP + G["tubeLength"] + 1, 0, TUBE_Y)))
 
-# thread supply: spool on the back of the tower, a felt brake, a dancer arm that is also the break switch
-SPOOL_Z = TW["height"] - 60
-def spool_holder():
-    y0 = EX_Y0 + EX_D
-    plate = box(-EX_W / 2, y0, SPOOL_Z - 25, EX_W / 2, y0 + 6, SPOOL_Z + 25)
-    pin = cyl_y(4, y0 + 6, y0 + 90, 0, SPOOL_Z)
-    s = fuse(plate, pin)
-    return cut(s, cyl_y(2.7, y0 - 1, y0 + 7, -10, SPOOL_Z + 15), cyl_y(2.7, y0 - 1, y0 + 7, 10, SPOOL_Z - 15),
-               cyl_y(1.6, y0 + 60, y0 + 91, 0, SPOOL_Z))                                      # M4 thread for the brake nut, tapped
+# thread supply. The thread cone stands still on a shelf behind the tower and the thread comes off over its top, up
+# through an eyelet and between two tension discs (as on a sewing machine): the tension then hardly changes as the cone
+# empties, unlike a felt brake on a turning spool, which pulls 2.5 times harder near the core (see the build page's
+# tension working). A dancer arm riding on the thread is the thread-break switch.
+SP = P["spool"]
+BACK_Y = EX_Y0 + EX_D
+SHELF_TOP = 120.0
+CONE_Y = BACK_Y + 6 + SP["coneBase"] / 2 + 2
+CONE_TOP = SHELF_TOP + SP["coneHeight"]
+EYE_Z = CONE_TOP + SP["eyeletAbove"]
+POST = (-14.0, EYE_Z - 22)                         # x, z of the tension-disc post
 
-printed("spool_holder", spool_holder(), rot=[((1, 0, 0), -90)])
-bought("T", "thread_spool", cut(cyl_y(25, EX_Y0 + EX_D + 10, EX_Y0 + EX_D + 70, 0, SPOOL_Z), cyl_y(4.5, EX_Y0, EX_Y0 + 200, 0, SPOOL_Z)))
+def cone_stand():
+    plate = box(-EX_W / 2, BACK_Y, SHELF_TOP - 36, EX_W / 2, BACK_Y + 6, SHELF_TOP + 4)
+    shelf = box(-SP["coneBase"] / 2 - 2, BACK_Y, SHELF_TOP - 6, SP["coneBase"] / 2 + 2, CONE_Y + SP["coneBase"] / 2 + 2, SHELF_TOP)
+    pts = [V(-3, BACK_Y + 6, SHELF_TOP - 6), V(-3, CONE_Y + 18, SHELF_TOP - 6), V(-3, BACK_Y + 6, SHELF_TOP - 34)]
+    gus = Part.Face(Part.makePolygon(pts + [pts[0]])).extrude(V(6, 0, 0))
+    s = fuse(plate, shelf, gus)
+    return cut(s, cyl_y(2.7, BACK_Y - 1, BACK_Y + 7, -10, SHELF_TOP - 26), cyl_y(2.7, BACK_Y - 1, BACK_Y + 7, 10, SHELF_TOP - 26),
+               cyl(4.2, SHELF_TOP - 7, SHELF_TOP + 1, 0, CONE_Y))                      # the cone's pin is an M8 bolt: prints flat, no supports
 
-DANCER_Z = SPOOL_Z - 50
+def tensioner_bracket():
+    plate = box(-EX_W / 2, BACK_Y, EYE_Z - 36, EX_W / 2, BACK_Y + 6, EYE_Z + 4)
+    arm = box(-8, BACK_Y + 6, EYE_Z - 3, 8, CONE_Y + 8, EYE_Z + 3)
+    eye = cyl(6, EYE_Z - 3, EYE_Z + 3, 0, CONE_Y)
+    boss = cyl_y(5, BACK_Y + 6, BACK_Y + 12, POST[0], POST[1])
+    s = fuse(plate, arm, eye, boss)
+    return cut(s, cyl(2.1, EYE_Z - 4, EYE_Z + 4, 0, CONE_Y),                        # eyelet: smooth, Ø 4.2
+               cyl_y(1.6, BACK_Y - 1, BACK_Y + 13, POST[0], POST[1]),                # M4 post, tapped
+               cyl_y(2.7, BACK_Y - 1, BACK_Y + 7, 10, EYE_Z - 26))
+
+printed("cone_stand", cone_stand(), rot=[((1, 0, 0), 90)])          # plate on the bed
+printed("tensioner_bracket", tensioner_bracket(), rot=[((1, 0, 0), 90)])   # plate on the bed, post upright
+bought("A", "cone_pin", cyl(4, SHELF_TOP - 6, SHELF_TOP + 54, 0, CONE_Y))
+bought("T", "thread_cone", cut(Part.makeCone(SP["coneBase"] / 2, SP["coneTop"] / 2, SP["coneHeight"], V(0, CONE_Y, SHELF_TOP)), cyl(9, SHELF_TOP - 1, CONE_TOP + 1, 0, CONE_Y)))
+bought("A", "tension_discs", fuse(cyl_y(8, BACK_Y + 14, BACK_Y + 15, POST[0], POST[1]), cyl_y(8, BACK_Y + 16, BACK_Y + 17, POST[0], POST[1]),
+                                  cyl_y(4, BACK_Y + 17, BACK_Y + 27, POST[0], POST[1]), cyl_y(2, BACK_Y + 6, BACK_Y + 32, POST[0], POST[1])))
+
+DANCER_Z = 150.0
 def dancer_bracket():
     x0 = -EX_W / 2
     plate = box(x0 - 6, EX_Y0, DANCER_Z - 20, x0, EX_Y0 + EX_D, DANCER_Z + 30)

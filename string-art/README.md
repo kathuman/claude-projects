@@ -8,7 +8,7 @@ preview, and gives you everything needed to build the piece by hand: a nail temp
 instructions, and a threading mode that calls out the next nail. Everything runs in the browser; pictures are never
 uploaded. English, Spanish (Latin America) and Danish.
 
-Version 1.2.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
+Version 1.4.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
 
 ## Using it
 
@@ -26,7 +26,8 @@ Version 1.2.0. Part of the [AI Projects](https://kathuman.github.io/claude-proje
    threading mode at the board.
 6. **Or wind it with a machine.** The winding-machine page (machine.html) takes the last result or a project file,
    checks a turntable-and-guide machine against it, estimates the winding time, plays the winding back with a
-   true-size close-up of each wrap, and downloads the G-code.
+   true-size close-up of each wrap, and downloads the G-code. With Chrome or Edge on a computer it also drives the
+   machine itself over USB (see "Driving the machine" below).
 7. **Build the machine.** The build page (build.html) has the machine in 3D, its numbers (drive ratio, steps, torque
    margin), the parts to buy with rough prices, STL files for the 12 printed parts, drilling plans for the base and the
    platter (on screen and at true size), the wiring, the GRBL settings, and the assembly and setting-up steps.
@@ -47,6 +48,24 @@ lines that rub the neighbouring nail, thread-speed cap) and `gcode.ts` (GRBL/Mar
 G92 to keep X within ten turns). The tests read the G-code back and confirm it wraps exactly the sequence's nails,
 passing only through gaps.
 
+## Driving the machine
+
+The Wind panel on the machine page talks to GRBL 1.1 over Web Serial (115200 baud). Connect, home, jog (one nail, or
+0.1 / 1 / 10 mm), set the zero over nail 0, send the settings, then start from line 1 or any line; pause, resume,
+stop, go back N lines, and change the speed (feed override). The simulator follows the real machine, and the last
+finished line is saved per sequence, so after a power cut it offers to carry on from there.
+
+- `src/machine/grbl.ts` (pure, tested against a fake GRBL in `tests/stream.test.ts`): status-report parsing and a
+  streamer that uses GRBL's character counting (a running count of unanswered bytes kept under the 128-byte receive
+  buffer), sends settings and single commands one at a time, and tells apart the three kinds of stop: the program's M0
+  (GRBL waits in Hold and answers the M0 only after cycle start, so it is the first unanswered line), the Pause button,
+  and the thread-break switch on GRBL's Hold input. How far the machine has really got comes from the planner's fill
+  (Bf in the status report, which `$10=2` turns on). An `error:n` holds the job until resumed or stopped.
+- `resumeProgram` in `src/machine/gcode.ts` carries on from line k wherever the machine is: it re-labels X within one
+  turn of the reported position (G92), lifts the guide clear, goes inside the ring, turns to where line k − 1 ended,
+  drops to its height, and stops for the thread to be tied to nail k − 1.
+- Stop holds first and resets only once the machine has stopped, so GRBL keeps its position.
+
 ## Building the machine
 
 One file, `src/hardware/params.json`, holds every dimension (600 mm nail circle, 240 nails, 305 mm lazy-susan bearing,
@@ -65,6 +84,15 @@ in its printing orientation, the assembly as `machine.glb` (FreeCAD's glTF write
 itself; the web view shows the pulley without its tooth grooves and the nails as hexagons to keep the file at 2.7 MB),
 `parts.json` (sizes, volumes) and the editable `string-art-machine.FCStd`. `freecadcmd` runs a script with `__name__`
 set to its file name, so `main()` is called unconditionally.
+
+**Thread tension** (`src/hardware/tension.ts`, shown step by step on the build page, checked per piece on the machine
+page): capstan friction along the thread path (K ≈ 2.7), payout speed and acceleration, spool inertia, sag of the
+longest line (lower limit ≈ 0.18 N) and bending of the busiest nail (upper limit ≈ 0.30 N for 1.5 mm nails with 25
+wraps, ≈ 0.70 N for 2 mm), then the thread strength needed against the peak tension. Winding is set at 0.25 N. A spool
+turning on a pin with a felt brake would pull 2.5 times harder near its core, past the nail limit, so the thread stands
+on a cone and comes off over the top through tension discs. The thread needs only about 0.09 mm of polyester; the app
+keeps a practical minimum of 0.15 mm. Friction coefficients, steel and thread strengths are typical values, not
+measurements. Every printed part is checked to print the right way up (centre of mass in the lower half).
 
 The clearance check found real collisions while designing (the belt through the base, the Y motor against a gusset,
 the arm's belt clamp crossing the motor pulley); the idler and motor pulley are now placed from the carriage's travel,
@@ -148,15 +176,15 @@ reproduces the sequence exactly (re-decoding the original photo might not, in an
 - `src/core/`: pure functions with no DOM, unit-tested in Node: geometry, Wu rasteriser, line cache, darkness model,
   solver interface, greedy solver, metrics, preprocessing, CLAHE, background check, importance mask, threading view.
 - `src/worker/`: the solver worker and its typed message protocol (discriminated unions, transferred arrays).
-- `src/machine/`: the winding machine (see above).
+- `src/machine/`: the winding machine (see above), including the GRBL streamer.
 - `src/hardware/`: the machine's dimensions (params.json), the drive maths (drive.ts) and the base and platter layout.
 - `hardware/cad/`: the FreeCAD scripts.
 - `src/export/`: winding instructions, CSV, the nail template (SVG and tiled pages), the project file.
-- `src/ui/`: the page (main.ts), the machine page (machine.ts, machine-sim.ts), the build page (build.ts, build-3d.ts, build-drawings.ts, build-data.ts), crop editor, parameters and presets, preview and loupe, threading mode, storage,
+- `src/ui/`: the page (main.ts), the machine page (machine.ts, machine-sim.ts, wind.ts, serial.ts), the build page (build.ts, build-3d.ts, build-drawings.ts, build-data.ts), crop editor, parameters and presets, preview and loupe, threading mode, storage,
   image loading, languages (i18n*.ts).
 - `web/`: the page sources (index.html, about.html, machine.html, build.html); `web/public/hardware/` the CAD output.
 - `app/`: the built page that GitHub Pages serves.
-- `tests/`: Vitest, 116 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
+- `tests/`: Vitest, 135 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
   about 5 s on a laptop; peak memory about 225 MB).
 
 ## License

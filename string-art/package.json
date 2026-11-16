@@ -1,6 +1,6 @@
 {
   "name": "string-art",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
   "description": "Turns a picture into string art: one continuous thread wound between nails on a circular frame.",
   "type": "module",
