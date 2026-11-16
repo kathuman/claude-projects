@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <script type="module" crossorigin src="./assets/main-D7q8AZYO.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/version-CCLoGjHT.js">
-  <link rel="stylesheet" crossorigin href="./assets/version-CnmyQX9U.css">
+  <script type="module" crossorigin src="./assets/main-C4cLjN3Z.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/version-LAk8b9qz.js">
+  <link rel="stylesheet" crossorigin href="./assets/version-ByEZBOd3.css">
 </head>
 <body>
 <div class="app">
@@ -71,6 +71,7 @@
 
     <section class="col side params">
       <h2 data-i18n="h.params">Parameters</h2>
+      <div class="presets" id="presets" role="group" data-i18n-attr="aria-label=h.presets" aria-label="Presets"></div>
       <div id="params"></div>
       <h2 data-i18n="h.template">Nail template</h2>
       <p class="fine" data-i18n="tpl.hint">The nail positions at true size, numbered, to tape to the board. Print at actual size (100 %, not “fit to page”) and check the 100 mm square with a ruler.</p>
@@ -96,7 +97,7 @@
         </div>
       </div>
       <div class="stage" id="stage" data-view="thread">
-        <figure class="thr"><canvas id="threadCanvas" width="400" height="400" data-i18n-attr="aria-label=view.threadLabel" aria-label="Preview of the thread on the board"></canvas><figcaption data-i18n="view.threadCap">thread, drawn at true thickness</figcaption></figure>
+        <figure class="thr"><canvas class="loupe" id="loupe" width="1" height="1" hidden aria-hidden="true"></canvas><canvas id="threadCanvas" width="400" height="400" data-i18n-attr="aria-label=view.threadLabel" aria-label="Preview of the thread on the board"></canvas><figcaption data-i18n="view.threadCap">thread, drawn at true thickness</figcaption></figure>
         <figure class="tgt"><canvas id="targetCanvas" width="1" height="1" data-i18n-attr="aria-label=view.targetLabel" aria-label="The target the solver aims for"></canvas><figcaption data-i18n="view.targetCap">target darkness</figcaption></figure>
       </div>
       <div class="bar" id="bar"><i></i></div>
@@ -106,6 +107,7 @@
         <button class="btn" id="btnCsv" data-i18n="dl.csv">Sequence (CSV)</button>
         <button class="btn" id="btnPng" data-i18n="dl.png">Preview (PNG)</button>
         <button class="btn" id="btnProject" data-i18n="dl.project">Project file</button>
+        <button class="btn primary" id="btnThread" data-i18n="dl.thread">Threading mode</button>
       </div>
       <h2 data-i18n="h.metrics">Result</h2>
       <table class="metrics"><tbody id="metrics"></tbody></table>
@@ -113,5 +115,35 @@
     </main>
   </div>
 </div>
+<section id="threadMode" class="tm" hidden role="dialog" aria-modal="true" aria-labelledby="tmTitle">
+  <header class="tm-top">
+    <h2 id="tmTitle" data-i18n="tm.title">Threading mode</h2>
+    <span class="tm-step" id="tmStep"></span>
+    <div class="tm-tools">
+      <label class="check" id="tmSpeakWrap"><input type="checkbox" id="tmSpeak" /> <span data-i18n="tm.speak">Say the nail aloud</span></label>
+      <button class="btn" id="tmFull" data-i18n="tm.full">Full screen</button>
+      <button class="btn" id="tmClose" data-i18n="tm.close">Close</button>
+    </div>
+  </header>
+  <div class="tm-main">
+    <div class="tm-now">
+      <div class="tm-label" data-i18n="tm.next">Next nail</div>
+      <div class="tm-nail" id="tmNail" aria-live="assertive"></div>
+      <div class="tm-from" id="tmFrom"></div>
+      <div class="tm-seq">
+        <div><span class="tm-k" data-i18n="tm.before">Before</span> <span id="tmPrev" class="tm-list"></span></div>
+        <div><span class="tm-k" data-i18n="tm.after">After</span> <span id="tmAfter" class="tm-list"></span></div>
+      </div>
+    </div>
+    <canvas class="tm-canvas" id="tmCanvas" data-i18n-attr="aria-label=tm.board" aria-label="The board, with the lines wound so far and the next line highlighted"></canvas>
+  </div>
+  <div class="tm-progress"><div class="bar" id="tmBar"><i></i></div></div>
+  <div class="tm-ctl">
+    <button class="btn tm-big" id="tmBack" data-i18n="tm.back">◀ Back</button>
+    <span class="tm-goto"><label for="tmGoto" data-i18n="tm.goto">Go to line</label> <input type="number" id="tmGoto" min="0" step="1" /> <button class="btn" id="tmGo" data-i18n="tm.go">Go</button></span>
+    <button class="btn primary tm-big" id="tmNextBtn" data-i18n="tm.nextBtn">Next ▶</button>
+  </div>
+  <p class="fine tm-help" data-i18n="tm.help">Space, Enter or → for the next nail; ← to go back; Esc to close. Your place is saved after every step, so you can close this and carry on later.</p>
+</section>
 </body>
 </html>

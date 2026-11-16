@@ -80,3 +80,23 @@ export function buildParams(host: HTMLElement, initial: UiParams, onChange: (p: 
     disable: (on) => host.querySelectorAll("input").forEach((i) => { (i as HTMLInputElement).disabled = on; })
   };
 }
+
+/** The presets: starting points for common kinds of picture. Each sets only the parameters it names. */
+export interface Preset { id: string; values: Partial<UiParams> }
+export const PRESETS: Preset[] = [
+  // many nails and a fine thread: detail and soft tones, at the cost of more lines and winding time
+  { id: "fine", values: { nails: 300, threadMm: 0.2, maxLines: 4500, minSkip: 25, darkness: 1, beta: 0, workingRes: 800, maxReuse: 1, epsilon: 0 } },
+  // fewer nails, a thicker thread, a higher darkness factor: strong shapes that read from across a room
+  { id: "bold", values: { nails: 200, threadMm: 0.4, maxLines: 2500, minSkip: 15, darkness: 1.3, beta: 0, workingRes: 600, maxReuse: 1, epsilon: 0 } },
+  // logos and silhouettes: high darkness so solid areas fill, a length penalty so edges near the rim stay crisp
+  { id: "graphic", values: { nails: 240, threadMm: 0.3, maxLines: 2000, minSkip: 20, darkness: 1.5, beta: 0.3, workingRes: 700, maxReuse: 2, epsilon: 0 } }
+];
+
+export function presetName(id: string): string {
+  return id === "fine" ? T("Portrait – fine") : id === "bold" ? T("Portrait – bold") : T("High-contrast graphic");
+}
+export function presetTip(id: string): string {
+  return id === "fine" ? T("300 nails, 0.2 mm thread, up to 4,500 lines: fine detail and soft tones. Takes longest to wind.")
+    : id === "bold" ? T("200 nails, 0.4 mm thread, up to 2,500 lines: strong shapes that read from across a room.")
+    : T("240 nails, dark thread and a length penalty: solid areas fill and edges near the rim stay crisp. For logos and silhouettes.");
+}

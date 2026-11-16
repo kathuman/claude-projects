@@ -7,9 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <script type="module" crossorigin src="./assets/about-BpMsLUaK.js"></script>
-  <link rel="modulepreload" crossorigin href="./assets/version-CCLoGjHT.js">
-  <link rel="stylesheet" crossorigin href="./assets/version-CnmyQX9U.css">
+  <script type="module" crossorigin src="./assets/about-Cav_hN2c.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/version-LAk8b9qz.js">
+  <link rel="stylesheet" crossorigin href="./assets/version-ByEZBOd3.css">
 </head>
 <body>
 <div class="app">
@@ -29,10 +29,63 @@
     <p data-i18n="about.how">The picture becomes a map of how dark each spot must be. Starting from one nail, the app tries every line it is allowed to wind next and keeps the one that brings the simulated board closest to that map, then carries on from where that line ends. Thread darkens the board the way real thread does: each pass hides a fraction of whatever white is still showing, so crossings get darker but never more than black. It stops when it reaches the most lines you allow, or when no line improves the picture any more.</p>
     <h2 data-i18n="about.h.numbers">The numbers</h2>
     <p data-i18n="about.numbers">RMSE measures how far the simulated board is from the target, pixel by pixel (0 is a perfect match). SSIM compares local brightness, contrast and structure (1 is identical); because thread is a fine texture of lines, the app also gives SSIM after a slight blur, closer to what you see from a few steps away. The thread length is the sum of all the lines, with 10 % more for winding round the nails and slack.</p>
+    <h2 data-i18n="about.h.math">The maths behind it</h2>
+    <p data-i18n="about.m.intro">Here is every step the app takes, with the equations it uses. You only need powers, square roots, sine and cosine, and the sign Σ, which means “add these all up”.</p>
+    <h3 data-i18n="about.m1.h">1. From a photo to a map of darkness</h3>
+    <p data-i18n="about.m1.a">A photo stores each pixel as three numbers between 0 and 1, for red, green and blue. But these numbers are “squashed”: screens store light along a curve, so that dark shades get more of the numbers. Before doing any maths with light, the app undoes the curve to get the real amount of light <i>L</i> from a stored value <i>v</i>:</p>
+    <div class="eq" data-i18n="about.m1.e1"><i>L</i> = ((<i>v</i> + 0.055) / 1.055)<sup>2.4</sup>      (for very dark values: <i>L</i> = <i>v</i> / 12.92)</div>
+    <p data-i18n="about.m1.b">Our eyes find green much brighter than red, and blue the darkest of the three, so the brightness <i>Y</i> of a pixel is a weighted average:</p>
+    <div class="eq" data-i18n="about.m1.e2"><i>Y</i> = 0.2126 <i>R</i> + 0.7152 <i>G</i> + 0.0722 <i>B</i></div>
+    <p data-i18n="about.m1.c">The thread is black, so what the app needs is the opposite of brightness: how dark each spot must be. That is the target darkness <i>T</i>, from 0 (white, no thread) to 1 (black, fully covered):</p>
+    <div class="eq" data-i18n="about.m1.e3"><i>T</i> = 1 − <i>Y</i></div>
+    <p data-i18n="about.m1.d">Why undo the curve? Because thread works with real light: a spot half covered by black thread sends back half the light, and only real-light numbers add up like that.</p>
+    <h3 data-i18n="about.m2.h">2. Where the nails go</h3>
+    <p data-i18n="about.m2.a">There are <i>N</i> nails evenly spaced on a circle of radius <i>R</i> around the centre (<i>c</i><sub>x</sub>, <i>c</i><sub>y</sub>). Nail 0 is at the top and the numbers go clockwise. Nail <i>i</i> sits at the angle</p>
+    <div class="eq" data-i18n="about.m2.e1"><i>θ</i><sub><i>i</i></sub> = −90° + 360° · <i>i</i> / <i>N</i></div>
+    <p data-i18n="about.m2.b">and its position comes from cosine and sine. On a screen <i>y</i> grows downwards, which is what makes the numbering run clockwise:</p>
+    <div class="eq" data-i18n="about.m2.e2"><i>x</i><sub><i>i</i></sub> = <i>c</i><sub>x</sub> + <i>R</i> cos <i>θ</i><sub><i>i</i></sub>      <i>y</i><sub><i>i</i></sub> = <i>c</i><sub>y</sub> + <i>R</i> sin <i>θ</i><sub><i>i</i></sub></div>
+    <p data-i18n="about.m2.c">A line between two nails that are <i>d</i> places apart is a chord of the circle. On a board of diameter <i>D</i> it is this long:</p>
+    <div class="eq" data-i18n="about.m2.e3">length = <i>D</i> · sin(180° · <i>d</i> / <i>N</i>)</div>
+    <p data-i18n="about.m2.d">For example, with 240 nails on a 600 mm board, nails 0 and 120 are opposite each other: sin(90°) = 1, so the line is the full 600 mm. Nails 0 and 60 are a quarter of the way round: 600 · sin(45°) ≈ 424 mm.</p>
+    <h3 data-i18n="about.m3.h">3. Drawing a line on a grid of pixels</h3>
+    <p data-i18n="about.m3.a">A straight line rarely passes exactly through the middle of pixels. The app uses Xiaolin Wu's method: it walks along the line one column at a time, and where the line passes between two pixels, it shares the ink between them. If the line is a fraction <i>f</i> of the way from the centre of the upper pixel to the lower one, they get</p>
+    <div class="eq" data-i18n="about.m3.e1"><i>w</i><sub>upper</sub> = 1 − <i>f</i>      <i>w</i><sub>lower</sub> = <i>f</i></div>
+    <p data-i18n="about.m3.b">so each column always gets exactly one pixel's worth of ink. But a slanted line is longer than the number of columns it crosses: a 45° line across 100 columns is 141 pixels long. So each line gets a correction</p>
+    <div class="eq" data-i18n="about.m3.e2"><i>k</i> = length / columns crossed      (between 1 and √2 ≈ 1.41)</div>
+    <h3 data-i18n="about.m4.h">4. How thread darkens the board</h3>
+    <p data-i18n="about.m4.a">One pass of thread covers only part of a pixel. At the working size a pixel is 600 mm / 700 ≈ 0.86 mm wide and the thread is 0.25 mm thick, so one pass covers about this fraction of it (the darkness factor, a setting, lets you make thread count as darker or lighter):</p>
+    <div class="eq" data-i18n="about.m4.e1"><i>α</i> = (thread width / pixel width) × darkness factor = 0.25 / 0.86 × 1 ≈ 0.29</div>
+    <p data-i18n="about.m4.b">On a pixel of a line with ink share <i>w</i>, one pass covers <i>a</i> = <i>α</i> · <i>k</i> · <i>w</i> (never more than 1). Now the key idea: a new thread lying on top of old ones hides the same fraction of whatever white is <b>still showing</b>. If <i>C</i> is how dark a pixel already is, the white still showing is 1 − <i>C</i>, and after one more pass</p>
+    <div class="eq" data-i18n="about.m4.e2">1 − <i>C</i><sub>new</sub> = (1 − <i>C</i>) · (1 − <i>a</i>)</div>
+    <p data-i18n="about.m4.c">After <i>n</i> passes over a white pixel the darkness is therefore</p>
+    <div class="eq" data-i18n="about.m4.e3"><i>C</i> = 1 − (1 − <i>a</i>)<sup><i>n</i></sup></div>
+    <p data-i18n="about.m4.d">With <i>a</i> = 0.29: one pass gives 0.29, two give 0.50 (not 0.58), three give 0.64, ten give 0.97. Crossings get darker and darker but never darker than black, just like real thread.</p>
+    <h3 data-i18n="about.m5.h">5. Choosing the next line</h3>
+    <p data-i18n="about.m5.a">The app measures how far its simulated board <i>C</i> is from the target <i>T</i> with the squared error: for every pixel, take the difference, square it (so too dark and too light both count as positive), multiply by how important that pixel is (<i>W</i>, from the brush: 1 normally, up to 3 for important areas), and add it all up:</p>
+    <div class="eq" data-i18n="about.m5.e1"><i>E</i> = Σ <i>W</i> · (<i>T</i> − <i>C</i>)<sup>2</sup></div>
+    <p data-i18n="about.m5.b">Winding one more line makes each of its pixels darker by <i>δ</i> = <i>a</i> · (1 − <i>C</i>). How much does that lower the error? Working out (<i>T</i> − <i>C</i>)<sup>2</sup> − (<i>T</i> − <i>C</i> − <i>δ</i>)<sup>2</sup> gives the improvement the line brings:</p>
+    <div class="eq" data-i18n="about.m5.e2">Δ<i>E</i> = Σ<sub>pixels of the line</sub> <i>W</i> · <i>δ</i> · (2(<i>T</i> − <i>C</i>) − <i>δ</i>)</div>
+    <p data-i18n="about.m5.c">A pixel helps while it is still lighter than it should be by more than half of <i>δ</i>; once it is dark enough, more thread there counts against the line. From the nail the thread is at, the app works out Δ<i>E</i> for every line it may wind next (about 200 of them), winds the one with the biggest Δ<i>E</i>, and repeats from the other end of that line.</p>
+    <p data-i18n="about.m5.d">This is called a <b>greedy</b> method: it always takes the best next step and never looks further ahead. Why not find the best sequence of all? With 200 choices at each of 3,000 steps there are 200<sup>3000</sup> possible sequences, a number with about 6,900 digits. No computer could try them all; the greedy method needs only 200 × 3,000 = 600,000 scores, which takes a few seconds.</p>
+    <h3 data-i18n="about.m6.h">6. When to stop, and favouring short lines</h3>
+    <p data-i18n="about.m6.a">The app stops after the most lines you allow, or when the best Δ<i>E</i> has stayed below a small threshold <i>ε</i> (normally 0) for 20 lines in a row: then no line helps any more, and those last 20 lines are taken out again. The length penalty <i>β</i> divides each line's score by its length <i>ℓ</i> raised to a power:</p>
+    <div class="eq" data-i18n="about.m6.e1">score = Δ<i>E</i> / <i>ℓ</i><sup><i>β</i></sup></div>
+    <p data-i18n="about.m6.b">With <i>β</i> = 0 nothing changes; with <i>β</i> = 1 a line twice as long needs twice the improvement to win, which gives short lines near the edge more of a chance.</p>
+    <h3 data-i18n="about.m7.h">7. Measuring the result</h3>
+    <p data-i18n="about.m7.a">The root-mean-square error averages the squared differences over all <i>n</i> pixels in the circle and takes the square root, so it is in the same units as darkness (0 is perfect):</p>
+    <div class="eq" data-i18n="about.m7.e1">RMSE = √( Σ (<i>T</i> − <i>C</i>)<sup>2</sup> / <i>n</i> )</div>
+    <p data-i18n="about.m7.b">SSIM (structural similarity) compares small 7 × 7 patches of the two pictures: their average darkness <i>μ</i>, how much they vary (<i>σ</i>), and how much they vary together (<i>σ</i><sub>TC</sub>). It is 1 when the patches match and close to 0 when they have nothing in common:</p>
+    <div class="eq" data-i18n="about.m7.e2">SSIM = (2<i>μ</i><sub>T</sub><i>μ</i><sub>C</sub> + <i>c</i><sub>1</sub>)(2<i>σ</i><sub>TC</sub> + <i>c</i><sub>2</sub>) / ((<i>μ</i><sub>T</sub><sup>2</sup> + <i>μ</i><sub>C</sub><sup>2</sup> + <i>c</i><sub>1</sub>)(<i>σ</i><sub>T</sub><sup>2</sup> + <i>σ</i><sub>C</sub><sup>2</sup> + <i>c</i><sub>2</sub>))
+<i>c</i><sub>1</sub> = 0.0001, <i>c</i><sub>2</sub> = 0.0009</div>
+    <p data-i18n="about.m7.c">The small numbers <i>c</i><sub>1</sub> and <i>c</i><sub>2</sub> stop it from dividing by zero on plain patches. Close up, thread is a tangle of thin lines, so the app also gives SSIM after blurring both pictures a little, which is closer to what you see from a few steps away. Finally, the thread you need is the sum of all the line lengths from step 2, plus 10 % for going round the nails and for slack.</p>
+    <h3 data-i18n="about.m8.h">8. Adjusting the picture</h3>
+    <p data-i18n="about.m8.a">Contrast and brightness work on the stored value <i>v</i>: the contrast <i>s</i> stretches it away from middle grey, the brightness <i>b</i> shifts it, and the gamma <i>γ</i> bends it, darkening the middle tones when <i>γ</i> is above 1:</p>
+    <div class="eq" data-i18n="about.m8.e1"><i>v</i>′ = ((<i>v</i> − 0.5) · <i>s</i> + 0.5 + <i>b</i>)<sup><i>γ</i></sup></div>
+    <p data-i18n="about.m8.b">The local contrast boost (CLAHE) cuts the picture into an 8 × 8 grid of squares. In each square it counts how many pixels have each shade (a histogram) and gives every shade a new value: the fraction of the square's pixels that are darker than it. Shades that many pixels share get spread apart, so detail appears in flat areas. Each count is capped at a limit first, so that noise is not blown up, and neighbouring squares are blended so that no seams show.</p>
     <h2 data-i18n="about.h.private">Your pictures stay with you</h2>
     <p data-i18n="about.private">Everything runs in your browser. Pictures are never uploaded.</p>
-    <h2 data-i18n="about.h.status">What is still to come</h2>
-    <p data-i18n="about.status">This is version 0.4: the solver, the live preview and the quality numbers, and preparing the picture — cropping, zooming and turning it, brightness, contrast and gamma, a local contrast boost, an importance brush, and a check that warns about pictures that will not work well; a nail template at true size, tiled onto A4 or A3 pages; and, after a run, winding instructions to print, the sequence as CSV, the preview as PNG, and a project file that reloads exactly. Still to come: a full-screen mode that calls out the next nail while you wind, saved settings and presets.</p>
+    <h2 data-i18n="about.h.status">What it does</h2>
+    <p data-i18n="about.status">Version 1.0. Prepare the picture — crop, zoom and turn it, adjust brightness, contrast and gamma, boost local contrast, and paint what matters — with a check that warns about pictures that will not work well; choose a preset or set every parameter; and watch the thread go on. Then print the nail template at true size and the winding instructions, and wind the piece with the threading mode, which shows (and can say) the next nail and remembers where you are. Your settings and last result are remembered in this browser.</p>
   </main>
 </div>
 </body>

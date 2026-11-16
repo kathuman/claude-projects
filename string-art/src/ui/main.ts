@@ -11,7 +11,9 @@ import type { DoneResult, FromWorker, ToWorker } from "../worker/protocol";
 import { CropEditor, rgbaCanvas, ZOOM_MAX, ZOOM_MIN } from "./crop";
 import { LANGS, T, apply, fx, int, lang, locale, mountSwitch } from "./i18n";
 import { loadImageFile, loadSample } from "./image";
-import { DEFAULT_UI, buildParams, type UiParams } from "./params";
+import { DEFAULT_UI, PRESETS, buildParams, presetName, presetTip, type UiParams } from "./params";
+import { loadLast, loadParams, saveLast, saveParams } from "./store";
+import { ThreadingMode } from "./threading";
 import { ThreadPreview, drawTargetWithMask } from "./preview";
 import { VERSION } from "./version";
 import { instructionsHtml } from "../export/instructions";
@@ -45,7 +47,22 @@ const state = {
 };
 
 const preview = new ThreadPreview($<HTMLCanvasElement>("threadCanvas"));
-const params = buildParams($("params"), DEFAULT_UI, (p) => { if (p.workingRes !== state.targetRes && state.src) scheduleTarget(); setButtons(); tplInfo(); });
+const params = buildParams($("params"), loadParams(DEFAULT_UI), paramsChanged);
+function paramsChanged(p: UiParams): void {
+  if (p.workingRes !== state.targetRes && state.src) scheduleTarget();
+  setButtons(); tplInfo(); saveParams(p);
+}
+const threading = new ThreadingMode($("threadMode"));
+
+// presets: starting points that set only the parameters they name
+$("presets").innerHTML = PRESETS.map((pr) => `<button class="btn" type="button" data-p="${pr.id}" title="${presetTip(pr.id)}">${presetName(pr.id)}</button>`).join("");
+$("presets").querySelectorAll<HTMLButtonElement>("button").forEach((b) => b.addEventListener("click", () => {
+  const pr = PRESETS.find((x) => x.id === b.dataset.p)!;
+  const next = { ...params.get(), ...pr.values };
+  params.set(next);
+  paramsChanged(params.get());
+  status(T("Preset “{name}”: {tip}", { name: presetName(pr.id), tip: presetTip(pr.id) }));
+}));
 const crop = new CropEditor($<HTMLCanvasElement>("cropCanvas"), (c) => { state.prep.crop = c; syncCropControls(c); scheduleTarget(); });
 
 // ---------------------------------------------------------------- the picture
@@ -253,6 +270,10 @@ function onWorker(m: FromWorker): void {
       }
       showMetrics(m.result);
       $("downloads").hidden = m.result.steps === 0;
+      if (m.result.steps > 0 && state.runParams) {
+        saveLast({ params: state.runParams, sequence: Array.from(m.result.sequences[0].sequence), metrics: m.result.metrics,
+          stopReason: m.result.stopReason, cacheMode: m.result.cacheMode, cacheBytes: m.result.cacheBytes, sourceName: $("srcName").textContent || "" });
+      }
       break;
     case "error":
       finish();
@@ -286,6 +307,8 @@ $("btnCancel").addEventListener("click", () => { if (state.running) send({ type:
 // ---------------------------------------------------------------- display
 function setButtons(): void {
   $<HTMLButtonElement>("btnRun").disabled = state.running || !state.target;
+  $<HTMLButtonElement>("btnProject").disabled = !state.target;
+  $("presets").querySelectorAll<HTMLButtonElement>("button").forEach((b) => { b.disabled = state.running; });
   $<HTMLButtonElement>("btnPause").disabled = !state.running;
   $<HTMLButtonElement>("btnCancel").disabled = !state.running;
   $("btnPause").textContent = state.paused ? T("Resume") : T("Pause");
@@ -358,6 +381,10 @@ function projectText(): string | null {
     sequence: r.sequences[0].sequence, version: VERSION, saved: new Date().toISOString() });
 }
 $("btnProject").addEventListener("click", () => { const t = projectText(); if (t) save(fileBase() + ".json", t, "application/json"); });
+$("btnThread").addEventListener("click", () => {
+  const r = state.result, p = state.runParams;
+  if (r && p) threading.open(r.sequences[0].sequence, p.nails);
+});
 $<HTMLInputElement>("projFile").addEventListener("change", async (ev) => {
   const input = ev.target as HTMLInputElement, f = input.files?.[0];
   input.value = "";
@@ -425,7 +452,41 @@ function setView(v: string): void {
 }
 document.querySelectorAll<HTMLButtonElement>("#segView button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.v!)));
 
+// ---------------------------------------------------------------- the loupe: the board at true thread width under the pointer
+const loupe = $<HTMLCanvasElement>("loupe"), tview = $<HTMLCanvasElement>("threadCanvas");
+tview.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse" || !preview.full.width) return;
+  const r = tview.getBoundingClientRect(), u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
+  const dpr = window.devicePixelRatio || 1, L = Math.round(200 * dpr);
+  if (loupe.width !== L) { loupe.width = L; loupe.height = L; }
+  const g = loupe.getContext("2d")!, fx = u * preview.full.width, fy = v * preview.full.height, src = 200;   // 200 board pixels: one per thread width
+  g.fillStyle = "#fff"; g.fillRect(0, 0, L, L);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(preview.full, fx - src / 2, fy - src / 2, src, src, 0, 0, L, L);
+  const box = tview.parentElement!.getBoundingClientRect();
+  loupe.style.left = `${Math.min(box.width - 200, Math.max(0, e.clientX - box.left + 24))}px`;
+  loupe.style.top = `${Math.max(0, e.clientY - box.top - 220)}px`;
+  loupe.hidden = false;
+});
+tview.addEventListener("pointerleave", () => { loupe.hidden = true; });
+
+// ---------------------------------------------------------------- the last result, remembered from the previous visit
+(function restoreLast() {
+  const last = loadLast();
+  if (!last) return;
+  const seq = Uint16Array.from(last.sequence), p = { ...DEFAULT_UI, ...last.params };
+  state.runParams = p;
+  state.result = { sequences: [{ colour: "#000000", sequence: seq }], simulated: new Float32Array(0), stopReason: last.stopReason,
+    steps: seq.length - 1, ms: last.metrics.ms, cacheMode: last.cacheMode, cacheBytes: last.cacheBytes, metrics: last.metrics };
+  preview.reset(p.nails, p.workingRes, p.marginPx, p.boardMm, p.threadMm, p.darkness);
+  preview.drawSequence(seq);
+  showMetrics(state.result);
+  $("downloads").hidden = false;
+  setBar(1);
+  status(T("Your last result is shown again ({n} lines{src}). Load a picture to make a new one.", { n: int(seq.length - 1), src: last.sourceName ? ", " + last.sourceName : "" }));
+})();
+
 setButtons();
 tplInfo();
 // test hook for the browser checks
-(window as unknown as { __sa: unknown }).__sa = { state, params, crop, run, setBrush, instructionsDoc, projectText, setSample: () => $("btnSample").click() };
+(window as unknown as { __sa: unknown }).__sa = { state, params, crop, run, setBrush, instructionsDoc, projectText, threading, setSample: () => $("btnSample").click() };
