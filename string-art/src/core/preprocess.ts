@@ -10,6 +10,8 @@
 //    "more contrast" by eye, so the sliders act on sRGB-encoded values; the result is decoded to linear again.
 // 5. T = 1 − Y: the darkness the thread must produce. Pixels outside the nail circle get T = 0.
 
+import { clahe } from "./clahe";
+
 export interface Rgba {
   data: Uint8ClampedArray | Uint8Array;
   width: number;
@@ -121,4 +123,65 @@ export function toTarget(Y: Float32Array, mask: Uint8Array): Float32Array {
   const T = new Float32Array(Y.length);
   for (let p = 0; p < Y.length; p++) T[p] = mask[p] ? Math.min(1, Math.max(0, 1 - Y[p])) : 0;
   return T;
+}
+
+/** Where the board circle sits on the picture: the centre and side of the square it fills (source pixels), and how
+ *  far the picture is turned clockwise on the board (radians). */
+export interface Crop { cx: number; cy: number; size: number; angle: number }
+
+export function defaultCrop(w: number, h: number): Crop { return { cx: w / 2, cy: h / 2, size: Math.min(w, h), angle: 0 }; }
+
+/** Bilinear sample of a w × h image at (x, y) in pixel coordinates (pixel centres at +½); outside counts as white. */
+function bilinear(Y: Float32Array, w: number, h: number, x: number, y: number): number {
+  const u = x - 0.5, v = y - 0.5, x0 = Math.floor(u), y0 = Math.floor(v), fx = u - x0, fy = v - y0;
+  const at = (i: number, j: number) => (i < 0 || j < 0 || i >= w || j >= h ? 1 : Y[j * w + i]);
+  return (1 - fy) * ((1 - fx) * at(x0, y0) + fx * at(x0 + 1, y0)) + fy * ((1 - fx) * at(x0, y0 + 1) + fx * at(x0 + 1, y0 + 1));
+}
+
+/**
+ * Resample the crop to res × res. Without rotation this is the exact area average (resampleSquare). With rotation each
+ * output pixel averages k × k bilinear samples spread evenly over its footprint in the source, k = ⌈size/res⌉ (at
+ * most 6): the footprint is about size/res source pixels wide, so k samples per side touch every source pixel it
+ * covers, which approximates the area average and avoids aliasing when the picture is shrunk.
+ *
+ * Geometry (screen coordinates, y down; a positive angle turns the picture clockwise on the board): output offset d
+ * from the board centre, in output pixels, shows the source point c + R(−angle)·d·(size/res).
+ */
+export function cropResample(Y: Float32Array, w: number, h: number, res: number, crop: Crop): Float32Array {
+  if (crop.angle === 0) return resampleSquare(Y, w, h, res, crop);
+  const out = new Float32Array(res * res), s = crop.size / res, k = Math.min(6, Math.max(1, Math.ceil(s)));
+  const cos = Math.cos(-crop.angle), sin = Math.sin(-crop.angle);
+  for (let j = 0; j < res; j++) {
+    for (let i = 0; i < res; i++) {
+      let acc = 0;
+      for (let b = 0; b < k; b++) {
+        const dy = (j + (b + 0.5) / k - res / 2) * s;
+        for (let a = 0; a < k; a++) {
+          const dx = (i + (a + 0.5) / k - res / 2) * s;
+          acc += bilinear(Y, w, h, crop.cx + dx * cos - dy * sin, crop.cy + dx * sin + dy * cos);
+        }
+      }
+      out[j * res + i] = acc / (k * k);
+    }
+  }
+  return out;
+}
+
+/** Everything that turns the picture into the target, in order. */
+export interface Prep { crop: Crop; adj: Adjustments; clahe: boolean; claheClip: number }
+
+/**
+ * The whole preparation: crop and resample, optional CLAHE (on the sRGB-encoded scale, see clahe.ts), brightness /
+ * contrast / gamma, then T = 1 − Y inside the circle.
+ */
+export function buildTarget(lum: Float32Array, w: number, h: number, res: number, prep: Prep, mask: Uint8Array): Float32Array {
+  let Y = cropResample(lum, w, h, res, prep.crop);
+  if (prep.clahe) {
+    const v = new Float32Array(Y.length);
+    for (let p = 0; p < Y.length; p++) v[p] = linearToSrgb(Math.min(1, Math.max(0, Y[p])));
+    const e = clahe(v, res, mask, 8, prep.claheClip);
+    for (let p = 0; p < Y.length; p++) Y[p] = srgbToLinear(Math.min(1, Math.max(0, e[p])));
+  }
+  Y = adjust(Y, prep.adj);
+  return toTarget(Y, mask);
 }

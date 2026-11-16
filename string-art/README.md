@@ -6,11 +6,12 @@ by hand. Everything runs in the browser; nothing is uploaded.
 
 **Live:** https://kathuman.github.io/claude-projects/string-art/
 
-**Status:** version 0.2.0, milestone 2 of 5. You can upload a picture (or use the drawn sample), set every solver
-parameter, run the solver in a Web Worker with live progress, pause, resume and cancel, watch the thread go on at true
-thickness, compare it side by side with the target, and read the quality numbers. In English, Spanish and Danish.
-Still to come: picture cropping and adjustments, CLAHE and an importance brush (M3); exports including a 1:1 nail
-template and printable winding instructions (M4); the threading mode, saved settings and presets (M5).
+**Status:** version 0.3.0, milestone 3 of 5. Upload a picture (or use the drawn sample); move, zoom and turn it under
+the board circle; adjust brightness, contrast and gamma, or boost local contrast with CLAHE; paint what matters with
+the importance brush; heed the background check; set every solver parameter; run the solver in a Web Worker with live
+progress, pause, resume and cancel; watch the thread go on at true thickness; compare it side by side with the target;
+and read the quality numbers. In English, Spanish and Danish. Still to come: exports including a 1:1 nail template and
+printable winding instructions (M4); the threading mode, saved settings and presets (M5).
 
 Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
 
@@ -55,9 +56,13 @@ committed alongside the source. The page's source is `web/index.html` plus `src/
 
 - `src/core/`: pure functions with no DOM (geometry, Wu rasteriser, line cache, darkness model, solver interface,
   greedy solver, metrics). They run in Node for the tests.
-- `src/core/preprocess.ts`: sRGB to linear light, Rec. 709 luminance, area-average resampling, adjustments, target.
+- `src/core/preprocess.ts`: sRGB to linear light, Rec. 709 luminance, area-average resampling, rotated crops
+  (supersampled bilinear), adjustments, the whole target pipeline.
+- `src/core/clahe.ts`: CLAHE written from scratch (8 × 8 tiles, iterative clip and redistribute, bilinear blending).
+- `src/core/checks.ts`: the background check (low contrast; busy border, measured on a fixed 128-px copy).
+- `src/core/mask.ts`: the importance mask and its multiplicative Gaussian brush.
 - `src/worker/`: the solver worker and its typed message protocol.
-- `src/ui/`: the page (main.ts), parameters, thread preview, image loading, languages (i18n*.ts).
+- `src/ui/`: the page (main.ts), crop editor, parameters, thread preview, image loading, languages (i18n*.ts).
 - `web/`: the page sources (index.html, about.html).
 - `app/`: the built page that GitHub Pages serves. CI rebuilds it and fails if the committed copy differs.
 - `tests/`: Vitest.

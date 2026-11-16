@@ -17,7 +17,8 @@ for (const f of pages) {
 const pageKeys = Object.keys(english);
 
 // every string literal inside a T( … ) call in the UI scripts, skipping the {vars} object
-const src = readdirSync(join(root, "src/ui")).filter((f) => f.endsWith(".ts") && !f.startsWith("i18n")).map((f) => readFileSync(join(root, "src/ui", f), "utf8")).join(";\n");
+const src = ["src/ui", "src/export"].flatMap((d) => readdirSync(join(root, d)).filter((f) => f.endsWith(".ts") && !f.startsWith("i18n"))
+  .map((f) => readFileSync(join(root, d, f), "utf8"))).join(";\n");
 const msgs = new Set<string>();
 for (let i = src.indexOf("T("); i >= 0; i = src.indexOf("T(", i + 2)) {
   if (/[\w.$]/.test(src[i - 1] || "")) continue;

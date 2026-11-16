@@ -33,9 +33,35 @@
         <button class="btn" id="btnSample" data-i18n="in.sample">Use the sample</button>
       </div>
       <p class="src-name" id="srcName"></p>
-      <canvas class="thumb" id="targetSmall" width="1" height="1" data-i18n-attr="aria-label=in.thumb" aria-label="The picture as the solver sees it"></canvas>
       <p class="hint" id="inputHint" data-i18n="in.hint">Choose a picture: a face or object with strong contrast against a plain background works best. Nothing is uploaded anywhere; everything runs in your browser.</p>
-      <p class="fine" data-i18n="in.note">The picture is cropped to the middle square and shown as the darkness the thread has to make. Cropping, rotating, brightness and contrast controls, and a brush to mark important areas, come in the next version.</p>
+
+      <div id="editPanel" hidden>
+        <canvas class="crop" id="cropCanvas" data-i18n-attr="aria-label=crop.label" aria-label="The picture under the board circle: drag to move it, scroll or pinch to zoom"></canvas>
+        <p class="fine" data-i18n="crop.hint">Drag to move the picture, scroll or pinch to zoom.</p>
+        <div class="ctl"><div class="row"><label for="zoom" data-i18n="crop.zoom">Zoom</label><output id="zoomOut"></output></div><input type="range" id="zoom" min="0" max="1" step="0.001" /></div>
+        <div class="ctl"><div class="row"><label for="rotate" data-i18n="crop.rotate">Turn</label><output id="rotateOut"></output></div><input type="range" id="rotate" min="-180" max="180" step="1" value="0" /></div>
+        <button class="btn" id="btnCropReset" data-i18n="crop.reset">Reset the crop</button>
+
+        <h2 data-i18n="h.adjust">Adjust</h2>
+        <div class="ctl"><div class="row"><label for="brightness" data-i18n="adj.brightness">Brightness</label><output id="brightnessOut"></output></div><input type="range" id="brightness" min="-0.5" max="0.5" step="0.01" value="0" /></div>
+        <div class="ctl"><div class="row"><label for="contrast" data-i18n="adj.contrast">Contrast</label><output id="contrastOut"></output></div><input type="range" id="contrast" min="0.2" max="3" step="0.05" value="1" /></div>
+        <div class="ctl"><div class="row"><label for="gamma" data-i18n="adj.gamma">Gamma (above 1 darkens mid-tones)</label><output id="gammaOut"></output></div><input type="range" id="gamma" min="0.3" max="3" step="0.05" value="1" /></div>
+        <label class="check"><input type="checkbox" id="clahe" /> <span data-i18n="adj.clahe">Local contrast boost (CLAHE)</span></label>
+        <div class="ctl" id="claheCtl" hidden><div class="row"><label for="claheClip" data-i18n="adj.clip">Clip limit (higher boosts more)</label><output id="claheClipOut"></output></div><input type="range" id="claheClip" min="1" max="8" step="0.1" value="2.5" /></div>
+        <button class="btn" id="btnAdjReset" data-i18n="adj.reset">Reset adjustments</button>
+
+        <h2 data-i18n="h.seen">As the solver sees it</h2>
+        <canvas class="thumb" id="targetSmall" width="1" height="1" data-i18n-attr="aria-label=in.thumb" aria-label="The picture as the solver sees it"></canvas>
+        <div id="checks" role="status" aria-live="polite"></div>
+
+        <h2 data-i18n="h.brush">Importance brush</h2>
+        <div class="seg seg-block" id="segBrush" role="group" data-i18n-attr="aria-label=h.brush" aria-label="Importance brush">
+          <button data-v="off" aria-pressed="true" data-i18n="brush.off">Off</button><button data-v="up" aria-pressed="false" data-i18n="brush.up">More important</button><button data-v="down" aria-pressed="false" data-i18n="brush.down">Less important</button>
+        </div>
+        <div class="ctl"><div class="row"><label for="brushSize" data-i18n="brush.size">Brush size</label><output id="brushSizeOut"></output></div><input type="range" id="brushSize" min="2" max="20" step="0.5" value="6" /></div>
+        <button class="btn" id="btnMaskClear" data-i18n="brush.clear">Clear the brush marks</button>
+        <p class="fine" data-i18n="brush.hint">Paint on the Target view. Warm areas count up to three times as much and draw more lines; cool areas count as little as a fifth. Use it for eyes, a mouth or an edge that matters.</p>
+      </div>
     </aside>
 
     <section class="col side params">
@@ -60,6 +86,10 @@
       </div>
       <div class="bar" id="bar"><i></i></div>
       <p class="status" id="status" role="status" aria-live="polite"></p>
+      <div class="runbar" id="downloads" hidden>
+        <button class="btn primary" id="btnInstructions" data-i18n="dl.instructions">Download winding instructions</button>
+        <button class="btn" id="btnCsv" data-i18n="dl.csv">Sequence (CSV)</button>
+      </div>
       <h2 data-i18n="h.metrics">Result</h2>
       <table class="metrics"><tbody id="metrics"></tbody></table>
       <details class="log"><summary data-i18n="log.summary">Solver log</summary><pre id="log"></pre></details>

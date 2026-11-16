@@ -109,3 +109,22 @@ export function drawDarkness(canvas: HTMLCanvasElement, D: ArrayLike<number>, re
   }
   ctx.putImageData(img, 0, 0);
 }
+
+/**
+ * The target with the importance mask over it: areas raised above 1 tinted warm (up to W = 3), areas lowered below 1
+ * tinted cool (down to 0.2). With no mask it is the plain target.
+ */
+export function drawTargetWithMask(canvas: HTMLCanvasElement, T: ArrayLike<number>, W: Float32Array | null, res: number): void {
+  drawDarkness(canvas, T, res);
+  if (!W) return;
+  const ctx = canvas.getContext("2d")!, img = ctx.getImageData(0, 0, res, res), d = img.data;
+  for (let p = 0, q = 0; p < res * res; p++, q += 4) {
+    const w = W[p];
+    if (w === 1) continue;
+    let a: number, r: number, g: number, b: number;
+    if (w > 1) { a = Math.min(1, (w - 1) / 2) * 0.6; r = 255; g = 150; b = 40; }
+    else { a = Math.min(1, (1 - w) / 0.8) * 0.6; r = 40; g = 140; b = 255; }
+    d[q] = d[q] * (1 - a) + r * a; d[q + 1] = d[q + 1] * (1 - a) + g * a; d[q + 2] = d[q + 2] * (1 - a) + b * a;
+  }
+  ctx.putImageData(img, 0, 0);
+}
