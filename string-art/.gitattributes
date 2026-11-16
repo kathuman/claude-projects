@@ -1,0 +1,6 @@
+# Vite copies the page sources into app/ as they are on disk; CI builds on Linux and checks app/ byte for byte.
+# Keep LF on every platform so a Windows checkout builds the same app/ as CI.
+* text=auto eol=lf
+*.jpg binary
+*.png binary
+*.webp binary
