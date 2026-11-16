@@ -1,0 +1,150 @@
+{
+ "centreDistance": 100.08,
+ "boardTop": 39,
+ "parts": [
+  {
+   "id": "turntable_pulley",
+   "qty": 1,
+   "file": "stl/turntable_pulley.stl",
+   "size": [
+    140.0,
+    140.0,
+    19.3
+   ],
+   "volume": 176.0,
+   "triangles": 28000
+  },
+  {
+   "id": "motor_plate",
+   "qty": 1,
+   "file": "stl/motor_plate.stl",
+   "size": [
+    80.0,
+    70.0,
+    6.0
+   ],
+   "volume": 29.6,
+   "triangles": 2032
+  },
+  {
+   "id": "turn_button",
+   "qty": 3,
+   "file": "stl/turn_button.stl",
+   "size": [
+    29.0,
+    20.0,
+    22.0
+   ],
+   "volume": 9.2,
+   "triangles": 228
+  },
+  {
+   "id": "hall_holder",
+   "qty": 1,
+   "file": "stl/hall_holder.stl",
+   "size": [
+    20.0,
+    24.0,
+    6.0
+   ],
+   "volume": 2.6,
+   "triangles": 444
+  },
+  {
+   "id": "tower_foot_left",
+   "qty": 1,
+   "file": "stl/tower_foot_left.stl",
+   "size": [
+    45.0,
+    20.0,
+    50.0
+   ],
+   "volume": 13.7,
+   "triangles": 664
+  },
+  {
+   "id": "tower_foot_right",
+   "qty": 1,
+   "file": "stl/tower_foot_right.stl",
+   "size": [
+    45.0,
+    20.0,
+    50.0
+   ],
+   "volume": 13.7,
+   "triangles": 664
+  },
+  {
+   "id": "z_motor_mount",
+   "qty": 1,
+   "file": "stl/z_motor_mount.stl",
+   "size": [
+    82.0,
+    40.0,
+    6.0
+   ],
+   "volume": 16.7,
+   "triangles": 1568
+  },
+  {
+   "id": "z_carriage",
+   "qty": 1,
+   "file": "stl/z_carriage.stl",
+   "size": [
+    92.0,
+    161.4,
+    60.0
+   ],
+   "volume": 129.4,
+   "triangles": 4320
+  },
+  {
+   "id": "guide_arm",
+   "qty": 1,
+   "file": "stl/guide_arm.stl",
+   "size": [
+    24.9,
+    87.0,
+    24.0
+   ],
+   "volume": 16.7,
+   "triangles": 1548
+  },
+  {
+   "id": "spool_holder",
+   "qty": 1,
+   "file": "stl/spool_holder.stl",
+   "size": [
+    40.0,
+    50.0,
+    90.0
+   ],
+   "volume": 15.7,
+   "triangles": 836
+  },
+  {
+   "id": "dancer_bracket",
+   "qty": 1,
+   "file": "stl/dancer_bracket.stl",
+   "size": [
+    50.0,
+    20.0,
+    26.0
+   ],
+   "volume": 8.1,
+   "triangles": 1060
+  },
+  {
+   "id": "dancer_arm",
+   "qty": 1,
+   "file": "stl/dancer_arm.stl",
+   "size": [
+    80.0,
+    10.0,
+    6.0
+   ],
+   "volume": 2.9,
+   "triangles": 740
+  }
+ ]
+}

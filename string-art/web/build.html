@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="bd.title">String Art — Build the Winding Machine</title>
+  <meta data-i18n-attr="content=bd.meta" name="description" content="Build the String Art winding machine: a 3D model, the parts to buy, printable parts, drilling plans, wiring, controller settings and step-by-step assembly." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2242%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%226%22/><path d=%22M50 8 L86 71 L14 71 Z M50 8 L50 92 M14 29 L86 71 M86 29 L14 71%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%223%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">String <span>Art</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub" data-i18n="bd.sub">build the machine</span>
+    </div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="machine.html" data-i18n="bd.toMachine">Machine</a>
+      <a class="back-link" href="index.html" data-i18n="mc.back">← Back to the app</a>
+      <a class="back-link" href="../../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <main class="doc wide">
+    <h1 data-i18n="bd.h1">Build the winding machine</h1>
+    <p data-i18n="bd.intro">A turntable carries the nail board; a thread guide above its rim moves only in and out and up and down. Everything here is worked out from one set of dimensions, for a 600 mm nail circle with 240 nails: the 3D model, the printed parts, the drilling plans and the controller settings. The machine page plans the moves and writes the G-code.</p>
+
+    <section class="bsec">
+      <div class="b3d" id="b3d"><p class="b3d-load" id="b3dLoad" data-i18n="bd.loading">Loading the 3D model…</p></div>
+      <div class="b3d-bar">
+        <span class="b3d-pick" id="b3dPick" data-i18n="bd.pickHint">Click a part to see what it is. Drag to turn, scroll to zoom.</span>
+        <label class="check"><input type="checkbox" id="b3dTurn" checked /> <span data-i18n="bd.turn">Turn slowly</span></label>
+      </div>
+      <div class="legend" id="b3dLegend"></div>
+    </section>
+
+    <h2 data-i18n="bd.h.numbers">The numbers</h2>
+    <table class="metrics wide"><tbody id="bdNumbers"></tbody></table>
+
+    <h2 data-i18n="bd.h.buy">Parts to buy</h2>
+    <table class="bom" id="bdBuy"></table>
+
+    <h2 data-i18n="bd.h.print">Parts to print</h2>
+    <p class="fine" data-i18n="bd.printHint">Each file is turned the way it prints best and sits on the bed. 0.2 mm layers unless the note says otherwise. The FreeCAD model holds every part and can be changed.</p>
+    <table class="bom" id="bdPrint"></table>
+    <div class="runbar"><a class="btn" href="hardware/string-art-machine.FCStd" download data-i18n="bd.fcstd">FreeCAD model (.FCStd)</a></div>
+
+    <h2 data-i18n="bd.h.drill">Drilling plans</h2>
+    <div class="dwg" id="bdBase"></div>
+    <div class="runbar"><button class="btn" id="bdBaseSvg" data-i18n="bd.svgBase">Base plan at true size (SVG)</button></div>
+    <div class="dwg narrow" id="bdPlatter"></div>
+    <div class="runbar"><button class="btn" id="bdPlatterSvg" data-i18n="bd.svgPlatter">Platter plan at true size (SVG)</button></div>
+    <p class="fine" data-i18n="bd.svgHint">The true-size files are in millimetres: print them at 100 % (most PDF viewers can split a large page into tiles) or use them to mark out. The nail board uses the nail template from the app.</p>
+
+    <h2 data-i18n="bd.h.wiring">Wiring</h2>
+    <div class="dwg" id="bdWiring"></div>
+
+    <h2 data-i18n="bd.h.grbl">Controller settings</h2>
+    <p class="fine" data-i18n="bd.grblHint">Send these once to GRBL 1.1 from any G-code sender; GRBL keeps them.</p>
+    <pre class="code" id="bdGrbl"></pre>
+    <div class="runbar"><button class="btn" id="bdCopy" data-i18n="bd.copy">Copy the settings</button></div>
+
+    <h2 data-i18n="bd.h.assembly">Assembly</h2>
+    <ol class="steps" id="bdAssembly"></ol>
+
+    <h2 data-i18n="bd.h.calibrate">Setting up and the first run</h2>
+    <ol class="steps" id="bdCalibrate"></ol>
+  </main>
+</div>
+<script type="module" src="../src/ui/build.ts"></script>
+</body>
+</html>

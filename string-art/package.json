@@ -1,6 +1,6 @@
 {
   "name": "string-art",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Turns a picture into string art: one continuous thread wound between nails on a circular frame.",
   "type": "module",
@@ -15,6 +15,8 @@
   },
   "devDependencies": {
     "@types/node": "22.10.1",
+    "@types/three": "0.170.0",
+    "three": "0.170.0",
     "typescript": "5.6.3",
     "vite": "5.4.11",
     "vitest": "2.1.8"

@@ -8,7 +8,7 @@ preview, and gives you everything needed to build the piece by hand: a nail temp
 instructions, and a threading mode that calls out the next nail. Everything runs in the browser; pictures are never
 uploaded. English, Spanish (Latin America) and Danish.
 
-Version 1.1.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
+Version 1.2.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
 
 ## Using it
 
@@ -27,6 +27,9 @@ Version 1.1.0. Part of the [AI Projects](https://kathuman.github.io/claude-proje
 6. **Or wind it with a machine.** The winding-machine page (machine.html) takes the last result or a project file,
    checks a turntable-and-guide machine against it, estimates the winding time, plays the winding back with a
    true-size close-up of each wrap, and downloads the G-code.
+7. **Build the machine.** The build page (build.html) has the machine in 3D, its numbers (drive ratio, steps, torque
+   margin), the parts to buy with rough prices, STL files for the 12 printed parts, drilling plans for the base and the
+   platter (on screen and at true size), the wiring, the GRBL settings, and the assembly and setting-up steps.
 
 ## The winding machine
 
@@ -43,6 +46,29 @@ later wrap on a nail is laid a little higher.
 lines that rub the neighbouring nail, thread-speed cap) and `gcode.ts` (GRBL/Marlin, M0 for tie-on, checks and tie-off,
 G92 to keep X within ten turns). The tests read the G-code back and confirm it wraps exactly the sequence's nails,
 passing only through gaps.
+
+## Building the machine
+
+One file, `src/hardware/params.json`, holds every dimension (600 mm nail circle, 240 nails, 305 mm lazy-susan bearing,
+20→160 tooth GT2 drive, 2040 tower with MGN12 and MGN9 rails, 2.5 mm brass guide tube). Both the FreeCAD model and the
+web page read it, so the parts, the drawings and the controller settings agree; `tests/hardware.test.ts` checks that.
+
+```sh
+# from string-art/, after changing params.json or the script
+"C:\Program Files\FreeCAD 1.1\bin\freecadcmd.exe" hardware/cad/build_machine.py      # STLs, GLB, parts.json, .FCStd
+"C:\Program Files\FreeCAD 1.1\bin\freecadcmd.exe" hardware/cad/check_clearance.py    # 0 unexpected overlaps
+npm test && npm run build
+```
+
+The script writes to `web/public/hardware/` (copied into `app/hardware/` by the build): each printed part as an STL
+in its printing orientation, the assembly as `machine.glb` (FreeCAD's glTF writer turns mm into m and Z-up into Y-up
+itself; the web view shows the pulley without its tooth grooves and the nails as hexagons to keep the file at 2.7 MB),
+`parts.json` (sizes, volumes) and the editable `string-art-machine.FCStd`. `freecadcmd` runs a script with `__name__`
+set to its file name, so `main()` is called unconditionally.
+
+The clearance check found real collisions while designing (the belt through the base, the Y motor against a gusset,
+the arm's belt clamp crossing the motor pulley); the idler and motor pulley are now placed from the carriage's travel,
+with an assertion in the script.
 
 ## Setup
 
@@ -123,12 +149,14 @@ reproduces the sequence exactly (re-decoding the original photo might not, in an
   solver interface, greedy solver, metrics, preprocessing, CLAHE, background check, importance mask, threading view.
 - `src/worker/`: the solver worker and its typed message protocol (discriminated unions, transferred arrays).
 - `src/machine/`: the winding machine (see above).
+- `src/hardware/`: the machine's dimensions (params.json), the drive maths (drive.ts) and the base and platter layout.
+- `hardware/cad/`: the FreeCAD scripts.
 - `src/export/`: winding instructions, CSV, the nail template (SVG and tiled pages), the project file.
-- `src/ui/`: the page (main.ts), the machine page (machine.ts, machine-sim.ts), crop editor, parameters and presets, preview and loupe, threading mode, storage,
+- `src/ui/`: the page (main.ts), the machine page (machine.ts, machine-sim.ts), the build page (build.ts, build-3d.ts, build-drawings.ts, build-data.ts), crop editor, parameters and presets, preview and loupe, threading mode, storage,
   image loading, languages (i18n*.ts).
-- `web/`: the page sources (index.html, about.html, machine.html).
+- `web/`: the page sources (index.html, about.html, machine.html, build.html); `web/public/hardware/` the CAD output.
 - `app/`: the built page that GitHub Pages serves.
-- `tests/`: Vitest, 108 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
+- `tests/`: Vitest, 116 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
   about 5 s on a laptop; peak memory about 225 MB).
 
 ## License

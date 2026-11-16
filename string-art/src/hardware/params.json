@@ -1,0 +1,13 @@
+{
+  "_comment": "The winding machine's dimensions in mm. Read by hardware/cad/build_machine.py (FreeCAD) and by the web pages, so the model, the parts list, the drawings and the controller settings always agree. Origin: centre of the board on the top face of the base; +Y points to the tower (nail 0); Z up.",
+  "board": { "nailCircle": 600, "nails": 240, "diameter": 640, "thickness": 18, "nailDiameter": 1.5, "nailLength": 30, "nailHeight": 18, "dowelHole": 10, "dowelDepth": 10 },
+  "base": { "width": 760, "front": 380, "back": 560, "thickness": 18, "footHeight": 75 },
+  "bearing": { "size": 305, "innerHole": 210, "height": 9, "screwSquare": 270 },
+  "platter": { "diameter": 700, "thickness": 12, "dowel": 10, "dowelProud": 8, "magnetRadius": 250, "magnetDiameter": 6 },
+  "drive": { "motorTeeth": 20, "turntableTeeth": 160, "beltPitch": 2, "beltWidth": 6, "beltLength": 400, "pulleyHeight": 16, "motorStepsPerRev": 200, "microsteps": 16 },
+  "tower": { "y": 450, "extrusion": [20, 40], "height": 260, "zRail": 200, "zLead": 8, "zTravel": 60, "yRail": 120, "yTeeth": 20 },
+  "guide": { "tubeOD": 2.5, "tubeID": 1.6, "tubeLength": 40, "armReach": 60, "ptfeOD": 4, "ptfeID": 2 },
+  "motor": { "size": 42.3, "length": 48, "shaft": 5, "shaftLength": 24, "holdingTorque": 0.45, "torqueAtSpeed": 0.3 },
+  "electronics": { "supplyV": 12, "supplyA": 5 },
+  "materials": { "plywoodDensity": 650 }
+}
