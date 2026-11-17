@@ -1,2 +1,2 @@
 /** The app's version, shown in the header and on the about page (tests/release.test.ts checks they agree). */
-export const VERSION = "1.5.0";
+export const VERSION = "1.6.0";

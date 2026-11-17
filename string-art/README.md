@@ -8,7 +8,7 @@ preview, and gives you everything needed to build the piece by hand: a nail temp
 instructions, and a threading mode that calls out the next nail. Everything runs in the browser; pictures are never
 uploaded. English, Spanish (Latin America) and Danish.
 
-Version 1.5.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
+Version 1.6.0. Part of the [AI Projects](https://kathuman.github.io/claude-projects/) site, in `string-art/`.
 
 ## Using it
 
@@ -86,7 +86,9 @@ itself; the web view shows the pulley without its tooth grooves and the nails as
 set to its file name, so `main()` is called unconditionally.
 
 **Thread tension** (`src/hardware/tension.ts`, shown step by step on the calculations page (calculations.html) for numbers
-you can change, summarised on the build page, checked per piece on the machine page): capstan friction along the thread path (K ≈ 2.7), payout speed and acceleration, spool inertia, sag of the
+you can change, summarised on the build page, checked per piece on the machine page; with eight force and acceleration
+diagrams drawn from the same numbers, `src/ui/calc-diagrams.ts`, and a simulated payout during a turn,
+`src/hardware/payout.ts`, which confirms the R·ω and R·α bounds): capstan friction along the thread path (K ≈ 2.7), payout speed and acceleration, spool inertia, sag of the
 longest line (lower limit ≈ 0.18 N) and bending of the busiest nail (upper limit ≈ 0.30 N for 1.5 mm nails with 25
 wraps, ≈ 0.70 N for 2 mm), then the thread strength needed against the peak tension. Winding is set at 0.25 N. A spool
 turning on a pin with a felt brake would pull 2.5 times harder near its core, past the nail limit, so the thread stands
@@ -184,7 +186,7 @@ reproduces the sequence exactly (re-decoding the original photo might not, in an
   image loading, languages (i18n*.ts).
 - `web/`: the page sources (index.html, about.html, machine.html, build.html, calculations.html); `web/public/hardware/` the CAD output.
 - `app/`: the built page that GitHub Pages serves.
-- `tests/`: Vitest, 136 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
+- `tests/`: Vitest, 139 tests, including the spec's acceptance checks and a benchmark (N = 240, K = 3000 at 700 px in
   about 5 s on a laptop; peak memory about 225 MB).
 
 ## License

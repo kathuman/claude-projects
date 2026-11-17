@@ -86,3 +86,31 @@ describe("the calculations page's working", () => {
     expect(custom).not.toEqual(base);
   });
 });
+
+describe("payout during a turn (the acceleration diagram)", () => {
+  it("turns exactly as far as asked, with the line only ever growing", async () => {
+    const { payoutRun } = await import("../src/hardware/payout");
+    const run = payoutRun(DEFAULT_MACHINE, 120, 1);
+    expect(run.at(-1)!.theta).toBeCloseTo(120, 9);
+    for (let i = 1; i < run.length; i++) expect(run[i].L).toBeGreaterThanOrEqual(run[i - 1].L - 1e-12);
+    for (const s of run) expect(s.v).toBeGreaterThanOrEqual(-1e-12);
+  });
+  it("stays inside the bounds R·ω and R·α that the working uses, for any turn up to half a revolution", async () => {
+    const { payoutRun } = await import("../src/hardware/payout");
+    const r = tension();
+    for (const turn of [10, 45, 120, 179]) {
+      for (const s of payoutRun(DEFAULT_MACHINE, turn, 1)) {
+        expect(s.v).toBeLessThanOrEqual(r.speed.v + 1e-9);
+        expect(Math.abs(s.a)).toBeLessThanOrEqual(r.speed.a + 1e-9 + 0.5 * 0.3 * (r.speed.v / 0.3) ** 2);
+        expect(s.a).toBeLessThanOrEqual(r.speed.a + 1e-9);
+      }
+    }
+  });
+  it("puts all eight diagrams into the working", async () => {
+    const { tensionSection } = await import("../src/ui/build-tension");
+    const html = tensionSection();
+    expect((html.match(/<figure class="cfig">/g) || []).length).toBe(8);
+    expect(html).not.toMatch(/NaN|Infinity|undefined/);
+    expect(tensionSection({ ...DEFAULT_MACHINE, tensionN: 2, nailMm: 1, threadMm: 0.1 }, 60)).not.toMatch(/NaN|Infinity|undefined/);
+  });
+});
