@@ -3,6 +3,13 @@ import type { Dict } from "./i18n";
 
 export const DA: Dict = {
   T: {
+    "Straight lines need at least {m} N.": "Lige linjer kræver mindst {m} N.",
+    "The busiest nail ({n} wraps, {d} mm) bends above about {l} N.": "Det mest brugte søm ({n} viklinger, {d} mm) bøjer over ca. {l} N.",
+    "The thread breaks at about {b} N and should hold {r} N.": "Tråden knækker ved ca. {b} N og bør holde {r} N.",
+    "The app's thinnest thread is {d} mm.": "Appens tyndeste tråd er {d} mm.",
+    "These numbers work: {t} N is inside the window.": "Disse tal virker: {t} N ligger inden for vinduet.",
+    "Something needs changing:": "Noget skal ændres:",
+    "The machine winds at {t} N: enough for straight lines (at least {a} N), below what bends the busiest nail (about {b} N with 1.5 mm nails and {n} wraps). It stands the thread on a cone with tension discs, and the thread must be at least {d} mm. Every step, with your own numbers, is on the calculations page.": "Maskinen vikler ved {t} N: nok til lige linjer (mindst {a} N) og under det, der bøjer det mest brugte søm (ca. {b} N med søm på 1,5 mm og {n} viklinger). Tråden står på en kegle med spændeskiver, og den skal være mindst {d} mm. Hvert trin, med dine egne tal, står på beregningssiden.",
     "Hex bolt M8 × 60": "Sekskantbolt M8 × 60",
     "the pin the thread cone stands on": "tappen, trådkeglen står på",
     "Eyelet and tension bracket": "Beslag til øje og spænding",
@@ -487,6 +494,15 @@ export const DA: Dict = {
     "What does this do?": "Hvad gør denne?"
   },
   H: {
+    "calc.title": "String Art — Beregninger",
+    "calc.meta": "Hvor hårdt viklemaskinen trækker i tråden, hvad der begrænser det, og hvor tynd tråden må være: hvert trin med formlen og tallene sat ind, for din egen maskine og dit eget værk.",
+    "calc.sub": "beregninger",
+    "calc.h1": "Beregninger: trådspænding",
+    "calc.intro": "Hvor hårdt viklemaskinen trækker i tråden, afgør, om de mest brugte søm bøjer, og hvor tynd tråden må være. Skift tallene nedenfor ud med din egen maskines og dit eget værks: hvert trin regnes om.",
+    "calc.h.inputs": "Dine tal",
+    "calc.reset": "Maskinens standardværdier",
+    "bd.calcLink": "Alle beregningerne",
+    "nav.calc": "Beregninger",
     "bd.h.tension": "Trådspænding",
     "wd.h": "Vikl det med din maskine",
     "wd.noSerial": "For at styre maskinen skal du bruge Chrome eller Edge på en computer: de kan tale med styringen via USB. Du kan stadig hente G-koden og sende den med et hvilket som helst G-kode-program.",

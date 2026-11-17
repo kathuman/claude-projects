@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="calc.title">String Art — Calculations</title>
+  <meta data-i18n-attr="content=calc.meta" name="description" content="How hard the winding machine pulls the thread, what limits it, and how thin the thread may be: every step with its formula and the numbers put in, for your own machine and piece." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2242%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%226%22/><path d=%22M50 8 L86 71 L14 71 Z M50 8 L50 92 M14 29 L86 71 M86 29 L14 71%22 fill=%22none%22 stroke=%22%23ffcf4a%22 stroke-width=%223%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <script type="module" crossorigin src="./assets/calculations-DUbO_gOZ.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/version-BNERoiKh.js">
+  <link rel="modulepreload" crossorigin href="./assets/tension-BvM2CuSM.js">
+  <link rel="stylesheet" crossorigin href="./assets/version-CGpWYiYJ.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">String <span>Art</span></div>
+      <span class="ver" id="ver"></span>
+      <span class="sub" data-i18n="calc.sub">calculations</span>
+    </div>
+    <div class="topnav">
+      <select class="lang" id="langSel" aria-label="Language"></select>
+      <a class="back-link" href="machine.html" data-i18n="nav.machine">Machine</a>
+      <a class="back-link" href="build.html" data-i18n="mc.build">Build it</a>
+      <a class="back-link" href="index.html" data-i18n="mc.back">← Back to the app</a>
+      <a class="back-link" href="../../" data-i18n="nav.projects">← All projects</a>
+    </div>
+  </header>
+
+  <main class="doc wide">
+    <h1 data-i18n="calc.h1">Calculations: thread tension</h1>
+    <p data-i18n="calc.intro">How hard the winding machine pulls the thread decides whether the busiest nails bend and how thin the thread may be. Change the numbers below to your own machine and piece: every step recalculates.</p>
+
+    <section class="calcin" aria-labelledby="calcInH">
+      <h2 id="calcInH" data-i18n="calc.h.inputs">Your numbers</h2>
+      <div class="calcgrid" id="calcInputs"></div>
+      <div class="runbar"><button class="btn" id="calcReset" data-i18n="calc.reset">The machine's defaults</button></div>
+      <div class="calcverdict" id="calcVerdict" role="status" aria-live="polite"></div>
+    </section>
+
+    <div class="tension" id="calcBody"></div>
+  </main>
+</div>
+</body>
+</html>

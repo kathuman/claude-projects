@@ -12,7 +12,7 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "../app", emptyOutDir: true, target: "es2022", sourcemap: false, chunkSizeWarningLimit: 700,   // three.js, loaded only by the build page
-    rollupOptions: { input: { main: here + "web/index.html", about: here + "web/about.html", machine: here + "web/machine.html", build: here + "web/build.html" } }
+    rollupOptions: { input: { main: here + "web/index.html", about: here + "web/about.html", machine: here + "web/machine.html", build: here + "web/build.html", calculations: here + "web/calculations.html" } }
   },
   worker: { format: "es" },
   test: { root: here, include: ["tests/**/*.test.ts"], environment: "node", testTimeout: 120_000 }

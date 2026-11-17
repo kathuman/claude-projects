@@ -6,7 +6,8 @@ import { drive, grblSettings, GRBL_MAX_RATE, PARAMS } from "../hardware/drive";
 import { motorHang } from "../hardware/layout";
 import { assemblySteps, boughtParts, calibrationSteps, grblComment, modelNames, printedNames } from "./build-data";
 import { baseDrawing, platterDrawing, wiringDrawing } from "./build-drawings";
-import { tensionSection } from "./build-tension";
+import { tension } from "../hardware/tension";
+import { DEFAULT_MACHINE } from "../machine/config";
 import { T, apply, fx, int, mountSwitch } from "./i18n";
 import { VERSION } from "./version";
 
@@ -64,7 +65,11 @@ fetch("hardware/parts.json").then((r) => r.json() as Promise<PartsFile>).then((p
 $("bdBase").innerHTML = baseDrawing("screen");
 $("bdPlatter").innerHTML = platterDrawing("screen");
 $("bdWiring").innerHTML = wiringDrawing();
-$("bdTension").innerHTML = tensionSection();
+{
+  const tr = tension();
+  $("bdTension").innerHTML = T("The machine winds at {t} N: enough for straight lines (at least {a} N), below what bends the busiest nail (about {b} N with 1.5 mm nails and {n} wraps). It stands the thread on a cone with tension discs, and the thread must be at least {d} mm. Every step, with your own numbers, is on the calculations page.",
+    { t: fx(DEFAULT_MACHINE.tensionN, 2), a: fx(tr.sag.minT, 2), b: fx(tr.nailLimit, 2), n: tr.nail.n, d: fx(PARAMS.tension.practicalMinMm, 2) });
+}
 function save(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: "image/svg+xml" })), a = document.createElement("a");
   a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();

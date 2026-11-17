@@ -1,7 +1,7 @@
-// The build page's "Thread tension" section: every step of hardware/tension.ts with its formula and the numbers put
-// in, so the result can be checked by hand. Numbers follow the page's language (decimal comma in Danish).
+// The thread-tension working, shown on the calculations page: every step of hardware/tension.ts with its formula and
+// the numbers put in, for a machine configuration and a busiest nail, so the result can be checked by hand. Numbers follow the page's language (decimal comma in Danish).
 
-import { DEFAULT_MACHINE, xSpeedLimit } from "../machine/config";
+import { DEFAULT_MACHINE, xSpeedLimit, type MachineConfig } from "../machine/config";
 import { PARAMS } from "../hardware/drive";
 import { tension } from "../hardware/tension";
 import { T, fx, int } from "./i18n";
@@ -10,8 +10,8 @@ const eq = (s: string) => `<div class="eq">${s}</div>`;
 const p = (s: string) => `<p>${s}</p>`;
 const h = (s: string) => `<h3>${s}</h3>`;
 
-export function tensionSection(): string {
-  const m = DEFAULT_MACHINE, r = tension(m), t = PARAMS.tension, sp = t.pinSpool;
+export function tensionSection(m: MachineConfig = DEFAULT_MACHINE, n: number = PARAMS.tension.busiestWraps): string {
+  const r = tension(m, undefined, n), t = PARAMS.tension, sp = t.pinSpool;
   const R = m.boardMm / 2000, w = xSpeedLimit(m) * Math.PI / 180, al = m.xAccel * Math.PI / 180;
   const pathName: Record<string, string> = { dancer: T("dancer eye"), ptfe: T("PTFE tube, all its bends"), tip: T("guide tube tip") };
   const fibreName: Record<string, string> = { polyester: T("polyester"), nylon: T("nylon"), cotton: T("cotton") };

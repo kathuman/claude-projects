@@ -73,3 +73,16 @@ describe("the machine page's tension check", () => {
     expect(check({ threadMm: 0.05, tensionN: 1.5 }).level).toBe("error");
   });
 });
+
+describe("the calculations page's working", () => {
+  it("shows the steps for the numbers given, not only the defaults", async () => {
+    const { tensionSection } = await import("../src/ui/build-tension");
+    const base = tensionSection();
+    expect((base.match(/<h3>/g) || []).length).toBe(10);
+    const custom = tensionSection({ ...DEFAULT_MACHINE, tensionN: 0.4, nailMm: 2 }, 30);
+    const r = tension({ ...DEFAULT_MACHINE, tensionN: 0.4, nailMm: 2 }, undefined, 30);
+    expect(custom).toContain(`0.40 / ${r.K.toFixed(2)} = ${r.brake.toFixed(3)} N`);
+    expect(custom).toContain(`× 30 × <i>T</i>`);
+    expect(custom).not.toEqual(base);
+  });
+});

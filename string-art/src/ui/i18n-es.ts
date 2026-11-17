@@ -4,6 +4,13 @@ import type { Dict } from "./i18n";
 
 export const ES: Dict = {
   T: {
+    "Straight lines need at least {m} N.": "Las líneas rectas necesitan al menos {m} N.",
+    "The busiest nail ({n} wraps, {d} mm) bends above about {l} N.": "El clavo más usado ({n} vueltas, {d} mm) se dobla por encima de unos {l} N.",
+    "The thread breaks at about {b} N and should hold {r} N.": "El hilo se rompe a unos {b} N y debería aguantar {r} N.",
+    "The app's thinnest thread is {d} mm.": "El hilo más delgado de la aplicación es de {d} mm.",
+    "These numbers work: {t} N is inside the window.": "Estos números funcionan: {t} N está dentro del margen.",
+    "Something needs changing:": "Hay algo que cambiar:",
+    "The machine winds at {t} N: enough for straight lines (at least {a} N), below what bends the busiest nail (about {b} N with 1.5 mm nails and {n} wraps). It stands the thread on a cone with tension discs, and the thread must be at least {d} mm. Every step, with your own numbers, is on the calculations page.": "La máquina enrolla a {t} N: suficiente para líneas rectas (al menos {a} N) y por debajo de lo que dobla el clavo más usado (unos {b} N con clavos de 1,5 mm y {n} vueltas). Pone el hilo en un cono fijo con discos de tensión, y el hilo debe tener al menos {d} mm. Cada paso, con tus propios números, está en la página de cálculos.",
     "Hex bolt M8 × 60": "Perno hexagonal M8 × 60",
     "the pin the thread cone stands on": "el eje sobre el que se apoya el cono de hilo",
     "Eyelet and tension bracket": "Soporte del ojal y la tensión",
@@ -488,6 +495,15 @@ export const ES: Dict = {
     "What does this do?": "¿Qué hace esto?"
   },
   H: {
+    "calc.title": "String Art — Cálculos",
+    "calc.meta": "Con qué fuerza tira del hilo la máquina de enrollar, qué lo limita y qué tan delgado puede ser el hilo: cada paso con su fórmula y los números puestos, para tu propia máquina y pieza.",
+    "calc.sub": "cálculos",
+    "calc.h1": "Cálculos: tensión del hilo",
+    "calc.intro": "La fuerza con que la máquina de enrollar tira del hilo decide si los clavos más usados se doblan y qué tan delgado puede ser el hilo. Cambia los números de abajo por los de tu máquina y tu pieza: cada paso se vuelve a calcular.",
+    "calc.h.inputs": "Tus números",
+    "calc.reset": "Los valores de la máquina",
+    "bd.calcLink": "Todos los cálculos",
+    "nav.calc": "Cálculos",
     "bd.h.tension": "Tensión del hilo",
     "wd.h": "Enróllalo con tu máquina",
     "wd.noSerial": "Para manejar la máquina hace falta Chrome o Edge en una computadora: pueden hablar con su controlador por USB. Igual puedes descargar el G-code y enviarlo con cualquier programa emisor de G-code.",
