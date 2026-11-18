@@ -6,8 +6,10 @@ import { SOLVED, applyMove, applyAlg, isSolved, stickerAt, turnOf, orientation, 
 import { parseAlg, invert, tidy, metrics } from './src/notation.js';
 import { validate } from './src/validate.js';
 import { createEditor } from './src/editor.js';
+import { planRobot, stepLabel } from './src/robot.js';
+import { pybricksProgram, planJSON, DEFAULT_SETTINGS } from './src/pybricks.js';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const $ = (id) => document.getElementById(id);
 
 const COLOR = { U: '--cube-W', D: '--cube-Y', F: '--cube-G', B: '--cube-B', L: '--cube-O', R: '--cube-R', '?': '--unknown' };
@@ -48,6 +50,27 @@ for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) for (let z = -1; z <
   cubies.push({ el, pos: [x, y, z], faces });
   cubeEl.appendChild(el);
 }
+
+// The robot drawn around the cube: turntable underneath (its notch shows it turning), the arms left and right
+// over the upper two layers, the hub at the back. Arm positions: x from the cube's centre, open / gripping / tipping.
+const rig = { el: document.createElement('div'), table: 0 };
+rig.el.className = 'rig';
+rig.el.hidden = true;
+rig.el.innerHTML = '<div class="rig-table"></div><div class="rig-arm" data-side="L"></div><div class="rig-arm" data-side="R"></div>'
+  + `<div class="rig-hub">${Array.from({ length: 25 }, (_, i) => `<i${[6, 8, 16, 17, 18].includes(i) ? ' class="on"' : ''}></i>`).join('')}</div>`;
+cubeEl.appendChild(rig.el);
+const ARM_X = { open: 150, grip: 104, tip: 96 };
+const ARM_Y = { open: -32, grip: -32, tip: -56 };
+function poseRig(left = 'open', right = 'open', dur = 0) {
+  rig.el.style.setProperty('--dur', `${dur}ms`);
+  rig.el.querySelector('.rig-table').style.transform = `translate3d(0, ${1.5 * STEP + 8}px, 0) rotateY(${rig.table}deg) rotateX(90deg)`;
+  for (const [side, pose] of [['L', left], ['R', right]]) {
+    const sgn = side === 'L' ? -1 : 1;
+    rig.el.querySelector(`.rig-arm[data-side="${side}"]`).style.transform = `translate3d(${sgn * ARM_X[pose]}px, ${ARM_Y[pose]}px, 0) rotateY(90deg)`;
+  }
+  rig.el.querySelector('.rig-hub').style.transform = `translate3d(0, -30px, ${-1.5 * STEP - 70}px)`;
+}
+poseRig();
 
 const netEl = $('net');
 const netCells = {};
@@ -116,15 +139,23 @@ function duration() {
 const CSS_SIGN = { x: -1, y: 1, z: -1 };
 const CSS_AXIS = { x: 0, y: 1, z: 2 };
 
-function doMove(move) {
+function doMove(move, item) {
   const t = turnOf(move);
   const dur = duration();
+  const step = item && item.step;
+  if (step) {
+    // the robot: arms grip for a layer turn, one arm pushes for a tip; the turntable turns under spins and turns
+    if (step.op !== 'tip') rig.table += t.degrees;
+    const arm = step.op === 'turn' ? 'grip' : 'open';
+    poseRig(step.op === 'tip' && step.side === 'L' ? 'tip' : arm, step.op === 'tip' && step.side === 'R' ? 'tip' : arm, dur);
+  }
   return new Promise((resolve) => {
     const layer = cubies.filter((cb) => t.layers.includes(toModel(cb.pos)[CSS_AXIS[t.axis]]));
     const finish = () => {
       state.cube = applyMove(state.cube, move);
       for (const cb of layer) { cb.el.classList.remove('move'); cb.el.style.transform = ''; }
       void cubeEl.offsetWidth; // the reset must not animate
+      if (step) poseRig('open', 'open', dur);
       render();
       resolve();
     };
@@ -147,14 +178,20 @@ const tp = { start: $('tpStart'), back: $('tpBack'), play: $('tpPlay'), fwd: $('
 const movesEl = $('moves');
 const scrub = $('scrub');
 
+const STEP_TITLE = {
+  spin: (s) => `arms open, the turntable spins the whole cube (${s.move})`,
+  tip: (s) => (s.side === 'L' ? 'the left arm tips the cube over to the right (z)' : "the right arm tips the cube over to the left (z')"),
+  turn: (s) => `the arms grip the upper two layers, the turntable turns the bottom layer (${s.move})`,
+};
+
 function renderMoveTokens() {
   movesEl.innerHTML = '';
   state.seq.forEach((item, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `move-token${item.kind === 'scramble' ? ' scramble' : ''}`;
-    b.textContent = item.move;
-    b.title = `${i + 1} · ${item.kind}`;
+    b.className = `move-token${item.kind === 'scramble' ? ' scramble' : ''}${item.step ? ` robot ${item.step.op}` : ''}`;
+    b.textContent = item.label || item.move;
+    b.title = `${i + 1} · ${item.step ? STEP_TITLE[item.step.op](item.step) : item.kind}`;
     b.setAttribute('aria-label', `Go to after move ${i + 1}, ${item.move}`);
     b.addEventListener('click', () => { pause(); seekTo(i + 1); });
     movesEl.appendChild(b);
@@ -184,6 +221,7 @@ function updateTransport() {
   $('btnScramble').disabled = editing || !solverReady || busy || animating || state.playing;
   $('btnReset').disabled = editing || animating || state.playing;
   $('btnEdit').disabled = editing || animating || state.playing;
+  $('btnRobot').disabled = editing || !solverReady || busy || animating || state.playing || isSolved(state.cube);
   $('btnUndo').disabled = animating || state.playing || state.pos === 0;
   $('btnRedo').disabled = animating || state.playing || state.pos === n;
 }
@@ -194,6 +232,8 @@ function seekTo(target) {
   if (target === state.pos) return;
   if (target < state.pos) { state.cube = state.base; state.pos = 0; }
   while (state.pos < target) { state.cube = applyMove(state.cube, state.seq[state.pos].move); state.pos++; }
+  rig.table = tableAngle(state.pos);
+  poseRig();
   render();
   updatePhase();
 }
@@ -202,13 +242,13 @@ function updatePhase() {
   const el = $('tlPhase');
   if (!state.seq.length) { el.textContent = 'idle'; return; }
   if (state.pos >= state.seq.length) el.textContent = isSolved(state.cube) ? 'solved' : 'sequence complete';
-  else el.textContent = { scramble: 'scrambling', solution: 'solving', manual: 'your moves', alg: 'playing your moves' }[state.seq[state.pos].kind];
+  else el.textContent = { scramble: 'scrambling', solution: 'solving', manual: 'your moves', alg: 'playing your moves', robot: 'robot solving' }[state.seq[state.pos].kind];
 }
 
 async function stepForward() {
   if (animating || state.pos >= state.seq.length) return;
   animating = true; updateTransport();
-  await doMove(state.seq[state.pos].move);
+  await doMove(state.seq[state.pos].move, state.seq[state.pos]);
   state.pos++;
   animating = false;
   updatePhase(); updateTransport();
@@ -218,7 +258,7 @@ async function stepForward() {
 async function stepBack() {
   if (animating || state.pos === 0) return;
   animating = true; updateTransport();
-  await doMove(invert(state.seq[state.pos - 1].move));
+  await doMove(invert(state.seq[state.pos - 1].move), state.seq[state.pos - 1]);
   state.pos--;
   animating = false;
   updatePhase(); updateTransport();
@@ -231,7 +271,7 @@ async function play() {
   state.playing = true; updateTransport();
   while (state.playing && state.pos < state.seq.length) {
     animating = true; updateTransport();
-    await doMove(state.seq[state.pos].move);
+    await doMove(state.seq[state.pos].move, state.seq[state.pos]);
     state.pos++;
     animating = false;
     updatePhase(); updateTransport();
@@ -250,6 +290,8 @@ function loadSequence(items, base, baseAlg = []) {
   state.cube = base;
   state.pos = 0;
   state.seq = items;
+  rig.table = 0;
+  poseRig();
   renderMoveTokens();
   render();
   updatePhase();
@@ -356,8 +398,9 @@ function onScrambled(alg) {
   announce(`Scrambled with ${moves.length} moves from a random position.`);
 }
 
-function requestSolve() {
+function requestSolve(forRobot = false) {
   if (!solverReady || busy || animating || isSolved(state.cube)) return;
+  robotNext = forRobot === true;
   busy = true; updateTransport();
   pill('solving…', 'busy');
   // the solver expects the standard hold; a cube that was turned as a whole is turned back first
@@ -365,11 +408,13 @@ function requestSolve() {
   worker.postMessage({ cmd: 'solve', facelets: applyAlg(state.cube, holdBack) });
 }
 let holdBack = [];
+let robotNext = false; // the solution is for the robot: plan it instead of playing it
 
 function onSolved(alg, ms) {
   const moves = holdBack.concat(tidy(parseAlg(alg)));
   const m = metrics(moves);
   const baseAlg = state.baseAlg && tidy(state.baseAlg.concat(state.seq.slice(0, state.pos).map((s) => s.move)));
+  if (robotNext) { robotNext = false; loadRobotPlan(moves, baseAlg, m, ms); return; }
   loadSequence(moves.map((move) => ({ move, kind: 'solution' })), state.cube, baseAlg);
   $('rSolution').textContent = moves.join(' ');
   $('rLen').textContent = `${m.htm} moves (${m.qtm} quarter turns)`;
@@ -386,6 +431,117 @@ function reset() {
   loadSequence([], SOLVED, []);
   for (const id of ['rScramble', 'rSolution', 'rLen', 'rTime']) $(id).textContent = '—';
 }
+
+// ---------------------------------------------------------------- the robot
+let lastPlan = null; // { plan, solution }
+const tableAngle = (pos) => state.seq.slice(0, pos).reduce((a, it) => (it.step && it.step.op !== 'tip' ? a + turnOf(it.move).degrees : a), 0);
+
+function setRig(on) {
+  rig.el.hidden = !on;
+  $('rigToggle').setAttribute('aria-pressed', String(on));
+  fitCube();
+}
+$('rigToggle').addEventListener('click', () => setRig(rig.el.hidden));
+
+const robotPill = (text, cls = '') => { $('robotPill').textContent = text; $('robotPill').className = `status-pill ${cls}`; };
+
+function loadRobotPlan(moves, baseAlg, m, ms) {
+  let plan;
+  try { plan = planRobot(state.cube, moves, { hold: $('robotHold').value }); } catch (e) { robotPill('no plan', 'busy'); $('rSolution').textContent = e.message; return; }
+  lastPlan = { plan, solution: moves.filter((mv) => !/^[xyz]/.test(mv)).join(' ') };
+  const items = plan.steps.map((step) => ({ move: step.move, kind: 'robot', label: stepLabel(step), step }));
+  loadSequence(items, plan.start, baseAlg && tidy(baseAlg.concat(parseAlg(plan.hold))));
+  $('rSolution').textContent = moves.join(' ');
+  $('rLen').textContent = `${m.htm} moves (${m.qtm} quarter turns)`;
+  $('rTime').textContent = `${ms} ms`;
+  $('robotOut').hidden = false;
+  $('robotPlace').innerHTML = `Put the cube in with the <b>${plan.place.top}</b> centre on top and the <b>${plan.place.front}</b> centre facing you (the hub is at the back).`;
+  $('robotSteps').textContent = `${plan.steps.length} · ${plan.counts.spin} spins, ${plan.counts.tip} tips, ${plan.counts.turn} turns`;
+  $('robotTime').textContent = `about ${Math.round(plan.time)} s`;
+  robotPill('planned', 'ready');
+  showCode();
+  setRig(true);
+  setSpin(false);
+  updatePhase();
+  announce(`Robot plan: ${plan.steps.length} steps, about ${Math.round(plan.time)} seconds. Put the cube in with the ${plan.place.top} centre on top and the ${plan.place.front} centre facing you.`);
+}
+
+// Hub settings: ports and the numbers that depend on the build, kept in this browser.
+const PORTS = 'ABCDEF';
+const hubInputs = [...document.querySelectorAll('.hubgrid [data-key]')];
+for (const el of hubInputs) if (el.tagName === 'SELECT') el.innerHTML = [...PORTS].map((p) => `<option>${p}</option>`).join('');
+function readSettings() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('cube-robot') || '{}'); } catch { /* storage unavailable */ }
+  return { ...DEFAULT_SETTINGS, ...saved };
+}
+function showSettings(s) { for (const el of hubInputs) el.value = String(s[el.dataset.key]); }
+function hubSettings() {
+  const s = readSettings();
+  for (const el of hubInputs) {
+    const k = el.dataset.key;
+    if (el.tagName === 'SELECT') s[k] = el.value;
+    else if (el.value !== '' && Number.isFinite(Number(el.value))) s[k] = Number(el.value);
+  }
+  return s;
+}
+showSettings(readSettings());
+for (const el of hubInputs) el.addEventListener('change', () => { try { localStorage.setItem('cube-robot', JSON.stringify(hubSettings())); } catch { /* ignore */ } });
+$('hsReset').addEventListener('click', () => { showSettings(DEFAULT_SETTINGS); try { localStorage.removeItem('cube-robot'); } catch { /* ignore */ } });
+
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+$('btnRobot').addEventListener('click', () => { pause(); requestSolve(true); });
+
+// The program viewer: the Pybricks program or the JSON plan, as text to read, copy or download. It follows the
+// plan and the hub settings as they change.
+let codeTab = 'py';
+function codeText() {
+  if (!lastPlan) return { error: 'No plan yet.' };
+  if (codeTab === 'json') return { name: 'cube_robot_plan.json', type: 'application/json', text: planJSON(lastPlan.plan, { solution: lastPlan.solution, version: VERSION }) };
+  const s = hubSettings();
+  if (new Set([s.tablePort, s.leftPort, s.rightPort]).size < 3) return { error: 'Two motors are set to the same port: check the hub settings.' };
+  return { name: 'cube_robot.py', type: 'text/x-python', text: pybricksProgram(lastPlan.plan, s, { solution: lastPlan.solution, title: `Cube Studio ${VERSION}` }) };
+}
+const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// light colouring for Python: comments and strings (a # inside a string is not a comment)
+const pyLine = (line) => esc(line).replace(/("[^"]*")|(#.*$)/g, (m, str) => (str ? `<span class="s">${m}</span>` : `<span class="c">${m}</span>`));
+function showCode() {
+  if ($('codeView').hidden) return;
+  $('cvPy').setAttribute('aria-pressed', String(codeTab === 'py'));
+  $('cvJson').setAttribute('aria-pressed', String(codeTab === 'json'));
+  const c = codeText();
+  $('cvName').textContent = c.name || '';
+  $('cvMsg').textContent = c.error || '';
+  $('cvMsg').className = `code-msg${c.error ? ' bad' : ''}`;
+  $('cvCode').innerHTML = c.error ? '' : codeTab === 'py' ? c.text.split('\n').map(pyLine).join('\n') : esc(c.text);
+  $('cvCopy').disabled = $('cvDownload').disabled = !!c.error;
+}
+function openCode(tab) {
+  codeTab = tab;
+  $('codeView').hidden = false;
+  showCode();
+  $('codeView').scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
+}
+$('viewPy').addEventListener('click', () => openCode('py'));
+$('viewJson').addEventListener('click', () => openCode('json'));
+$('cvPy').addEventListener('click', () => { codeTab = 'py'; showCode(); });
+$('cvJson').addEventListener('click', () => { codeTab = 'json'; showCode(); });
+$('cvClose').addEventListener('click', () => { $('codeView').hidden = true; });
+$('cvDownload').addEventListener('click', () => { const c = codeText(); if (!c.error) download(c.name, c.text, c.type); });
+$('cvCopy').addEventListener('click', async () => {
+  const c = codeText();
+  if (c.error) return;
+  try { await navigator.clipboard.writeText(c.text); $('cvMsg').textContent = 'Copied.'; } catch { $('cvMsg').textContent = 'Copying is blocked here: select the text instead.'; }
+});
+for (const el of hubInputs) el.addEventListener('input', showCode);
+$('hsReset').addEventListener('click', showCode);
 
 // ---------------------------------------------------------------- solver worker
 let solverReady = false;
@@ -435,7 +591,8 @@ $('labelsToggle').addEventListener('click', () => {
 function fitCube() {
   const host = sceneEl.parentElement;
   const box = Math.min(host.clientWidth, host.clientHeight) || 320;
-  cubeEl.style.setProperty('--fit', Math.max(0.28, box / 430).toFixed(3));
+  const room = rig.el.hidden ? 430 : 600; // the robot needs more room around the cube
+  cubeEl.style.setProperty('--fit', Math.max(0.22, box / room).toFixed(3));
 }
 if (window.ResizeObserver) { const ro = new ResizeObserver(fitCube); ro.observe(stageSlot); ro.observe(railSlot); }
 addEventListener('resize', fitCube);
@@ -510,7 +667,7 @@ $('spinToggle').addEventListener('click', () => setSpin(!autoSpin));
 
 // ---------------------------------------------------------------- wiring
 $('btnScramble').addEventListener('click', scramble);
-$('btnSolve').addEventListener('click', requestSolve);
+$('btnSolve').addEventListener('click', () => requestSolve());
 $('btnReset').addEventListener('click', reset);
 tp.play.addEventListener('click', () => (state.playing ? pause() : play()));
 tp.fwd.addEventListener('click', stepForward);

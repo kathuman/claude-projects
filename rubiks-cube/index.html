@@ -41,6 +41,7 @@
             <button id="view2d" type="button" aria-pressed="false">2D net</button>
           </div>
           <div class="tools">
+            <button class="toolbtn" id="rigToggle" type="button" aria-pressed="false">Robot</button>
             <button class="toolbtn" id="labelsToggle" type="button" aria-pressed="false">Labels</button>
             <button class="toolbtn" id="spinToggle" type="button" aria-pressed="true">Auto-spin</button>
           </div>
@@ -116,6 +117,46 @@
           </div>
         </div>
 
+        <div class="panel full robot" id="robotPanel">
+          <div class="panel-label"><span>Robot</span><span class="status-pill" id="robotPill">no plan</span></div>
+          <div class="controls">
+            <p class="fine">A turntable and two arms. The robot can only turn the bottom layer, so it spins or tips the cube to bring each face down first.</p>
+            <div class="field">
+              <label for="robotHold">Put in</label>
+              <select id="robotHold">
+                <option value="best">the quickest way</option>
+                <option value="as-is">as shown</option>
+              </select>
+            </div>
+            <button class="btn primary" id="btnRobot" type="button" disabled>Plan the robot's solve</button>
+            <div class="robot-out" id="robotOut" hidden>
+              <p class="place" id="robotPlace"></p>
+              <dl class="robot-dl">
+                <dt>Steps</dt><dd id="robotSteps">—</dd>
+                <dt>Time</dt><dd id="robotTime">—</dd>
+              </dl>
+              <div class="btn-row">
+                <button class="btn" id="viewPy" type="button">View program</button>
+                <button class="btn" id="viewJson" type="button">View plan</button>
+              </div>
+            </div>
+            <details class="hubset">
+              <summary>Hub settings</summary>
+              <div class="hubgrid">
+                <label for="hsTable">Turntable port</label><select id="hsTable" data-key="tablePort"></select>
+                <label for="hsLeft">Left arm port</label><select id="hsLeft" data-key="leftPort"></select>
+                <label for="hsRight">Right arm port</label><select id="hsRight" data-key="rightPort"></select>
+                <label for="hsRatio">Gear ratio</label><input id="hsRatio" data-key="tableRatio" type="number" step="any" min="0.1" title="motor degrees per degree of the turntable" />
+                <label for="hsGrip">Arm grip °</label><input id="hsGrip" data-key="armGrip" type="number" step="1" />
+                <label for="hsTip">Arm tip °</label><input id="hsTip" data-key="armTip" type="number" step="1" />
+                <label for="hsOver">Overshoot °</label><input id="hsOver" data-key="overshoot" type="number" step="1" min="0" />
+                <label for="hsSpeed">Speed °/s</label><input id="hsSpeed" data-key="speed" type="number" step="10" min="50" />
+              </div>
+              <p class="fine">Written into the program. Arm angles are from where the arms are when it starts (open). <button class="linkbtn" id="hsReset" type="button">Defaults</button></p>
+            </details>
+          </div>
+        </div>
+
         <div class="panel full">
           <div class="panel-label"><span>Readout</span><span class="status-pill" id="statusPill">solver: loading</span></div>
           <div class="readout">
@@ -146,6 +187,23 @@
           <span class="count" id="tpCount">0 / 0</span>
         </div>
       </div>
+    </section>
+    <section class="panel codeview" id="codeView" aria-label="Robot program" hidden>
+      <div class="panel-label">
+        <span>Robot program</span>
+        <div class="seg" role="group" aria-label="Show">
+          <button id="cvPy" type="button" aria-pressed="true">Pybricks program</button>
+          <button id="cvJson" type="button" aria-pressed="false">JSON plan</button>
+        </div>
+      </div>
+      <div class="code-tools">
+        <span class="code-name" id="cvName">cube_robot.py</span>
+        <span class="code-msg" id="cvMsg" aria-live="polite"></span>
+        <button class="toolbtn" id="cvCopy" type="button">Copy</button>
+        <button class="toolbtn" id="cvDownload" type="button">Download</button>
+        <button class="toolbtn" id="cvClose" type="button" aria-label="Close the program view">✕</button>
+      </div>
+      <pre class="code" id="cvCode" tabindex="0"></pre>
     </section>
     <p class="sr" id="announce" aria-live="polite"></p>
   </main>

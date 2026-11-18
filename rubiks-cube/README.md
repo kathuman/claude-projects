@@ -3,7 +3,7 @@
 A 3×3 cube in the browser: scramble it from a truly random position, then watch a short solution play out move by
 move, found by Kociemba's two-phase algorithm and checked by an independent model of the cube.
 
-**Live:** https://kathuman.github.io/claude-projects/rubiks-cube/ · version 1.2.0 · method in [about.html](about.html)
+**Live:** https://kathuman.github.io/claude-projects/rubiks-cube/ · version 1.3.0 · method in [about.html](about.html)
 
 ## What it does
 
@@ -32,6 +32,15 @@ move, found by Kociemba's two-phase algorithm and checked by an independent mode
 
   Every problem is explained, and the stickers involved are marked.
 - Cubes turned as a whole are solved too: the solution starts by turning them back to the standard hold.
+- **The robot** (LEGO MINDSTORMS Robot Inventor, one motor each for a turntable and two arms). It can spin the whole
+  cube (`y`), grip the upper two layers and turn the bottom one (`D`), or tip the cube over with either arm (`z`,
+  `z'`), so it turns only the bottom face. **Plan the robot's solve**:
+  - solves the cube;
+  - plans, over the 24 ways the cube can sit in the robot, the quickest way (in seconds) to bring each face of the
+    solution down, optionally choosing how the cube goes in;
+  - animates the plan with the robot drawn around the cube;
+  - shows it as a **Pybricks program** (ports, gear ratio and arm angles from **Hub settings**, updated as they
+    change) or as a JSON plan, to read, copy or download.
 - **Other keys:** Space plays or pauses, ← and → step.
 - The AI Projects blueprint look, dark by default, with a light theme.
 
@@ -64,6 +73,8 @@ src/model.js                     the cube: stickers, geometry, moves
 src/notation.js                  reading, inverting, tidying and counting moves
 src/validate.js                  is this a cube that can exist? with reasons
 src/scan.js, src/editor.js       reading colours from the camera; painting and scanning your own cube
+src/robot.js                     the robot planner: spins, tips and bottom-layer turns, cheapest over 24 holds
+src/pybricks.js                  the plan as a Pybricks program for the hub, and as JSON
 vendor/                          cubejs (cube.js, solve.js, MIT) and the solver worker
 tests/                           node test suites (cubejs.js loads the solver into Node)
 tools/browser-check.cjs          drives the page in a real browser
@@ -83,9 +94,12 @@ scramble makes exactly its position, and the superflip is solved. The checks: ev
 counts, a twisted corner, a flipped edge, a mirror-image corner and two swapped pieces are each caught with the right
 reason. Of 2,400 cubes put together from loose pieces at random, about one in twelve pass (as theory says), and the
 solver solves every one that does. The scan: 300 cubes photographed under uneven light are read exactly. Under harsh
-light at least 185 of 200 are, and every misreading is caught by the checks.
+light at least 185 of 200 are, and every misreading is caught by the checks. The robot: on 500 random positions,
+replaying the plan's spins, tips and turns on the cube as it was put in solves it, both when the planner chooses the
+hold and when it keeps the one shown. Choosing the hold matches the best of all 24 holds tried one by one, rotations
+in a solution cost nothing, and the Pybricks program parses as Python.
 
-The browser check (59 checks) covers:
+The browser check (77 checks) covers:
 - the theme and the facts;
 - a scramble whose net and 3D stickers match the model exactly;
 - stepping and keys;
@@ -97,6 +111,8 @@ The browser check (59 checks) covers:
 - set-up, a link round trip, and solving a cube turned as a whole;
 - painting a cube, a twisted corner caught, a painted cube solved, and links carrying it;
 - a scan through a stand-in camera read exactly;
+- a robot plan that plays to a solved cube; the program and JSON plan shown, copied and downloaded; hub settings
+  changing the program; a port clash refused;
 - phone width.
 
 ```bash
@@ -106,8 +122,8 @@ PW=<path to playwright or playwright-core> CHROME=<chrome.exe> node rubiks-cube/
 
 ## Roadmap
 
-1.3 the shortest possible solutions · 1.4 a LEGO MINDSTORMS Robot Inventor solving robot:
-a turntable and two tilting arms, colour-sensor scanning, an animated plan and a Pybricks program · 2.0 learn to
+1.3 the robot plan and Pybricks program (done) · 1.4 the live robot: Web Bluetooth to the hub, a calibration panel,
+dry run, stop · 1.5 scanning with the robot's colour sensor · 1.6 the shortest possible solutions · 2.0 learn to
 solve it: the beginner's method and CFOP.
 
 ## Credits

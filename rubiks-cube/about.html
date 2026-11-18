@@ -14,7 +14,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.2.0</span><span class="sub">About and method</span></div>
+    <div class="brand"><a class="mark" href="./">Cube Studio</a><span class="ver">v1.3.0</span><span class="sub">About and method</span></div>
     <div class="header-actions"><a class="back-link" href="./">The cube</a><a class="back-link" href="../">← Projects</a></div>
   </header>
   <main class="wrap about">
@@ -61,6 +61,66 @@
     </section>
 
     <section class="panel">
+      <h2>The robot</h2>
+      <p>The robot is a turntable under the cube and two arms, one on each side, for a LEGO MINDSTORMS Robot Inventor hub. Each part has one motor, and together they can do three things:</p>
+      <table><thead><tr><th>Step</th><th>What happens</th><th>In cube notation</th></tr></thead><tbody>
+        <tr><td>spin</td><td>Arms open, the turntable turns the whole cube.</td><td><code>y</code>, <code>y'</code>, <code>y2</code></td></tr>
+        <tr><td>turn</td><td>Both arms grip the upper two layers, the turntable turns the bottom layer.</td><td><code>D</code>, <code>D'</code>, <code>D2</code></td></tr>
+        <tr><td>tip L / tip R</td><td>The left arm tips the cube over to the right, or the right arm to the left.</td><td><code>z</code>, <code>z'</code></td></tr>
+      </tbody></table>
+      <p>So the robot only ever turns the bottom face. For an <code>R</code>, the left arm first rolls the cube so the right face is at the bottom, then the turntable turns it. A cube can sit in the robot 24 ways, so the planner works through all of them: for each move of the solution, it finds the quickest way to bring that face down, given the moves still to come. It can also choose how you put the cube in, and then tells you which colour goes on top and which faces you. A typical solve is about 50 robot steps, roughly 80 seconds with the planner's default timings (your build's real speed will differ).</p>
+      <p>The drawing on the stage is a simple generic robot, so you can follow the plan. Your own build can look quite different, as long as it moves the same way.</p>
+
+      <h3>Solving a cube with the robot, step by step</h3>
+      <ol>
+        <li><b>Get your cube into the app.</b> Paint it or scan it with <b>Enter your own cube</b>, or scramble one here to try things out.</li>
+        <li><b>Choose how it goes in.</b> Under <b>Put in</b>, <i>the quickest way</i> lets the planner pick which colour goes on top. <i>As shown</i> keeps the cube the way the stage shows it, with the front face towards you.</li>
+        <li><b>Press Plan the robot's solve.</b> The panel tells you how to put the cube in, for example "the yellow centre on top and the red centre facing you". The hub is at the back, so "facing you" means the side away from the hub. The panel also shows the number of steps and an estimated time. The move list then holds the robot's steps: press play to watch them, or step through them one at a time.</li>
+        <li><b>Check Hub settings</b> against your build (see below). This matters most before the first run.</li>
+        <li><b>View program</b>, then <b>Download</b> it as <code>cube_robot.py</code>, or <b>Copy</b> it.</li>
+        <li><b>Run it on the hub.</b> The hub needs <a href="https://pybricks.com" target="_blank" rel="noopener">Pybricks</a> firmware. Paste the program into <a href="https://code.pybricks.com" target="_blank" rel="noopener">Pybricks Code</a> and press run, or from a PC run <code>python -m pybricksdev run ble -n &lt;hub name&gt; cube_robot.py</code>.</li>
+        <li><b>Start it.</b> Put the cube in as the panel said, with both arms open. The hub shows <b>GO</b> and a yellow light: press its <b>right button</b>. The light turns blue and the screen counts down the steps left. At the end it shows <b>OK</b> with a green light. The <b>centre button</b> stops the robot at any moment.</li>
+      </ol>
+      <p>Each plan belongs to one position. If the cube is turned by hand, or a step slips, plan again from the cube as it is now.</p>
+
+      <h3>What the program does on the hub</h3>
+      <p>The program is short, and you can read it in <b>View program</b>. It starts with the settings for your build, then the plan as a list of codes, then three moves built from the motors:</p>
+      <ul>
+        <li>a <b>spin</b> turns the turntable a quarter or half turn with both arms open;</li>
+        <li>a <b>turn</b> closes both arms to grip, turns the turntable, then opens the arms. The turntable goes a few degrees past and comes back, so the layer settles square;</li>
+        <li>a <b>tip</b> swings one arm to its tip angle, which pushes the cube over, then back to open.</li>
+      </ul>
+      <p>The program takes the motors' positions at start-up as zero. So the arms must be open when it starts, and every arm angle is measured from there.</p>
+
+      <h3>Hub settings</h3>
+      <table><thead><tr><th>Setting</th><th>What it means</th><th>Default</th></tr></thead><tbody>
+        <tr><td>Turntable, left arm, right arm port</td><td>Where each motor is plugged in (A to F). Each motor needs its own port.</td><td>A, B, C</td></tr>
+        <tr><td>Gear ratio</td><td>How many degrees the motor turns for one degree of the turntable. A 12-tooth gear driving a 36-tooth gear gives 3. Set it to 1 if the motor drives the turntable directly.</td><td>3</td></tr>
+        <tr><td>Arm grip °</td><td>How far an arm swings from open to hold the upper two layers firmly.</td><td>90</td></tr>
+        <tr><td>Arm tip °</td><td>How far an arm swings to push the cube over onto its side.</td><td>150</td></tr>
+        <tr><td>Overshoot °</td><td>How far the turntable goes past a layer turn before coming back. A little helps a stiff cube line up; set it to 0 to switch it off.</td><td>6</td></tr>
+        <tr><td>Speed °/s</td><td>Motor speed for every move. Start slower while trying a new build.</td><td>600</td></tr>
+      </tbody></table>
+      <p>The right arm is a mirror image of the left, so the program runs it the other way round, and the same angles work for both arms. If the turntable turns the wrong way, use the opposite direction in the program's <code>table = Motor(…)</code> line. The settings are kept in this browser, and <b>Defaults</b> puts them back. To find good angles, start with the defaults and a slow speed, with a hand near the centre button, and adjust a little at a time.</p>
+
+      <h3>The plan's codes and the JSON plan</h3>
+      <table><thead><tr><th>Code</th><th>Step</th><th>Cube notation</th></tr></thead><tbody>
+        <tr><td><code>S1</code> <code>S-1</code> <code>S2</code></td><td>spin a quarter turn anticlockwise or clockwise (seen from above), or a half turn</td><td><code>y'</code> <code>y</code> <code>y2</code></td></tr>
+        <tr><td><code>T1</code> <code>T-1</code> <code>T2</code></td><td>grip and turn the bottom layer, the turntable going anticlockwise or clockwise (from above), or a half turn</td><td><code>D</code> <code>D'</code> <code>D2</code></td></tr>
+        <tr><td><code>L</code> <code>R</code></td><td>tip with the left arm (the cube rolls right) or the right arm (it rolls left)</td><td><code>z</code> <code>z'</code></td></tr>
+      </tbody></table>
+      <p><b>View plan</b> shows the same plan as JSON, for your own programs. It contains:</p>
+      <ul>
+        <li><code>codes</code>: the codes above, in order;</li>
+        <li><code>steps</code>: each step with its kind, its move in cube notation, and the quarter turns of the turntable or the arm that tips;</li>
+        <li><code>place</code>: the colours that go on top and in front;</li>
+        <li><code>start</code>: the cube as it sits in the robot, as 54 stickers in the order U R F D L B;</li>
+        <li><code>solution</code>, the step <code>counts</code> and the estimated <code>seconds</code>.</li>
+      </ul>
+      <p>Coming next: driving the robot live from this page over Bluetooth, with a panel to find the arm angles by moving the motors, and a dry run without a cube.</p>
+    </section>
+
+    <section class="panel">
       <h2>Some numbers</h2>
       <table><tbody>
         <tr><td>Positions</td><td>43,252,003,274,489,856,000 (about 4.3 × 10¹⁹) that can be reached by turning.</td></tr>
@@ -89,13 +149,14 @@
 
     <section class="panel">
       <h2>What's next</h2>
-      <p>The shortest possible solutions; a LEGO solving robot, animated, with a program you can run; and a guided way to learn to solve it yourself.</p>
+      <p>Driving the robot live from this page over Bluetooth, with a panel to set its arm positions; the robot reading the cube with its colour sensor; the shortest possible solutions; and a guided way to learn to solve it yourself.</p>
       <h3>Versions</h3>
-      <ul><li>1.2.0 (2026-10-25): enter your own cube by painting it or scanning it with the camera, checked for the four conditions a real cube meets, with every problem explained; links can carry a cube entered by hand.</li>
+      <ul><li>1.3.0 (2026-11-18): a LEGO MINDSTORMS Robot Inventor solving robot: plans that bring each face to the turntable the quickest way, the robot drawn and animated around the cube, and a Pybricks program to download, with ports and angles for your build.</li>
+        <li>1.2.0 (2026-10-25): enter your own cube by painting it or scanning it with the camera, checked for the four conditions a real cube meets, with every problem explained; links can carry a cube entered by hand.</li>
         <li>1.1.0 (2026-10-25): turn the cube yourself, by dragging stickers, with keys or with buttons; type any sequence to play or to set up; undo and redo; links that open a cube and its moves; cubes turned as a whole are solved too.</li>
         <li>1.0.0 (2026-10-25): the AI Projects look with a dark theme; scrambles from a truly random position; God's number stated correctly (20 face turns, 26 quarter turns); move counts in both metrics; the cube model, notation and tests in their own modules.</li></ul>
     </section>
   </main>
-  <footer class="wrap foot">Cube Studio v1.2.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="wrap foot">Cube Studio v1.3.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/rubiks-cube">Source</a> · <a href="../">All projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
 </body>
 </html>

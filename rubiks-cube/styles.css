@@ -164,7 +164,46 @@ h1, h2, h3 { font-family: var(--head); letter-spacing: .02em; line-height: 1.15;
 .about th { font-family: var(--head); text-transform: uppercase; letter-spacing: .05em; font-size: .8rem; color: var(--faint); }
 .about code { font-family: var(--mono); }
 
-@media (prefers-reduced-motion: reduce) { .cubie.move, .cubie.assemble, .cube.spin { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .cubie.move, .cubie.assemble, .cube.spin, .rig > * { transition: none !important; } }
+
+/* ---- the robot: a generic turntable, two arms and the hub at the back, drawn around the cube ---- */
+.rig { position: absolute; width: 0; height: 0; transform-style: preserve-3d; pointer-events: none; }
+.rig > * { position: absolute; transform-style: preserve-3d; transition: transform var(--dur, 300ms) cubic-bezier(.4, .9, .25, 1); }
+.rig-table { width: 250px; height: 250px; margin: -125px; border-radius: 50%; background: radial-gradient(circle, #5d6b78 0 46%, #3a444e 47% 100%);
+  box-shadow: inset 0 0 0 3px rgba(0,0,0,.35); }
+.rig-table::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: #13a3a0; }
+.rig-arm { width: 140px; height: 124px; margin: -62px -70px; border-radius: 10px; background: rgba(226,232,238,.82); border: 3px solid #13a3a0; }
+.rig-arm::after { content: ""; position: absolute; inset: 34px 44px; border-radius: 6px; background: #3a444e; }
+.rig-hub { width: 150px; height: 120px; margin: -60px -75px; border-radius: 10px; background: #e8edf1; border: 3px solid #13a3a0;
+  display: grid; grid-template-columns: repeat(5, 12px); gap: 5px; place-content: center; }
+.rig-hub i { width: 12px; height: 12px; border-radius: 2px; background: #c9d2da; }
+.rig-hub i.on { background: #ffcc33; }
+:root[data-theme="light"] .rig-arm { background: rgba(255,255,255,.85); }
+
+.robot .fine, .hubset .fine { margin: 0; color: var(--muted); font-size: 13.5px; }
+.field select { flex: 1; min-width: 0; font: 14px var(--sans); padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--soft); color: var(--ink); }
+.robot-out { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.robot-out .place { margin: 0; font-size: 14.5px; }
+.robot-out .place b { color: var(--accent); }
+.robot-dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-family: var(--mono); font-size: 12px; }
+.robot-dl dt { color: var(--faint); font-family: var(--head); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; align-self: center; }
+.robot-dl dd { margin: 0; text-align: right; }
+.hubset summary { cursor: pointer; font-family: var(--head); font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.hubgrid { display: grid; grid-template-columns: 1fr 96px; gap: 6px 10px; align-items: center; margin: 8px 0; font-size: 13.5px; }
+.hubgrid input, .hubgrid select { width: 100%; font: 13px var(--mono); padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--soft); color: var(--ink); }
+.linkbtn { appearance: none; border: 0; background: none; padding: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.codeview { margin-top: 18px; scroll-margin-top: 76px; } /* clear the sticky header when scrolled to */
+.codeview .seg { font-size: 11px; }
+.codeview .seg button { padding: 4px 10px; }
+.code-tools { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.code-name { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.code-msg { flex: 1; font-size: 13px; color: var(--muted); }
+.code-msg.bad { color: var(--warn); }
+.code { margin: 0; padding: 12px 14px; max-height: 520px; overflow: auto; background: var(--soft); font: 12.5px/1.55 var(--mono); color: var(--ink); tab-size: 4; }
+.code .c { color: var(--faint); font-style: italic; }
+.code .s { color: var(--accent); }
+.move-token.robot { min-width: 0; padding: 7px 8px; font-size: 12px; white-space: nowrap; }
+.move-token.robot.turn { border-color: var(--accent); }
 
 /* ---- turning the cube by hand ---- */
 .turnpanel { margin-top: 14px; }

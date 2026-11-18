@@ -178,6 +178,55 @@ const READ = () => {
   check(/^[xyz]/.test(await p.textContent('#rSolution')), 'the solution first turns the cube back to the standard hold');
   await shot(p, 'hands-on');
 
+  // ---- 1.3: the robot plan
+  await p.click('#btnReset');
+  check(await p.isDisabled('#btnRobot'), 'no robot plan for a solved cube');
+  await p.click('#btnScramble');
+  await p.waitForFunction(() => document.getElementById('rState').textContent === 'not solved', null, { timeout: 15000 });
+  const robotFrom = await p.evaluate(READ);
+  await p.click('#btnRobot');
+  await p.waitForFunction(() => document.getElementById('robotPill').textContent === 'planned', null, { timeout: 15000 });
+  check(!(await p.evaluate(() => document.querySelector('.rig').hidden)) && (await p.getAttribute('#rigToggle', 'aria-pressed')) === 'true', 'the robot appears around the cube');
+  const place = await p.textContent('#robotPlace');
+  check(/centre on top and the \w+ centre facing you/.test(place), `it says how to put the cube in (${place})`);
+  const rsteps = await p.$$eval('.move-token.robot', (els) => els.map((e) => e.textContent));
+  check(rsteps.length > 10 && rsteps.every((t) => /^(spin [↺↻½]|tip [LR]|turn D['2]?)$/.test(t)), `the move list shows robot steps (${rsteps.slice(0, 6)})`);
+  check(/\d+ · \d+ spins, \d+ tips, \d+ turns/.test(await p.textContent('#robotSteps')) && /about \d+ s/.test(await p.textContent('#robotTime')), 'steps and time are shown');
+  const placed = await p.evaluate(READ);
+  check(placed.colours3d === robotFrom.colours3d, 'the cube shown is the same cube, as it goes into the robot');
+  await p.click('#tpEnd');
+  check(await p.textContent('#rState') === 'solved', 'replayed to the end, the robot steps solve it');
+  await p.click('#tpStart');
+  await p.fill('#speed', '100');
+  await p.click('#tpPlay');
+  await p.waitForFunction(() => document.getElementById('tlPhase').textContent === 'solved', null, { timeout: 90000 });
+  check(true, 'the robot plan plays through, animated');
+  check(await p.isHidden('#codeView'), 'the program view stays closed until asked for');
+  await p.click('#viewPy');
+  const shown = await p.textContent('#cvCode');
+  check(/from pybricks\.hubs import InventorHub/.test(shown) && (await p.textContent('#cvName')) === 'cube_robot.py', 'View program shows the Pybricks program');
+  check((await p.$$('#cvCode .c')).length > 5 && (await p.$$('#cvCode .s')).length > 5, 'comments and strings are coloured');
+  const dl = p.waitForEvent('download');
+  await p.click('#cvDownload');
+  const prog = require('fs').readFileSync(await (await dl).path(), 'utf8');
+  check(prog === shown, 'the download is exactly the program shown');
+  await p.click('#cvCopy');
+  check((await p.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n') === shown, 'Copy copies the program (Windows adds CR to line ends)');
+  await p.click('#cvJson');
+  const plan = JSON.parse(await p.textContent('#cvCode'));
+  check(plan.kind === 'robot-plan' && plan.codes.length === rsteps.length && (await p.textContent('#cvName')) === 'cube_robot_plan.json', 'the JSON tab shows the plan, one code per step');
+  await p.click('#cvPy');
+  await p.click('.hubset summary');
+  await p.selectOption('#hsTable', 'E');
+  check(/Port\.E/.test(await p.textContent('#cvCode')), 'a hub setting changes the program shown at once');
+  await p.selectOption('#hsLeft', 'E');
+  check(/same port/.test(await p.textContent('#cvMsg')) && (await p.textContent('#cvCode')) === '' && await p.isDisabled('#cvDownload'), 'two motors on one port are refused');
+  await p.click('#hsReset');
+  check(/Port\.A/.test(await p.textContent('#cvCode')), 'Defaults puts the ports back');
+  await shot(p, 'robot');
+  await p.click('#cvClose');
+  check(await p.isHidden('#codeView'), 'the program view closes');
+
   // ---- 1.2: your own cube, painted
   await p.click('#btnReset');
   await p.click('#btnEdit');
