@@ -1,0 +1,32 @@
+name: PolicyForge tests
+
+# The domain models and the simulator: round trips, bounds, conservation (Hypothesis), reproducibility, common random
+# numbers, the analytical fill rate, the 1,000 × 104 performance budget, and the tutorial's example. Lint with ruff,
+# type-check core/ with mypy --strict, and require 80 % coverage on core/.
+on:
+  push:
+    paths:
+      - 'policyforge/**'
+      - '.github/workflows/policyforge-ci.yml'
+  pull_request:
+    paths:
+      - 'policyforge/**'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: policyforge/backend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e ".[dev]"
+      - run: ruff check core tests examples
+      - run: mypy
+      - run: python -m pytest -o addopts="" -q --cov=core --cov-report=term --cov-fail-under=80

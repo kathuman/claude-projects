@@ -1,0 +1,905 @@
+{
+  "$defs": {
+    "DC": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "title": "Name",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "storage_capacity": {
+          "description": "Units the DC can hold",
+          "exclusiveMinimum": 0,
+          "maximum": 10000000.0,
+          "title": "Storage Capacity",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "location",
+        "storage_capacity"
+      ],
+      "title": "DC",
+      "type": "object"
+    },
+    "DemandOverride": {
+      "additionalProperties": false,
+      "properties": {
+        "market": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Market",
+          "type": "string"
+        },
+        "sku": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Sku",
+          "type": "string"
+        },
+        "mean": {
+          "description": "Units per period",
+          "maximum": 1000000.0,
+          "minimum": 0,
+          "title": "Mean",
+          "type": "number"
+        },
+        "cv": {
+          "anyOf": [
+            {
+              "maximum": 3,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cv"
+        }
+      },
+      "required": [
+        "market",
+        "sku",
+        "mean"
+      ],
+      "title": "DemandOverride",
+      "type": "object"
+    },
+    "Deterministic": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "deterministic",
+          "default": "deterministic",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "Deterministic",
+      "type": "object"
+    },
+    "Discrete": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "discrete",
+          "default": "discrete",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "maximum": 10000000.0,
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        },
+        "probs": {
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Probs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values",
+        "probs"
+      ],
+      "title": "Discrete",
+      "type": "object"
+    },
+    "EmissionFactors": {
+      "additionalProperties": false,
+      "description": "kg CO2e per tonne-km, by transport mode.",
+      "properties": {
+        "road": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Road",
+          "type": "number"
+        },
+        "rail": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Rail",
+          "type": "number"
+        },
+        "sea": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Sea",
+          "type": "number"
+        },
+        "air": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Air",
+          "type": "number"
+        },
+        "express_road": {
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Express Road",
+          "type": "number"
+        }
+      },
+      "required": [
+        "road",
+        "rail",
+        "sea",
+        "air",
+        "express_road"
+      ],
+      "title": "EmissionFactors",
+      "type": "object"
+    },
+    "ExpediteOption": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "air",
+            "express_road"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "lead_time_days": {
+          "discriminator": {
+            "mapping": {
+              "deterministic": "#/$defs/Deterministic",
+              "discrete": "#/$defs/Discrete",
+              "gamma": "#/$defs/Gamma",
+              "normal": "#/$defs/Normal",
+              "triangular": "#/$defs/Triangular"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Deterministic"
+            },
+            {
+              "$ref": "#/$defs/Normal"
+            },
+            {
+              "$ref": "#/$defs/Gamma"
+            },
+            {
+              "$ref": "#/$defs/Triangular"
+            },
+            {
+              "$ref": "#/$defs/Discrete"
+            }
+          ],
+          "title": "Lead Time Days"
+        },
+        "cost_multiplier": {
+          "description": "Multiplier on the lane's cost per unit",
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Cost Multiplier",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mode",
+        "lead_time_days",
+        "cost_multiplier"
+      ],
+      "title": "ExpediteOption",
+      "type": "object"
+    },
+    "Gamma": {
+      "additionalProperties": false,
+      "description": "Gamma by mean and coefficient of variation (a common way to state lead-time variability).",
+      "properties": {
+        "kind": {
+          "const": "gamma",
+          "default": "gamma",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mu": {
+          "description": "Mean",
+          "exclusiveMinimum": 0,
+          "maximum": 10000000.0,
+          "title": "Mu",
+          "type": "number"
+        },
+        "cv": {
+          "description": "Coefficient of variation (sd / mean)",
+          "exclusiveMinimum": 0,
+          "maximum": 5,
+          "title": "Cv",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mu",
+        "cv"
+      ],
+      "title": "Gamma",
+      "type": "object"
+    },
+    "Lane": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "origin": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Origin",
+          "type": "string"
+        },
+        "destination": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Destination",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "road",
+            "rail",
+            "sea",
+            "air",
+            "express_road"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "lead_time_days": {
+          "discriminator": {
+            "mapping": {
+              "deterministic": "#/$defs/Deterministic",
+              "discrete": "#/$defs/Discrete",
+              "gamma": "#/$defs/Gamma",
+              "normal": "#/$defs/Normal",
+              "triangular": "#/$defs/Triangular"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Deterministic"
+            },
+            {
+              "$ref": "#/$defs/Normal"
+            },
+            {
+              "$ref": "#/$defs/Gamma"
+            },
+            {
+              "$ref": "#/$defs/Triangular"
+            },
+            {
+              "$ref": "#/$defs/Discrete"
+            }
+          ],
+          "title": "Lead Time Days"
+        },
+        "cost_per_unit": {
+          "description": "EUR per unit moved",
+          "maximum": 10000.0,
+          "minimum": 0,
+          "title": "Cost Per Unit",
+          "type": "number"
+        },
+        "distance_km": {
+          "maximum": 20000,
+          "minimum": 0,
+          "title": "Distance Km",
+          "type": "number"
+        },
+        "expedite": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExpediteOption"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "origin",
+        "destination",
+        "mode",
+        "lead_time_days",
+        "cost_per_unit",
+        "distance_km"
+      ],
+      "title": "Lane",
+      "type": "object"
+    },
+    "Location": {
+      "additionalProperties": false,
+      "properties": {
+        "x_km": {
+          "maximum": 5000,
+          "minimum": -5000,
+          "title": "X Km",
+          "type": "number"
+        },
+        "y_km": {
+          "maximum": 5000,
+          "minimum": -5000,
+          "title": "Y Km",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x_km",
+        "y_km"
+      ],
+      "title": "Location",
+      "type": "object"
+    },
+    "Market": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "title": "Name",
+          "type": "string"
+        },
+        "region": {
+          "maxLength": 40,
+          "title": "Region",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "size_factor": {
+          "description": "Share of each SKU's base demand that arises here",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Size Factor",
+          "type": "number"
+        },
+        "served_by": {
+          "description": "The DC that serves this market",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Served By",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "region",
+        "location",
+        "size_factor",
+        "served_by"
+      ],
+      "title": "Market",
+      "type": "object"
+    },
+    "Normal": {
+      "additionalProperties": false,
+      "description": "Normal, truncated at zero when sampled.",
+      "properties": {
+        "kind": {
+          "const": "normal",
+          "default": "normal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mu": {
+          "description": "Mean",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Mu",
+          "type": "number"
+        },
+        "sigma": {
+          "description": "Standard deviation",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Sigma",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mu",
+        "sigma"
+      ],
+      "title": "Normal",
+      "type": "object"
+    },
+    "Plant": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "title": "Name",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "capacity_per_period": {
+          "description": "Units of finished goods per period, all SKUs",
+          "exclusiveMinimum": 0,
+          "maximum": 10000000.0,
+          "title": "Capacity Per Period",
+          "type": "number"
+        },
+        "production_cost_per_unit": {
+          "description": "EUR per unit produced",
+          "maximum": 10000.0,
+          "minimum": 0,
+          "title": "Production Cost Per Unit",
+          "type": "number"
+        },
+        "skus": {
+          "description": "SKUs this plant can make",
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Skus",
+          "type": "array"
+        },
+        "sourcing": {
+          "description": "The plant's normal split of material by supplier",
+          "items": {
+            "$ref": "#/$defs/SourcingShare"
+          },
+          "minItems": 1,
+          "title": "Sourcing",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "location",
+        "capacity_per_period",
+        "production_cost_per_unit",
+        "skus",
+        "sourcing"
+      ],
+      "title": "Plant",
+      "type": "object"
+    },
+    "SKU": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "title": "Name",
+          "type": "string"
+        },
+        "abc_class": {
+          "enum": [
+            "A",
+            "B",
+            "C"
+          ],
+          "title": "Abc Class",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "chilled",
+            "ambient"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "shelf_life_days": {
+          "anyOf": [
+            {
+              "maximum": 365,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Chilled SKUs only",
+          "title": "Shelf Life Days"
+        },
+        "unit_cost": {
+          "description": "Value of one unit, EUR",
+          "exclusiveMinimum": 0,
+          "maximum": 10000.0,
+          "title": "Unit Cost",
+          "type": "number"
+        },
+        "holding_cost_per_unit_period": {
+          "description": "EUR per unit held per period",
+          "maximum": 1000.0,
+          "minimum": 0,
+          "title": "Holding Cost Per Unit Period",
+          "type": "number"
+        },
+        "backorder_penalty_per_unit_period": {
+          "description": "EUR per unit backordered per period",
+          "maximum": 10000.0,
+          "minimum": 0,
+          "title": "Backorder Penalty Per Unit Period",
+          "type": "number"
+        },
+        "lost_sale_penalty_per_unit": {
+          "description": "EUR per unit of demand lost",
+          "maximum": 10000.0,
+          "minimum": 0,
+          "title": "Lost Sale Penalty Per Unit",
+          "type": "number"
+        },
+        "unmet_demand": {
+          "description": "What happens to demand that cannot be met",
+          "enum": [
+            "backorder",
+            "lost_sale"
+          ],
+          "title": "Unmet Demand",
+          "type": "string"
+        },
+        "base_demand": {
+          "description": "Network-wide mean demand, units per period",
+          "maximum": 1000000.0,
+          "minimum": 0,
+          "title": "Base Demand",
+          "type": "number"
+        },
+        "demand_cv": {
+          "description": "Coefficient of variation of demand per market and period",
+          "maximum": 3,
+          "minimum": 0,
+          "title": "Demand Cv",
+          "type": "number"
+        },
+        "seasonality_amplitude": {
+          "default": 0,
+          "description": "Peak deviation from mean, fraction",
+          "maximum": 0.9,
+          "minimum": 0,
+          "title": "Seasonality Amplitude",
+          "type": "number"
+        },
+        "seasonality_peak_period": {
+          "default": 0,
+          "description": "Period of the year with peak demand",
+          "maximum": 52,
+          "minimum": 0,
+          "title": "Seasonality Peak Period",
+          "type": "integer"
+        },
+        "weight_kg": {
+          "description": "Shipping weight of one unit",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "title": "Weight Kg",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "abc_class",
+        "category",
+        "unit_cost",
+        "holding_cost_per_unit_period",
+        "backorder_penalty_per_unit_period",
+        "lost_sale_penalty_per_unit",
+        "unmet_demand",
+        "base_demand",
+        "demand_cv",
+        "weight_kg"
+      ],
+      "title": "SKU",
+      "type": "object"
+    },
+    "SourcingShare": {
+      "additionalProperties": false,
+      "properties": {
+        "supplier": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Supplier",
+          "type": "string"
+        },
+        "share": {
+          "description": "Share of the plant's material bought from this supplier",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Share",
+          "type": "number"
+        }
+      },
+      "required": [
+        "supplier",
+        "share"
+      ],
+      "title": "SourcingShare",
+      "type": "object"
+    },
+    "Supplier": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 80,
+          "title": "Name",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/Location"
+        },
+        "capacity_per_period": {
+          "description": "Units per period across all SKUs",
+          "exclusiveMinimum": 0,
+          "maximum": 10000000.0,
+          "title": "Capacity Per Period",
+          "type": "number"
+        },
+        "unit_cost_index": {
+          "description": "Multiplier on SKU unit cost for material bought here",
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "title": "Unit Cost Index",
+          "type": "number"
+        },
+        "fill_rate_mean": {
+          "description": "Mean share of each order that is shipped",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Fill Rate Mean",
+          "type": "number"
+        },
+        "fill_rate_sd": {
+          "description": "Period-to-period variability of the fill rate",
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Fill Rate Sd",
+          "type": "number"
+        },
+        "ordering_cost": {
+          "default": 0,
+          "description": "EUR per order placed",
+          "maximum": 100000.0,
+          "minimum": 0,
+          "title": "Ordering Cost",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "location",
+        "capacity_per_period",
+        "unit_cost_index",
+        "fill_rate_mean",
+        "fill_rate_sd"
+      ],
+      "title": "Supplier",
+      "type": "object"
+    },
+    "Triangular": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "triangular",
+          "default": "triangular",
+          "title": "Kind",
+          "type": "string"
+        },
+        "low": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Low",
+          "type": "number"
+        },
+        "mode": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Mode",
+          "type": "number"
+        },
+        "high": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "High",
+          "type": "number"
+        }
+      },
+      "required": [
+        "low",
+        "mode",
+        "high"
+      ],
+      "title": "Triangular",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "maxLength": 80,
+      "title": "Name",
+      "type": "string"
+    },
+    "currency": {
+      "const": "EUR",
+      "default": "EUR",
+      "title": "Currency",
+      "type": "string"
+    },
+    "period_days": {
+      "default": 7,
+      "description": "Length of one simulation period",
+      "maximum": 31,
+      "minimum": 1,
+      "title": "Period Days",
+      "type": "integer"
+    },
+    "skus": {
+      "items": {
+        "$ref": "#/$defs/SKU"
+      },
+      "maxItems": 200,
+      "minItems": 1,
+      "title": "Skus",
+      "type": "array"
+    },
+    "suppliers": {
+      "items": {
+        "$ref": "#/$defs/Supplier"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Suppliers",
+      "type": "array"
+    },
+    "plants": {
+      "items": {
+        "$ref": "#/$defs/Plant"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Plants",
+      "type": "array"
+    },
+    "dcs": {
+      "items": {
+        "$ref": "#/$defs/DC"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Dcs",
+      "type": "array"
+    },
+    "markets": {
+      "items": {
+        "$ref": "#/$defs/Market"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Markets",
+      "type": "array"
+    },
+    "lanes": {
+      "items": {
+        "$ref": "#/$defs/Lane"
+      },
+      "maxItems": 5000,
+      "minItems": 1,
+      "title": "Lanes",
+      "type": "array"
+    },
+    "demand_overrides": {
+      "items": {
+        "$ref": "#/$defs/DemandOverride"
+      },
+      "title": "Demand Overrides",
+      "type": "array"
+    },
+    "emission_factors": {
+      "$ref": "#/$defs/EmissionFactors"
+    }
+  },
+  "required": [
+    "name",
+    "skus",
+    "suppliers",
+    "plants",
+    "dcs",
+    "markets",
+    "lanes",
+    "emission_factors"
+  ],
+  "title": "Network",
+  "type": "object"
+}

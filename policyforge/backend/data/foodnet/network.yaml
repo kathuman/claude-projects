@@ -1,0 +1,138 @@
+# FoodNet: a fictional food manufacturer. Synthetic data only; no real company is described.
+# Field meanings and units: see README.md in this folder. Schema: network.schema.json.
+name: FoodNet
+currency: EUR
+period_days: 7
+
+skus:
+  - {id: S01, name: Chilled yoghurt 6-pack, abc_class: A, category: chilled, shelf_life_days: 21, unit_cost: 3.20,
+     holding_cost_per_unit_period: 0.030, backorder_penalty_per_unit_period: 0, lost_sale_penalty_per_unit: 6.00,
+     unmet_demand: lost_sale, base_demand: 1200, demand_cv: 0.25, seasonality_amplitude: 0.15,
+     seasonality_peak_period: 26, weight_kg: 0.9}
+  - {id: S02, name: Fresh pasta, abc_class: A, category: chilled, shelf_life_days: 28, unit_cost: 2.80,
+     holding_cost_per_unit_period: 0.025, backorder_penalty_per_unit_period: 0, lost_sale_penalty_per_unit: 5.00,
+     unmet_demand: lost_sale, base_demand: 800, demand_cv: 0.30, seasonality_amplitude: 0.10,
+     seasonality_peak_period: 50, weight_kg: 0.5}
+  - {id: S03, name: Tomato sauce, abc_class: A, category: ambient, unit_cost: 1.60,
+     holding_cost_per_unit_period: 0.004, backorder_penalty_per_unit_period: 0.40, lost_sale_penalty_per_unit: 3.00,
+     unmet_demand: backorder, base_demand: 1500, demand_cv: 0.20, seasonality_amplitude: 0.10,
+     seasonality_peak_period: 45, weight_kg: 0.7}
+  - {id: S04, name: Dry pasta, abc_class: A, category: ambient, unit_cost: 1.10,
+     holding_cost_per_unit_period: 0.003, backorder_penalty_per_unit_period: 0.30, lost_sale_penalty_per_unit: 2.00,
+     unmet_demand: backorder, base_demand: 2000, demand_cv: 0.15, weight_kg: 0.5}
+  - {id: S05, name: Breakfast cereal, abc_class: B, category: ambient, unit_cost: 2.90,
+     holding_cost_per_unit_period: 0.007, backorder_penalty_per_unit_period: 0.50, lost_sale_penalty_per_unit: 4.00,
+     unmet_demand: backorder, base_demand: 900, demand_cv: 0.30, seasonality_amplitude: 0.20,
+     seasonality_peak_period: 2, weight_kg: 0.4}
+  - {id: S06, name: Canned beans, abc_class: B, category: ambient, unit_cost: 0.90,
+     holding_cost_per_unit_period: 0.002, backorder_penalty_per_unit_period: 0.20, lost_sale_penalty_per_unit: 1.50,
+     unmet_demand: backorder, base_demand: 700, demand_cv: 0.25, weight_kg: 0.45}
+  - {id: S07, name: Olive oil, abc_class: B, category: ambient, unit_cost: 6.50,
+     holding_cost_per_unit_period: 0.015, backorder_penalty_per_unit_period: 0.80, lost_sale_penalty_per_unit: 9.00,
+     unmet_demand: backorder, base_demand: 500, demand_cv: 0.35, seasonality_amplitude: 0.10,
+     seasonality_peak_period: 48, weight_kg: 1.0}
+  - {id: S08, name: Crackers, abc_class: C, category: ambient, unit_cost: 1.80,
+     holding_cost_per_unit_period: 0.004, backorder_penalty_per_unit_period: 0, lost_sale_penalty_per_unit: 2.50,
+     unmet_demand: lost_sale, base_demand: 300, demand_cv: 0.45, weight_kg: 0.25}
+  - {id: S09, name: Spice mix, abc_class: C, category: ambient, unit_cost: 2.40,
+     holding_cost_per_unit_period: 0.005, backorder_penalty_per_unit_period: 0, lost_sale_penalty_per_unit: 3.00,
+     unmet_demand: lost_sale, base_demand: 200, demand_cv: 0.50, weight_kg: 0.1}
+  - {id: S10, name: Infant porridge, abc_class: C, category: ambient, unit_cost: 4.50,
+     holding_cost_per_unit_period: 0.010, backorder_penalty_per_unit_period: 1.20, lost_sale_penalty_per_unit: 8.00,
+     unmet_demand: backorder, base_demand: 250, demand_cv: 0.40, weight_kg: 0.35}
+
+suppliers:
+  # A: cheap, slow, reliable
+  - {id: SUP_A, name: Supplier A, location: {x_km: -400, y_km: 200}, capacity_per_period: 6000,
+     unit_cost_index: 0.90, fill_rate_mean: 0.99, fill_rate_sd: 0.01, ordering_cost: 150}
+  # B: mid-priced, variable
+  - {id: SUP_B, name: Supplier B, location: {x_km: 100, y_km: 350}, capacity_per_period: 6000,
+     unit_cost_index: 1.00, fill_rate_mean: 0.93, fill_rate_sd: 0.06, ordering_cost: 120}
+  # C: expensive, fast, capacity-limited
+  - {id: SUP_C, name: Supplier C, location: {x_km: 50, y_km: -50}, capacity_per_period: 2000,
+     unit_cost_index: 1.30, fill_rate_mean: 0.98, fill_rate_sd: 0.02, ordering_cost: 100}
+
+plants:
+  - id: PLANT_N
+    name: North plant
+    location: {x_km: 0, y_km: 300}
+    capacity_per_period: 6000
+    production_cost_per_unit: 0.35
+    skus: [S01, S02, S03, S04, S05]
+    sourcing: [{supplier: SUP_A, share: 0.5}, {supplier: SUP_B, share: 0.5}]
+  - id: PLANT_S
+    name: South plant
+    location: {x_km: 0, y_km: -250}
+    capacity_per_period: 6000
+    production_cost_per_unit: 0.30
+    skus: [S03, S04, S06, S07, S08, S09, S10]
+    sourcing: [{supplier: SUP_A, share: 0.4}, {supplier: SUP_B, share: 0.6}]
+
+dcs:
+  - {id: DC_N, name: North DC, location: {x_km: 0, y_km: 400}, storage_capacity: 40000}
+  - {id: DC_C, name: Central DC, location: {x_km: 50, y_km: 0}, storage_capacity: 40000}
+  - {id: DC_S, name: South DC, location: {x_km: 0, y_km: -350}, storage_capacity: 40000}
+
+markets:
+  - {id: MKT_N1, name: North 1, region: North, location: {x_km: -80, y_km: 480}, size_factor: 0.22, served_by: DC_N}
+  - {id: MKT_N2, name: North 2, region: North, location: {x_km: 90, y_km: 450}, size_factor: 0.14, served_by: DC_N}
+  - {id: MKT_C1, name: Central 1, region: Central, location: {x_km: -60, y_km: 30}, size_factor: 0.20, served_by: DC_C}
+  - {id: MKT_C2, name: Central 2, region: Central, location: {x_km: 140, y_km: -20}, size_factor: 0.12, served_by: DC_C}
+  - {id: MKT_S1, name: South 1, region: South, location: {x_km: -90, y_km: -400}, size_factor: 0.18, served_by: DC_S}
+  - {id: MKT_S2, name: South 2, region: South, location: {x_km: 80, y_km: -380}, size_factor: 0.14, served_by: DC_S}
+
+demand_overrides: []
+
+lanes:
+  # suppliers → plants
+  - {id: L_A_N, origin: SUP_A, destination: PLANT_N, mode: road, distance_km: 410, cost_per_unit: 0.55,
+     lead_time_days: {kind: gamma, mu: 21, cv: 0.08},
+     expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 9, cv: 0.1}, cost_multiplier: 2.5}}
+  - {id: L_A_S, origin: SUP_A, destination: PLANT_S, mode: road, distance_km: 615, cost_per_unit: 0.70,
+     lead_time_days: {kind: gamma, mu: 24, cv: 0.08},
+     expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 10, cv: 0.1}, cost_multiplier: 2.5}}
+  - {id: L_B_N, origin: SUP_B, destination: PLANT_N, mode: road, distance_km: 110, cost_per_unit: 0.30,
+     lead_time_days: {kind: gamma, mu: 12, cv: 0.35},
+     expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 5, cv: 0.2}, cost_multiplier: 2.5}}
+  - {id: L_B_S, origin: SUP_B, destination: PLANT_S, mode: road, distance_km: 610, cost_per_unit: 0.60,
+     lead_time_days: {kind: gamma, mu: 15, cv: 0.35},
+     expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 6, cv: 0.2}, cost_multiplier: 2.5}}
+  - {id: L_C_N, origin: SUP_C, destination: PLANT_N, mode: road, distance_km: 355, cost_per_unit: 0.45,
+     lead_time_days: {kind: gamma, mu: 4, cv: 0.15}}
+  - {id: L_C_S, origin: SUP_C, destination: PLANT_S, mode: road, distance_km: 205, cost_per_unit: 0.35,
+     lead_time_days: {kind: gamma, mu: 3, cv: 0.15}}
+  # plants → DCs
+  - {id: L_N_DCN, origin: PLANT_N, destination: DC_N, mode: road, distance_km: 100, cost_per_unit: 0.15,
+     lead_time_days: {kind: triangular, low: 1, mode: 2, high: 4},
+     expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
+  - {id: L_N_DCC, origin: PLANT_N, destination: DC_C, mode: road, distance_km: 300, cost_per_unit: 0.30,
+     lead_time_days: {kind: triangular, low: 2, mode: 3, high: 5},
+     expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
+  - {id: L_N_DCS, origin: PLANT_N, destination: DC_S, mode: rail, distance_km: 700, cost_per_unit: 0.40,
+     lead_time_days: {kind: triangular, low: 3, mode: 5, high: 9},
+     expedite: {mode: air, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 6.0}}
+  - {id: L_S_DCN, origin: PLANT_S, destination: DC_N, mode: rail, distance_km: 650, cost_per_unit: 0.40,
+     lead_time_days: {kind: triangular, low: 3, mode: 5, high: 9},
+     expedite: {mode: air, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 6.0}}
+  - {id: L_S_DCC, origin: PLANT_S, destination: DC_C, mode: road, distance_km: 255, cost_per_unit: 0.28,
+     lead_time_days: {kind: triangular, low: 2, mode: 3, high: 5},
+     expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
+  - {id: L_S_DCS, origin: PLANT_S, destination: DC_S, mode: road, distance_km: 100, cost_per_unit: 0.15,
+     lead_time_days: {kind: triangular, low: 1, mode: 2, high: 4},
+     expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
+  # DCs → markets (delivery within the period; the lane carries cost and distance for CO2)
+  - {id: L_DCN_N1, origin: DC_N, destination: MKT_N1, mode: road, distance_km: 115, cost_per_unit: 0.20,
+     lead_time_days: {kind: deterministic, value: 1}}
+  - {id: L_DCN_N2, origin: DC_N, destination: MKT_N2, mode: road, distance_km: 100, cost_per_unit: 0.18,
+     lead_time_days: {kind: deterministic, value: 1}}
+  - {id: L_DCC_C1, origin: DC_C, destination: MKT_C1, mode: road, distance_km: 115, cost_per_unit: 0.20,
+     lead_time_days: {kind: deterministic, value: 1}}
+  - {id: L_DCC_C2, origin: DC_C, destination: MKT_C2, mode: road, distance_km: 95, cost_per_unit: 0.18,
+     lead_time_days: {kind: deterministic, value: 1}}
+  - {id: L_DCS_S1, origin: DC_S, destination: MKT_S1, mode: road, distance_km: 105, cost_per_unit: 0.19,
+     lead_time_days: {kind: deterministic, value: 1}}
+  - {id: L_DCS_S2, origin: DC_S, destination: MKT_S2, mode: road, distance_km: 85, cost_per_unit: 0.16,
+     lead_time_days: {kind: deterministic, value: 1}}
+
+# kg CO2e per tonne-km
+emission_factors: {road: 0.105, rail: 0.028, sea: 0.016, air: 0.600, express_road: 0.150}

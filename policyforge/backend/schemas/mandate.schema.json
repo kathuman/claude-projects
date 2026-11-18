@@ -1,0 +1,344 @@
+{
+  "$defs": {
+    "ActionKind": {
+      "description": "Actions that can be prohibited outright.",
+      "enum": [
+        "add_new_supplier",
+        "change_supplier_master_data",
+        "cancel_customer_orders",
+        "change_customer_priorities",
+        "exceed_storage_capacity",
+        "expedite_by_air",
+        "change_policy_parameters",
+        "ship_expired_stock"
+      ],
+      "title": "ActionKind",
+      "type": "string"
+    },
+    "AuthorityLimit": {
+      "additionalProperties": false,
+      "description": "A bound on what the agent may do without asking.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/LimitKind"
+        },
+        "value": {
+          "description": "In the unit of the kind (see LIMIT_SPECS)",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "title": "AuthorityLimit",
+      "type": "object"
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "description": "`var op threshold`, holding for `for_periods` consecutive periods. Only state variables are allowed.",
+      "properties": {
+        "var": {
+          "$ref": "#/$defs/VarRef"
+        },
+        "op": {
+          "enum": [
+            "lt",
+            "le",
+            "gt",
+            "ge"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "threshold": {
+          "description": "In the variable's unit (see the vocabulary)",
+          "maximum": 10000000.0,
+          "minimum": -10000000.0,
+          "title": "Threshold",
+          "type": "number"
+        },
+        "for_periods": {
+          "default": 1,
+          "description": "Consecutive periods the condition must hold",
+          "maximum": 52,
+          "minimum": 1,
+          "title": "For Periods",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "var",
+        "op",
+        "threshold"
+      ],
+      "title": "Condition",
+      "type": "object"
+    },
+    "ConditionTrigger": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "condition",
+          "default": "condition",
+          "title": "Kind",
+          "type": "string"
+        },
+        "condition": {
+          "$ref": "#/$defs/Condition"
+        }
+      },
+      "required": [
+        "condition"
+      ],
+      "title": "ConditionTrigger",
+      "type": "object"
+    },
+    "EscalationRule": {
+      "additionalProperties": false,
+      "description": "When to hand a decision back to a person.",
+      "properties": {
+        "trigger": {
+          "discriminator": {
+            "mapping": {
+              "condition": "#/$defs/ConditionTrigger",
+              "limit_breach": "#/$defs/LimitBreach"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LimitBreach"
+            },
+            {
+              "$ref": "#/$defs/ConditionTrigger"
+            }
+          ],
+          "title": "Trigger"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "escalate_to": {
+          "default": "owner",
+          "enum": [
+            "owner",
+            "approver"
+          ],
+          "title": "Escalate To",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger",
+        "severity"
+      ],
+      "title": "EscalationRule",
+      "type": "object"
+    },
+    "LimitBreach": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "limit_breach",
+          "default": "limit_breach",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limit": {
+          "$ref": "#/$defs/LimitKind"
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "title": "LimitBreach",
+      "type": "object"
+    },
+    "LimitKind": {
+      "enum": [
+        "order_qty_change_pct",
+        "expedite_spend_per_period",
+        "consecutive_sourcing_switches",
+        "volume_shift_pct",
+        "parameter_drift_pct"
+      ],
+      "title": "LimitKind",
+      "type": "string"
+    },
+    "Severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "VarRef": {
+      "additionalProperties": false,
+      "description": "A variable with its qualifiers, written like `lead_time[supplier_B]` or `on_hand[DC_N, S01]`.",
+      "properties": {
+        "var": {
+          "$ref": "#/$defs/Variable",
+          "description": "A name from the fixed vocabulary"
+        },
+        "supplier": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Supplier id, for supplier variables",
+          "title": "Supplier"
+        },
+        "node": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Plant, DC or market id, for node variables",
+          "title": "Node"
+        },
+        "sku": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SKU id; empty means summed over the SKUs in scope",
+          "title": "Sku"
+        }
+      },
+      "required": [
+        "var"
+      ],
+      "title": "VarRef",
+      "type": "object"
+    },
+    "Variable": {
+      "enum": [
+        "inventory_position",
+        "on_hand",
+        "backorders",
+        "pipeline",
+        "forecast",
+        "observed_lead_time",
+        "supplier_fill_rate",
+        "capacity_utilisation",
+        "demand",
+        "lead_time",
+        "supplier_capacity",
+        "plant_capacity"
+      ],
+      "title": "Variable",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "owner": {
+      "description": "The person accountable for the policy",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Owner",
+      "type": "string"
+    },
+    "approver": {
+      "description": "The person who signs it off",
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Approver",
+      "type": "string"
+    },
+    "agent_id": {
+      "description": "The agent that executes the policy",
+      "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "autonomy": {
+      "items": {
+        "$ref": "#/$defs/AuthorityLimit"
+      },
+      "maxItems": 20,
+      "title": "Autonomy",
+      "type": "array"
+    },
+    "escalation": {
+      "items": {
+        "$ref": "#/$defs/EscalationRule"
+      },
+      "maxItems": 50,
+      "title": "Escalation",
+      "type": "array"
+    },
+    "prohibited_actions": {
+      "items": {
+        "$ref": "#/$defs/ActionKind"
+      },
+      "maxItems": 20,
+      "title": "Prohibited Actions",
+      "type": "array"
+    },
+    "valid_from": {
+      "format": "date-time",
+      "title": "Valid From",
+      "type": "string"
+    },
+    "expires_at": {
+      "description": "Mandatory; defaults to valid_from + 90 days",
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "review_triggers": {
+      "description": "Monitor ids forcing re-review",
+      "items": {
+        "description": "Identifier",
+        "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+        "type": "string"
+      },
+      "maxItems": 50,
+      "title": "Review Triggers",
+      "type": "array"
+    }
+  },
+  "required": [
+    "owner",
+    "approver",
+    "agent_id",
+    "expires_at"
+  ],
+  "title": "Mandate",
+  "type": "object"
+}

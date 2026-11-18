@@ -1,0 +1,253 @@
+{
+  "$defs": {
+    "ConstraintScope": {
+      "additionalProperties": false,
+      "description": "What a constraint applies to; empty fields mean everything.",
+      "properties": {
+        "sku_class": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B",
+                "C"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sku Class"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "enum": [
+                "chilled",
+                "ambient"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "sku": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sku"
+        },
+        "node": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node"
+        }
+      },
+      "title": "ConstraintScope",
+      "type": "object"
+    },
+    "HardConstraint": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "metric": {
+          "$ref": "#/$defs/Metric"
+        },
+        "scope": {
+          "$ref": "#/$defs/ConstraintScope"
+        },
+        "op": {
+          "enum": [
+            "ge",
+            "le"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "threshold": {
+          "description": "In the metric's unit",
+          "maximum": 100000000000.0,
+          "minimum": 0,
+          "title": "Threshold",
+          "type": "number"
+        },
+        "window": {
+          "default": "horizon",
+          "description": "Measured per period, per calendar month (4.33 weeks), or over the horizon",
+          "enum": [
+            "period",
+            "month",
+            "horizon"
+          ],
+          "title": "Window",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 300,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "metric",
+        "op",
+        "threshold"
+      ],
+      "title": "HardConstraint",
+      "type": "object"
+    },
+    "Metric": {
+      "enum": [
+        "fill_rate",
+        "otif",
+        "backorder_units",
+        "stockout_periods",
+        "expedite_spend",
+        "total_cost",
+        "inventory_days",
+        "co2_tonnes"
+      ],
+      "title": "Metric",
+      "type": "string"
+    },
+    "Objective": {
+      "enum": [
+        "service",
+        "resilience",
+        "cost",
+        "carbon"
+      ],
+      "title": "Objective",
+      "type": "string"
+    },
+    "RiskAttitude": {
+      "additionalProperties": false,
+      "description": "Which part of the distribution counts as the acceptable worst case.",
+      "properties": {
+        "measure": {
+          "default": "cvar",
+          "enum": [
+            "percentile",
+            "cvar"
+          ],
+          "title": "Measure",
+          "type": "string"
+        },
+        "level": {
+          "default": 0.95,
+          "description": "E.g. 0.95: the worst 5 % of outcomes",
+          "maximum": 0.999,
+          "minimum": 0.5,
+          "title": "Level",
+          "type": "number"
+        }
+      },
+      "title": "RiskAttitude",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Identifier",
+      "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "version": {
+      "default": 1,
+      "maximum": 10000,
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "name": {
+      "maxLength": 120,
+      "title": "Name",
+      "type": "string"
+    },
+    "hard_constraints": {
+      "items": {
+        "$ref": "#/$defs/HardConstraint"
+      },
+      "maxItems": 50,
+      "title": "Hard Constraints",
+      "type": "array"
+    },
+    "priorities": {
+      "description": "Lexicographic order, most important first; all four objectives",
+      "items": {
+        "$ref": "#/$defs/Objective"
+      },
+      "title": "Priorities",
+      "type": "array"
+    },
+    "soft_weights": {
+      "additionalProperties": {
+        "maximum": 1,
+        "minimum": 0,
+        "type": "number"
+      },
+      "description": "Weights for a scalar tie-breaking score",
+      "propertyNames": {
+        "$ref": "#/$defs/Objective"
+      },
+      "title": "Soft Weights",
+      "type": "object"
+    },
+    "risk": {
+      "$ref": "#/$defs/RiskAttitude"
+    },
+    "breach_alpha": {
+      "default": 0.05,
+      "description": "Largest share of replications that may breach",
+      "maximum": 0.5,
+      "minimum": 0,
+      "title": "Breach Alpha",
+      "type": "number"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "priorities",
+    "soft_weights"
+  ],
+  "title": "Constitution",
+  "type": "object"
+}

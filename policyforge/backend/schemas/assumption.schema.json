@@ -1,0 +1,361 @@
+{
+  "$defs": {
+    "Deterministic": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "deterministic",
+          "default": "deterministic",
+          "title": "Kind",
+          "type": "string"
+        },
+        "value": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "Deterministic",
+      "type": "object"
+    },
+    "Discrete": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "discrete",
+          "default": "discrete",
+          "title": "Kind",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "maximum": 10000000.0,
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Values",
+          "type": "array"
+        },
+        "probs": {
+          "items": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "maxItems": 50,
+          "minItems": 1,
+          "title": "Probs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "values",
+        "probs"
+      ],
+      "title": "Discrete",
+      "type": "object"
+    },
+    "Gamma": {
+      "additionalProperties": false,
+      "description": "Gamma by mean and coefficient of variation (a common way to state lead-time variability).",
+      "properties": {
+        "kind": {
+          "const": "gamma",
+          "default": "gamma",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mu": {
+          "description": "Mean",
+          "exclusiveMinimum": 0,
+          "maximum": 10000000.0,
+          "title": "Mu",
+          "type": "number"
+        },
+        "cv": {
+          "description": "Coefficient of variation (sd / mean)",
+          "exclusiveMinimum": 0,
+          "maximum": 5,
+          "title": "Cv",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mu",
+        "cv"
+      ],
+      "title": "Gamma",
+      "type": "object"
+    },
+    "Normal": {
+      "additionalProperties": false,
+      "description": "Normal, truncated at zero when sampled.",
+      "properties": {
+        "kind": {
+          "const": "normal",
+          "default": "normal",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mu": {
+          "description": "Mean",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Mu",
+          "type": "number"
+        },
+        "sigma": {
+          "description": "Standard deviation",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Sigma",
+          "type": "number"
+        }
+      },
+      "required": [
+        "mu",
+        "sigma"
+      ],
+      "title": "Normal",
+      "type": "object"
+    },
+    "Triangular": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "triangular",
+          "default": "triangular",
+          "title": "Kind",
+          "type": "string"
+        },
+        "low": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Low",
+          "type": "number"
+        },
+        "mode": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Mode",
+          "type": "number"
+        },
+        "high": {
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "High",
+          "type": "number"
+        }
+      },
+      "required": [
+        "low",
+        "mode",
+        "high"
+      ],
+      "title": "Triangular",
+      "type": "object"
+    },
+    "VarRef": {
+      "additionalProperties": false,
+      "description": "A variable with its qualifiers, written like `lead_time[supplier_B]` or `on_hand[DC_N, S01]`.",
+      "properties": {
+        "var": {
+          "$ref": "#/$defs/Variable",
+          "description": "A name from the fixed vocabulary"
+        },
+        "supplier": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Supplier id, for supplier variables",
+          "title": "Supplier"
+        },
+        "node": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Plant, DC or market id, for node variables",
+          "title": "Node"
+        },
+        "sku": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SKU id; empty means summed over the SKUs in scope",
+          "title": "Sku"
+        }
+      },
+      "required": [
+        "var"
+      ],
+      "title": "VarRef",
+      "type": "object"
+    },
+    "Variable": {
+      "enum": [
+        "inventory_position",
+        "on_hand",
+        "backorders",
+        "pipeline",
+        "forecast",
+        "observed_lead_time",
+        "supplier_fill_rate",
+        "capacity_utilisation",
+        "demand",
+        "lead_time",
+        "supplier_capacity",
+        "plant_capacity"
+      ],
+      "title": "Variable",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "`variable op threshold` (or `variable ~ distribution`), e.g. `lead_time[supplier_B] < 21 days`.",
+  "properties": {
+    "id": {
+      "description": "Identifier",
+      "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "statement": {
+      "description": "The assumption in plain language",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Statement",
+      "type": "string"
+    },
+    "variable": {
+      "$ref": "#/$defs/VarRef",
+      "description": "A state or exogenous variable"
+    },
+    "operator": {
+      "anyOf": [
+        {
+          "enum": [
+            "lt",
+            "le",
+            "gt",
+            "ge"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "With a threshold",
+      "title": "Operator"
+    },
+    "threshold": {
+      "anyOf": [
+        {
+          "maximum": 10000000.0,
+          "minimum": -10000000.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "In the variable's unit",
+      "title": "Threshold"
+    },
+    "distribution": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "deterministic": "#/$defs/Deterministic",
+              "discrete": "#/$defs/Discrete",
+              "gamma": "#/$defs/Gamma",
+              "normal": "#/$defs/Normal",
+              "triangular": "#/$defs/Triangular"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Deterministic"
+            },
+            {
+              "$ref": "#/$defs/Normal"
+            },
+            {
+              "$ref": "#/$defs/Gamma"
+            },
+            {
+              "$ref": "#/$defs/Triangular"
+            },
+            {
+              "$ref": "#/$defs/Discrete"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The assumed distribution of the variable",
+      "title": "Distribution"
+    },
+    "source": {
+      "enum": [
+        "user_stated",
+        "compiler_inferred"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "confidence": {
+      "description": "How sure the source is, 0..1",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence",
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "statement",
+    "variable",
+    "source",
+    "confidence"
+  ],
+  "title": "Assumption",
+  "type": "object"
+}

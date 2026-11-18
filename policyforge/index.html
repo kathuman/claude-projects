@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PolicyForge · About</title>
+  <meta name="description" content="PolicyForge: a workbench for supply chain managers who delegate execution to AI agents. State intent, compile it into a typed, bounded decision rule with a mandate, stress-test it across thousands of futures, approve it, and monitor its assumptions." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><rect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%230a2f52%22/><path d=%22M14 46h36M20 46V30h24v16M24 30l8-12 8 12%22 stroke=%22%237dd3fc%22 stroke-width=%224%22 fill=%22none%22 stroke-linejoin=%22round%22/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="assets/site.css" />
+  <script>try { const t = localStorage.getItem('pf-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* storage unavailable */ }</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="mark" href="./">Policy<span>Forge</span></a>
+      <span class="ver">v0.2.0</span>
+      <span class="sub">policy workbench for agent-run supply chains</span>
+    </div>
+    <nav class="actions">
+      <a class="back-link" href="./" aria-current="page">About</a>
+      <a class="back-link" href="tutorial.html">Tutorial</a>
+      <a class="back-link" href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a>
+      <button class="back-link" id="theme" type="button" aria-label="Toggle colour theme">◐</button>
+      <a class="back-link" href="../">← Projects</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="eyebrow">Supply chain · governance · Monte Carlo</div>
+    <h1>Govern the rule, not the plan</h1>
+    <p class="lede">As AI agents take over replenishment, allocation, expediting and supplier switching, the supply chain manager's job shifts from making plans to <b>governing policies</b>: decision rules, plus a mandate that says what the agent may decide alone. PolicyForge is a workbench for that job.</p>
+
+    <section class="panel" aria-labelledby="h-what">
+      <h2 id="h-what">About PolicyForge</h2>
+      <p>A planning system optimises one plan for one expected future. A <b>policy</b> is different: it reacts to whatever future happens. So it has to be judged across many futures, and its robustness, stability and governance count as much as its average cost.</p>
+      <p>Governing a policy means five things:</p>
+      <ul>
+        <li><b>stating intent</b> in plain language;</li>
+        <li><b>turning it into an explicit rule</b>, with every threshold visible and bounded;</li>
+        <li><b>setting the agent's mandate</b>: what it may decide alone and when it must escalate;</li>
+        <li><b>testing the rule against uncertainty</b> before it goes live, against the rule it replaces;</li>
+        <li><b>monitoring the assumptions</b> behind it, so you know when it no longer holds.</li>
+      </ul>
+      <p>PolicyForge follows that sequence:</p>
+      <svg class="flow" viewBox="0 0 600 250" role="img" aria-labelledby="flow-title flow-desc">
+        <title id="flow-title">The PolicyForge flow</title>
+        <desc id="flow-desc">Six stages in order: intent, compile, validate, stress-test, approve and deploy, monitor. The simulator under the stress test is built; the evaluation, compiler, registry and monitors are being built phase by phase.</desc>
+        <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink-faint)"/></marker></defs>
+        <g stroke="var(--ink-faint)" stroke-width="1.5" fill="none" marker-end="url(#arr)">
+          <path d="M184 60h26"/><path d="M384 60h26"/><path d="M500 92v34H100v32"/><path d="M184 190h26"/><path d="M384 190h26"/>
+        </g>
+        <g font-size="15">
+          <rect x="10" y="28" width="174" height="64" rx="8" fill="var(--panel-2)" stroke="var(--plan)"/>
+          <text x="22" y="52" font-weight="700">1 · INTENT</text><text x="22" y="72" class="small">plain language</text><text x="22" y="85" class="small">planned · P4</text>
+          <rect x="213" y="28" width="171" height="64" rx="8" fill="var(--panel-2)" stroke="var(--plan)"/>
+          <text x="225" y="52" font-weight="700">2 · COMPILE</text><text x="225" y="72" class="small">LLM → typed DSL only</text><text x="225" y="85" class="small">planned · P4</text>
+          <rect x="413" y="28" width="177" height="64" rx="8" fill="var(--panel-2)" stroke="var(--next)"/>
+          <text x="425" y="52" font-weight="700">3 · VALIDATE</text><text x="425" y="72" class="small">schema + bounds: built</text><text x="425" y="85" class="small">constitution: P4</text>
+          <rect x="10" y="158" width="174" height="64" rx="8" fill="var(--panel-2)" stroke="var(--ok)"/>
+          <text x="22" y="182" font-weight="700">4 · STRESS-TEST</text><text x="22" y="202" class="small">simulator: built</text><text x="22" y="215" class="small">evaluation: next · P3</text>
+          <rect x="213" y="158" width="171" height="64" rx="8" fill="var(--panel-2)" stroke="var(--plan)"/>
+          <text x="225" y="182" font-weight="700">5 · APPROVE</text><text x="225" y="202" class="small">versioned registry</text><text x="225" y="215" class="small">planned · P5</text>
+          <rect x="413" y="158" width="177" height="64" rx="8" fill="var(--panel-2)" stroke="var(--plan)"/>
+          <text x="425" y="182" font-weight="700">6 · MONITOR</text><text x="425" y="202" class="small">assumption drift</text><text x="425" y="215" class="small">planned · P6</text>
+        </g>
+      </svg>
+      <p class="caption">The core flow. Box outlines show progress: green is built, amber is partly built or next, blue-grey is planned.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-design">
+      <h2 id="h-design">Design principles</h2>
+      <ul>
+        <li><b>The LLM never produces code.</b> It will compile plain language into a typed, bounded policy language, and nothing else. Every rule is a validated object; execution is deterministic Python.</li>
+        <li><b>A closed vocabulary.</b> Rules may read only eight observable state variables (inventory position, on-hand, backorders, pipeline, forecast, observed lead time, supplier fill rate, capacity utilisation). Anything else fails validation.</li>
+        <li><b>Every number has bounds and a unit.</b> Cover and lead times are in days, persistence in weeks, money in EUR. A test checks that every number in every schema is bounded.</li>
+        <li><b>Mandates expire.</b> Ninety days by default, never more than 366 days without review.</li>
+        <li><b>Reproducible, fair comparisons.</b> Every run is seeded. All randomness is drawn before the run, so every policy faces exactly the same futures (common random numbers).</li>
+        <li><b>Honest about limits.</b> Every design decision is logged with its rationale, and every simplification is listed.</li>
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="h-now">
+      <h2 id="h-now">What works today (v0.2.0)</h2>
+      <p>PolicyForge is in early development, and there is no web interface yet. Today it is a Python library you run from the command line; the <a href="tutorial.html">tutorial</a> walks you through it.</p>
+      <h3>The policy language <span class="badge done">built</span></h3>
+      <p>Six rule types:
+        <b>base stock</b> (in units or days of cover),
+        <b>(s, S)</b>,
+        <b>allocation</b> (fair share, priority or proportional, with reservations),
+        <b>expedite triggers</b> (projected stockout or low coverage, with a cost cap),
+        <b>sourcing switches</b> (with persistence, a minimum dwell and switch-back),
+        and <b>composites</b> of these.
+        Each rule comes with its mandate, assumptions, the constitution it is tested against, and its provenance.
+        Schemas are exported, and the <a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/docs/DSL_REFERENCE.md">DSL reference</a> is generated from them.</p>
+      <h3>The simulator <span class="badge done">built</span></h3>
+      <p>It runs weekly over a supplier → plant → DC → market network, vectorised over replications.
+        It models stochastic lead times per order, supplier capacity and fill rates, finite plant capacity, shelf life and spoilage, backorders or lost sales, information delay and noisy signals, and the mandate's limits (blocked or flagged).
+        1,000 replications × 104 weeks take about 6 seconds.
+        It conserves stock exactly, and it matches the textbook fill rate of a base-stock system to within 0.03 percentage points.</p>
+      <h3>FoodNet and the scenario library <span class="badge done">built</span></h3>
+      <p>A fictional food manufacturer: 3 suppliers, 2 plants, 3 DCs, 6 markets and 10 SKUs (2 chilled). Eight stress scenarios:
+        a quiet baseline,
+        a demand surge,
+        a promotion spike,
+        a supplier outage,
+        lead-time creep,
+        a plant capacity loss,
+        a correlated shock,
+        and noisy, delayed signals.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="h-road">
+      <h2 id="h-road">Roadmap</h2>
+      <p>The build goes phase by phase, and each phase starts only when the previous one passes its acceptance tests.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Phase</th><th>What it delivers</th><th>Accepted when</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>P1 Domain and data</td><td>The DSL, mandate, assumptions, constitution; FoodNet; schemas</td><td>Models round-trip; bad bounds rejected; schema docs generated</td><td><span class="badge done">done</span></td></tr>
+          <tr><td>P2 Simulator</td><td>Vectorised engine, an executor per rule, 8 scenarios, common random numbers</td><td>Conservation; exact reproducibility; 1,000 × 104 under 30 s; analytical fill rate within ±1 pp</td><td><span class="badge done">done</span></td></tr>
+          <tr><td>P3 Baselines and evaluation</td><td>Incumbent, naive and rolling-optimisation baselines (Pyomo with HiGHS); full metrics; robustness verdict; report</td><td>Bullwhip ratio above 1 under delay; the optimiser solves; reports for the default suite</td><td><span class="badge next">next</span></td></tr>
+          <tr><td>P4 LLM compiler</td><td>Provider interface, offline mock, compiler with retries, validator, back-translation</td><td>20 golden intents compile; out-of-vocabulary references rejected</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P5 Registry and API</td><td>Lifecycle, approval gate, hash-chained audit log, agent mandate endpoint, diffs</td><td>No approval without a passing evaluation; tampering detected</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry, Monitor and Network screens</td><td>The full demo runs in the browser</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge plan">planned</span></td></tr>
+        </tbody>
+      </table></div>
+      <h3>Proposed additions</h3>
+      <ul>
+        <li><b>A leaner incumbent for FoodNet (in P3).</b> With 35 days of cover at plants and 14 at DCs, the default policy is so buffered that shocks barely show. The tutorial's 10-day DC incumbent is fragile enough for stress tests to tell policies apart.</li>
+        <li><b>A public demo on this site (after P7).</b> GitHub Pages cannot run the Python backend. Two options: precomputed stress-test reports shown in the browser, or the simulator itself in the browser through Pyodide, which ships NumPy.</li>
+        <li><b>Seasonal forecasts (in P3).</b> Policies currently forecast by smoothing alone, which lags seasonal peaks. Adding the known seasonal profile would separate forecast lag from policy weakness.</li>
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="h-more">
+      <h2 id="h-more">Read more</h2>
+      <ul>
+        <li><a href="tutorial.html">Tutorial</a>: write a policy, stress-test it and read the result, in about 15 minutes.</li>
+        <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/DECISIONS.md">Design decisions</a>: 22 so far, each with its context, options and rationale.</li>
+        <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/STATUS.md">Status</a>: what works, what is stubbed, and the known limitations, phase by phase.</li>
+        <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/backend/data/foodnet/README.md">FoodNet</a>: every field of the synthetic network, with its unit.</li>
+      </ul>
+      <p>All data is synthetic. No real company is described.</p>
+    </section>
+  </main>
+
+  <footer class="foot">PolicyForge v0.2.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <script>
+    document.getElementById('theme').addEventListener('click', () => {
+      const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem('pf-theme', next); } catch { /* ignore */ }
+    });
+  </script>
+</body>
+</html>

@@ -337,5 +337,16 @@
     "tags": ["python", "tkinter", "game"],
     "repoUrl": null,
     "demoUrl": "https://claude.ai/code/artifact/3a0966c2-17c0-4024-ab90-540b14857d46"
+  },
+  {
+    "title": "PolicyForge",
+    "discipline": "supply-chain",
+    "status": "early",
+    "thumb": "assets/thumbs/policyforge.webp",
+    "description": "A workbench for supply chain managers who delegate execution to AI agents: govern the rule, not the plan. An intent becomes a typed, bounded decision rule (base stock, (s, S), allocation, expedite triggers, sourcing switches, composites) with a mandate that says what the agent may decide alone, when it must escalate and when the mandate expires, plus the assumptions it rests on and the constitution it answers to. Rules may read only a closed vocabulary of observable state, every number is bounded and has a unit, and the LLM will only ever compile into this language, never into code. A vectorised Monte Carlo simulator runs a supplier-plant-DC-market network week by week with stochastic lead times, supplier capacity and fill rates, plant capacity, shelf life and spoilage, backorders or lost sales, information delay and noisy signals, and enforces the mandate by blocking or flagging. Common random numbers give every policy the same futures; 1,000 replications of two years run in about 6 seconds, stock is conserved exactly, and a base-stock test matches the textbook fill rate to 0.03 points. A synthetic food network (3 suppliers, 2 plants, 3 DCs, 6 markets, 10 SKUs) and eight stress scenarios, from a supplier outage to a correlated shock. Early development: phases 1 and 2 of 8 are done (domain and simulator, Python, 75 tests, mypy --strict); evaluation, the LLM compiler, registry, monitoring and the web interface follow. About page with roadmap, and a tutorial that stress-tests a sourcing switch against the incumbent.",
+    "date": "2026-11-18",
+    "tags": ["python", "supply-chain", "simulation", "monte-carlo", "governance", "ai-agents", "pydantic", "numpy"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/policyforge",
+    "demoUrl": "https://kathuman.github.io/claude-projects/policyforge/"
   }
 ]
