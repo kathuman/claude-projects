@@ -182,3 +182,69 @@ It exports to Markdown; PDF follows with the frontend (P7).
 - reports are generated for the full default suite;
 - a regression test locks the incumbent's default-suite KPIs at a fixed seed;
 - unit tests for every metric, the constitution check, the verdict rules, CVaR and regret.
+
+## Phase 5b: Network Studio (added 2026-11-20 at the user's request, D032)
+
+A visual editor for creating and maintaining networks, in the spirit of Tierwise's Network Studio: rebuilt for
+PolicyForge's model and its React + TypeScript frontend, reusing Tierwise's proven patterns, not its code. It comes
+right after P5, because it needs the API for validation, versions and the quick test. It starts the frontend early
+and becomes the first screen of P7, replacing the brief's read-only Network screen.
+
+### Model change
+
+`Location` gains optional `lat` / `lon` in degrees, alongside the km grid:
+- the Studio's map draws nodes by latitude and longitude;
+- a lane's distance is *suggested* from the great-circle distance × a road factor, and stays editable;
+- FoodNet gets plausible, still fictional, European positions.
+
+Existing files without coordinates stay valid.
+
+### Scope (all in this phase)
+
+1. **Diagram view:**
+   - four columns (suppliers → plants → DCs → markets), with lanes as arrows;
+   - modes to select, add, connect (drag from node to node) and delete; drag to reorder;
+   - undo and redo for every edit;
+   - colour by a measure: utilisation, cost, lead time, quick-test fill rate.
+2. **Inspector:**
+   - a form **generated from the JSON Schema**, with units, bounds and descriptions, so it can never fall out of
+     step with the model;
+   - lead-time distributions edited with a small preview.
+3. **Map view:** nodes on a world map (Tierwise's projection, great-circle lanes, zoom and pan), the same editing
+   modes as the diagram.
+4. **Tables:** the SKU catalogue, the market × SKU demand grid (base × size factor, plus overrides) and lanes, as
+   spreadsheets with paste from Excel.
+5. **Live checks:**
+   - field errors at once, from the JSON Schema;
+   - cross-reference errors from `POST /networks/validate`, shown on the element concerned;
+   - a health panel: plant and supplier utilisation against demand, shelf life against lead time, unreachable SKUs.
+6. **Quick test:** a ~2-second simulation with the incumbent; the diagram and map coloured by fill rate.
+7. **Import and export:** YAML / JSON (the engine's own format) and CSV templates (nodes, lanes, SKUs, demand), with
+   errors by row.
+8. **Versions:**
+   - networks are versioned in the registry, and reports already record the network by hash;
+   - editing a network marks policies tested on an older version "re-test needed";
+   - a diff view between versions.
+9. **Scenario builder:**
+   - scenarios composed on a timeline: outages, lead-time inflation, capacity loss, demand shifts, correlated
+     shocks, signal noise;
+   - parameters from the scenario schema; saved as named scenario sets;
+   - a preview of what each component changes.
+
+### One source of truth
+
+The Python models stay authoritative. The browser uses the exported JSON Schema for instant field checks and the
+API for everything else. A shared set of deliberately broken networks is tested by both the Python and the
+TypeScript suites, so they cannot drift apart.
+
+### Acceptance (proposed)
+
+- **Build FoodNet from scratch** in the Studio (diagram, tables, map), export it, and the engine loads a network
+  equal to the shipped one.
+- **Errors in place:** every broken network in the shared set is rejected in the browser, with the message on the
+  right element.
+- **Undo and redo** restore exact states; YAML and CSV round-trip.
+- **Versions:** a change to a network flags dependent policies for re-test; the diff shows exactly the changed
+  fields.
+- **Scenario builder:** a scenario built there generates the same draws as the same scenario written in Python.
+- **End to end:** a browser test (Playwright) of build, check, quick test, save version, and build and run a scenario.

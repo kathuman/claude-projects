@@ -136,8 +136,9 @@
           <tr><td>P3 Baselines and evaluation</td><td>Incumbent, naive and rolling-optimisation baselines (Pyomo with HiGHS); full metrics; robustness verdict; report</td><td>Bullwhip ratio above 1 under delay; the optimiser solves; reports for the default suite</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P4 LLM compiler</td><td>Provider interface, offline mock, compiler with retries, validator, back-translation</td><td>20 golden intents compile; out-of-vocabulary references rejected</td><td><span class="badge next">next</span></td></tr>
           <tr><td>P5 Registry and API</td><td>Lifecycle, approval gate, hash-chained audit log, agent mandate endpoint, diffs</td><td>No approval without a passing evaluation; tampering detected</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P5b Network Studio</td><td>Build and maintain networks visually: a diagram, a world map, tables, an inspector generated from the schema, live checks, a quick test, YAML/CSV import and export, versions with diffs, and a scenario builder</td><td>FoodNet rebuilt from scratch in the Studio equals the shipped one; errors shown on the right element; versions flag policies for re-test</td><td><span class="badge plan">planned</span></td></tr>
           <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge plan">planned</span></td></tr>
-          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry, Monitor and Network screens</td><td>The full demo runs in the browser</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge plan">planned</span></td></tr>
           <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge plan">planned</span></td></tr>
         </tbody>
       </table></div>
@@ -155,7 +156,7 @@
       <ul>
         <li><a href="tutorial.html">Tutorial</a>: write a policy, stress-test it, read the result and get the verdict, in about 20 minutes.</li>
         <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/docs/example-report.md">Example evaluation report</a>: the tutorial's sourcing switch against three baselines on eight scenarios.</li>
-        <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/DECISIONS.md">Design decisions</a>: 31 so far, each with its context, options and rationale.</li>
+        <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/DECISIONS.md">Design decisions</a>: 32 so far, each with its context, options and rationale.</li>
         <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/STATUS.md">Status</a>: what works, what is stubbed, and the known limitations, phase by phase.</li>
         <li><a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/backend/data/foodnet/README.md">FoodNet</a>: every field of the synthetic network, with its unit.</li>
       </ul>

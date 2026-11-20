@@ -288,3 +288,22 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   constitution without its creation date, scenarios, network, run settings and the simulator config. The same
   inputs give the same id.
 - Per-replication samples are `null` where a metric is undefined (no shock, so no recovery time).
+
+## D032: A Network Studio phase, P5b (user decision, 2026-11-20)
+- **Context:** networks are written by hand in YAML, and the only feedback is a Python validation error. That is
+  fine for the author of one fictional network, and unusable for a planner modelling their own. The brief only asks
+  for a read-only Network screen in P7.
+- **Options proposed:**
+  1. a standalone browser-only page before P4;
+  2. a new phase after P5 (registry and API);
+  3. inside P7.
+- **User decisions:**
+  1. A **new phase P5b, after P5**.
+  2. **Add latitude and longitude** and put FoodNet on a real map.
+  3. **The full scope at once**: diagram, inspector, tables, live checks, quick test, import and export, map,
+     versions with diffs, and the scenario builder.
+- **Consequences:**
+  - The React + TypeScript frontend starts in P5b, not P7, and the Studio becomes P7's first screen.
+  - `Location` gets optional `lat` / `lon`.
+  - Networks become versioned registry objects in P5, so P5's design must cover them.
+  - Plan: `docs/PLAN.md`, section "Phase 5b".
