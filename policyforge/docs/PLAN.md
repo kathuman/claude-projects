@@ -249,6 +249,97 @@ TypeScript suites, so they cannot drift apart.
 - **Scenario builder:** a scenario built there generates the same draws as the same scenario written in Python.
 - **End to end:** a browser test (Playwright) of build, check, quick test, save version, and build and run a scenario.
 
+## Phase 6: monitoring (started and done 2026-11-20, see STATUS.md)
+
+Brief §8.4 and §9: a live stream from a hidden "true" scenario, three monitor types, an escalation inbox, and a
+one-click re-test. Acceptance: in the §10 demo, capacity loss at Supplier C from week 20 fires the assumption alert
+within 4 periods.
+
+### The live stream (`core/monitor/stream.py`)
+- A stream runs the network with the **deployed policies** (on top of the incumbent, as evaluations do), one
+  replication, week by week, from a seed.
+- The hidden world is a list of **switches**: from week *w*, the true scenario is *S*. Draws are spliced: weeks
+  before *w* come from the old world, weeks from *w* on from the new one. The base randomness is the same in both
+  (common random numbers), so injecting a change can never alter what has already been observed.
+- Injections: demand shift, supplier outage, lead-time inflation, plant capacity loss. Each starts at the current
+  week or later; its own window says when it bites (inject now, "quietly", for week 20).
+- A stream's state is its config (seed, horizon, policies, switches, current week). Observations are recomputed from
+  it, so stepping week by week and jumping ahead give the same history and the same alerts.
+
+### Observations (`core/monitor/observe.py`)
+Weekly, as an operations team would see them:
+- demand per market (true demand, summed over SKUs);
+- supplier lead time, **on arrival**: the lead time of the supplier's shipments that arrived that week, so lead-time
+  drift is seen only after the lead time has passed;
+- supplier fill rate (shipped ÷ ordered, when there were orders);
+- supplier and plant **reported capacity** (the true capacity with 2 % measurement noise): a backup supplier with no
+  volume still reports capacity;
+- plant utilisation, on-hand stock;
+- KPIs: fill rate and cost per week;
+- mandate escalations raised by the agents.
+
+### The reference (`core/monitor/reference.py`)
+What the stress test predicts: the same policies under the **matching scenario** (baseline by default), 200
+replications, with the same observation functions. It gives each series its expected level per week (seasonality
+included), its spread, and the P5–P95 envelope of the KPIs.
+
+### Monitors (`core/monitor/monitors.py`, `detectors.py`)
+- **Assumption drift:** one monitor per assumption of each deployed policy (id `assumption:<policy>:<assumption>`).
+  - Threshold assumptions use a one-sided CUSUM on the violation, scaled by the reference spread
+    (k = 0.5, h = 4): a clear step fires at once, and noise around a nearby threshold does not. The level reported
+    is the mean since the CUSUM change point (D057).
+  - Distribution assumptions use a KS test of the last 12 observations against the stated distribution.
+  - Variables the stream cannot observe are listed as "not observable", never silently passed.
+- **Input drift:** demand per market and lead time per supplier, as ratios to the reference level. PSI and the KS
+  test against the reference over the last 8 weeks, and a two-sided CUSUM on the mean; CUSUM fires the alert, and
+  PSI and KS are reported as evidence.
+- **Performance drift:** the 4-week rolling fill rate below the envelope's P5, or the cost above its P95, for a run
+  of weeks.
+- **As built:** fixed limits gave false alarms, so each input monitor's CUSUM limit and the performance run length
+  are calibrated on the reference, for a 5 % family-wise false-alarm rate (D058).
+- **Mandate:** escalations raised by an agent (limit hits) become inbox items linked to the limit.
+- Monitors start after an 8-week warm-up.
+
+### The inbox (`core/monitor/inbox.py`)
+- **Rank** = severity weight (low 1, medium 2, high 3, critical 4) × 1/reversibility × financial exposure (EUR/week):
+  - **severity:** assumption breach high, critical when the mandate's `review_triggers` names the monitor; input
+    drift medium; performance high for service, medium for cost; mandate items take the escalation rule's
+    severity.
+  - **reversibility** comes from what the policy does, taking the least reversible of its rules: expedite 0.4,
+    sourcing switch 0.5, allocation 0.7, base stock and (s, S) 0.8; network-level items 1.
+  - **exposure** is the value flowing through the subject, at unit cost plus lost-sale penalty. For a supplier,
+    the larger of its reference volume and the volume the policy may shift to it.
+- Alerts are stored in the registry with their evidence, and move from open to acknowledged to resolved or
+  dismissed. Each status change goes into the audit log. While an alert is open or acknowledged, its monitor
+  raises no duplicate.
+
+### Re-test (`core/monitor/retest.py`)
+"Re-run the stress test with the updated assumption":
+- The alert's subject is set to what was observed, giving an **observed network**: capacity, lead-time scale,
+  fill rate or demand size factor, from the mean of the recent observations.
+- The policy is then evaluated on the default suite on that network.
+- The report and verdict are stored with the alert, not as the policy's evaluation, so the approval gate is
+  untouched.
+- A performance alert re-tests with the updates of every open alert of the stream.
+
+### API
+- `POST /streams`, `GET /streams/{id}` (weeks, observations, monitor states), `POST /streams/{id}/step`,
+  `POST /streams/{id}/inject`;
+- `GET /alerts` (the ranked inbox), `POST /alerts/{id}/acknowledge|resolve|dismiss`;
+- `POST /alerts/{id}/retest` and `GET /retests/{id}` (also as Markdown).
+
+The Monitor screen is P7.
+
+### Tests
+- **Acceptance:** the demo policy deployed, capacity loss at Supplier C from week 20 injected at week 10, and
+  the C-capacity assumption fires by week 23.
+- **Determinism:** injecting never changes the past; stepping equals jumping.
+- **No false alarms:** for 10 seeds of a quiet stream, no assumption alerts and no input or performance alerts.
+- **Detection:** Supplier B's lead time inflated ×1.6 is caught by the input monitor.
+- **Ranking:** the assumption alert outranks the others in the demo.
+- **Re-test:** the observed network has C's capacity set to what was seen, and the verdict is stored.
+- **API flow:** the full demo through the API.
+
 ## Phase 4: LLM compiler
 
 ### Packages

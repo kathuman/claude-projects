@@ -8,9 +8,10 @@ A policy authoring and simulation workbench for supply chain managers who delega
 - **Pages:** [about](https://kathuman.github.io/claude-projects/policyforge/) ·
   [tutorial](https://kathuman.github.io/claude-projects/policyforge/tutorial.html) ·
   [Network Studio](https://kathuman.github.io/claude-projects/policyforge/frontend/dist/index.html)
-- **Status:** v0.6.0, early development. Phases 1–5 and 5b are done: domain and data, the simulator, baselines with
-  evaluation, the LLM compiler, the registry with its API, and the Network Studio, a visual editor for networks
-  and scenarios. Next: P6, monitoring. See [STATUS.md](STATUS.md) and the roadmap on the about page.
+- **Status:** v0.7.0, early development. Phases 1–6 are done: domain and data, the simulator, baselines with
+  evaluation, the LLM compiler, the registry with its API, the Network Studio (a visual editor for networks and
+  scenarios), and monitoring (a live stream, drift monitors, a ranked escalation inbox and one-click re-tests).
+  Next: P7, the remaining screens. See [STATUS.md](STATUS.md) and the roadmap on the about page.
 
 ## Run it
 
@@ -18,10 +19,11 @@ A policy authoring and simulation workbench for supply chain managers who delega
 cd backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
-.venv/bin/python -m pytest -q              # 160 tests
+.venv/bin/python -m pytest -q              # 179 tests
 .venv/bin/python -m examples.first_stress_test
 .venv/bin/python -m examples.evaluate_report  # full verdict report into docs/
 .venv/bin/python -m examples.compile_intent   # intent → policy, offline; --live "..." with a key
+.venv/bin/python -m examples.monitor_demo     # deploy, inject a capacity loss, catch it, re-test
 .venv/bin/python -m uvicorn api.app:app        # the API on http://127.0.0.1:8000 (docs at /docs)
 ```
 
@@ -54,9 +56,12 @@ backend/core/baselines/  incumbent, naive, rolling optimisation (Pyomo + HiGHS)
 backend/core/evaluate/   metrics, constitution check, verdict, report runner, Markdown export
 backend/core/llm/        provider interface, Anthropic provider, mock, prompts, compiler, narrative
 backend/core/validate/   deterministic policy validator (errors and warnings)
-backend/core/registry/   versioned networks, constitutions, policies; lifecycle gate; hash-chained audit log
+backend/core/monitor/    live stream, observations, reference, drift monitors, inbox ranking, re-test
+backend/core/registry/   versioned networks, constitutions, policies; lifecycle gate; hash-chained audit log;
+                         streams, alerts and re-tests
 backend/api/             FastAPI app: networks (check, quick test, CSV/YAML), scenario sets, constitutions,
-                         compile, policies, evaluations, audit, agents; serves the Studio at /app
+                         compile, policies, evaluations, streams, alerts, re-tests, audit, agents; serves the
+                         Studio at /app
 backend/data/foodnet/    the synthetic network (YAML, schema, README)
 backend/schemas/         exported JSON Schemas
 backend/examples/        the tutorial's runnable example, and the example report

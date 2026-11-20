@@ -260,3 +260,55 @@ monitoring, frontend, packaging).
   (some ask permission). `http://127.0.0.1:8000/app/` always works.
 - The JS bundle is about 550 kB (170 kB gzipped); code splitting comes with P7's other screens.
 - The other screens of the brief (Constitution, Author, Stress test, Registry, Monitor) come in P7.
+
+## Phase 6: monitoring. Done, acceptance met.
+
+**What works** (`core/monitor/`, `core/registry/monitoring.py`)
+- **The live stream** (D054): the network runs week by week with the deployed policies, from a hidden true
+  scenario. Injections (demand shift, supplier outage, lead-time inflation, plant capacity loss) change the world
+  from the next week on, and never the past.
+- **Observations** (D055): demand per market; lead time on arrival; fill rate; reported capacity; utilisation;
+  stock; weekly fill rate and cost; the agents' escalations.
+- **The reference** (D056): the stress test under the matching scenario (baseline by default), 400 replications,
+  observed the same way.
+- **Four kinds of monitor:**
+  - **Assumption drift:** one per assumption of each deployed policy: CUSUM on the violation, KS for
+    distribution assumptions, "not observable" where the stream cannot see the variable (D057).
+  - **Input drift:** demand per market and lead time per supplier: CUSUM, with PSI and KS as evidence.
+  - **Performance drift:** the rolling fill rate and cost against the stress test's P5–P95 envelope.
+  - **Mandate escalations** (D062).
+
+  Input and performance limits are calibrated on the reference, for at most 5 % false alarms overall (D058).
+- **The escalation inbox:** ranked by severity × 1/reversibility × exposure, each factor explained on the alert
+  (D059); one open alert per monitor; open → acknowledged → resolved or dismissed; audited (D060).
+- **Re-test** (D061): one call evaluates the policy on the network as observed. The report and verdict are kept with
+  the alert, and also served as Markdown.
+- **API:** `POST /streams`, `GET /streams/{id}` (with `reveal=true` for the hidden world),
+  `POST /streams/{id}/step`, `POST /streams/{id}/inject`, `GET /alerts`,
+  `POST /alerts/{id}/acknowledge|resolve|dismiss`, `POST /alerts/{id}/retest`, `GET /retests/{id}` (and
+  `/markdown`).
+- **Example:** `python -m examples.monitor_demo` runs §10's step 6 end to end.
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| The scripted demo (§10) triggers an assumption-drift alert within 4 periods of injected drift | `test_acceptance_the_demo_fires_the_assumption_within_four_periods`: the demo policy deployed; capacity loss at Supplier C from week 20, injected at week 10; the "C has spare capacity ≥ 1,100" monitor fires at week 20 for seeds 1, 2 and 3, and never in the same streams without the loss. Through the registry and over HTTP, the alert is raised by week 23, tops the inbox, and its re-test runs on C's capacity as observed (about 830 units/week) |
+| Three monitor types | Assumption: as above, plus a distribution assumption caught by KS. Input: Supplier B's lead time ×1.6 from week 20 caught at week 29 (shipments take 2 weeks to reveal it), with PSI > 0.25 and KS p < 0.01; demand ×1.5 in one market caught within 2 weeks, with the change point found. Performance: an outage at Supplier A drives the rolling fill rate below the envelope's P5 |
+| No false alarms in normal times | 10 quiet streams over 104 weeks: no assumption alarms; at most one stream with an input or performance alarm (the calibrated target is 5 %) |
+| Escalation inbox and re-test action | Ranking checked for every kind of subject. The lifecycle with the 409 on a bad transition. One alert per monitor until it is closed, then a new one for later alarms. Audit entries verified. A demand alert re-tests with the market's size factor × 1.4 |
+| Determinism | Injecting never changes the past (every series equal before the switch); stepping 50 times equals jumping 50 weeks |
+| Quality gates | 179 tests green; ruff and `mypy --strict` clean; 95 % line coverage |
+
+**What the demo shows.** The alert fires in week 20, the week Supplier C's capacity drops to about 830. It tops
+the inbox with a score of about 32,000: high severity, reversibility 0.5 for a sourcing switch, and exposure of about
+€5,400 a week, the 30 % of B's volume the policy may move to C. The re-test on the observed network still says
+**approve**: even a smaller Supplier C is a better backup than none, and the policy still beats the incumbent
+under the shocks. That is useful to know, and it is the planner's call whether to lower the 30 %.
+
+**Known limitations**
+- One stream runs one replication of one network; there is no streaming from real systems.
+- The reference assumes the world of the matching scenario. A planned change (a promotion) should be added to the
+  matching scenario, or the monitors will report it as drift.
+- Exposure is a first-order estimate (volume × value at risk), not a simulation of the loss.
+- The Monitor screen (play, pause, inject, the inbox) is P7.

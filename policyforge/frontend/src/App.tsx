@@ -16,7 +16,7 @@ import Tables from "./screens/Tables";
 import Versions from "./screens/Versions";
 import { useStore, type View } from "./store";
 
-export const VERSION = "0.6.0";
+export const VERSION = "0.7.0";
 
 export interface Shared {
   checks: Checks;

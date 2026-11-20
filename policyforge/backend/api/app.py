@@ -33,7 +33,9 @@ from core.evaluate.quick import QuickTest, quick_test
 from core.evaluate.report import to_markdown
 from core.llm.compiler import CompileError, CompileResult, compile_intent
 from core.llm.provider import LLMProvider
+from core.monitor.stream import Injection
 from core.registry.diff import Change
+from core.registry.monitoring import AlertStatus, AlertView, Monitoring, RetestView, StreamView
 from core.registry.registry import (
     AgentMandate,
     AuditEntry,
@@ -50,7 +52,7 @@ from core.sim.layout import build_layout
 from core.sim.scenarios import default_suite
 from core.sim.scenarios.preview import Preview, preview
 
-API_VERSION = "0.6.0"
+API_VERSION = "0.7.0"
 STUDIO = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 Actor = Annotated[str, Header(alias="X-Actor")]
 INTENTS = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "intents"
@@ -153,6 +155,33 @@ class EvaluateResponse(BaseModel):
 
 class Note(BaseModel):
     note: str = ""
+
+
+class StreamRequest(BaseModel):
+    seed: int = Field(default=1, ge=0)
+    horizon: int = Field(default=104, ge=26, le=156)
+    scenario_id: str = Field(default="baseline", description="The matching scenario the monitors compare against")
+    network_id: str | None = None
+
+
+class StepRequest(BaseModel):
+    weeks: int = Field(default=1, ge=1, le=156)
+
+
+class InjectRequest(BaseModel):
+    component: Injection
+    note: str = Field(default="", max_length=200)
+
+
+class StepResult(BaseModel):
+    stream: StreamView
+    raised: list[AlertView]
+
+
+class RetestRequest(BaseModel):
+    replications: int = Field(default=200, ge=10, le=2000)
+    periods: int = Field(default=104, ge=26, le=156)
+    rolling_replications: int = Field(default=20, ge=2, le=200)
 
 
 def create_app(engine: Engine | None = None, registry: Registry | None = None,
@@ -422,6 +451,74 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
             raise HTTPException(404, detail={"code": "no_mandate", "message": f"agent {agent_id} has no deployed "
                                              "mandate"})
         return m
+
+    # ---------------------------------------------------------------- monitoring (P6)
+    mon = Monitoring(reg)
+    app.state.monitoring = mon
+
+    @app.post("/streams", response_model=StreamView, status_code=201)
+    def create_stream(req: StreamRequest | None = None, actor: Actor = "local-user") -> StreamView:
+        r = req or StreamRequest()
+        return mon.create_stream(actor, seed=r.seed, horizon=r.horizon, scenario_id=r.scenario_id,
+                                 network_id=r.network_id)
+
+    @app.get("/streams/{sid}", response_model=StreamView)
+    def get_stream(sid: int, reveal: bool = False) -> StreamView:
+        return mon.stream(sid, reveal=reveal)
+
+    @app.post("/streams/{sid}/step", response_model=StepResult)
+    def step_stream(sid: int, req: StepRequest | None = None, actor: Actor = "local-user") -> StepResult:
+        raised = mon.step(sid, (req or StepRequest()).weeks, actor)
+        return StepResult(stream=mon.stream(sid), raised=raised)
+
+    @app.post("/streams/{sid}/inject", response_model=StreamView)
+    def inject(sid: int, req: InjectRequest, actor: Actor = "local-user") -> StreamView:
+        return mon.inject(sid, req.component, actor, req.note)
+
+    @app.get("/alerts", response_model=list[AlertView])
+    def alerts(status: str | None = Query(default=None, description="open, acknowledged, resolved, dismissed, or "
+                                                                     "active (open or acknowledged)"),
+               stream_id: int | None = None) -> list[AlertView]:
+        return mon.alerts(status, stream_id)
+
+    @app.get("/alerts/{aid}", response_model=AlertView)
+    def alert(aid: int) -> AlertView:
+        return mon.alert(aid)
+
+    def _move(aid: int, status: AlertStatus, body: Note | None, actor: str) -> AlertView:
+        return mon.set_status(aid, status, actor, (body or Note()).note)
+
+    @app.post("/alerts/{aid}/acknowledge", response_model=AlertView)
+    def acknowledge(aid: int, body: Note | None = None, actor: Actor = "local-user") -> AlertView:
+        return _move(aid, "acknowledged", body, actor)
+
+    @app.post("/alerts/{aid}/resolve", response_model=AlertView)
+    def resolve(aid: int, body: Note | None = None, actor: Actor = "local-user") -> AlertView:
+        return _move(aid, "resolved", body, actor)
+
+    @app.post("/alerts/{aid}/dismiss", response_model=AlertView)
+    def dismiss(aid: int, body: Note | None = None, actor: Actor = "local-user") -> AlertView:
+        return _move(aid, "dismissed", body, actor)
+
+    @app.post("/alerts/{aid}/retest", response_model=RetestView)
+    def run_retest(aid: int, req: RetestRequest | None = None, actor: Actor = "local-user") -> RetestView:
+        r = req or RetestRequest()
+        return mon.run_retest(aid, actor, replications=r.replications, periods=r.periods,
+                              rolling_reps=r.rolling_replications)
+
+    @app.get("/retests/{rid}", response_model=RetestView)
+    def get_retest(rid: int) -> RetestView:
+        return mon.retest(rid)
+
+    @app.get("/retests/{rid}/markdown", response_class=PlainTextResponse)
+    def retest_md(rid: int) -> str:
+        rt = mon.retest(rid)
+        lines = [f"# Re-test after alert {rt.alert_id}", "",
+                 f"Policy `{rt.policy_id}` v{rt.policy_version}, on the network as observed. Verdict: "
+                 f"**{rt.verdict}**.", "", "## What changed in the model", ""]
+        lines += [f"- `{c.path}`: {c.before} → {c.after} ({c.why})" for c in rt.retest.changes] or ["- nothing"]
+        lines += [f"- {n}" for n in rt.retest.notes]
+        return "\n".join(lines) + "\n\n" + to_markdown(rt.retest.report)
 
     if STUDIO.exists():  # the built frontend (npm run build in frontend/)
         app.mount("/app", StaticFiles(directory=STUDIO, html=True), name="studio")

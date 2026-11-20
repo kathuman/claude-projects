@@ -16,7 +16,7 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.6.0</span>
+      <span class="ver">v0.7.0</span>
       <span class="sub">policy workbench for agent-run supply chains</span>
     </div>
     <nav class="actions">
@@ -65,7 +65,7 @@
           <rect x="213" y="158" width="171" height="64" rx="8" fill="var(--panel-2)" stroke="var(--ok)"/>
           <text x="225" y="182" font-weight="700">5 · APPROVE</text><text x="225" y="202" class="small">versioned registry</text><text x="225" y="215" class="small">built</text>
           <rect x="413" y="158" width="177" height="64" rx="8" fill="var(--panel-2)" stroke="var(--plan)"/>
-          <text x="425" y="182" font-weight="700">6 · MONITOR</text><text x="425" y="202" class="small">assumption drift</text><text x="425" y="215" class="small">planned · P6</text>
+          <text x="425" y="182" font-weight="700">6 · MONITOR</text><text x="425" y="202" class="small">assumption drift</text><text x="425" y="215" class="small">built</text>
         </g>
       </svg>
       <p class="caption">The core flow. Box outlines show progress: green is built, amber is partly built or next, blue-grey is planned.</p>
@@ -84,7 +84,7 @@
     </section>
 
     <section class="panel" aria-labelledby="h-now">
-      <h2 id="h-now">What works today (v0.6.0)</h2>
+      <h2 id="h-now">What works today (v0.7.0)</h2>
       <p>PolicyForge is in early development. Its first screen, the <b>Network Studio</b>, is live. The rest is a Python library and an API you run from the command line; the <a href="tutorial.html">tutorial</a> walks you through it.</p>
       <h3 id="studio">The Network Studio <span class="badge done">built</span></h3>
       <p>Policies are tested on a model of the supply network, so that model has to be easy to build and keep up to date. The Studio does it visually:</p>
@@ -98,6 +98,17 @@
       </ul>
       <p><a href="frontend/dist/index.html">Open the Studio</a>. On this site it edits, checks fields, and opens and saves YAML or JSON files without any server. For reference checks, health, the quick test, CSV files, versions and scenarios, run the API locally and open <code>http://127.0.0.1:8000/app/</code>.</p>
       <p>A browser test rebuilds FoodNet from scratch in the Studio, through the tables, the map and the diagram, and checks that the engine loads exactly the shipped network.</p>
+      <h3 id="monitoring">Monitoring <span class="badge done">built</span></h3>
+      <p>A deployed policy keeps being checked against the world it runs in. A <b>live stream</b> runs the network week by week with the deployed policies. Its true scenario is hidden from the monitors and can be changed during a run: for example, Supplier C quietly losing capacity from week 20. Four kinds of monitor watch what an operations team would see:</p>
+      <ul>
+        <li><b>Assumption drift:</b> every assumption of every deployed policy becomes a monitor. "Supplier C has spare capacity of at least 1,100 units a week" fires in the week the capacity drops.</li>
+        <li><b>Input drift:</b> demand per market and lead time per supplier, against what the stress test assumed (CUSUM, with PSI and the KS test as evidence). Lead times are seen as shipments arrive, so drift shows only once the slower shipments land.</li>
+        <li><b>Performance drift:</b> fill rate and cost against the P5–P95 envelope the stress test predicted.</li>
+        <li><b>Mandate escalations:</b> an agent reaching the limits of its mandate.</li>
+      </ul>
+      <p>Thresholds are calibrated on the stress test's own futures, so a quiet world raises a false alarm in at most 5 % of runs.</p>
+      <p>Alerts go to an <b>escalation inbox</b>, ranked by severity × 1/reversibility × financial exposure, and each alert explains its own score. One call <b>re-runs the stress test</b> on the network as observed (C's capacity as it is now) and returns a new verdict, without touching the approval record.</p>
+      <p><code>python -m examples.monitor_demo</code> runs it end to end: the alert comes in week 20, tops the inbox, and the re-test still approves. Even a smaller Supplier C is a better backup than none.</p>
       <h3>The policy language <span class="badge done">built</span></h3>
       <p>Six rule types:
         <b>base stock</b> (in units or days of cover),
@@ -172,8 +183,8 @@
           <tr><td>P4 LLM compiler</td><td>Provider interface, offline mock, compiler with retries, validator, back-translation</td><td>20 golden intents compile; out-of-vocabulary references rejected</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P5 Registry and API</td><td>Lifecycle, approval gate, hash-chained audit log, agent mandate endpoint, diffs</td><td>No approval without a passing evaluation; tampering detected</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P5b Network Studio</td><td>Build and maintain networks visually: a diagram, a world map, tables, an inspector generated from the schema, live checks, a quick test, YAML/CSV import and export, versions with diffs, and a scenario builder</td><td>FoodNet rebuilt from scratch in the Studio equals the shipped one; errors shown on the right element; versions flag policies for re-test</td><td><span class="badge done">done</span></td></tr>
-          <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge next">next</span></td></tr>
-          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge done">done</span></td></tr>
+          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge next">next</span></td></tr>
           <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge plan">planned</span></td></tr>
         </tbody>
       </table></div>
@@ -199,7 +210,7 @@
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.6.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.7.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

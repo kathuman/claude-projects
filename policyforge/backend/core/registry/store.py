@@ -96,6 +96,61 @@ class ScenarioSetRow(SQLModel, table=True):
     created_at: datetime
 
 
+class StreamRow(SQLModel, table=True):
+    """A live stream (P6): its config (seed, horizon, hidden switches) and how far it has run."""
+
+    __tablename__ = "streams"
+    id: int | None = Field(default=None, primary_key=True)
+    network_ref: str
+    policies: str  # JSON list of [policy_id, version] deployed when the stream started
+    scenario_id: str  # the matching scenario of the reference
+    config: str  # StreamConfig JSON
+    week: int
+    actor: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class AlertRow(SQLModel, table=True):
+    """An inbox item: a monitor that fired, ranked, with its status."""
+
+    __tablename__ = "alerts"
+    id: int | None = Field(default=None, primary_key=True)
+    stream_id: int = Field(index=True)
+    monitor_id: str = Field(index=True)
+    kind: str
+    policy_id: str | None
+    policy_version: int | None
+    subject: str
+    week: int
+    message: str
+    evidence: str  # JSON
+    update_: str  # JSON, what a re-test sets ("null" when nothing)
+    severity: str
+    reversibility: float
+    exposure: float
+    score: float
+    basis: str
+    status: str  # open, acknowledged, resolved, dismissed
+    note: str
+    closed_week: int | None
+    retest_id: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RetestRow(SQLModel, table=True):
+    __tablename__ = "retests"
+    id: int | None = Field(default=None, primary_key=True)
+    alert_id: int = Field(index=True)
+    policy_id: str
+    policy_version: int
+    verdict: str
+    body: str  # Retest JSON
+    actor: str
+    created_at: datetime
+
+
 class AuditRow(SQLModel, table=True):
     __tablename__ = "audit"
     seq: int | None = Field(default=None, primary_key=True)

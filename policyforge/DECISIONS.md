@@ -488,3 +488,101 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   market and DC, utilisation and cost per week, in well under a second for FoodNet.
 - **Rationale:** it answers "does this network work at all?" while editing. Stress tests and verdicts remain the
   evaluation's job.
+
+## D054: The live stream is a spliced world, recomputed (P6)
+- **Choice:**
+  - A stream runs the network with the deployed policies (on top of the incumbent), one replication, from a seed.
+  - Its hidden world is a list of switches: from week *w*, the true scenario gains a component.
+  - Draws are spliced: weeks before *w* come from the old world, later weeks from the new one, with the same base
+    randomness (common random numbers).
+  - An injection applies from the week after the last observed one.
+  - A stream's state is its config and current week; observations, monitor states and alarms are recomputed from
+    them (about 0.1 s).
+- **Rationale:** the past can never change. Stepping one week at a time and jumping ahead give the same alerts
+  (tested), and a stream can be replayed exactly from its audit entries.
+
+## D055: Observations as an operations team sees them (P6)
+- **Choice:**
+  - Demand is the true demand per market.
+  - A supplier's lead time is observed **on arrival**: shipments that arrived that week.
+  - Fill rate is shipped ÷ ordered.
+  - Supplier and plant capacity are **reported** values: the true capacity with 2 % measurement noise.
+  - KPIs are the week's fill rate and cost.
+- **Rationale:**
+  - Lead-time drift can only be seen once the slower shipments land. Monitors that saw lead times at order time
+    would look faster than any real one.
+  - A backup supplier with no volume ships nothing that would reveal its capacity, so the demo's capacity
+    assumption must rest on what the supplier reports.
+
+## D056: The reference is the stress test under the matching scenario (P6)
+- **Choice:** what the monitors compare against comes from the same policies under the matching scenario (baseline by
+  default), 400 replications, with the same observation functions. It gives each series its level (seasonality
+  included), its spread, and the P5–P95 envelope of the KPIs.
+- **Rationale:** "what the stress test predicted" taken literally, and nothing calibrated on the live data itself.
+  A change early in a stream cannot hide by contaminating its own baseline.
+
+## D057: Assumption monitors (P6)
+- **Choice:**
+  - A threshold assumption gets a one-sided CUSUM on the violation, `(threshold − x) / scale` for ≥ (mirrored for ≤),
+    with the scale from the reference, k = 0.5, h = 4.
+  - The level it reports, and the re-test uses, is the mean since the CUSUM change point (the week after the
+    statistic last stood at zero), not a fixed window.
+  - A distribution assumption gets a KS test of its last 12 observations against the stated distribution
+    (p < 0.01).
+  - Variables the stream cannot observe (inventory position, pipeline, forecast, backorders) are listed as "not
+    observable", not passed silently.
+- **Rationale:** a clear step fires at once (the demo fires in the week the capacity loss starts), and noise near
+  the threshold does not (no assumption alarms in 10 quiet streams). A fixed window would report a blend of the
+  old and new level.
+
+## D058: Input and performance monitors are calibrated for a 5 % family-wise false-alarm rate (P6)
+- **Choice:**
+  - Input monitors cover demand per market and lead time per supplier, as ratios to the reference level, with a
+    two-sided CUSUM (k = 0.5).
+  - Performance monitors fire when the 4-week rolling fill rate stays below the envelope's P5, or the cost above
+    its P95, for a run of weeks.
+  - Each monitor's CUSUM limit, or required run length, is the smallest at which at most 5 % ÷ (number of
+    monitors) of the reference's quiet futures would fire over the horizon. Together, at most 5 % of quiet
+    futures raise any input or performance alarm.
+  - PSI and the KS test are reported as evidence.
+- **Rationale:** fixed limits gave false alarms in 2 of 10 quiet streams. Supplier B's skewed lead times, and the
+  strongly autocorrelated rolling KPI, break textbook settings. Calibrating on the stress test's own futures sets
+  the false-alarm rate explicitly.
+
+## D059: How the inbox ranks (P6)
+- **Choice:** score = severity weight × (1 / reversibility) × exposure (EUR/week).
+  - **Severity weight:** low 1, medium 2, high 3, critical 4. An assumption breach is high, and critical when
+    the mandate's `review_triggers` names it. Input drift is medium. A performance alarm is high for service,
+    medium for cost. A mandate escalation takes its escalation rule's severity.
+  - **Reversibility:** the policy's least reversible rule: expedite 0.4, sourcing switch 0.5, allocation 0.7, base
+    stock and (s, S) 0.8; input drift 1.
+  - **Exposure:** the value flowing through the subject, at unit cost plus lost-sale penalty. For a supplier, the
+    larger of its normal volume and what the policy may shift to it; the service gap for a performance alarm.
+    Each alert states how its exposure was worked out.
+- **Rationale:** the brief's formula, with every factor explained on the alert itself.
+
+## D060: Alerts are registry objects with a lifecycle (P6)
+- **Choice:**
+  - An alert goes from open to acknowledged to resolved or dismissed.
+  - A monitor has at most one open (or acknowledged) alert. Once that alert is closed, the monitor raises a new
+    one only for an alarm after the week it was closed.
+  - Raising, every status change, injections and re-tests go into the hash-chained audit log; stepping does not.
+- **Rationale:** an inbox that repeats itself every week gets ignored. The audit log records decisions, not ticks.
+
+## D061: The re-test runs on the network as observed, outside the approval gate (P6)
+- **Choice:**
+  - "Re-run the stress test with the updated assumption" sets the alert's subject to what was observed, re-read
+    over every week since the change began, giving the **observed network**. The subject can be a supplier's
+    capacity, its lead times (all its lanes scaled) or its fill rate, a plant's capacity, or a market's demand.
+  - The policy is then evaluated on that network on the default suite.
+  - The report is stored with the alert, not as the policy's evaluation.
+  - A performance alert re-tests with every open alert's update together.
+- **Rationale:** it answers "is this policy still right in the world we now see?" without letting an alarm silently
+  change which evaluation approves the policy. Acting on the answer, by editing and re-approving, stays a person's
+  decision.
+
+## D062: Mandate escalations are inbox items (P6)
+- **Choice:** when an agent hits a limit of its mandate, that becomes an inbox item linked to the limit, once per
+  episode (a week with hits after a week without), with the escalation rule's severity.
+- **Rationale:** the brief: each item links to "the breached assumption or limit". Escalations and drift alerts
+  belong in one queue, ranked against each other.

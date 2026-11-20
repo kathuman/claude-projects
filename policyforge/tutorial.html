@@ -16,7 +16,7 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.6.0</span>
+      <span class="ver">v0.7.0</span>
       <span class="sub">tutorial</span>
     </div>
     <nav class="actions">
@@ -48,7 +48,7 @@ cd claude-projects/policyforge/backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
 .venv/bin/python -m pytest -q          <span class="c"># Windows: .venv\Scripts\python</span></pre>
-      <p>You should see 160 tests pass in two or three minutes. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
+      <p>You should see 179 tests pass in about five minutes. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
     </section>
 
     <section class="panel" id="s2">
@@ -203,12 +203,13 @@ candidate = simulate(lay, draws, compile_program(lay, candidate_policies))</pre>
         <li><b>Make the incumbent leaner.</b> Replace it with <code>background_policies(lay, dc_days=7, plant_days=21)</code>. Fill falls to about 69 % even in normal times. 21 days at a plant does not even cover Supplier A's 21–24-day lead time plus a week of review, so the plant keeps running out and a backlog builds. Backlog is served first, so new demand waits. The order-up-to level has to exceed demand over the lead time, with room to spare.</li>
         <li><b>Add an expedite trigger</b> on the DCs: <code>ExpediteTrigger(condition=CoverageBelow(days=3), mode="express_road", cost_cap_per_period=4000)</code>. How much of the shock's damage does expediting buy back, and at what cost? Run the report and check whether the €20,000-a-month expedite budget holds.</li>
         <li><b>Break FoodNet in the Studio.</b> Start the API (<code>.venv/bin/python -m uvicorn api.app:app</code> in <code>backend/</code>) and open <code>http://127.0.0.1:8000/app/</code>. Run the quick test, then set Supplier B's capacity to 2,000 and run it again, with the diagram coloured by fill rate. Which markets suffer first, and why those? The Health tab shows the supplier now overloaded. Undo (Ctrl+Z) restores FoodNet exactly.</li>
+        <li><b>Watch it in production.</b> Run <code>.venv/bin/python -m examples.monitor_demo</code>. It deploys the §10 demo policy, starts a live stream, and quietly takes 60 % of Supplier C's capacity from week 20. The assumption "C has spare capacity of at least 1,100 units a week" fires that same week and tops the inbox; the re-test runs on C as observed. Now set <code>SEVERITY = 0.4</code> at the top of the file and run it again: C keeps 1,200 units, the assumption still holds, and nothing fires. The monitor watches the assumption, not the capacity.</li>
         <li><b>Delay the information.</b> The <code>bullwhip</code> scenario delays what the agents see by two weeks and adds noise. Then try <code>SimConfig(own_orders_known=False)</code>, where an agent forgets even its own recent orders. That is the classic beer-game instability, with order swings many times those of demand.</li>
       </ol>
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.6.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.7.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
