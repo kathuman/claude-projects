@@ -375,24 +375,53 @@
     },
     "Location": {
       "additionalProperties": false,
+      "description": "Where a node is. `lat`/`lon` place it on the world map (the Network Studio); `x_km`/`y_km` are a flat grid kept\nfor older files. Lane distances are given on the lanes themselves; coordinates only suggest them.",
       "properties": {
         "x_km": {
+          "default": 0,
           "maximum": 5000,
           "minimum": -5000,
           "title": "X Km",
           "type": "number"
         },
         "y_km": {
+          "default": 0,
           "maximum": 5000,
           "minimum": -5000,
           "title": "Y Km",
           "type": "number"
+        },
+        "lat": {
+          "anyOf": [
+            {
+              "maximum": 90,
+              "minimum": -90,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Latitude, degrees north",
+          "title": "Lat"
+        },
+        "lon": {
+          "anyOf": [
+            {
+              "maximum": 180,
+              "minimum": -180,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Longitude, degrees east",
+          "title": "Lon"
         }
       },
-      "required": [
-        "x_km",
-        "y_km"
-      ],
       "title": "Location",
       "type": "object"
     },
@@ -805,6 +834,7 @@
     }
   },
   "additionalProperties": false,
+  "description": "A complete, consistent network: the fields of `NetworkData`, plus every cross-reference check.",
   "properties": {
     "name": {
       "maxLength": 80,

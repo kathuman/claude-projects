@@ -1,0 +1,14 @@
+{
+  "id": "north-outage",
+  "name": "North outage",
+  "scenarios": [
+    {
+      "id": "sup-b-outage",
+      "name": "Supplier B outage",
+      "description": "",
+      "components": [
+        {"kind": "supplier_outage", "supplier": "SUP_B", "window": {"start": 20, "duration": 6}, "severity": 0.8}
+      ]
+    }
+  ]
+}

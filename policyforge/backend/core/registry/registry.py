@@ -37,6 +37,7 @@ from core.registry.store import (
     EvaluationRow,
     NetworkRow,
     PolicyRow,
+    ScenarioSetRow,
     append_audit,
     canonical,
     content_hash,
@@ -260,6 +261,56 @@ class Registry:
         if row is None:
             raise RegistryError(409, "no_constitution", "no constitution is active")
         return Constitution.model_validate_json(row.body)
+
+    # ---------------------------------------------------------------- scenario sets
+    def save_scenario_set(self, ss: ScenarioSet, actor: str) -> tuple[int, bool]:
+        """Store a named scenario set; changed content becomes a new version. Returns (version, created)."""
+        body = ss.model_dump(mode="json")
+        h = content_hash(body)
+        with self.session() as s:
+            last = s.exec(select(ScenarioSetRow).where(ScenarioSetRow.set_id == ss.id)
+                          .order_by(col(ScenarioSetRow.version).desc())).first()
+            if last and last.content_hash == h:
+                return last.version, False
+            version = (last.version + 1) if last else 1
+            s.add(ScenarioSetRow(set_id=ss.id, version=version, content_hash=h, body=canonical(body), actor=actor,
+                                 created_at=self.clock()))
+            append_audit(s, actor, "scenario_set.saved", "scenario_set", f"{ss.id}@{version}", {"content_hash": h},
+                         self.clock())
+            s.commit()
+        return version, True
+
+    def get_scenario_set(self, set_id: str, version: int | None = None) -> tuple[ScenarioSet, int]:
+        if set_id == "default-suite" and version is None:
+            with self.session() as s:
+                stored = s.exec(select(ScenarioSetRow).where(ScenarioSetRow.set_id == set_id)).first()
+            if stored is None:
+                from core.sim.scenarios import default_suite
+
+                return default_suite(), 0
+        with self.session() as s:
+            q = select(ScenarioSetRow).where(ScenarioSetRow.set_id == set_id)
+            q = q.where(ScenarioSetRow.version == version) if version else q.order_by(
+                col(ScenarioSetRow.version).desc())
+            row = s.exec(q).first()
+        if row is None:
+            raise RegistryError(404, "scenario_set_not_found", f"no scenario set {set_id}")
+        return ScenarioSet.model_validate_json(row.body), row.version
+
+    def scenario_sets(self) -> list[dict[str, Any]]:
+        from core.sim.scenarios import default_suite
+
+        with self.session() as s:
+            rows = s.exec(select(ScenarioSetRow).order_by(col(ScenarioSetRow.set_id),
+                                                          col(ScenarioSetRow.version))).all()
+        latest: dict[str, ScenarioSetRow] = {r.set_id: r for r in rows}
+        out = [{"set_id": "default-suite", "version": 0, "name": default_suite().name, "scenarios": 8,
+                "builtin": True}] if "default-suite" not in latest else []
+        for r in latest.values():
+            ss = ScenarioSet.model_validate_json(r.body)
+            out.append({"set_id": r.set_id, "version": r.version, "name": ss.name, "scenarios": len(ss.scenarios),
+                        "builtin": False})
+        return out
 
     # ---------------------------------------------------------------- policies
     def _row(self, s: Session, pid: str, version: int | None = None) -> PolicyRow:

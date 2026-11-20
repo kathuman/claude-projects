@@ -16,6 +16,7 @@ from core.domain.constitution import METRICS, Constitution
 from core.domain.mandate import LIMIT_SPECS, Mandate
 from core.domain.network import Network
 from core.domain.policy import Policy
+from core.domain.scenario import Scenario, ScenarioSet
 from core.domain.vocabulary import VARIABLES
 
 BACKEND = Path(__file__).resolve().parents[2]
@@ -27,6 +28,8 @@ TOP: dict[str, type[BaseModel]] = {
     "mandate": Mandate,
     "assumption": Assumption,
     "constitution": Constitution,
+    "scenario": Scenario,
+    "scenario_set": ScenarioSet,
 }
 
 Schema = dict[str, Any]
@@ -129,6 +132,13 @@ def export() -> list[Path]:
     p = BACKEND / "data" / "foodnet" / "network.schema.json"
     p.write_text(json.dumps(schemas()["network"], indent=2) + "\n", encoding="utf-8")
     written.append(p)
+    src = BACKEND / "data" / "foodnet" / "network.yaml"
+    if src.exists():  # FoodNet as JSON too, for the frontend and its tests
+        from core.domain.network import load_network
+
+        p = BACKEND / "data" / "foodnet" / "network.json"
+        p.write_text(load_network(src).model_dump_json(indent=2) + "\n", encoding="utf-8")
+        written.append(p)
     p = ROOT / "docs" / "DSL_REFERENCE.md"
     p.parent.mkdir(exist_ok=True)
     p.write_text(dsl_reference() + "\n", encoding="utf-8")

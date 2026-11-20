@@ -411,3 +411,80 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   as a parameter (default 200).
 - **Rationale:** real authentication is out of scope (brief §3). Background jobs with progress come with the
   frontend (P7), where a progress indicator is required.
+
+## D045: Networks on a world map (P5b)
+- **Choice:** `Location` gains optional `lat`/`lon` (both or neither), next to the old km grid. FoodNet's nodes sit
+  on plausible, still fictional, European positions. Its lane distances are now great-circle × 1.25 (a road factor),
+  which changed only the CO₂ figures of the locked incumbent KPIs; the golden file was regenerated.
+- **Rationale:** the Studio's map needs coordinates, and a distance computed from them is a better default than a
+  number typed by hand. It is only a suggestion: a lane's `distance_km` stays the truth, so sea or rail routes can
+  differ.
+
+## D046: Two levels of checks, one source of truth (P5b)
+- **Choice:**
+  - `NetworkData` holds the fields; `reference_problems()` returns each cross-reference problem with the dotted
+    path of the field at fault; `Network` = both.
+  - The browser checks fields at once from the exported JSON Schema (Ajv). Two rewrites make errors land on the
+    right field: discriminated unions become `if/then` on the tag, and `anyOf [T, null]` becomes a nullable `T`.
+    Messages are reworded as Pydantic words them.
+  - The server checks references and health (`POST /networks/check`), debounced while editing.
+  - One fixture of broken networks (`tests/fixtures/broken_networks.json`) is run by pytest, Vitest and
+    Playwright; its `browser` flag says which cases the browser alone must catch.
+- **Rationale:** the brief's "never fall out of step". Cross-field rules stay in Python only, rather than being
+  written twice.
+
+## D047: The frontend stack and where the Studio runs (P5b)
+- **Choice:**
+  - React 18 + TypeScript (strict) + Vite 6, TanStack Query for the API, Tailwind 4 for styling, Ajv for schemas,
+    the `yaml` package for files; Vitest and Playwright for tests.
+  - The build is committed (`frontend/dist`, relative paths). The API serves it at `/app`, and GitHub Pages serves
+    it too.
+  - Without the API, the Studio still edits, checks fields, and opens and saves YAML/JSON. Reference checks,
+    health, the quick test, CSV, versions and scenarios say they need the API.
+- **Rationale:** the brief's stack for P7, started early. A committed build keeps Pages working without a build
+  step there.
+
+## D048: Undo is over whole network states (P5b)
+- **Choice:** every edit replaces the network with a new immutable state, kept in a 200-step history. Keystrokes in
+  one field within 0.8 s merge into one step. Opening a file is undoable too.
+- **Rationale:** exact restores by construction (the tests compare whole documents), and no per-edit inverse to get
+  wrong.
+
+## D049: Graph edits keep the network consistent, or show where it is not (P5b)
+- **Choice:**
+  - Renaming a node or SKU updates every reference.
+  - Deleting a supplier removes its lanes and renormalises the plants' sourcing shares.
+  - Deleting a market drops its demand overrides.
+  - Deleting a DC leaves its markets unserved, shown as an error, rather than guessing a new DC.
+  - Drawing a DC → market lane moves the market to that DC; drawing a supplier → plant lane adds the supplier to
+    the plant's sourcing with share 0.
+- **Rationale:** automatic fixes only where there is one right answer; elsewhere the error says what to decide.
+
+## D050: Broken files open, to be fixed in place (P5b)
+- **Choice:** opening a YAML/JSON file loads it even when it fails validation. The CSV import endpoint returns a
+  `draft` (what could be read) alongside its errors by table, row and column.
+- **Rationale:** errors are easier to fix on the element than from a list in a dialog.
+
+## D051: Scenario sets are versioned in the registry (P5b)
+- **Choice:**
+  - the scenario builder saves named sets, versioned like networks (the built-in default suite is version 0);
+  - an evaluation can name `scenario_set` (and version);
+  - `POST /scenarios/preview` shows what a scenario changes as scenario draws ÷ baseline draws with common random
+    numbers, so only the scenario's effect is left. It takes the Studio's unsaved network.
+- **Rationale:** the brief's "saved as named scenario sets". The ratio view shows timing and size without the
+  noise.
+
+## D052: Tables and CSV templates share one layout (P5b)
+- **Choice:**
+  - the Studio's tables have the columns of the CSV templates;
+  - lead times are written `gamma(21, 0.08)` and sourcing `SUP_A=0.5 SUP_B=0.5`;
+  - paste from Excel (tab-separated) maps columns by a header row when there is one;
+  - semicolon CSVs and decimal commas are accepted (European Excel);
+  - the market × SKU demand grid is base × size factor, and a typed value becomes an override.
+- **Rationale:** one mental model for files and screens, and data entry from the spreadsheets people already have.
+
+## D053: The quick test is not a verdict (P5b)
+- **Choice:** 100 futures × 52 weeks of the baseline scenario with the incumbent policies. It reports fill rates by
+  market and DC, utilisation and cost per week, in well under a second for FoodNet.
+- **Rationale:** it answers "does this network work at all?" while editing. Stress tests and verdicts remain the
+  evaluation's job.

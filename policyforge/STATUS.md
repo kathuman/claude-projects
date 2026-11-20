@@ -204,3 +204,59 @@ monitoring, frontend, packaging).
   registry.
 - The hash chain proves integrity within the database, not against someone who rewrites the whole chain. The head
   hash (`GET /audit/verify`) is there to be anchored elsewhere.
+
+## Phase 5b: Network Studio. Done, acceptance met.
+
+**What works**
+- **The model on a map** (D045): `lat`/`lon` on every location. FoodNet sits on plausible, fictional European
+  positions; lane distances follow the map (great circle × 1.25) and stay editable.
+- **Checks with paths** (D046): field errors and reference problems carry the dotted path of the field at fault
+  (`markets.0.served_by`). `network_health` flags plant and supplier load against mean demand, chilled shelf life
+  against transit time, idle markets, backup suppliers and lane distances far from the map's.
+- **Backend for the Studio:**
+  - `POST /networks/check` (errors and health);
+  - `/networks/quick-test`: 100 futures × 52 weeks with the incumbent, about 0.2 s;
+  - CSV templates in and out with errors by table, row and column, and YAML in and out, both returning a `draft`
+    of a broken file (D050);
+  - scenario sets saved and versioned in the registry, and named by evaluations (D051);
+  - `POST /scenarios/preview` (scenario ÷ baseline with common random numbers, on the Studio's unsaved network);
+  - every JSON Schema served and exported;
+  - CORS for the Pages Studio and the dev server.
+- **The Studio** (`frontend/`, React + TypeScript + Vite, D047), served at `/app` and on GitHub Pages:
+  - **Diagram:** four columns, modes to select, add, connect and delete, drag to reorder, colour by utilisation,
+    cost, lead time or quick-test fill rate, error badges on elements.
+  - **Map:** the Tierwise projection with the land basemap, great-circle lanes, zoom, pan, drag to move, click to
+    add, and a tray of nodes not yet placed.
+  - **Tables:** every table with the CSV columns, paste from Excel (header-aware), copy for Excel, and the market ×
+    SKU demand grid with overrides (D052).
+  - **Inspector:** generated from the JSON Schema, with bounds, units and descriptions. Ids rename with every
+    reference; references are pickers; sourcing shares can be renormalised; lead times have a live distribution
+    preview (mean, sd, 95th percentile) and switch kind while keeping the mean.
+  - **Issues, Health, Quick test:** issues jump to their element.
+  - **File:** new, FoodNet, open YAML/JSON/CSV, export YAML/JSON/CSV zip.
+  - **Undo and redo** over every edit (D048), with a draft kept across reloads.
+  - **Versions:** save, history, open any version, diff two versions, unsaved changes against the saved version,
+    and the policies on the network with "re-test needed".
+  - **Scenarios:** sets of scenarios built on a timeline (drag to move in time), forms from the scenario schema,
+    instant checks, save and open sets, and a preview of what each changes.
+  - Works offline for editing, field checks and YAML/JSON. The rest says it needs the API.
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| Build FoodNet from scratch in the Studio; the export loads as the shipped network | Playwright `build FoodNet from scratch…`: an empty network; SKUs, suppliers, plants, DCs, markets and lanes pasted from the CSV templates as Excel would; one market placed on the map; the last lane drawn in the diagram and set up in the inspector; "consistent ✓"; Export YAML, loaded by the engine, **equals** `data/foodnet/network.json` |
+| Errors in place: every broken network in the shared set is rejected, with the message on the right element | `broken_networks.json` (15 cases, field and reference). pytest checks each path and message on `NetworkData`, `reference_problems`, `Network` and `/networks/check`. Vitest checks the browser catches every `browser: true` case (in Pydantic's words) and leaves the rest to the server. Playwright opens each one, clicks the issue, and finds the message in that element's inspector |
+| Undo and redo restore exact states; YAML and CSV round-trip | Vitest (history, merged keystrokes); Playwright deletes, renames and adds, then undoes back to exactly FoodNet and redoes to exactly the edited state. CSV: Python round trip, plus browser copy → paste for every table; YAML: the from-scratch test |
+| Versions: a change flags dependent policies for re-test; the diff shows exactly the changed fields | Playwright: a policy compiled, created and evaluated on `foodnet@1`; a capacity change saved as v2; the policy shows "re-test needed"; the v1 → v2 diff has exactly one row, `plants.0.capacity_per_period` 6000 → 6500 |
+| Scenario builder: a scenario built there draws exactly like the same scenario in Python | Playwright builds a Supplier B outage (dragged to period 20 on the timeline) and saves it; the saved set **equals** `tests/fixtures/studio_scenario_set.json`. pytest checks that fixture equals the set written in Python, with identical draws |
+| End to end in a browser | `frontend/e2e/studio.spec.ts`: 5 tests, about 30 s, against the real API on a fresh database (`npm run e2e`) |
+| Quality gates | Backend: 160 tests green, ruff and `mypy --strict` clean, 96 % line coverage; exported schemas checked fresh in CI. Studio: TypeScript strict, 50 Vitest tests, 5 Playwright tests, in a CI job of their own |
+
+**Known limitations**
+- The Studio edits one network at a time. Comparing two networks side by side is the Versions diff only.
+- Map lanes are drawn as great circles; routes that cross the antimeridian are not split.
+- On GitHub Pages the Studio reaches a local API only if the browser allows a public page to call `127.0.0.1`
+  (some ask permission). `http://127.0.0.1:8000/app/` always works.
+- The JS bundle is about 550 kB (170 kB gzipped); code splitting comes with P7's other screens.
+- The other screens of the brief (Constitution, Author, Stress test, Registry, Monitor) come in P7.

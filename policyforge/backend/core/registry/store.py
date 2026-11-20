@@ -86,6 +86,16 @@ class EvaluationRow(SQLModel, table=True):
     created_at: datetime
 
 
+class ScenarioSetRow(SQLModel, table=True):
+    __tablename__ = "scenario_sets"
+    set_id: str = Field(primary_key=True)
+    version: int = Field(primary_key=True)
+    content_hash: str
+    body: str
+    actor: str
+    created_at: datetime
+
+
 class AuditRow(SQLModel, table=True):
     __tablename__ = "audit"
     seq: int | None = Field(default=None, primary_key=True)

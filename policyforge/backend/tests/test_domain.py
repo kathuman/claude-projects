@@ -333,7 +333,7 @@ def test_schema_export_and_reference(tmp_path: Any, monkeypatch: Any) -> None:
     monkeypatch.setattr(schema_export, "ROOT", tmp_path)
     (tmp_path / "backend" / "data" / "foodnet").mkdir(parents=True)
     written = schema_export.export()
-    assert len(written) == 7 and all(p.exists() for p in written)
+    assert len(written) == 9 and all(p.exists() for p in written)
     ref = (tmp_path / "docs" / "DSL_REFERENCE.md").read_text(encoding="utf-8")
     for heading in ("## Variable vocabulary", "## BaseStock", "## SourcingSwitch", "## Mandate", "## Assumption"):
         assert heading in ref

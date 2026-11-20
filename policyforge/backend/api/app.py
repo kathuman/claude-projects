@@ -13,16 +13,23 @@ import os
 from pathlib import Path
 from typing import Annotated, Any
 
+import yaml
 from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.engine import Engine
 
+from core.domain import network_health, network_io, schema_export
 from core.domain.constitution import Constitution
-from core.domain.network import Network
+from core.domain.network import Network, NetworkData, reference_problems
+from core.domain.network_health import Health
+from core.domain.network_io import TableError
 from core.domain.policy import Policy
 from core.domain.results import EvaluationReport, Verdict
-from core.domain.scenario import ScenarioSet
+from core.domain.scenario import Scenario, ScenarioSet
+from core.evaluate.quick import QuickTest, quick_test
 from core.evaluate.report import to_markdown
 from core.llm.compiler import CompileError, CompileResult, compile_intent
 from core.llm.provider import LLMProvider
@@ -39,11 +46,16 @@ from core.registry.registry import (
     seeded,
 )
 from core.registry.store import make_engine
+from core.sim.layout import build_layout
 from core.sim.scenarios import default_suite
+from core.sim.scenarios.preview import Preview, preview
 
-API_VERSION = "0.5.0"
+API_VERSION = "0.6.0"
+STUDIO = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 Actor = Annotated[str, Header(alias="X-Actor")]
 INTENTS = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "intents"
+# The published Studio (GitHub Pages) and the Vite dev server may call a local API; override with POLICYFORGE_CORS.
+CORS_ORIGINS = "https://kathuman.github.io,http://localhost:5173,http://127.0.0.1:5173"
 
 
 def default_provider() -> LLMProvider:
@@ -68,6 +80,7 @@ class FieldError(BaseModel):
     path: str
     message: str
     type: str
+    level: str = "field"  # "field" (types, bounds) or "reference" (how the parts fit together)
 
 
 class ValidationResult(BaseModel):
@@ -80,11 +93,56 @@ class CompileRequest(BaseModel):
     answers: dict[str, str] | None = None
 
 
+class NetworkCheck(BaseModel):
+    valid: bool
+    errors: list[FieldError]
+    health: Health | None = None
+
+
+class NetworkBody(BaseModel):
+    network: dict[str, Any]
+
+
+class QuickTestRequest(BaseModel):
+    network: dict[str, Any]
+    replications: int = Field(default=100, ge=10, le=500)
+    periods: int = Field(default=52, ge=26, le=156)
+
+
+class Tables(BaseModel):
+    tables: dict[str, str]
+
+
+class TablesResult(BaseModel):
+    network: dict[str, Any] | None
+    errors: list[TableError]
+    draft: dict[str, Any] | None = Field(default=None, description="What could be read, valid or not, to fix in place")
+
+
+class YamlText(BaseModel):
+    text: str
+
+
+class YamlResult(BaseModel):
+    network: dict[str, Any] | None
+    errors: list[FieldError]
+    draft: dict[str, Any] | None = Field(default=None, description="The file's network, valid or not, to fix in place")
+
+
+class PreviewRequest(BaseModel):
+    scenario: Scenario
+    network_id: str | None = None
+    network: dict[str, Any] | None = Field(default=None, description="An unsaved network (the Studio's); wins over id")
+    periods: int = Field(default=104, ge=26, le=156)
+
+
 class EvaluateRequest(BaseModel):
     replications: int = Field(default=200, ge=10, le=2000)
     periods: int = Field(default=104, ge=26, le=156)
     seed: int = Field(default=1, ge=0)
-    scenarios: list[str] | None = Field(default=None, description="Ids from the default suite; empty = all eight")
+    scenarios: list[str] | None = Field(default=None, description="Ids from the scenario set; empty = all")
+    scenario_set: str | None = Field(default=None, description="A saved scenario set; empty = the default suite")
+    scenario_set_version: int | None = None
     rolling_replications: int = Field(default=20, ge=2, le=200)
 
 
@@ -104,6 +162,9 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
     app = FastAPI(title="PolicyForge API", version=API_VERSION,
                   description="Policies for agent-run supply chains: compile, evaluate, approve, deploy, monitor.")
     app.state.registry = reg
+    origins = os.environ.get("POLICYFORGE_CORS", CORS_ORIGINS).split(",")
+    app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()],
+                       allow_methods=["*"], allow_headers=["*"])
 
     @app.exception_handler(RegistryError)
     async def registry_error(_: Request, e: RegistryError) -> JSONResponse:
@@ -125,15 +186,84 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
         nid, version, created = reg.save_network(net, actor, network_id)
         return Created(id=nid, version=version, created=created)
 
+    def field_errors(body: dict[str, Any]) -> list[FieldError]:
+        """Field errors first; if the fields are fine, the cross-reference problems, each with its path."""
+        try:
+            data = NetworkData.model_validate(body)
+        except ValidationError as e:
+            return [FieldError(path=".".join(str(x) for x in err["loc"]) or "(network)", message=err["msg"],
+                               type=err["type"]) for err in e.errors()]
+        return [FieldError(path=p.path, message=p.message, type="reference", level="reference")
+                for p in reference_problems(data)]
+
+    def parse(body: dict[str, Any]) -> Network:
+        errs = field_errors(body)
+        if errs:
+            raise HTTPException(422, detail={"code": "invalid_network", "message": errs[0].message,
+                                             "errors": [e.model_dump() for e in errs]})
+        return Network.model_validate(body)
+
     @app.post("/networks/validate", response_model=ValidationResult)
     def validate_network(body: dict[str, Any] = Body(...)) -> ValidationResult:  # noqa: B008
+        errs = field_errors(body)
+        return ValidationResult(valid=not errs, errors=errs)
+
+    @app.post("/networks/check", response_model=NetworkCheck)
+    def check_network(req: NetworkBody) -> NetworkCheck:
+        """Everything the Studio shows while editing: errors with their paths, and health once valid."""
+        errs = field_errors(req.network)
+        return NetworkCheck(valid=not errs, errors=errs,
+                            health=None if errs else network_health.check(Network.model_validate(req.network)))
+
+    @app.post("/networks/quick-test", response_model=QuickTest)
+    def run_quick_test(req: QuickTestRequest) -> QuickTest:
+        return quick_test(parse(req.network), replications=req.replications, periods=req.periods)
+
+    @app.post("/networks/to-csv", response_model=Tables)
+    def to_tables(req: NetworkBody) -> Tables:
+        return Tables(tables=network_io.to_csv(parse(req.network)))
+
+    @app.post("/networks/csv-zip")
+    def to_zip(req: NetworkBody) -> Response:
+        import io
+        import zipfile
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for name, text in network_io.to_csv(parse(req.network)).items():
+                z.writestr(f"{name}.csv", text)
+        return Response(buf.getvalue(), media_type="application/zip",
+                        headers={"Content-Disposition": 'attachment; filename="network-csv.zip"'})
+
+    @app.post("/networks/from-csv", response_model=TablesResult)
+    def from_tables(req: Tables) -> TablesResult:
+        net, errs = network_io.from_csv(req.tables)
+        draft = network_io.read_csv(req.tables)[0] if errs else None
+        return TablesResult(network=net.model_dump(mode="json") if net else None, errors=errs, draft=draft)
+
+    @app.post("/networks/to-yaml", response_class=PlainTextResponse)
+    def to_yaml(req: NetworkBody) -> str:
+        return str(yaml.safe_dump(parse(req.network).model_dump(mode="json"), sort_keys=False, allow_unicode=True))
+
+    @app.post("/networks/from-yaml", response_model=YamlResult)
+    def from_yaml(req: YamlText) -> YamlResult:
         try:
-            Network.model_validate(body)
-        except ValidationError as e:
-            return ValidationResult(valid=False, errors=[
-                FieldError(path=".".join(str(x) for x in err["loc"]) or "(network)", message=err["msg"],
-                           type=err["type"]) for err in e.errors()])
-        return ValidationResult(valid=True, errors=[])
+            data = yaml.safe_load(req.text)
+        except yaml.YAMLError as e:
+            return YamlResult(network=None, errors=[FieldError(path="(file)", message=f"not valid YAML or JSON: {e}",
+                                                               type="parse")])
+        if not isinstance(data, dict):
+            return YamlResult(network=None, errors=[FieldError(path="(file)", message="the file is not a network",
+                                                               type="parse")])
+        errs = field_errors(data)
+        if errs:
+            return YamlResult(network=None, errors=errs, draft=data)
+        return YamlResult(network=Network.model_validate(data).model_dump(mode="json"), errors=[])
+
+    @app.get("/networks/suggest-distance")
+    def suggest(origin_lat: float, origin_lon: float, dest_lat: float, dest_lon: float) -> dict[str, float]:
+        km = network_health.great_circle_km(origin_lat, origin_lon, dest_lat, dest_lon)
+        return {"great_circle_km": round(km, 1), "road_km": round(km * network_health.ROAD_FACTOR)}
 
     @app.get("/networks/{nid}")
     def get_network(nid: str, version: int | None = None) -> dict[str, Any]:
@@ -160,6 +290,32 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
     @app.post("/constitutions/{cid}/{version}/activate", status_code=204)
     def activate(cid: str, version: int, actor: Actor = "local-user") -> None:
         reg.activate_constitution(cid, version, actor)
+
+    # ---------------------------------------------------------------- schemas and scenarios
+    @app.get("/schemas/{name}")
+    def schema(name: str) -> dict[str, Any]:
+        schemas = schema_export.schemas()
+        if name not in schemas:
+            raise HTTPException(404, detail={"code": "no_schema", "message": f"no schema {name!r}"})
+        return schemas[name]
+
+    @app.get("/scenario-sets")
+    def scenario_sets() -> list[dict[str, Any]]:
+        return reg.scenario_sets()
+
+    @app.post("/scenario-sets", response_model=Created, status_code=201)
+    def save_scenario_set(ss: ScenarioSet, actor: Actor = "local-user") -> Created:
+        version, created = reg.save_scenario_set(ss, actor)
+        return Created(id=ss.id, version=version, created=created)
+
+    @app.get("/scenario-sets/{set_id}", response_model=ScenarioSet)
+    def get_scenario_set(set_id: str, version: int | None = None) -> ScenarioSet:
+        return reg.get_scenario_set(set_id, version)[0]
+
+    @app.post("/scenarios/preview", response_model=Preview)
+    def preview_scenario(req: PreviewRequest) -> Preview:
+        net = parse(req.network) if req.network else reg.get_network(req.network_id or reg.default_network_id())[0]
+        return preview(build_layout(net), req.scenario, periods=req.periods)
 
     # ---------------------------------------------------------------- compiling intents
     @app.post("/compile", response_model=CompileResult)
@@ -217,7 +373,8 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
     def evaluate(pid: str, version: int, req: EvaluateRequest | None = None,
                  actor: Actor = "local-user") -> EvaluateResponse:
         req = req or EvaluateRequest()
-        suite = default_suite()
+        suite = reg.get_scenario_set(req.scenario_set, req.scenario_set_version)[0] if req.scenario_set \
+            else default_suite()
         if req.scenarios:
             chosen = [s for s in suite.scenarios if s.id in req.scenarios]
             unknown = set(req.scenarios) - {s.id for s in chosen}
@@ -265,6 +422,13 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
             raise HTTPException(404, detail={"code": "no_mandate", "message": f"agent {agent_id} has no deployed "
                                              "mandate"})
         return m
+
+    if STUDIO.exists():  # the built frontend (npm run build in frontend/)
+        app.mount("/app", StaticFiles(directory=STUDIO, html=True), name="studio")
+
+        @app.get("/", include_in_schema=False)
+        def root() -> RedirectResponse:
+            return RedirectResponse("/app/")
 
     return app
 

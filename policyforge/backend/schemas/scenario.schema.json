@@ -1,0 +1,414 @@
+{
+  "$defs": {
+    "BaselineDemand": {
+      "additionalProperties": false,
+      "description": "The base layer's settings; including it changes nothing else (it is always applied).",
+      "properties": {
+        "kind": {
+          "const": "baseline_demand",
+          "default": "baseline_demand",
+          "title": "Kind",
+          "type": "string"
+        },
+        "seasonality": {
+          "default": true,
+          "description": "Apply each SKU's seasonal profile",
+          "title": "Seasonality",
+          "type": "boolean"
+        }
+      },
+      "title": "BaselineDemand",
+      "type": "object"
+    },
+    "CorrelatedShock": {
+      "additionalProperties": false,
+      "description": "Several suppliers and markets hit at once, at a random start, in a random share of replications.",
+      "properties": {
+        "kind": {
+          "const": "correlated_shock",
+          "default": "correlated_shock",
+          "title": "Kind",
+          "type": "string"
+        },
+        "probability": {
+          "description": "Share of replications in which the shock happens",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Probability",
+          "type": "number"
+        },
+        "earliest_start": {
+          "maximum": 156,
+          "minimum": 0,
+          "title": "Earliest Start",
+          "type": "integer"
+        },
+        "latest_start": {
+          "maximum": 156,
+          "minimum": 0,
+          "title": "Latest Start",
+          "type": "integer"
+        },
+        "duration": {
+          "maximum": 156,
+          "minimum": 1,
+          "title": "Duration",
+          "type": "integer"
+        },
+        "suppliers": {
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Suppliers",
+          "type": "array"
+        },
+        "supply_severity": {
+          "default": 0,
+          "description": "Share of capacity lost at each supplier",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Supply Severity",
+          "type": "number"
+        },
+        "lead_time_factor": {
+          "default": 1,
+          "description": "Lead-time multiplier at each supplier",
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Lead Time Factor",
+          "type": "number"
+        },
+        "markets": {
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Markets",
+          "type": "array"
+        },
+        "demand_factor": {
+          "default": 1,
+          "description": "Demand multiplier in each market",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Demand Factor",
+          "type": "number"
+        }
+      },
+      "required": [
+        "probability",
+        "earliest_start",
+        "latest_start",
+        "duration"
+      ],
+      "title": "CorrelatedShock",
+      "type": "object"
+    },
+    "DemandShift": {
+      "additionalProperties": false,
+      "description": "A level shift (long window) or promotion spike (short window) in demand.",
+      "properties": {
+        "kind": {
+          "const": "demand_shift",
+          "default": "demand_shift",
+          "title": "Kind",
+          "type": "string"
+        },
+        "window": {
+          "$ref": "#/$defs/Window"
+        },
+        "factor": {
+          "description": "Multiplier on demand in the window",
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Factor",
+          "type": "number"
+        },
+        "markets": {
+          "description": "Empty = all markets",
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Markets",
+          "type": "array"
+        },
+        "skus": {
+          "description": "Empty = all SKUs",
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Skus",
+          "type": "array"
+        },
+        "categories": {
+          "description": "Empty = all categories",
+          "items": {
+            "enum": [
+              "chilled",
+              "ambient"
+            ],
+            "type": "string"
+          },
+          "title": "Categories",
+          "type": "array"
+        }
+      },
+      "required": [
+        "window",
+        "factor"
+      ],
+      "title": "DemandShift",
+      "type": "object"
+    },
+    "LeadTimeInflation": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "lead_time_inflation",
+          "default": "lead_time_inflation",
+          "title": "Kind",
+          "type": "string"
+        },
+        "supplier": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Supplier",
+          "type": "string"
+        },
+        "start": {
+          "maximum": 156,
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "factor": {
+          "description": "Multiplier on lead time once fully in effect",
+          "maximum": 10,
+          "minimum": 0.1,
+          "title": "Factor",
+          "type": "number"
+        },
+        "ramp_periods": {
+          "default": 0,
+          "description": "0 = a step change; else a linear ramp",
+          "maximum": 156,
+          "minimum": 0,
+          "title": "Ramp Periods",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "supplier",
+        "start",
+        "factor"
+      ],
+      "title": "LeadTimeInflation",
+      "type": "object"
+    },
+    "PlantCapacityLoss": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "plant_capacity_loss",
+          "default": "plant_capacity_loss",
+          "title": "Kind",
+          "type": "string"
+        },
+        "plant": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Plant",
+          "type": "string"
+        },
+        "window": {
+          "$ref": "#/$defs/Window"
+        },
+        "severity": {
+          "description": "Share of capacity lost",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Severity",
+          "type": "number"
+        }
+      },
+      "required": [
+        "plant",
+        "window",
+        "severity"
+      ],
+      "title": "PlantCapacityLoss",
+      "type": "object"
+    },
+    "SignalNoise": {
+      "additionalProperties": false,
+      "description": "The bullwhip stressor: noisier demand signals and a longer information delay.",
+      "properties": {
+        "kind": {
+          "const": "signal_noise",
+          "default": "signal_noise",
+          "title": "Kind",
+          "type": "string"
+        },
+        "noise_cv": {
+          "default": 0,
+          "description": "CV of multiplicative noise on observed demand",
+          "maximum": 2,
+          "minimum": 0,
+          "title": "Noise Cv",
+          "type": "number"
+        },
+        "extra_delay": {
+          "default": 0,
+          "description": "Extra periods of information delay",
+          "maximum": 12,
+          "minimum": 0,
+          "title": "Extra Delay",
+          "type": "integer"
+        }
+      },
+      "title": "SignalNoise",
+      "type": "object"
+    },
+    "SupplierOutage": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "supplier_outage",
+          "default": "supplier_outage",
+          "title": "Kind",
+          "type": "string"
+        },
+        "supplier": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Supplier",
+          "type": "string"
+        },
+        "window": {
+          "$ref": "#/$defs/Window"
+        },
+        "severity": {
+          "description": "Share of capacity lost (1 = nothing ships)",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Severity",
+          "type": "number"
+        }
+      },
+      "required": [
+        "supplier",
+        "window",
+        "severity"
+      ],
+      "title": "SupplierOutage",
+      "type": "object"
+    },
+    "Window": {
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "description": "First period affected",
+          "maximum": 156,
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "maximum": 156,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Periods affected; none = to the end",
+          "title": "Duration"
+        }
+      },
+      "required": [
+        "start"
+      ],
+      "title": "Window",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Identifier",
+      "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 120,
+      "title": "Name",
+      "type": "string"
+    },
+    "description": {
+      "default": "",
+      "maxLength": 1000,
+      "title": "Description",
+      "type": "string"
+    },
+    "components": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "baseline_demand": "#/$defs/BaselineDemand",
+            "correlated_shock": "#/$defs/CorrelatedShock",
+            "demand_shift": "#/$defs/DemandShift",
+            "lead_time_inflation": "#/$defs/LeadTimeInflation",
+            "plant_capacity_loss": "#/$defs/PlantCapacityLoss",
+            "signal_noise": "#/$defs/SignalNoise",
+            "supplier_outage": "#/$defs/SupplierOutage"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/BaselineDemand"
+          },
+          {
+            "$ref": "#/$defs/DemandShift"
+          },
+          {
+            "$ref": "#/$defs/SupplierOutage"
+          },
+          {
+            "$ref": "#/$defs/LeadTimeInflation"
+          },
+          {
+            "$ref": "#/$defs/PlantCapacityLoss"
+          },
+          {
+            "$ref": "#/$defs/CorrelatedShock"
+          },
+          {
+            "$ref": "#/$defs/SignalNoise"
+          }
+        ]
+      },
+      "maxItems": 20,
+      "title": "Components",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "name"
+  ],
+  "title": "Scenario",
+  "type": "object"
+}

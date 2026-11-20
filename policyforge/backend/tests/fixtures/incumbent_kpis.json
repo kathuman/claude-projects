@@ -1,7 +1,7 @@
 {
   "baseline": {
     "bullwhip_dc": 1.928780906,
-    "co2_t": 34.778098434,
+    "co2_t": 65.690230675,
     "cost_per_week": 30675.317707004,
     "fill_rate": 0.981759579,
     "fill_rate.category.chilled": 0.984598597,
@@ -10,7 +10,7 @@
   },
   "bullwhip": {
     "bullwhip_dc": 5.417837392,
-    "co2_t": 34.611836311,
+    "co2_t": 65.489888077,
     "cost_per_week": 31089.363537502,
     "fill_rate": 0.934364861,
     "fill_rate.category.chilled": 0.960564052,
@@ -19,7 +19,7 @@
   },
   "correlated-shock": {
     "bullwhip_dc": 1.99028312,
-    "co2_t": 34.819214902,
+    "co2_t": 65.7899302,
     "cost_per_week": 31101.845845592,
     "fill_rate": 0.932253702,
     "fill_rate.category.chilled": 0.965598269,
@@ -28,7 +28,7 @@
   },
   "demand-surge": {
     "bullwhip_dc": 1.551914288,
-    "co2_t": 35.282393521,
+    "co2_t": 66.821999476,
     "cost_per_week": 31175.6846812,
     "fill_rate": 0.981395238,
     "fill_rate.category.chilled": 0.984847658,
@@ -37,7 +37,7 @@
   },
   "lead-time-inflation": {
     "bullwhip_dc": 1.928689878,
-    "co2_t": 34.587171617,
+    "co2_t": 65.119488024,
     "cost_per_week": 30192.23130651,
     "fill_rate": 0.966005755,
     "fill_rate.category.chilled": 0.983714285,
@@ -46,7 +46,7 @@
   },
   "plant-capacity-loss": {
     "bullwhip_dc": 1.929896701,
-    "co2_t": 34.657773028,
+    "co2_t": 65.337728481,
     "cost_per_week": 30540.058327476,
     "fill_rate": 0.967499689,
     "fill_rate.category.chilled": 0.976697303,
@@ -55,7 +55,7 @@
   },
   "promotion": {
     "bullwhip_dc": 1.700633937,
-    "co2_t": 35.632173594,
+    "co2_t": 67.261040414,
     "cost_per_week": 31389.466436259,
     "fill_rate": 0.953772366,
     "fill_rate.category.chilled": 0.984010962,
@@ -64,7 +64,7 @@
   },
   "supplier-b-outage": {
     "bullwhip_dc": 1.938738656,
-    "co2_t": 34.957139238,
+    "co2_t": 66.761928599,
     "cost_per_week": 30575.105550523,
     "fill_rate": 0.979710093,
     "fill_rate.category.chilled": 0.984257705,

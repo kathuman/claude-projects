@@ -8,7 +8,7 @@ lane's distance is given explicitly so it can differ from the straight line.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import yaml
 from pydantic import Field, model_validator
@@ -21,8 +21,19 @@ Mode = Literal["road", "rail", "sea", "air", "express_road"]
 
 
 class Location(Model):
-    x_km: float = Field(ge=-5000, le=5000)
-    y_km: float = Field(ge=-5000, le=5000)
+    """Where a node is. `lat`/`lon` place it on the world map (the Network Studio); `x_km`/`y_km` are a flat grid kept
+    for older files. Lane distances are given on the lanes themselves; coordinates only suggest them."""
+
+    x_km: float = Field(default=0, ge=-5000, le=5000)
+    y_km: float = Field(default=0, ge=-5000, le=5000)
+    lat: float | None = Field(default=None, ge=-90, le=90, description="Latitude, degrees north")
+    lon: float | None = Field(default=None, ge=-180, le=180, description="Longitude, degrees east")
+
+    @model_validator(mode="after")
+    def _both_or_neither(self) -> Location:
+        if (self.lat is None) != (self.lon is None):
+            raise ValueError("give both lat and lon, or neither")
+        return self
 
 
 class SKU(Model):
@@ -136,7 +147,9 @@ class EmissionFactors(Model):
         return float(getattr(self, mode))
 
 
-class Network(Model):
+class NetworkData(Model):
+    """The network's fields, without the cross-reference checks (see `Network`)."""
+
     name: str = Field(max_length=80)
     currency: Literal["EUR"] = "EUR"
     period_days: int = Field(default=7, ge=1, le=31, description="Length of one simulation period")
@@ -149,59 +162,96 @@ class Network(Model):
     demand_overrides: list[DemandOverride] = Field(default_factory=list)
     emission_factors: EmissionFactors
 
+
+class Problem(Model):
+    """A cross-reference problem, located: `path` points at the field (e.g. markets.0.served_by)."""
+
+    path: str
+    message: str
+
+
+def reference_problems(net: NetworkData) -> list[Problem]:
+    """Every way the network's parts fail to fit together, each with the path of the field at fault."""
+    out: list[Problem] = []
+
+    def add(path: str, message: str) -> None:
+        out.append(Problem(path=path, message=message))
+
+    groups: tuple[tuple[str, list[Any]], ...] = (("suppliers", net.suppliers), ("plants", net.plants),
+                                                 ("dcs", net.dcs), ("markets", net.markets))
+    seen: dict[str, str] = {}
+    for gname, group in groups:
+        for i, x in enumerate(group):
+            if x.id in seen:
+                add(f"{gname}.{i}.id", f"node ids must be unique: {x.id} is also {seen[x.id]}")
+            else:
+                seen[x.id] = f"{gname}.{i}"
+    sku_ids = [s.id for s in net.skus]
+    for i, s in enumerate(net.skus):
+        if sku_ids.index(s.id) != i:
+            add(f"skus.{i}.id", f"SKU ids must be unique: {s.id} appears twice")
+    lane_ids = [ln.id for ln in net.lanes]
+    for i, ln in enumerate(net.lanes):
+        if lane_ids.index(ln.id) != i:
+            add(f"lanes.{i}.id", f"lane ids must be unique: {ln.id} appears twice")
+
+    kind = {s.id: "supplier" for s in net.suppliers}
+    kind |= {p.id: "plant" for p in net.plants}
+    kind |= {d.id: "dc" for d in net.dcs}
+    kind |= {m.id: "market" for m in net.markets}
+    allowed = {("supplier", "plant"), ("plant", "dc"), ("dc", "market")}
+    pairs: dict[tuple[str, str], int] = {}
+    for i, ln in enumerate(net.lanes):
+        for end in ("origin", "destination"):
+            if getattr(ln, end) not in kind:
+                add(f"lanes.{i}.{end}", f"lane {ln.id} refers to an unknown node {getattr(ln, end)}")
+        if ln.origin in kind and ln.destination in kind and (kind[ln.origin], kind[ln.destination]) not in allowed:
+            add(f"lanes.{i}.destination",
+                f"lane {ln.id} goes {kind[ln.origin]} → {kind[ln.destination]}, which is not allowed")
+        if (ln.origin, ln.destination) in pairs:
+            add(f"lanes.{i}", f"at most one lane per origin and destination: {ln.id} repeats lane "
+                f"{net.lanes[pairs[(ln.origin, ln.destination)]].id}")
+        else:
+            pairs[(ln.origin, ln.destination)] = i
+
+    for i, p in enumerate(net.plants):
+        for j, made_id in enumerate(p.skus):
+            if made_id not in sku_ids:
+                add(f"plants.{i}.skus.{j}", f"plants make unknown SKUs: {p.id} makes {made_id}")
+        if not any(ln.destination == p.id for ln in net.lanes):
+            add(f"plants.{i}", f"plant {p.id} has no supplier lane")
+        for j, share in enumerate(p.sourcing):
+            if (share.supplier, p.id) not in pairs:
+                add(f"plants.{i}.sourcing.{j}.supplier",
+                    f"plant {p.id} sources from {share.supplier} but there is no lane between them")
+    made = {k for p in net.plants for k in p.skus}
+    for i, sku in enumerate(net.skus):
+        if sku.id not in made:
+            add(f"skus.{i}", f"no plant makes {sku.id}")
+    for i, d in enumerate(net.dcs):
+        sources = {ln.origin for ln in net.lanes if ln.destination == d.id}
+        for sid in sku_ids:
+            if sid in made and not any(p.id in sources and sid in p.skus for p in net.plants):
+                add(f"dcs.{i}", f"DC {d.id} has no lane from a plant that makes {sid}")
+    for i, m in enumerate(net.markets):
+        if kind.get(m.served_by) != "dc":
+            add(f"markets.{i}.served_by", f"market {m.id} is served by {m.served_by}, which is not a DC")
+        elif (m.served_by, m.id) not in pairs:
+            add(f"markets.{i}.served_by", f"market {m.id} has no lane from its DC {m.served_by}")
+    for i, o in enumerate(net.demand_overrides):
+        if kind.get(o.market) != "market" or o.sku not in sku_ids:
+            add(f"demand_overrides.{i}", f"demand override {o.market}/{o.sku} refers to an unknown market or SKU")
+    return out
+
+
+class Network(NetworkData):
+    """A complete, consistent network: the fields of `NetworkData`, plus every cross-reference check."""
+
     @model_validator(mode="after")
     def _references(self) -> Network:
-        ids: list[str] = [x.id for group in (self.suppliers, self.plants, self.dcs, self.markets) for x in group]
-        dupes = {i for i in ids if ids.count(i) > 1}
-        if dupes:
-            raise ValueError(f"node ids must be unique: {sorted(dupes)}")
-        sku_ids = [s.id for s in self.skus]
-        if len(set(sku_ids)) != len(sku_ids):
-            raise ValueError("SKU ids must be unique")
-        lane_ids = [ln.id for ln in self.lanes]
-        if len(set(lane_ids)) != len(lane_ids):
-            raise ValueError("lane ids must be unique")
-
-        kind = {s.id: "supplier" for s in self.suppliers}
-        kind |= {p.id: "plant" for p in self.plants}
-        kind |= {d.id: "dc" for d in self.dcs}
-        kind |= {m.id: "market" for m in self.markets}
-        allowed = {("supplier", "plant"), ("plant", "dc"), ("dc", "market")}
-        for ln in self.lanes:
-            if ln.origin not in kind or ln.destination not in kind:
-                raise ValueError(f"lane {ln.id} refers to an unknown node")
-            if (kind[ln.origin], kind[ln.destination]) not in allowed:
-                raise ValueError(f"lane {ln.id} goes {kind[ln.origin]} → {kind[ln.destination]}, which is not allowed")
-        pairs = {(ln.origin, ln.destination) for ln in self.lanes}
-        if len(pairs) != len(self.lanes):
-            raise ValueError("at most one lane per origin and destination")
-
-        made = {s for p in self.plants for s in p.skus}
-        unknown = made - set(sku_ids)
-        if unknown:
-            raise ValueError(f"plants make unknown SKUs: {sorted(unknown)}")
-        unmade = set(sku_ids) - made
-        if unmade:
-            raise ValueError(f"no plant makes {sorted(unmade)}")
-        for p in self.plants:
-            if not any(ln.destination == p.id for ln in self.lanes):
-                raise ValueError(f"plant {p.id} has no supplier lane")
-            for share in p.sourcing:
-                if (share.supplier, p.id) not in pairs:
-                    raise ValueError(f"plant {p.id} sources from {share.supplier} but there is no lane between them")
-        for d in self.dcs:
-            sources = {ln.origin for ln in self.lanes if ln.destination == d.id}
-            for s in sku_ids:
-                if not any(p.id in sources and s in p.skus for p in self.plants):
-                    raise ValueError(f"DC {d.id} has no lane from a plant that makes {s}")
-        for m in self.markets:
-            if kind.get(m.served_by) != "dc":
-                raise ValueError(f"market {m.id} is served by {m.served_by}, which is not a DC")
-            if (m.served_by, m.id) not in pairs:
-                raise ValueError(f"market {m.id} has no lane from its DC {m.served_by}")
-        for o in self.demand_overrides:
-            if kind.get(o.market) != "market" or o.sku not in sku_ids:
-                raise ValueError(f"demand override {o.market}/{o.sku} refers to an unknown market or SKU")
+        problems = reference_problems(self)
+        if problems:
+            raise ValueError("; ".join(p.message for p in problems))
         return self
 
     # ---- lookups

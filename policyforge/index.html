@@ -16,12 +16,13 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.5.0</span>
+      <span class="ver">v0.6.0</span>
       <span class="sub">policy workbench for agent-run supply chains</span>
     </div>
     <nav class="actions">
       <a class="back-link" href="./" aria-current="page">About</a>
       <a class="back-link" href="tutorial.html">Tutorial</a>
+      <a class="back-link" href="frontend/dist/index.html">Network Studio</a>
       <a class="back-link" href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a>
       <button class="back-link" id="theme" type="button" aria-label="Toggle colour theme">◐</button>
       <a class="back-link" href="../">← Projects</a>
@@ -83,8 +84,20 @@
     </section>
 
     <section class="panel" aria-labelledby="h-now">
-      <h2 id="h-now">What works today (v0.5.0)</h2>
-      <p>PolicyForge is in early development, and there is no web interface yet. Today it is a Python library you run from the command line; the <a href="tutorial.html">tutorial</a> walks you through it.</p>
+      <h2 id="h-now">What works today (v0.6.0)</h2>
+      <p>PolicyForge is in early development. Its first screen, the <b>Network Studio</b>, is live. The rest is a Python library and an API you run from the command line; the <a href="tutorial.html">tutorial</a> walks you through it.</p>
+      <h3 id="studio">The Network Studio <span class="badge done">built</span></h3>
+      <p>Policies are tested on a model of the supply network, so that model has to be easy to build and keep up to date. The Studio does it visually:</p>
+      <ul>
+        <li><b>Diagram:</b> suppliers → plants → DCs → markets in four columns. Click to add, drag between nodes to draw a lane, drag to reorder, and colour by utilisation, cost, lead time or quick-test fill rate.</li>
+        <li><b>Map:</b> the same network on a world map, with lanes along great circles. Nodes are placed and moved by dragging, and a lane's distance is suggested from the map.</li>
+        <li><b>Tables:</b> SKUs, nodes, lanes and the market × SKU demand grid as spreadsheets. Paste straight from Excel; a bad cell is reported by row and column.</li>
+        <li><b>Inspector:</b> a form generated from the model's JSON Schema, with every field's bounds, units and description. Lead times are shown as a distribution, with their mean and 95th percentile.</li>
+        <li><b>Live checks:</b> field errors at once in the browser. Then the server's checks of how the parts fit together, and a health panel (utilisation against demand, shelf life against lead time), each shown on the element concerned.</li>
+        <li><b>Quick test</b> (a second of simulation with the incumbent), <b>versions</b> with field-level diffs and re-test flags on the policies that depend on them, and a <b>scenario builder</b> with a timeline and a preview of what each scenario changes.</li>
+      </ul>
+      <p><a href="frontend/dist/index.html">Open the Studio</a>. On this site it edits, checks fields, and opens and saves YAML or JSON files without any server. For reference checks, health, the quick test, CSV files, versions and scenarios, run the API locally and open <code>http://127.0.0.1:8000/app/</code>.</p>
+      <p>A browser test rebuilds FoodNet from scratch in the Studio, through the tables, the map and the diagram, and checks that the engine loads exactly the shipped network.</p>
       <h3>The policy language <span class="badge done">built</span></h3>
       <p>Six rule types:
         <b>base stock</b> (in units or days of cover),
@@ -158,8 +171,8 @@
           <tr><td>P3 Baselines and evaluation</td><td>Incumbent, naive and rolling-optimisation baselines (Pyomo with HiGHS); full metrics; robustness verdict; report</td><td>Bullwhip ratio above 1 under delay; the optimiser solves; reports for the default suite</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P4 LLM compiler</td><td>Provider interface, offline mock, compiler with retries, validator, back-translation</td><td>20 golden intents compile; out-of-vocabulary references rejected</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P5 Registry and API</td><td>Lifecycle, approval gate, hash-chained audit log, agent mandate endpoint, diffs</td><td>No approval without a passing evaluation; tampering detected</td><td><span class="badge done">done</span></td></tr>
-          <tr><td>P5b Network Studio</td><td>Build and maintain networks visually: a diagram, a world map, tables, an inspector generated from the schema, live checks, a quick test, YAML/CSV import and export, versions with diffs, and a scenario builder</td><td>FoodNet rebuilt from scratch in the Studio equals the shipped one; errors shown on the right element; versions flag policies for re-test</td><td><span class="badge next">next</span></td></tr>
-          <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P5b Network Studio</td><td>Build and maintain networks visually: a diagram, a world map, tables, an inspector generated from the schema, live checks, a quick test, YAML/CSV import and export, versions with diffs, and a scenario builder</td><td>FoodNet rebuilt from scratch in the Studio equals the shipped one; errors shown on the right element; versions flag policies for re-test</td><td><span class="badge done">done</span></td></tr>
+          <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge next">next</span></td></tr>
           <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge plan">planned</span></td></tr>
           <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge plan">planned</span></td></tr>
         </tbody>
@@ -186,7 +199,7 @@
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.5.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.6.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

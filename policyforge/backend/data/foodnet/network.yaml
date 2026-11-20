@@ -1,4 +1,5 @@
 # FoodNet: a fictional food manufacturer. Synthetic data only; no real company is described.
+# Nodes sit at real places (Low Countries to Provence) so the Network Studio can draw them on a map.
 # Field meanings and units: see README.md in this folder. Schema: network.schema.json.
 name: FoodNet
 currency: EUR
@@ -43,95 +44,95 @@ skus:
 
 suppliers:
   # A: cheap, slow, reliable
-  - {id: SUP_A, name: Supplier A, location: {x_km: -400, y_km: 200}, capacity_per_period: 6000,
+  - {id: SUP_A, name: Supplier A, location: {x_km: -400, y_km: 200, lat: 39.47, lon: -0.38}, capacity_per_period: 6000,
      unit_cost_index: 0.90, fill_rate_mean: 0.99, fill_rate_sd: 0.01, ordering_cost: 150}
   # B: mid-priced, variable
-  - {id: SUP_B, name: Supplier B, location: {x_km: 100, y_km: 350}, capacity_per_period: 6000,
+  - {id: SUP_B, name: Supplier B, location: {x_km: 100, y_km: 350, lat: 51.22, lon: 4.4}, capacity_per_period: 6000,
      unit_cost_index: 1.00, fill_rate_mean: 0.93, fill_rate_sd: 0.06, ordering_cost: 120}
   # C: expensive, fast, capacity-limited
-  - {id: SUP_C, name: Supplier C, location: {x_km: 50, y_km: -50}, capacity_per_period: 2000,
+  - {id: SUP_C, name: Supplier C, location: {x_km: 50, y_km: -50, lat: 47.9, lon: 1.91}, capacity_per_period: 2000,
      unit_cost_index: 1.30, fill_rate_mean: 0.98, fill_rate_sd: 0.02, ordering_cost: 100}
 
 plants:
   - id: PLANT_N
     name: North plant
-    location: {x_km: 0, y_km: 300}
+    location: {x_km: 0, y_km: 300, lat: 50.63, lon: 3.06}
     capacity_per_period: 6000
     production_cost_per_unit: 0.35
     skus: [S01, S02, S03, S04, S05]
     sourcing: [{supplier: SUP_A, share: 0.5}, {supplier: SUP_B, share: 0.5}]
   - id: PLANT_S
     name: South plant
-    location: {x_km: 0, y_km: -250}
+    location: {x_km: 0, y_km: -250, lat: 45.76, lon: 4.84}
     capacity_per_period: 6000
     production_cost_per_unit: 0.30
     skus: [S03, S04, S06, S07, S08, S09, S10]
     sourcing: [{supplier: SUP_A, share: 0.4}, {supplier: SUP_B, share: 0.6}]
 
 dcs:
-  - {id: DC_N, name: North DC, location: {x_km: 0, y_km: 400}, storage_capacity: 40000}
-  - {id: DC_C, name: Central DC, location: {x_km: 50, y_km: 0}, storage_capacity: 40000}
-  - {id: DC_S, name: South DC, location: {x_km: 0, y_km: -350}, storage_capacity: 40000}
+  - {id: DC_N, name: North DC, location: {x_km: 0, y_km: 400, lat: 51.05, lon: 3.72}, storage_capacity: 40000}
+  - {id: DC_C, name: Central DC, location: {x_km: 50, y_km: 0, lat: 47.32, lon: 5.04}, storage_capacity: 40000}
+  - {id: DC_S, name: South DC, location: {x_km: 0, y_km: -350, lat: 43.95, lon: 4.81}, storage_capacity: 40000}
 
 markets:
-  - {id: MKT_N1, name: North 1, region: North, location: {x_km: -80, y_km: 480}, size_factor: 0.22, served_by: DC_N}
-  - {id: MKT_N2, name: North 2, region: North, location: {x_km: 90, y_km: 450}, size_factor: 0.14, served_by: DC_N}
-  - {id: MKT_C1, name: Central 1, region: Central, location: {x_km: -60, y_km: 30}, size_factor: 0.20, served_by: DC_C}
-  - {id: MKT_C2, name: Central 2, region: Central, location: {x_km: 140, y_km: -20}, size_factor: 0.12, served_by: DC_C}
-  - {id: MKT_S1, name: South 1, region: South, location: {x_km: -90, y_km: -400}, size_factor: 0.18, served_by: DC_S}
-  - {id: MKT_S2, name: South 2, region: South, location: {x_km: 80, y_km: -380}, size_factor: 0.14, served_by: DC_S}
+  - {id: MKT_N1, name: North 1, region: North, location: {x_km: -80, y_km: 480, lat: 52.37, lon: 4.9}, size_factor: 0.22, served_by: DC_N}
+  - {id: MKT_N2, name: North 2, region: North, location: {x_km: 90, y_km: 450, lat: 50.94, lon: 6.96}, size_factor: 0.14, served_by: DC_N}
+  - {id: MKT_C1, name: Central 1, region: Central, location: {x_km: -60, y_km: 30, lat: 48.86, lon: 2.35}, size_factor: 0.20, served_by: DC_C}
+  - {id: MKT_C2, name: Central 2, region: Central, location: {x_km: 140, y_km: -20, lat: 48.57, lon: 7.75}, size_factor: 0.12, served_by: DC_C}
+  - {id: MKT_S1, name: South 1, region: South, location: {x_km: -90, y_km: -400, lat: 43.3, lon: 5.37}, size_factor: 0.18, served_by: DC_S}
+  - {id: MKT_S2, name: South 2, region: South, location: {x_km: 80, y_km: -380, lat: 43.61, lon: 3.88}, size_factor: 0.14, served_by: DC_S}
 
 demand_overrides: []
 
 lanes:
   # suppliers → plants
-  - {id: L_A_N, origin: SUP_A, destination: PLANT_N, mode: road, distance_km: 410, cost_per_unit: 0.55,
+  - {id: L_A_N, origin: SUP_A, destination: PLANT_N, mode: road, distance_km: 1587, cost_per_unit: 0.55,
      lead_time_days: {kind: gamma, mu: 21, cv: 0.08},
      expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 9, cv: 0.1}, cost_multiplier: 2.5}}
-  - {id: L_A_S, origin: SUP_A, destination: PLANT_S, mode: road, distance_km: 615, cost_per_unit: 0.70,
+  - {id: L_A_S, origin: SUP_A, destination: PLANT_S, mode: road, distance_km: 1024, cost_per_unit: 0.70,
      lead_time_days: {kind: gamma, mu: 24, cv: 0.08},
      expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 10, cv: 0.1}, cost_multiplier: 2.5}}
-  - {id: L_B_N, origin: SUP_B, destination: PLANT_N, mode: road, distance_km: 110, cost_per_unit: 0.30,
+  - {id: L_B_N, origin: SUP_B, destination: PLANT_N, mode: road, distance_km: 143, cost_per_unit: 0.30,
      lead_time_days: {kind: gamma, mu: 12, cv: 0.35},
      expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 5, cv: 0.2}, cost_multiplier: 2.5}}
-  - {id: L_B_S, origin: SUP_B, destination: PLANT_S, mode: road, distance_km: 610, cost_per_unit: 0.60,
+  - {id: L_B_S, origin: SUP_B, destination: PLANT_S, mode: road, distance_km: 760, cost_per_unit: 0.60,
      lead_time_days: {kind: gamma, mu: 15, cv: 0.35},
      expedite: {mode: express_road, lead_time_days: {kind: gamma, mu: 6, cv: 0.2}, cost_multiplier: 2.5}}
-  - {id: L_C_N, origin: SUP_C, destination: PLANT_N, mode: road, distance_km: 355, cost_per_unit: 0.45,
+  - {id: L_C_N, origin: SUP_C, destination: PLANT_N, mode: road, distance_km: 394, cost_per_unit: 0.45,
      lead_time_days: {kind: gamma, mu: 4, cv: 0.15}}
-  - {id: L_C_S, origin: SUP_C, destination: PLANT_S, mode: road, distance_km: 205, cost_per_unit: 0.35,
+  - {id: L_C_S, origin: SUP_C, destination: PLANT_S, mode: road, distance_km: 408, cost_per_unit: 0.35,
      lead_time_days: {kind: gamma, mu: 3, cv: 0.15}}
   # plants → DCs
-  - {id: L_N_DCN, origin: PLANT_N, destination: DC_N, mode: road, distance_km: 100, cost_per_unit: 0.15,
+  - {id: L_N_DCN, origin: PLANT_N, destination: DC_N, mode: road, distance_km: 82, cost_per_unit: 0.15,
      lead_time_days: {kind: triangular, low: 1, mode: 2, high: 4},
      expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
-  - {id: L_N_DCC, origin: PLANT_N, destination: DC_C, mode: road, distance_km: 300, cost_per_unit: 0.30,
+  - {id: L_N_DCC, origin: PLANT_N, destination: DC_C, mode: road, distance_km: 494, cost_per_unit: 0.30,
      lead_time_days: {kind: triangular, low: 2, mode: 3, high: 5},
      expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
-  - {id: L_N_DCS, origin: PLANT_N, destination: DC_S, mode: rail, distance_km: 700, cost_per_unit: 0.40,
+  - {id: L_N_DCS, origin: PLANT_N, destination: DC_S, mode: rail, distance_km: 943, cost_per_unit: 0.40,
      lead_time_days: {kind: triangular, low: 3, mode: 5, high: 9},
      expedite: {mode: air, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 6.0}}
-  - {id: L_S_DCN, origin: PLANT_S, destination: DC_N, mode: rail, distance_km: 650, cost_per_unit: 0.40,
+  - {id: L_S_DCN, origin: PLANT_S, destination: DC_N, mode: rail, distance_km: 742, cost_per_unit: 0.40,
      lead_time_days: {kind: triangular, low: 3, mode: 5, high: 9},
      expedite: {mode: air, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 6.0}}
-  - {id: L_S_DCC, origin: PLANT_S, destination: DC_C, mode: road, distance_km: 255, cost_per_unit: 0.28,
+  - {id: L_S_DCC, origin: PLANT_S, destination: DC_C, mode: road, distance_km: 218, cost_per_unit: 0.28,
      lead_time_days: {kind: triangular, low: 2, mode: 3, high: 5},
      expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
-  - {id: L_S_DCS, origin: PLANT_S, destination: DC_S, mode: road, distance_km: 100, cost_per_unit: 0.15,
+  - {id: L_S_DCS, origin: PLANT_S, destination: DC_S, mode: road, distance_km: 252, cost_per_unit: 0.15,
      lead_time_days: {kind: triangular, low: 1, mode: 2, high: 4},
      expedite: {mode: express_road, lead_time_days: {kind: deterministic, value: 1}, cost_multiplier: 2.2}}
   # DCs → markets (delivery within the period; the lane carries cost and distance for CO2)
-  - {id: L_DCN_N1, origin: DC_N, destination: MKT_N1, mode: road, distance_km: 115, cost_per_unit: 0.20,
+  - {id: L_DCN_N1, origin: DC_N, destination: MKT_N1, mode: road, distance_km: 210, cost_per_unit: 0.20,
      lead_time_days: {kind: deterministic, value: 1}}
-  - {id: L_DCN_N2, origin: DC_N, destination: MKT_N2, mode: road, distance_km: 100, cost_per_unit: 0.18,
+  - {id: L_DCN_N2, origin: DC_N, destination: MKT_N2, mode: road, distance_km: 284, cost_per_unit: 0.18,
      lead_time_days: {kind: deterministic, value: 1}}
-  - {id: L_DCC_C1, origin: DC_C, destination: MKT_C1, mode: road, distance_km: 115, cost_per_unit: 0.20,
+  - {id: L_DCC_C1, origin: DC_C, destination: MKT_C1, mode: road, distance_km: 329, cost_per_unit: 0.20,
      lead_time_days: {kind: deterministic, value: 1}}
-  - {id: L_DCC_C2, origin: DC_C, destination: MKT_C2, mode: road, distance_km: 95, cost_per_unit: 0.18,
+  - {id: L_DCC_C2, origin: DC_C, destination: MKT_C2, mode: road, distance_km: 306, cost_per_unit: 0.18,
      lead_time_days: {kind: deterministic, value: 1}}
-  - {id: L_DCS_S1, origin: DC_S, destination: MKT_S1, mode: road, distance_km: 105, cost_per_unit: 0.19,
+  - {id: L_DCS_S1, origin: DC_S, destination: MKT_S1, mode: road, distance_km: 106, cost_per_unit: 0.19,
      lead_time_days: {kind: deterministic, value: 1}}
-  - {id: L_DCS_S2, origin: DC_S, destination: MKT_S2, mode: road, distance_km: 85, cost_per_unit: 0.16,
+  - {id: L_DCS_S2, origin: DC_S, destination: MKT_S2, mode: road, distance_km: 105, cost_per_unit: 0.16,
      lead_time_days: {kind: deterministic, value: 1}}
 
 # kg CO2e per tonne-km

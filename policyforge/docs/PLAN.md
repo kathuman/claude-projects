@@ -183,7 +183,7 @@ It exports to Markdown; PDF follows with the frontend (P7).
 - a regression test locks the incumbent's default-suite KPIs at a fixed seed;
 - unit tests for every metric, the constitution check, the verdict rules, CVaR and regret.
 
-## Phase 5b: Network Studio (added 2026-11-20 at the user's request, D032)
+## Phase 5b: Network Studio (added 2026-11-20 at the user's request, D032; done 2026-11-20, see STATUS.md)
 
 A visual editor for creating and maintaining networks, in the spirit of Tierwise's Network Studio: rebuilt for
 PolicyForge's model and its React + TypeScript frontend, reusing Tierwise's proven patterns, not its code. It comes

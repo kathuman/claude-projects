@@ -16,12 +16,13 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.5.0</span>
+      <span class="ver">v0.6.0</span>
       <span class="sub">tutorial</span>
     </div>
     <nav class="actions">
       <a class="back-link" href="./">About</a>
       <a class="back-link" href="tutorial.html" aria-current="page">Tutorial</a>
+      <a class="back-link" href="frontend/dist/index.html">Network Studio</a>
       <a class="back-link" href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a>
       <button class="back-link" id="theme" type="button" aria-label="Toggle colour theme">◐</button>
       <a class="back-link" href="../">← Projects</a>
@@ -37,7 +38,7 @@
       <a href="#s4">4 Pick the futures</a><a href="#s5">5 Run it</a><a href="#s6">6 Read the result</a><a href="#s7">7 Get the verdict</a><a href="#s8">8 Try it yourself</a>
     </nav>
 
-    <div class="note"><p><b>Where things stand.</b> PolicyForge has no web interface yet. In this tutorial you write the rule yourself, in Python, exactly as the compiler produces it from plain language. To see the compiler at work, run <code>python -m examples.compile_intent</code>: it compiles this tutorial's intent offline from a recorded answer, or any intent live with <code>--live</code> and an Anthropic API key.</p></div>
+    <div class="note"><p><b>Where things stand.</b> PolicyForge's first screen, the <a href="frontend/dist/index.html">Network Studio</a>, builds and checks networks; the screens for writing and testing policies come in P7. In this tutorial you write the rule yourself, in Python, exactly as the compiler produces it from plain language. To see the compiler at work, run <code>python -m examples.compile_intent</code>: it compiles this tutorial's intent offline from a recorded answer, or any intent live with <code>--live</code> and an Anthropic API key.</p></div>
 
     <section class="panel" id="s1">
       <h2>1 · Set up</h2>
@@ -47,7 +48,7 @@ cd claude-projects/policyforge/backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
 .venv/bin/python -m pytest -q          <span class="c"># Windows: .venv\Scripts\python</span></pre>
-      <p>You should see 136 tests pass in about a minute. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
+      <p>You should see 160 tests pass in two or three minutes. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
     </section>
 
     <section class="panel" id="s2">
@@ -63,6 +64,7 @@ uv pip install --python .venv -e ".[dev]"
       </table></div>
       <p class="caption">Cost is a multiplier on each SKU's unit cost. Fill rate is the share of each order actually shipped; the rest is never delivered.</p>
       <p>Two plants make 10 SKUs. Two of them are chilled, with a shelf life of 21 and 28 days. Total demand is about 8,350 units a week. Normally the plants buy from A and B. C has no regular volume: it is the backup. <a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/backend/data/foodnet/README.md">The FoodNet README</a> explains every field.</p>
+      <p>To see it, open the <a href="frontend/dist/index.html">Network Studio</a>, which starts on FoodNet. The diagram shows how material flows, the map shows where everything is, and the tables hold every number. Click any node or lane to see its fields with their units and bounds.</p>
 <pre><span class="c"># in a Python shell, from backend/</span>
 from core.domain.network import load_foodnet
 net = load_foodnet()              <span class="c"># reads and validates data/foodnet/network.yaml</span>
@@ -200,12 +202,13 @@ candidate = simulate(lay, draws, compile_program(lay, candidate_policies))</pre>
         <li><b>Catch the slow supplier.</b> Wrap the switch in a <code>Composite</code> with a second <code>SourcingSwitch</code> triggered by <code>observed_lead_time</code> above 21 days. Does lead-time creep improve?</li>
         <li><b>Make the incumbent leaner.</b> Replace it with <code>background_policies(lay, dc_days=7, plant_days=21)</code>. Fill falls to about 69 % even in normal times. 21 days at a plant does not even cover Supplier A's 21–24-day lead time plus a week of review, so the plant keeps running out and a backlog builds. Backlog is served first, so new demand waits. The order-up-to level has to exceed demand over the lead time, with room to spare.</li>
         <li><b>Add an expedite trigger</b> on the DCs: <code>ExpediteTrigger(condition=CoverageBelow(days=3), mode="express_road", cost_cap_per_period=4000)</code>. How much of the shock's damage does expediting buy back, and at what cost? Run the report and check whether the €20,000-a-month expedite budget holds.</li>
+        <li><b>Break FoodNet in the Studio.</b> Start the API (<code>.venv/bin/python -m uvicorn api.app:app</code> in <code>backend/</code>) and open <code>http://127.0.0.1:8000/app/</code>. Run the quick test, then set Supplier B's capacity to 2,000 and run it again, with the diagram coloured by fill rate. Which markets suffer first, and why those? The Health tab shows the supplier now overloaded. Undo (Ctrl+Z) restores FoodNet exactly.</li>
         <li><b>Delay the information.</b> The <code>bullwhip</code> scenario delays what the agents see by two weeks and adds noise. Then try <code>SimConfig(own_orders_known=False)</code>, where an agent forgets even its own recent orders. That is the classic beer-game instability, with order swings many times those of demand.</li>
       </ol>
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.5.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.6.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

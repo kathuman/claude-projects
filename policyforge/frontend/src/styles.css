@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* The AI Projects blueprint look (policyforge/assets/site.css), as Tailwind theme tokens. */
+@theme {
+  --color-bg: var(--pf-bg);
+  --color-panel: var(--pf-panel);
+  --color-panel-2: var(--pf-panel-2);
+  --color-line: var(--pf-line);
+  --color-line-soft: var(--pf-line-soft);
+  --color-ink: var(--pf-ink);
+  --color-ink-dim: var(--pf-ink-dim);
+  --color-ink-faint: var(--pf-ink-faint);
+  --color-accent: var(--pf-accent);
+  --color-accent-ink: var(--pf-accent-ink);
+  --color-ok: var(--pf-ok);
+  --color-warn: var(--pf-warn);
+  --color-bad: var(--pf-bad);
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-head: "Rajdhani", "Arial Narrow", sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  --pf-bg: #0a2f52; --pf-panel: #0d3a63; --pf-panel-2: #082444; --pf-line: #2a5580; --pf-line-soft: #1d4470;
+  --pf-ink: #bfe4ff; --pf-ink-dim: #8fd0f2; --pf-ink-faint: #6fa8c9; --pf-accent: #7dd3fc; --pf-accent-ink: #04202b;
+  --pf-ok: #7ee2a8; --pf-warn: #ffd27a; --pf-bad: #f87171;
+  --pf-land: #123f6b; --pf-sea: #082444;
+  --g-suppliers: #c4b5fd; --g-plants: #7dd3fc; --g-dcs: #7ee2a8; --g-markets: #ffd27a;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --pf-bg: #e9f1f8; --pf-panel: #ffffff; --pf-panel-2: #f3f8fc; --pf-line: #c3d7e8; --pf-line-soft: #dbe7f1;
+  --pf-ink: #0a2f52; --pf-ink-dim: #2d5677; --pf-ink-faint: #4f7495; --pf-accent: #0b6aa2; --pf-accent-ink: #ffffff;
+  --pf-ok: #17824a; --pf-warn: #9a6200; --pf-bad: #c62828;
+  --pf-land: #d5e3ef; --pf-sea: #f3f8fc;
+  --g-suppliers: #6d28d9; --g-plants: #0b6aa2; --g-dcs: #17824a; --g-markets: #9a6200;
+  color-scheme: light;
+}
+
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--pf-bg); color: var(--pf-ink); font-family: var(--font-body); font-size: 14px; }
+
+.btn { font-family: var(--font-head); font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--pf-ink-dim); padding: 5px 10px; border: 1px solid var(--pf-line); border-radius: 6px; background: transparent;
+  cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled), .btn[aria-pressed="true"] { color: var(--pf-accent); border-color: var(--pf-accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn-primary { background: var(--pf-accent); color: var(--pf-accent-ink); border-color: var(--pf-accent); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); color: var(--pf-accent-ink); }
+.inp { background: var(--pf-panel-2); color: var(--pf-ink); border: 1px solid var(--pf-line); border-radius: 5px;
+  padding: 3px 6px; font: 13px var(--font-mono); min-width: 0; }
+.inp:focus { outline: 1px solid var(--pf-accent); border-color: var(--pf-accent); }
+.inp.bad { border-color: var(--pf-bad); }
+.lbl { font-family: var(--font-head); font-weight: 600; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--pf-ink-faint); }
+.mono { font-family: var(--font-mono); }
+.err { color: var(--pf-bad); font-size: 12px; }
+.grid-cell { border-bottom: 1px solid var(--pf-line-soft); border-right: 1px solid var(--pf-line-soft); }
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: var(--pf-line); border-radius: 4px; }
+svg text { user-select: none; }

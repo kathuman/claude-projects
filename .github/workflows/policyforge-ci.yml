@@ -1,8 +1,9 @@
 name: PolicyForge tests
 
-# The domain models and the simulator: round trips, bounds, conservation (Hypothesis), reproducibility, common random
-# numbers, the analytical fill rate, the 1,000 × 104 performance budget, and the tutorial's example. Lint with ruff,
-# type-check core/ with mypy --strict, and require 80 % coverage on core/.
+# Backend: the domain models, simulator, evaluation, compiler, registry and API. Lint with ruff, type-check with
+# mypy --strict, require 80 % coverage, and check the exported JSON Schemas match the models (the Studio reads them).
+# Studio: TypeScript strict, Vitest over the shared broken-network fixtures, the build, and Playwright end to end
+# against the real API (FoodNet rebuilt from scratch, errors in place, undo/redo, versions, scenarios).
 on:
   push:
     paths:
@@ -30,3 +31,31 @@ jobs:
       - run: ruff check core api tests examples
       - run: mypy
       - run: python -m pytest -o addopts="" -q --cov=core --cov=api --cov-report=term --cov-fail-under=80
+      - name: Exported schemas are up to date
+        run: python -m core.domain.schema_export && git diff --exit-code -- schemas data ../docs/DSL_REFERENCE.md
+
+  studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: policyforge/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: policyforge/frontend/package-lock.json
+      - run: pip install -e ".[dev]"
+        working-directory: policyforge/backend
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npx vitest run
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+        env:
+          PF_PYTHON: python
