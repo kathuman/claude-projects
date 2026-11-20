@@ -307,3 +307,53 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   - `Location` gets optional `lat` / `lon`.
   - Networks become versioned registry objects in P5, so P5's design must cover them.
   - Plan: `docs/PLAN.md`, section "Phase 5b".
+
+## D033: Structured outputs, not tool calls, carry the compiled policy (P4)
+- **Context:** the brief asks for "structured output or tool calls with schema validation". On the current models
+  (Claude Opus 5.5 by default), forced tool choice returns a 400, so a tool call cannot be guaranteed.
+- **Choice:** the compile call uses structured outputs (`output_config.format`) with the JSON Schema of
+  `CompileOutput`. That schema can't carry numeric bounds, string lengths, patterns or array lengths, and wants
+  `anyOf` rather than `oneOf`, so `core/llm/schema.py` adapts it. The dropped constraints are re-checked by Pydantic
+  when the answer comes back, so every bound still binds. A test checks the schema has nothing the API would
+  reject.
+
+## D034: The model writes a mandate term, not dates (P4)
+- **Choice:** `CompileOutput.mandate` has `term_days` (1–366, default 90). The compiler sets `valid_from` to the
+  compile time and `expires_at` to `valid_from + term`.
+- **Rationale:** models are unreliable with "now", and a policy's dates must come from the system that records
+  it.
+
+## D035: Errors retry, warnings inform (P4)
+- **Choice:** the deterministic validator (`core/validate/policy.py`) separates issues into two kinds:
+  - **errors** (wrong ids, empty scope, a constitution mismatch, an unreachable secondary supplier) are sent back to
+    the model, with at most two retries as the brief says;
+  - **warnings** (cover below the replenishment time, an expedite cap that can exceed the monthly budget, a shift
+    beyond the mandate, an expedite mode the lanes don't offer) go to the person signing off and do not block.
+- **Calibration:** "below the replenishment time" uses the lead time in whole weeks, as the simulator applies it
+  (D012), plus extra review weeks. It flags 21 days at the South plant (needs about 24) and 12 days with a
+  fortnightly review (needs 14), and passes the incumbent's 10 days at DCs. Simulation agrees on all three.
+
+## D036: Refusal fallbacks on by default (P4)
+- **Choice:** `AnthropicProvider` sends `fallbacks: "default"` with beta `server-side-fallback-2026-07-01`. If the
+  model declines a request, the API re-runs it on a fallback model within the same call. A request that is still
+  declined raises `LLMRefusalError`. Fallbacks can be turned off (`AnthropicProvider(fallbacks=False)`).
+- **Rationale:** recommended for current models. Compiling supply chain policies should never be declined, but if
+  a classifier misfires, the user gets an answer rather than an error.
+
+## D037: Golden intents are hand-authored recordings (P4)
+- **Context:** no Anthropic credentials were available while building P4.
+- **Choice:** the 20 golden intents' model answers were written by hand, in the shape the model must return, and
+  replayed by the mock provider. They exercise every rule type, mandates on their own, assumptions with both
+  sources, clarifying questions, warnings, and one out-of-vocabulary intent whose first answer is invalid, which
+  exercises the retry.
+- **Consequence:** the tests prove the compiler pipeline (parse, schema, build, validate, retry, back-translate,
+  provenance), not the model's judgement. Once a key is set, `python -m examples.compile_intent --live "..."`
+  compiles with Claude. Re-recording the fixtures from live answers, and reviewing them, would give an eval of the
+  model itself.
+
+## D038: The report narrative may cite only the report's numbers (P4)
+- **Choice:** `core/llm/narrative.py` gives the model a compact view of the report: verdict, reasons, comparisons,
+  breach shares, and key metrics per scenario and policy. Every number in its answer must match a value in that
+  view, in one of its displayed forms (as written, rounded to 0–3 decimals, or as a percentage with 0–2 decimals).
+  If any number fails, the model is asked once more with the offending numbers named. If it still invents one, no
+  summary is shown.

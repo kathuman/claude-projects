@@ -1,0 +1,157 @@
+{
+  "id": "11-ambient-10d-escalate-backorders",
+  "intent": "Keep 10 days of cover on ambient SKUs at DCs; the agent may change orders by up to 20% without asking and must escalate to me if backorders at any DC exceed 2,000 units.",
+  "responses": [
+    {
+      "name": "Ambient cover with a backorder alarm",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [
+          "ambient"
+        ],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "base_stock",
+        "target": {
+          "unit": "days_of_cover",
+          "value": 10
+        },
+        "review_period": 1
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [
+          {
+            "kind": "order_qty_change_pct",
+            "value": 20
+          }
+        ],
+        "escalation": [
+          {
+            "trigger": {
+              "kind": "limit_breach",
+              "limit": "order_qty_change_pct"
+            },
+            "severity": "medium",
+            "escalate_to": "owner",
+            "note": ""
+          },
+          {
+            "trigger": {
+              "kind": "condition",
+              "condition": {
+                "var": {
+                  "var": "backorders",
+                  "supplier": null,
+                  "node": "DC_N",
+                  "sku": null
+                },
+                "op": "gt",
+                "threshold": 2000,
+                "for_periods": 1
+              }
+            },
+            "severity": "high",
+            "escalate_to": "owner",
+            "note": ""
+          },
+          {
+            "trigger": {
+              "kind": "condition",
+              "condition": {
+                "var": {
+                  "var": "backorders",
+                  "supplier": null,
+                  "node": "DC_C",
+                  "sku": null
+                },
+                "op": "gt",
+                "threshold": 2000,
+                "for_periods": 1
+              }
+            },
+            "severity": "high",
+            "escalate_to": "owner",
+            "note": ""
+          },
+          {
+            "trigger": {
+              "kind": "condition",
+              "condition": {
+                "var": {
+                  "var": "backorders",
+                  "supplier": null,
+                  "node": "DC_S",
+                  "sku": null
+                },
+                "op": "gt",
+                "threshold": 2000,
+                "for_periods": 1
+              }
+            },
+            "severity": "high",
+            "escalate_to": "owner",
+            "note": ""
+          }
+        ],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At every DC, order ambient SKUs up to 10 days of cover each week. Orders may change by up to 20% without asking; backorders above 2,000 units at any DC are escalated to you.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "Each week the agent orders ambient products at every DC up to 10 days of cover. It may change an order by up to 20% on its own, and alerts the planning manager whenever a DC has more than 2,000 units on backorder.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [
+        "ambient"
+      ],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "base_stock",
+      "target": {
+        "unit": "days_of_cover",
+        "value": 10
+      },
+      "review_period": 1
+    },
+    "autonomy": [
+      {
+        "kind": "order_qty_change_pct",
+        "value": 20
+      }
+    ],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

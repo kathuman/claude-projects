@@ -14,6 +14,7 @@ dependencies = [
   "scipy>=1.12",
   "pyomo>=6.7",
   "highspy>=1.7",
+  "anthropic>=2.0",
 ]
 
 [project.optional-dependencies]

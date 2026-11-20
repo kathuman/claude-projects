@@ -1,0 +1,76 @@
+{
+  "id": "18-south-plant-dc-order",
+  "intent": "During shortages, serve DCs from the South plant in this order: South DC, Central DC, North DC.",
+  "responses": [
+    {
+      "name": "South plant serves DCs by priority",
+      "scope": {
+        "nodes": [
+          "PLANT_S"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "allocation",
+        "method": "priority",
+        "priority": [
+          "DC_S",
+          "DC_C",
+          "DC_N"
+        ],
+        "reservation_pct": 0
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "allocation-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At the South plant, when stock is short, fill the South DC's orders first, then the Central DC's, then the North DC's.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "When the South plant cannot ship everything, the agent fills the South DC first, then the Central DC, then the North DC.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "PLANT_S"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "allocation",
+      "method": "priority",
+      "priority": [
+        "DC_S",
+        "DC_C",
+        "DC_N"
+      ],
+      "reservation_pct": 0
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "id": "10-central-proportional",
+  "intent": "Share scarce stock at the Central DC in proportion to each market's normal demand, keeping 10% back for Central 1.",
+  "responses": [
+    {
+      "name": "Proportional allocation at the Central DC",
+      "scope": {
+        "nodes": [
+          "DC_C"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "allocation",
+        "method": "proportional_to_demand",
+        "priority": [
+          "MKT_C1"
+        ],
+        "reservation_pct": 10
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "allocation-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At the Central DC, when stock is short, hold 10% back for Central 1 and share the rest in proportion to each market's normal demand.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "When the Central DC is short, the agent keeps 10% of the stock for Central 1 and shares the rest between Central 1 and Central 2 in proportion to their usual demand.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_C"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "allocation",
+      "method": "proportional_to_demand",
+      "priority": [
+        "MKT_C1"
+      ],
+      "reservation_pct": 10
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

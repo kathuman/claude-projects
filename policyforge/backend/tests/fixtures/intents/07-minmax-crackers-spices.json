@@ -1,0 +1,88 @@
+{
+  "id": "07-minmax-crackers-spices",
+  "intent": "Use a min-max rule at the DCs for crackers and spice mix: reorder when cover drops to 5 days, fill up to 15 days.",
+  "responses": [
+    {
+      "name": "Min-max for crackers and spice mix",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [
+          "S08",
+          "S09"
+        ],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "min_max",
+        "reorder_point": {
+          "unit": "days_of_cover",
+          "value": 5
+        },
+        "order_up_to": {
+          "unit": "days_of_cover",
+          "value": 15
+        }
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At every DC, for crackers and spice mix: when cover falls to 5 days or less, order up to 15 days.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "For crackers and spice mix at every DC, the agent reorders whenever stock covers 5 days or less, bringing it back up to 15 days.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [
+        "S08",
+        "S09"
+      ],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "min_max",
+      "reorder_point": {
+        "unit": "days_of_cover",
+        "value": 5
+      },
+      "order_up_to": {
+        "unit": "days_of_cover",
+        "value": 15
+      }
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

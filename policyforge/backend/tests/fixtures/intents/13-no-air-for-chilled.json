@@ -1,0 +1,98 @@
+{
+  "id": "13-no-air-for-chilled",
+  "intent": "Never expedite chilled products by air.",
+  "responses": [
+    {
+      "name": "Chilled products: road expediting only",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [
+          "chilled"
+        ],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "expedite",
+        "condition": {
+          "kind": "coverage_below",
+          "days": 3
+        },
+        "mode": "express_road",
+        "cost_cap_per_period": 2000
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "expedite-agent-01",
+        "autonomy": [
+          {
+            "kind": "expedite_spend_per_period",
+            "value": 2000
+          }
+        ],
+        "escalation": [],
+        "prohibited_actions": [
+          "expedite_by_air"
+        ],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [
+        "When should chilled products be expedited at all? I assumed: by express road when a DC holds less than 3 days of cover, up to EUR 2,000 a week."
+      ],
+      "interpretation_notes": "Chilled products are never expedited by air. When a DC holds less than 3 days of cover, they may be expedited by express road, up to EUR 2,000 a week.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.5,
+        "mandate": 0.9,
+        "assumptions": 0.9
+      }
+    }
+  ],
+  "back_translation": "The agent may never expedite chilled products by air. When a DC has less than 3 days of chilled stock, it may send them by express road, spending up to EUR 2,000 a week.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [
+        "chilled"
+      ],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "expedite",
+      "condition": {
+        "kind": "coverage_below",
+        "days": 3
+      },
+      "mode": "express_road",
+      "cost_cap_per_period": 2000
+    },
+    "autonomy": [
+      {
+        "kind": "expedite_spend_per_period",
+        "value": 2000
+      }
+    ],
+    "prohibited_actions": [
+      "expedite_by_air"
+    ],
+    "assumptions": 0,
+    "questions": 1,
+    "attempts": 1
+  }
+}

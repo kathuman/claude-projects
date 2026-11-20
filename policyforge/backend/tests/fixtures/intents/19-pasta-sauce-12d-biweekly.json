@@ -1,0 +1,82 @@
+{
+  "id": "19-pasta-sauce-12d-biweekly",
+  "intent": "Order up to 12 days of cover on dry pasta and tomato sauce at all DCs, reviewing every two weeks.",
+  "responses": [
+    {
+      "name": "Pasta and sauce, fortnightly review",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [
+          "S03",
+          "S04"
+        ],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "base_stock",
+        "target": {
+          "unit": "days_of_cover",
+          "value": 12
+        },
+        "review_period": 2
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At every DC, every two weeks, order dry pasta and tomato sauce up to 12 days of cover.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "Every two weeks the agent orders dry pasta and tomato sauce at every DC up to 12 days of expected demand.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [
+        "S03",
+        "S04"
+      ],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "base_stock",
+      "target": {
+        "unit": "days_of_cover",
+        "value": 12
+      },
+      "review_period": 2
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

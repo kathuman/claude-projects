@@ -1,0 +1,146 @@
+{
+  "id": "01-chilled-cover-expedite-budget",
+  "intent": "Keep two weeks of cover on chilled SKUs at all DCs, but never let expedite costs go over €20k a month.",
+  "responses": [
+    {
+      "name": "Chilled cover with an expedite budget",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [
+          "chilled"
+        ],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "composite",
+        "rules": [
+          {
+            "type": "base_stock",
+            "target": {
+              "unit": "days_of_cover",
+              "value": 14
+            },
+            "review_period": 1
+          },
+          {
+            "type": "expedite",
+            "condition": {
+              "kind": "projected_stockout",
+              "within_periods": 1
+            },
+            "mode": "express_road",
+            "cost_cap_per_period": 4600
+          }
+        ]
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [
+          {
+            "kind": "expedite_spend_per_period",
+            "value": 4600
+          }
+        ],
+        "escalation": [
+          {
+            "trigger": {
+              "kind": "limit_breach",
+              "limit": "expedite_spend_per_period"
+            },
+            "severity": "high",
+            "escalate_to": "owner",
+            "note": "Monthly expedite budget of EUR 20,000"
+          }
+        ],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [
+        {
+          "id": "chilled-demand-stable",
+          "statement": "Chilled demand stays near its normal level",
+          "variable": {
+            "var": "demand",
+            "supplier": null,
+            "node": null,
+            "sku": null
+          },
+          "operator": "le",
+          "threshold": 2400,
+          "distribution": null,
+          "source": "compiler_inferred",
+          "confidence": 0.5
+        }
+      ],
+      "clarifying_questions": [
+        "You set a budget but not when to expedite. Should the agent expedite only when a DC is projected to run out within a week (my default), or earlier?"
+      ],
+      "interpretation_notes": "At every DC, order chilled SKUs up to 14 days of cover each week. When a DC is projected to run out within one week, expedite by express road, spending at most EUR 4,600 a week (EUR 20,000 a month).",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "Each week the agent orders chilled products at every DC up to 14 days of expected demand. If a DC is projected to run out within a week, it ships by express road, spending no more than EUR 4,600 a week. The agent may spend up to EUR 4,600 a week on expediting by itself and must escalate anything beyond that to the planning manager.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [
+        "chilled"
+      ],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "composite",
+      "rules": [
+        {
+          "type": "base_stock",
+          "target": {
+            "unit": "days_of_cover",
+            "value": 14
+          },
+          "review_period": 1
+        },
+        {
+          "type": "expedite",
+          "condition": {
+            "kind": "projected_stockout",
+            "within_periods": 1
+          },
+          "mode": "express_road",
+          "cost_cap_per_period": 4600
+        }
+      ]
+    },
+    "autonomy": [
+      {
+        "kind": "expedite_spend_per_period",
+        "value": 4600
+      }
+    ],
+    "prohibited_actions": [],
+    "assumptions": 1,
+    "questions": 1,
+    "attempts": 1
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "id": "06-class-a-plants-3w",
+  "intent": "Order up to 3 weeks of cover for class A SKUs at the plants, reviewed every week.",
+  "responses": [
+    {
+      "name": "Three weeks of cover for class A at the plants",
+      "scope": {
+        "nodes": [
+          "PLANT_N",
+          "PLANT_S"
+        ],
+        "skus": [],
+        "sku_classes": [
+          "A"
+        ],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "base_stock",
+        "target": {
+          "unit": "days_of_cover",
+          "value": 21
+        },
+        "review_period": 1
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At both plants, each week, order class A SKUs up to 21 days of cover.",
+      "confidence": {
+        "scope": 0.95,
+        "rule": 0.95,
+        "mandate": 0.8,
+        "assumptions": 0.9
+      }
+    }
+  ],
+  "back_translation": "Every week the agent orders class A products at both plants up to 21 days of expected demand.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "PLANT_N",
+        "PLANT_S"
+      ],
+      "skus": [],
+      "sku_classes": [
+        "A"
+      ],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "base_stock",
+      "target": {
+        "unit": "days_of_cover",
+        "value": 21
+      },
+      "review_period": 1
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "id": "02-b-misses-switch-to-c",
+  "intent": "If Supplier B misses more than 10% of orders for three weeks running, move volume to Supplier C, and don't switch back for at least a month.",
+  "responses": [
+    {
+      "name": "Move volume from B to C when B under-delivers",
+      "scope": {
+        "nodes": [],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "sourcing_switch",
+        "primary": "SUP_B",
+        "secondary": "SUP_C",
+        "trigger": {
+          "var": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "op": "lt",
+          "threshold": 0.9,
+          "for_periods": 3
+        },
+        "shift_fraction": 1.0,
+        "switch_back": {
+          "var": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "op": "ge",
+          "threshold": 0.9,
+          "for_periods": 2
+        },
+        "min_dwell_periods": 4
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "sourcing-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [
+        {
+          "id": "c-capacity",
+          "statement": "Supplier C can absorb Supplier B's volume",
+          "variable": {
+            "var": "supplier_capacity",
+            "supplier": "SUP_C",
+            "node": null,
+            "sku": null
+          },
+          "operator": "ge",
+          "threshold": 4600,
+          "distribution": null,
+          "source": "compiler_inferred",
+          "confidence": 0.3
+        },
+        {
+          "id": "b-fill-normal",
+          "statement": "Supplier B normally ships at least 90% of what is ordered",
+          "variable": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "operator": "ge",
+          "threshold": 0.9,
+          "distribution": null,
+          "source": "user_stated",
+          "confidence": 0.7
+        }
+      ],
+      "clarifying_questions": [
+        "How much of Supplier B's volume should move to C? I assumed all of it, but Supplier C can supply only 2,000 units a week."
+      ],
+      "interpretation_notes": "When Supplier B ships less than 90% of what is ordered for three weeks in a row, move all of B's volume to Supplier C. Stay with C for at least four weeks, then move back once B ships 90% or more for two weeks.",
+      "confidence": {
+        "scope": 0.8,
+        "rule": 0.85,
+        "mandate": 0.7,
+        "assumptions": 0.5
+      }
+    }
+  ],
+  "back_translation": "If Supplier B delivers less than 90% of its orders for three consecutive weeks, the agent moves all of B's volume to Supplier C, stays there for at least four weeks, and returns once B delivers at least 90% for two weeks running.",
+  "expected": {
+    "scope": {
+      "nodes": [],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "sourcing_switch",
+      "primary": "SUP_B",
+      "secondary": "SUP_C",
+      "trigger": {
+        "var": {
+          "var": "supplier_fill_rate",
+          "supplier": "SUP_B",
+          "node": null,
+          "sku": null
+        },
+        "op": "lt",
+        "threshold": 0.9,
+        "for_periods": 3
+      },
+      "shift_fraction": 1.0,
+      "switch_back": {
+        "var": {
+          "var": "supplier_fill_rate",
+          "supplier": "SUP_B",
+          "node": null,
+          "sku": null
+        },
+        "op": "ge",
+        "threshold": 0.9,
+        "for_periods": 2
+      },
+      "min_dwell_periods": 4
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 2,
+    "questions": 1,
+    "attempts": 1
+  }
+}

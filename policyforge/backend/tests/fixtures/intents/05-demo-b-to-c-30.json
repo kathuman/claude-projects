@@ -1,0 +1,192 @@
+{
+  "id": "05-demo-b-to-c-30",
+  "intent": "If Supplier B misses more than 10% of orders for three weeks running, shift ambient volume to Supplier C, don't switch back for a month, and the sourcing agent can do this alone up to 30% of volume—beyond that, ask me.",
+  "responses": [
+    {
+      "name": "Shift ambient volume from B to C",
+      "scope": {
+        "nodes": [],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [
+          "ambient"
+        ],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "composite",
+        "rules": [
+          {
+            "type": "sourcing_switch",
+            "primary": "SUP_B",
+            "secondary": "SUP_C",
+            "trigger": {
+              "var": {
+                "var": "supplier_fill_rate",
+                "supplier": "SUP_B",
+                "node": null,
+                "sku": null
+              },
+              "op": "lt",
+              "threshold": 0.9,
+              "for_periods": 3
+            },
+            "shift_fraction": 0.3,
+            "switch_back": {
+              "var": {
+                "var": "supplier_fill_rate",
+                "supplier": "SUP_B",
+                "node": null,
+                "sku": null
+              },
+              "op": "ge",
+              "threshold": 0.9,
+              "for_periods": 2
+            },
+            "min_dwell_periods": 4
+          }
+        ]
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "sourcing-agent-01",
+        "autonomy": [
+          {
+            "kind": "volume_shift_pct",
+            "value": 30
+          }
+        ],
+        "escalation": [
+          {
+            "trigger": {
+              "kind": "limit_breach",
+              "limit": "volume_shift_pct"
+            },
+            "severity": "high",
+            "escalate_to": "owner",
+            "note": "Shifting more than 30% of volume needs approval"
+          }
+        ],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [
+        {
+          "id": "c-spare-capacity",
+          "statement": "Supplier C has spare capacity of at least 30% of B's ambient volume",
+          "variable": {
+            "var": "supplier_capacity",
+            "supplier": "SUP_C",
+            "node": null,
+            "sku": null
+          },
+          "operator": "ge",
+          "threshold": 1100,
+          "distribution": null,
+          "source": "compiler_inferred",
+          "confidence": 0.6
+        },
+        {
+          "id": "c-lead-time",
+          "statement": "Supplier C's lead time stays under a week",
+          "variable": {
+            "var": "lead_time",
+            "supplier": "SUP_C",
+            "node": null,
+            "sku": null
+          },
+          "operator": "lt",
+          "threshold": 7,
+          "distribution": null,
+          "source": "compiler_inferred",
+          "confidence": 0.7
+        },
+        {
+          "id": "b-recovers",
+          "statement": "Supplier B returns to shipping at least 90% of orders",
+          "variable": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "operator": "ge",
+          "threshold": 0.9,
+          "distribution": null,
+          "source": "user_stated",
+          "confidence": 0.6
+        }
+      ],
+      "clarifying_questions": [
+        "Should the agent ask you before going above 30%, or never go above 30% at all?"
+      ],
+      "interpretation_notes": "When Supplier B ships less than 90% of ambient orders for three weeks running, move 30% of B's ambient volume to Supplier C. Stay for at least four weeks, and move back once B ships 90% or more for two weeks. Moving more than 30% needs your approval.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "If Supplier B delivers less than 90% of its orders for three weeks in a row, the agent moves 30% of B's ambient volume to Supplier C, keeps it there for at least four weeks, and moves it back once B delivers 90% or more for two weeks. The agent may shift up to 30% of volume itself; anything more must go to the planning manager.",
+  "expected": {
+    "scope": {
+      "nodes": [],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [
+        "ambient"
+      ],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "composite",
+      "rules": [
+        {
+          "type": "sourcing_switch",
+          "primary": "SUP_B",
+          "secondary": "SUP_C",
+          "trigger": {
+            "var": {
+              "var": "supplier_fill_rate",
+              "supplier": "SUP_B",
+              "node": null,
+              "sku": null
+            },
+            "op": "lt",
+            "threshold": 0.9,
+            "for_periods": 3
+          },
+          "shift_fraction": 0.3,
+          "switch_back": {
+            "var": {
+              "var": "supplier_fill_rate",
+              "supplier": "SUP_B",
+              "node": null,
+              "sku": null
+            },
+            "op": "ge",
+            "threshold": 0.9,
+            "for_periods": 2
+          },
+          "min_dwell_periods": 4
+        }
+      ]
+    },
+    "autonomy": [
+      {
+        "kind": "volume_shift_pct",
+        "value": 30
+      }
+    ],
+    "prohibited_actions": [],
+    "assumptions": 3,
+    "questions": 1,
+    "attempts": 1
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "03-protect-north",
+  "intent": "When supply is short, protect the North market first, then share the rest fairly.",
+  "responses": [
+    {
+      "name": "Protect the North market in shortages",
+      "scope": {
+        "nodes": [
+          "DC_N"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "allocation",
+        "method": "priority",
+        "priority": [
+          "MKT_N1",
+          "MKT_N2"
+        ],
+        "reservation_pct": 0
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "allocation-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [
+        "Both North markets are served by the North DC. Should North 1 come before North 2, or should they share equally before anyone else?"
+      ],
+      "interpretation_notes": "At the North DC, when stock is short, serve North 1 in full, then North 2, then share what is left fairly.",
+      "confidence": {
+        "scope": 0.85,
+        "rule": 0.8,
+        "mandate": 0.9,
+        "assumptions": 0.9
+      }
+    }
+  ],
+  "back_translation": "When the North DC cannot cover every order, the agent fills North 1 first, then North 2, and splits anything left in proportion to the remaining orders.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "allocation",
+      "method": "priority",
+      "priority": [
+        "MKT_N1",
+        "MKT_N2"
+      ],
+      "reservation_pct": 0
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 1,
+    "attempts": 1
+  }
+}

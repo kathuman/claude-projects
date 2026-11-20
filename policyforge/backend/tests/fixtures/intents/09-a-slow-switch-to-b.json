@@ -1,0 +1,126 @@
+{
+  "id": "09-a-slow-switch-to-b",
+  "intent": "If Supplier A's lead time goes above 30 days for two weeks, move half of its volume to Supplier B and switch back once it's under 25 days for a month.",
+  "responses": [
+    {
+      "name": "Move half of A's volume to B when A is slow",
+      "scope": {
+        "nodes": [],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "sourcing_switch",
+        "primary": "SUP_A",
+        "secondary": "SUP_B",
+        "trigger": {
+          "var": {
+            "var": "observed_lead_time",
+            "supplier": "SUP_A",
+            "node": null,
+            "sku": null
+          },
+          "op": "gt",
+          "threshold": 30,
+          "for_periods": 2
+        },
+        "shift_fraction": 0.5,
+        "switch_back": {
+          "var": {
+            "var": "observed_lead_time",
+            "supplier": "SUP_A",
+            "node": null,
+            "sku": null
+          },
+          "op": "lt",
+          "threshold": 25,
+          "for_periods": 4
+        },
+        "min_dwell_periods": 0
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "sourcing-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [
+        {
+          "id": "b-headroom",
+          "statement": "Supplier B can take half of Supplier A's volume",
+          "variable": {
+            "var": "supplier_capacity",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "operator": "ge",
+          "threshold": 5000,
+          "distribution": null,
+          "source": "compiler_inferred",
+          "confidence": 0.5
+        }
+      ],
+      "clarifying_questions": [],
+      "interpretation_notes": "When Supplier A's observed lead time is above 30 days for two weeks, move half of A's volume to Supplier B; move it back once A's lead time is below 25 days for four weeks.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "When Supplier A takes more than 30 days to deliver for two weeks in a row, the agent moves half of A's volume to Supplier B, and moves it back once A delivers in under 25 days for four consecutive weeks.",
+  "expected": {
+    "scope": {
+      "nodes": [],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "sourcing_switch",
+      "primary": "SUP_A",
+      "secondary": "SUP_B",
+      "trigger": {
+        "var": {
+          "var": "observed_lead_time",
+          "supplier": "SUP_A",
+          "node": null,
+          "sku": null
+        },
+        "op": "gt",
+        "threshold": 30,
+        "for_periods": 2
+      },
+      "shift_fraction": 0.5,
+      "switch_back": {
+        "var": {
+          "var": "observed_lead_time",
+          "supplier": "SUP_A",
+          "node": null,
+          "sku": null
+        },
+        "op": "lt",
+        "threshold": 25,
+        "for_periods": 4
+      },
+      "min_dwell_periods": 0
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 1,
+    "questions": 0,
+    "attempts": 1
+  }
+}

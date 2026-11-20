@@ -1,0 +1,98 @@
+{
+  "id": "04-order-change-mandate",
+  "intent": "The replenishment agent can adjust order quantities by up to 15% on its own; anything bigger needs my sign-off.",
+  "responses": [
+    {
+      "name": "Replenishment orders within a 15% band",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "base_stock",
+        "target": {
+          "unit": "days_of_cover",
+          "value": 10
+        },
+        "review_period": 1
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [
+          {
+            "kind": "order_qty_change_pct",
+            "value": 15
+          }
+        ],
+        "escalation": [
+          {
+            "trigger": {
+              "kind": "limit_breach",
+              "limit": "order_qty_change_pct"
+            },
+            "severity": "medium",
+            "escalate_to": "owner",
+            "note": "Order changes above 15% need sign-off"
+          }
+        ],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [
+        "Which rule should the agent run within this mandate? I kept the current one: 10 days of cover at every DC."
+      ],
+      "interpretation_notes": "Keep the current DC rule (order up to 10 days of cover each week). The agent may change an order by up to 15% against its previous order; a bigger change goes to you for sign-off.",
+      "confidence": {
+        "scope": 0.7,
+        "rule": 0.6,
+        "mandate": 0.95,
+        "assumptions": 0.9
+      }
+    }
+  ],
+  "back_translation": "The agent keeps ordering up to 10 days of cover at each DC every week. It may change any order by up to 15% compared with the previous one on its own; larger changes must be escalated to the planning manager.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "base_stock",
+      "target": {
+        "unit": "days_of_cover",
+        "value": 10
+      },
+      "review_period": 1
+    },
+    "autonomy": [
+      {
+        "kind": "order_qty_change_pct",
+        "value": 15
+      }
+    ],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 1,
+    "attempts": 1
+  }
+}

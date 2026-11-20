@@ -1,0 +1,78 @@
+{
+  "id": "16-central-7-14",
+  "intent": "Keep cover for all SKUs at the Central DC between 7 and 14 days.",
+  "responses": [
+    {
+      "name": "Central DC between 7 and 14 days of cover",
+      "scope": {
+        "nodes": [
+          "DC_C"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "min_max",
+        "reorder_point": {
+          "unit": "days_of_cover",
+          "value": 7
+        },
+        "order_up_to": {
+          "unit": "days_of_cover",
+          "value": 14
+        }
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At the Central DC, when any SKU's cover falls to 7 days or less, order it up to 14 days.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "At the Central DC the agent reorders any product whose stock covers 7 days or less, bringing it up to 14 days.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_C"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "min_max",
+      "reorder_point": {
+        "unit": "days_of_cover",
+        "value": 7
+      },
+      "order_up_to": {
+        "unit": "days_of_cover",
+        "value": 14
+      }
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

@@ -124,3 +124,42 @@ monitoring, frontend, packaging).
 - PDF export is not built yet: Markdown now, PDF with the frontend (P7).
 - The LLM narrative summary (brief §8.2) belongs with the compiler work (P4).
 - Results from P2 changed with D025 and D029. The tutorial and its test were updated.
+
+## Phase 4: LLM compiler. Done, acceptance met.
+
+**What works**
+- **Providers** (`core/llm/`):
+  - a provider-agnostic interface;
+  - an Anthropic provider (official SDK; model from `LLM_MODEL`, default `claude-opus-5-5`; structured outputs;
+    adaptive thinking with effort `high` to compile and `low` for prose; refusal fallbacks on by default; typed
+    errors);
+  - a deterministic mock that replays recorded answers.
+- **Compiler** (`core/llm/compiler.py`): intent → `CompileOutput`, then:
+  - parse, Pydantic validation and deterministic validation, with at most two retries;
+  - errors are passed back to the model, and every attempt is recorded;
+  - a `Policy` draft with provenance (model, prompt hash), clarifying questions, interpretation notes, confidence
+    per field, warnings, and a back-translation by a second call.
+
+  Answers to clarifying questions are passed back in.
+- **Prompts** (`core/llm/prompts.py`): a fixed system prompt explaining the DSL, units, vocabulary, scope,
+  mandates, and asking rather than guessing. The context gives the network, constitution, vocabulary and existing
+  policies. The prompt hash is SHA-256 of the template and the schema.
+- **Validator** (`core/validate/policy.py`): errors and warnings (D035).
+- **Narrative** (`core/llm/narrative.py`): an optional report summary that may cite only the report's numbers
+  (D038).
+- **Try it:** `python -m examples.compile_intent` (offline, the 20 recorded intents) or `--live "..."` with a key.
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| All 20 golden intents compile to the expected DSL with the mock | `test_golden_intent_compiles_to_the_expected_dsl` (×20: scope, rule, mandate limits and prohibitions, numbers of assumptions, questions and attempts, provenance, a valid draft, the back-translation, JSON round trip); the brief's demo intent: a composite with a sourcing switch, a 30 % mandate, three assumptions and one question |
+| References outside the vocabulary are rejected | by the schema (`competitor_price`, intent 20) and by the validator (unknown nodes, SKUs, suppliers, lanes, priorities, wrong node kinds) |
+| Failed validations retry with errors | intent 20 recovers on the second attempt, with the errors in the retry message; a policy that keeps failing raises after 3 attempts, all recorded |
+| Quality gates | 125 tests green; ruff clean; `mypy --strict` clean on `core/`; 96 % line coverage on `core/` |
+
+**Known limitations**
+- No live model calls were made while building (no credentials): the golden answers are hand-authored (D037). The
+  Anthropic provider is tested against a stand-in client (request shape, errors, refusal, truncation).
+- The narrative's number check is textual. A number written in words ("three scenarios") is not checked.
+- Mandate review triggers (links to monitors) are accepted but not used until P6.

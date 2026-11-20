@@ -1,0 +1,153 @@
+{
+  "id": "17-switch-twice-no-new-supplier",
+  "intent": "The sourcing agent may switch suppliers at most twice without asking me, and must never add a new supplier.",
+  "responses": [
+    {
+      "name": "Bounded supplier switching",
+      "scope": {
+        "nodes": [],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "sourcing_switch",
+        "primary": "SUP_B",
+        "secondary": "SUP_C",
+        "trigger": {
+          "var": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "op": "lt",
+          "threshold": 0.9,
+          "for_periods": 3
+        },
+        "shift_fraction": 0.5,
+        "switch_back": {
+          "var": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "op": "ge",
+          "threshold": 0.9,
+          "for_periods": 2
+        },
+        "min_dwell_periods": 4
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "sourcing-agent-01",
+        "autonomy": [
+          {
+            "kind": "consecutive_sourcing_switches",
+            "value": 2
+          }
+        ],
+        "escalation": [
+          {
+            "trigger": {
+              "kind": "limit_breach",
+              "limit": "consecutive_sourcing_switches"
+            },
+            "severity": "high",
+            "escalate_to": "owner",
+            "note": ""
+          }
+        ],
+        "prohibited_actions": [
+          "add_new_supplier"
+        ],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [
+        {
+          "id": "b-fill-trigger",
+          "statement": "A fill rate below 90% for three weeks is the right moment to switch",
+          "variable": {
+            "var": "supplier_fill_rate",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "operator": "lt",
+          "threshold": 0.9,
+          "distribution": null,
+          "source": "compiler_inferred",
+          "confidence": 0.3
+        }
+      ],
+      "clarifying_questions": [
+        "What should trigger a switch, and from which supplier to which? I assumed Supplier B to Supplier C when B ships less than 90% for three weeks.",
+        "How much volume should a switch move? I assumed half."
+      ],
+      "interpretation_notes": "When Supplier B ships less than 90% for three weeks, move half of its volume to Supplier C (both assumed). The agent may make at most two switches on its own and may never add a new supplier.",
+      "confidence": {
+        "scope": 0.6,
+        "rule": 0.4,
+        "mandate": 0.95,
+        "assumptions": 0.3
+      }
+    }
+  ],
+  "back_translation": "The agent moves half of Supplier B's volume to Supplier C when B delivers less than 90% for three weeks, and back when B recovers. It may switch at most twice on its own; further switches go to the planning manager. It may never add a new supplier.",
+  "expected": {
+    "scope": {
+      "nodes": [],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "sourcing_switch",
+      "primary": "SUP_B",
+      "secondary": "SUP_C",
+      "trigger": {
+        "var": {
+          "var": "supplier_fill_rate",
+          "supplier": "SUP_B",
+          "node": null,
+          "sku": null
+        },
+        "op": "lt",
+        "threshold": 0.9,
+        "for_periods": 3
+      },
+      "shift_fraction": 0.5,
+      "switch_back": {
+        "var": {
+          "var": "supplier_fill_rate",
+          "supplier": "SUP_B",
+          "node": null,
+          "sku": null
+        },
+        "op": "ge",
+        "threshold": 0.9,
+        "for_periods": 2
+      },
+      "min_dwell_periods": 4
+    },
+    "autonomy": [
+      {
+        "kind": "consecutive_sourcing_switches",
+        "value": 2
+      }
+    ],
+    "prohibited_actions": [
+      "add_new_supplier"
+    ],
+    "assumptions": 1,
+    "questions": 2,
+    "attempts": 1
+  }
+}

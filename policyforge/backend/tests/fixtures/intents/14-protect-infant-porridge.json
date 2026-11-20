@@ -1,0 +1,118 @@
+{
+  "id": "14-protect-infant-porridge",
+  "intent": "Protect infant porridge: keep 3 weeks of cover at every DC and expedite by road when cover falls below 5 days, up to €1,500 a week.",
+  "responses": [
+    {
+      "name": "Protect infant porridge",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [
+          "S10"
+        ],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "composite",
+        "rules": [
+          {
+            "type": "base_stock",
+            "target": {
+              "unit": "days_of_cover",
+              "value": 21
+            },
+            "review_period": 1
+          },
+          {
+            "type": "expedite",
+            "condition": {
+              "kind": "coverage_below",
+              "days": 5
+            },
+            "mode": "express_road",
+            "cost_cap_per_period": 1500
+          }
+        ]
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [
+          {
+            "kind": "expedite_spend_per_period",
+            "value": 1500
+          }
+        ],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At every DC, order infant porridge up to 21 days of cover each week; when cover falls below 5 days, expedite by express road, up to EUR 1,500 a week.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "The agent orders infant porridge at every DC up to 21 days of cover each week, and ships it by express road whenever a DC drops below 5 days, spending up to EUR 1,500 a week.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [
+        "S10"
+      ],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "composite",
+      "rules": [
+        {
+          "type": "base_stock",
+          "target": {
+            "unit": "days_of_cover",
+            "value": 21
+          },
+          "review_period": 1
+        },
+        {
+          "type": "expedite",
+          "condition": {
+            "kind": "coverage_below",
+            "days": 5
+          },
+          "mode": "express_road",
+          "cost_cap_per_period": 1500
+        }
+      ]
+    },
+    "autonomy": [
+      {
+        "kind": "expedite_spend_per_period",
+        "value": 1500
+      }
+    ],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

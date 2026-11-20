@@ -1,0 +1,76 @@
+{
+  "id": "12-olive-oil-south",
+  "intent": "Hold 4 weeks of cover for olive oil at the South plant.",
+  "responses": [
+    {
+      "name": "Four weeks of olive oil at the South plant",
+      "scope": {
+        "nodes": [
+          "PLANT_S"
+        ],
+        "skus": [
+          "S07"
+        ],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "base_stock",
+        "target": {
+          "unit": "days_of_cover",
+          "value": 28
+        },
+        "review_period": 1
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At the South plant, order olive oil up to 28 days of cover each week.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "Every week the agent orders olive oil at the South plant up to 28 days of expected demand.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "PLANT_S"
+      ],
+      "skus": [
+        "S07"
+      ],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "base_stock",
+      "target": {
+        "unit": "days_of_cover",
+        "value": 28
+      },
+      "review_period": 1
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "id": "15-b-slow-north-quarter",
+  "intent": "If Supplier B's lead time exceeds 21 days, shift a quarter of its volume at the North plant to Supplier C; switch back after two weeks below 18 days, staying switched at least 3 weeks.",
+  "responses": [
+    {
+      "name": "North plant: a quarter of B's volume to C when B is slow",
+      "scope": {
+        "nodes": [
+          "PLANT_N"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "sourcing_switch",
+        "primary": "SUP_B",
+        "secondary": "SUP_C",
+        "trigger": {
+          "var": {
+            "var": "observed_lead_time",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "op": "gt",
+          "threshold": 21,
+          "for_periods": 1
+        },
+        "shift_fraction": 0.25,
+        "switch_back": {
+          "var": {
+            "var": "observed_lead_time",
+            "supplier": "SUP_B",
+            "node": null,
+            "sku": null
+          },
+          "op": "lt",
+          "threshold": 18,
+          "for_periods": 2
+        },
+        "min_dwell_periods": 3
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "sourcing-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "At the North plant, when Supplier B's observed lead time exceeds 21 days, move a quarter of B's volume to Supplier C; return after two weeks below 18 days, and stay at least three weeks.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "At the North plant, as soon as Supplier B takes more than 21 days to deliver, the agent moves a quarter of B's volume to Supplier C, keeps it there for at least three weeks, and returns once B delivers in under 18 days for two weeks.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "PLANT_N"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "sourcing_switch",
+      "primary": "SUP_B",
+      "secondary": "SUP_C",
+      "trigger": {
+        "var": {
+          "var": "observed_lead_time",
+          "supplier": "SUP_B",
+          "node": null,
+          "sku": null
+        },
+        "op": "gt",
+        "threshold": 21,
+        "for_periods": 1
+      },
+      "shift_fraction": 0.25,
+      "switch_back": {
+        "var": {
+          "var": "observed_lead_time",
+          "supplier": "SUP_B",
+          "node": null,
+          "sku": null
+        },
+        "op": "lt",
+        "threshold": 18,
+        "for_periods": 2
+      },
+      "min_dwell_periods": 3
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

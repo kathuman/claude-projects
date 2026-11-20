@@ -248,3 +248,76 @@ TypeScript suites, so they cannot drift apart.
   fields.
 - **Scenario builder:** a scenario built there generates the same draws as the same scenario written in Python.
 - **End to end:** a browser test (Playwright) of build, check, quick test, save version, and build and run a scenario.
+
+## Phase 4: LLM compiler
+
+### Packages
+
+- **`core/llm/provider.py`:** the `LLMProvider` protocol, with one method, `generate(system, messages, schema,
+  purpose, trace_key)`, which returns text plus the model id and stop reason. Its errors are `LLMRefusal`,
+  `LLMTruncated` and `LLMError`.
+- **`core/llm/anthropic_provider.py`:** Claude through the official `anthropic` SDK. The model comes from `LLM_MODEL`
+  (default `claude-opus-5-5`).
+  - Structured outputs (`output_config.format`) carry the compile schema; forced tool choice is not available on
+    current models.
+  - Adaptive thinking; effort `high` to compile, `low` for prose.
+  - Server-side refusal fallbacks are on by default (`fallbacks: "default"`).
+  - SDK errors map to typed errors, most specific first.
+- **`core/llm/mock.py`:** a deterministic provider that replays fixtures, keyed by purpose and the intent plus
+  answers. A sequence of responses per key lets tests script a bad first answer.
+- **`core/llm/schema.py`:** turns a Pydantic model's JSON Schema into one structured outputs accept:
+  - `oneOf` becomes `anyOf`;
+  - numeric bounds, string lengths, patterns, array lengths, titles and defaults are dropped (Pydantic re-checks
+    them on the way back);
+  - every object gets `additionalProperties: false`.
+- **`core/llm/prompts.py`:** the system prompts (compile, back-translation, narrative) and the context builder:
+  - the network: nodes with ids, names and regions; SKUs; suppliers with their character; lanes;
+  - the active constitution, existing policies, and the vocabulary with units and bounds.
+  The **prompt hash** is SHA-256 of the compile prompt template plus the API schema.
+- **`core/llm/compiler.py`:** `compile_intent(intent, answers=…)`. The model returns a `CompileOutput`:
+  - `name`, `scope`, `rule`;
+  - a mandate draft with `term_days` instead of dates;
+  - `assumptions`, `clarifying_questions` (at most 3, only for material ambiguity), `interpretation_notes`;
+  - confidence for scope, rule, mandate and assumptions.
+
+  The compiler then:
+  1. parses the output;
+  2. validates the schema with Pydantic;
+  3. builds the `Policy` (draft, provenance with model and prompt hash);
+  4. runs the deterministic validator.
+
+  Errors go back to the model, **at most two retries**. Then a second call back-translates the DSL into plain
+  language for the side-by-side check.
+- **`core/llm/narrative.py`:** the optional report summary. Every number in it must appear in the report object,
+  checked by extracting the numbers and matching them against the report's values in their displayed forms. If any
+  number fails, it retries once with the offending numbers named.
+- **`core/validate/policy.py`:** the deterministic validator, giving issues with a severity (error or warning), a
+  path and a message.
+  - **References:** scope nodes, SKUs, suppliers and lanes; condition and assumption variables; allocation
+    priorities; sourcing suppliers and lanes.
+  - **Scope:** it covers something the rule acts on.
+  - **Constitution:** the policy's constitution reference matches the active one; the expedite cap, over a month,
+    against the expedite budget.
+  - **Sanity warnings:** days of cover below the lead time; a review period longer than the cover; a shift beyond
+    the mandate with no escalation rule; air expediting where lanes only offer road.
+
+### The 20 golden intents (`tests/fixtures/intents/`)
+
+They cover every rule type, mandates on their own, assumptions, clarifying questions, warnings, and one intent
+that names something outside the vocabulary (its first recorded answer is invalid, which exercises the retry).
+Each fixture holds:
+- the intent;
+- the recorded model response(s);
+- the back-translation;
+- the expected DSL: scope, rule, mandate limits, and the numbers of assumptions, questions and attempts.
+
+### Tests (P4 acceptance)
+
+- All 20 golden intents compile to the expected DSL with the mock.
+- References outside the vocabulary are rejected: by the schema, and by the validator for unknown ids.
+- Failed validations retry with the errors passed back; after two retries compiling fails with every attempt
+  recorded.
+- The API schema has no unsupported keywords, `additionalProperties: false` everywhere, and no `oneOf`.
+- The Anthropic provider's requests are checked against a stand-in client: model from `LLM_MODEL`, the schema in
+  `output_config`, effort, fallbacks, no forced tool choice; refusal and truncation are raised.
+- The narrative check rejects an invented number and accepts the real ones.

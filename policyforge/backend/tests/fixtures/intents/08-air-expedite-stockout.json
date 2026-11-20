@@ -1,0 +1,88 @@
+{
+  "id": "08-air-expedite-stockout",
+  "intent": "Expedite by air if a DC is projected to run out within a week, but spend at most €3,000 a week.",
+  "responses": [
+    {
+      "name": "Air expediting before stockouts",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "expedite",
+        "condition": {
+          "kind": "projected_stockout",
+          "within_periods": 1
+        },
+        "mode": "air",
+        "cost_cap_per_period": 3000
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "expedite-agent-01",
+        "autonomy": [
+          {
+            "kind": "expedite_spend_per_period",
+            "value": 3000
+          }
+        ],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [],
+      "interpretation_notes": "When a DC is projected to run out within a week, expedite by air, spending at most EUR 3,000 a week.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    }
+  ],
+  "back_translation": "If any DC is projected to run out within a week, the agent ships by air, spending no more than EUR 3,000 a week, which is also the most it may spend on its own.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "expedite",
+      "condition": {
+        "kind": "projected_stockout",
+        "within_periods": 1
+      },
+      "mode": "air",
+      "cost_cap_per_period": 3000
+    },
+    "autonomy": [
+      {
+        "kind": "expedite_spend_per_period",
+        "value": 3000
+      }
+    ],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 0,
+    "attempts": 1
+  }
+}

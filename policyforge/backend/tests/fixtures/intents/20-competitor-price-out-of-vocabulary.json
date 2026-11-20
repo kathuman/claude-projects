@@ -1,0 +1,167 @@
+{
+  "id": "20-competitor-price-out-of-vocabulary",
+  "intent": "If competitor prices drop 10%, raise safety stock on cereal to 3 weeks.",
+  "responses": [
+    {
+      "name": "Cereal cover tied to competitor prices",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [
+          "S05"
+        ],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "composite",
+        "rules": [
+          {
+            "type": "base_stock",
+            "target": {
+              "unit": "days_of_cover",
+              "value": 21
+            },
+            "review_period": 1
+          }
+        ]
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [
+          {
+            "trigger": {
+              "kind": "condition",
+              "condition": {
+                "var": {
+                  "var": "backorders",
+                  "supplier": null,
+                  "node": null,
+                  "sku": null
+                },
+                "op": "gt",
+                "threshold": 500,
+                "for_periods": 1
+              }
+            },
+            "severity": "low",
+            "escalate_to": "owner",
+            "note": ""
+          }
+        ],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [
+        {
+          "id": "competitor",
+          "statement": "Competitor prices drop 10%",
+          "variable": {
+            "var": "competitor_price",
+            "supplier": null,
+            "node": null,
+            "sku": null
+          },
+          "operator": "lt",
+          "threshold": 0.9,
+          "distribution": null,
+          "source": "user_stated",
+          "confidence": 0.9
+        }
+      ],
+      "clarifying_questions": [],
+      "interpretation_notes": "Raise cereal cover to 3 weeks when competitor prices drop 10%.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.9,
+        "mandate": 0.85,
+        "assumptions": 0.7
+      }
+    },
+    {
+      "name": "Three weeks of cover for cereal",
+      "scope": {
+        "nodes": [
+          "DC_N",
+          "DC_C",
+          "DC_S"
+        ],
+        "skus": [
+          "S05"
+        ],
+        "sku_classes": [],
+        "categories": [],
+        "suppliers": [],
+        "lanes": []
+      },
+      "rule": {
+        "type": "base_stock",
+        "target": {
+          "unit": "days_of_cover",
+          "value": 21
+        },
+        "review_period": 1
+      },
+      "mandate": {
+        "owner": "Planning manager",
+        "approver": "Head of supply chain",
+        "agent_id": "replenishment-agent-01",
+        "autonomy": [],
+        "escalation": [],
+        "prohibited_actions": [],
+        "term_days": 90,
+        "review_triggers": []
+      },
+      "assumptions": [],
+      "clarifying_questions": [
+        "PolicyForge cannot observe competitor prices. Should the agent hold 3 weeks of cover on cereal at all times, or only when you switch this policy on?"
+      ],
+      "interpretation_notes": "At every DC, order cereal up to 21 days of cover each week. Competitor prices cannot be observed, so the rule does not depend on them.",
+      "confidence": {
+        "scope": 0.9,
+        "rule": 0.6,
+        "mandate": 0.8,
+        "assumptions": 0.9
+      }
+    }
+  ],
+  "back_translation": "Every week the agent orders breakfast cereal at every DC up to 21 days of expected demand.",
+  "expected": {
+    "scope": {
+      "nodes": [
+        "DC_N",
+        "DC_C",
+        "DC_S"
+      ],
+      "skus": [
+        "S05"
+      ],
+      "sku_classes": [],
+      "categories": [],
+      "suppliers": [],
+      "lanes": []
+    },
+    "rule": {
+      "type": "base_stock",
+      "target": {
+        "unit": "days_of_cover",
+        "value": 21
+      },
+      "review_period": 1
+    },
+    "autonomy": [],
+    "prohibited_actions": [],
+    "assumptions": 0,
+    "questions": 1,
+    "attempts": 2
+  }
+}
