@@ -7,7 +7,9 @@ expedite trigger. Sourcing switches all apply, in order, to the plants and SKUs 
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 
@@ -85,6 +87,8 @@ class Program:
     sourcing: list[Sourcing]
     mandates: list[MandatePlan]
     supported: dict[str, list[str]] = field(default_factory=dict)  # notes on things the simulator skipped
+    # A baseline may plan the orders itself: (observation, period) → orders [R, N, K]. None = the rule executors.
+    decider: Callable[[Any, int], F] | None = None
 
 
 def scope_cells(lay: Layout, scope: Scope) -> B:

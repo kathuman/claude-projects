@@ -22,7 +22,7 @@ from core.domain.scenario import (
     SignalNoise,
     SupplierOutage,
 )
-from core.sim.layout import B, F, Layout
+from core.sim.layout import B, F, I, Layout
 
 STREAMS = ("demand", "lead_time", "expedite_lead_time", "fill", "signal_noise", "shock")
 
@@ -42,6 +42,16 @@ class Draws:
     plant_cap: F  # [R, T, P] capacity factor
     extra_delay: int = 0  # periods of information delay the scenario adds
     shocked: B = field(default_factory=lambda: np.zeros((0, 0), dtype=bool))  # [R, T] a correlated shock is on
+    onset: I = field(default_factory=lambda: np.zeros(0, dtype=np.int64))  # [R] first disrupted period, −1 for none
+
+    def subset(self, n: int) -> Draws:
+        """The first n replications (the same futures, for baselines run on a subsample)."""
+        return Draws(scenario_id=self.scenario_id, seed=self.seed, R=min(n, self.R), T=self.T,
+                     demand=self.demand[:n], signal=self.signal[:n], lt_days=self.lt_days[:n],
+                     exp_lt_days=self.exp_lt_days[:n], fill=self.fill[:n], supplier_cap=self.supplier_cap[:n],
+                     plant_cap=self.plant_cap[:n], extra_delay=self.extra_delay,
+                     shocked=self.shocked[:n] if self.shocked.size else self.shocked,
+                     onset=self.onset[:n] if self.onset.size else self.onset)
 
 
 def _season(lay: Layout, T: int, on: bool) -> F:
@@ -78,6 +88,12 @@ def generate(lay: Layout, scenario: Scenario, R: int, T: int, seed: int) -> Draw
     sup_cap = np.ones((R, T, S))
     plant_cap = np.ones((R, T, P))
     shocked = np.zeros((R, T), dtype=bool)
+    onset = np.full(R, -1, dtype=np.int64)
+
+    def mark(start: int) -> None:  # the earliest disruption so far, for every replication
+        nonlocal onset
+        if start < T:
+            onset = np.where((onset < 0) | (onset > start), start, onset)
     extra_delay = 0
     t_idx = np.arange(T)
 
@@ -86,6 +102,7 @@ def generate(lay: Layout, scenario: Scenario, R: int, T: int, seed: int) -> Draw
 
     for c in scenario.components:
         if isinstance(c, DemandShift):
+            mark(c.window.start)
             w = list(c.window.periods(T))
             mk = _market_mask(lay, c.markets)
             sk = np.array([(not c.skus or s in c.skus) and (not c.categories or lay.net.sku(s).category in c.categories)
@@ -93,10 +110,13 @@ def generate(lay: Layout, scenario: Scenario, R: int, T: int, seed: int) -> Draw
             factor = 1.0 + (c.factor - 1.0) * mk[:, None] * sk[None, :]
             demand[:, w] *= factor[None, None]
         elif isinstance(c, SupplierOutage):
+            mark(c.window.start)
             sup_cap[:, list(c.window.periods(T)), lay.supplier_ids.index(c.supplier)] *= 1.0 - c.severity
         elif isinstance(c, PlantCapacityLoss):
+            mark(c.window.start)
             plant_cap[:, list(c.window.periods(T)), lay.plant_ids.index(c.plant)] *= 1.0 - c.severity
         elif isinstance(c, LeadTimeInflation):
+            mark(c.start)
             ramp = np.clip((t_idx - c.start + 1) / max(1, c.ramp_periods), 0.0, 1.0) if c.ramp_periods else (
                 (t_idx >= c.start).astype(np.float64))
             ramp = np.where(t_idx >= c.start, ramp, 0.0)
@@ -110,6 +130,8 @@ def generate(lay: Layout, scenario: Scenario, R: int, T: int, seed: int) -> Draw
             start = g.integers(c.earliest_start, c.latest_start + 1, R)
             on = occurs[:, None] & (t_idx[None, :] >= start[:, None]) & (t_idx[None, :] < start[:, None] + c.duration)
             shocked |= on
+            hit = occurs & (start < T)
+            onset = np.where(hit & ((onset < 0) | (onset > start)), start, onset)
             onf = on.astype(np.float64)
             for s in c.suppliers:
                 j = lay.supplier_ids.index(s)
@@ -125,4 +147,4 @@ def generate(lay: Layout, scenario: Scenario, R: int, T: int, seed: int) -> Draw
 
     return Draws(scenario_id=scenario.id, seed=seed, R=R, T=T, demand=np.maximum(demand, 0.0), signal=signal,
                  lt_days=lt, exp_lt_days=exp_lt, fill=fill, supplier_cap=sup_cap, plant_cap=plant_cap,
-                 extra_delay=extra_delay, shocked=shocked)
+                 extra_delay=extra_delay, shocked=shocked, onset=onset)

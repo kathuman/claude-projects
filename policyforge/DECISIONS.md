@@ -178,3 +178,113 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   Supplier B outage, and 84.6 % at P5 under a correlated shock (300 replications, seed 42).
 - **Rationale:** stress tests need an incumbent that is healthy in normal times and visibly fragile under shocks.
   P3 will formalise this as FoodNet's incumbent policy.
+
+## D023: Metric definitions (P3)
+- **Fill rate:** the share of demand met from stock in the period it arose. Backlog is served first, so the
+  period's shortfall is min(demand, end backorders + lost sales).
+- **OTIF:** the share of (market, SKU, period) lines with demand that were met in full in their period.
+- **Backorder units:** units of demand not met on time.
+- **Stockout periods:** periods with a shortfall, averaged over lines.
+- **Resilience:** peak service loss is the pre-shock weekly fill (up to 12 periods before the scenario's onset)
+  minus the lowest 4-week rolling fill after it. Recovery is the number of periods from the onset until the
+  rolling fill is back within 1 pp (censored at the horizon). Undefined without a shock.
+- **Bullwhip ratio:** the variance over time of an echelon's total orders ÷ the variance of total consumer demand.
+  Network-level, so it includes the effect of pooling.
+- **Nervousness:** the mean absolute period-to-period change of a cell's orders ÷ its mean order.
+- **Regret:** measured on total cost (EUR, penalties included) and on fill rate, against the best policy in the same
+  replication, among the policies run on all replications.
+- **CVaR:** the mean of the worst (1 − level) share of replications, in each metric's bad direction.
+- **Rationale:** each is the simplest standard reading of the brief's list, chosen so that it can be computed per
+  replication from recorded arrays.
+
+## D024: The naive baseline's lead time (P3)
+- **Choice:** mean demand × the mean lead time *as the simulator applies it*: whole periods, at least 1. A plant
+  uses the sourcing-weighted mean over its suppliers. The target is in units, so it ignores forecasts.
+
+## D025: Plants see the DC orders placed in the same period (P3, fixes a P2 artefact)
+- **Context:** in P2, plants decided on a snapshot taken before the DCs ordered, so they saw their own demand one
+  period late. Base stock with a one-period-stale position oscillates: the plants' orders varied 12 times as much
+  as consumer demand, even in calm conditions.
+- **Choice:** DC orders are placed first and added to the plants' backorders in the current snapshot; then plants
+  decide. With an information delay, plants see that updated snapshot when the delay has passed.
+
+## D026: What an information delay means (P3)
+- **Context:** "policies see state with a configurable lag" can mean everything is late, including the agent's own
+  orders. That is the textbook supply-line-blind stressor. With order = S − IP(t − d), the inventory position
+  follows x(t) = x(t−1) − x(t−1−d), which is unstable for d ≥ 2 (characteristic roots of modulus 1.15). Measured:
+  2 weeks of delay gave DC bullwhip ratios of 34 and plant ratios of 366, and every policy fell to 55–71 % fill.
+  Adding the agent's own orders back but nothing else leaves a systematic bias (the stale position misses the
+  demand since the report), and fill collapses to 13–47 %.
+- **Choice (default):** stock, backorders, demand and supplier state arrive late. The agent knows the orders it
+  placed itself since the snapshot, and estimates consumption since then as forecast × delay. The inventory
+  position is then stale but unbiased.
+- **Option:** `SimConfig(own_orders_known=False)` keeps the literal, supply-line-blind reading for teaching.
+- **Rationale:** an agent executing its own orders always knows its order log. Under the default, delay and noise
+  degrade service and raise bullwhip gradually:
+
+  | Noise, delay | Incumbent fill | Incumbent DC ratio | Naive DC ratio |
+  |---|---|---|---|
+  | 0, 0 | 97.8 % | 1.96 | 1.85 |
+  | 0.3, 2 (default bullwhip scenario) | 93.0 % | 5.34 | 3.46 |
+
+  This makes the stressor informative instead of catastrophic.
+
+## D027: The verdict rules (P3)
+- **Choice:** deterministic rules, each reason a sentence built from the report's numbers.
+  1. A hard constraint breached in more than α of replications under **normal conditions** (a scenario that is
+     baseline demand only) → **reject**.
+  2. Breached beyond α under **stress** → a **condition**, but only if the candidate breaches it more often than
+     the incumbent, by more than 2 pp. If it breaches it as often or less, that is reported for information.
+  3. Candidate against incumbent **lexicographically**, in the constitution's priority order, each objective on
+     its risk measure averaged over scenarios: service = fill-rate CVaR (tolerance 0.2 pp), resilience =
+     peak-service-loss CVaR (0.2 pp), cost = weekly-cost CVaR (0.5 %), carbon = mean CO2 (1 %). The first
+     objective that differs beyond tolerance decides: worse → reject; better → noted.
+  4. In any single scenario, a fill-rate CVaR more than 0.5 pp below the incumbent's → a condition.
+  5. Escalations are reported for information.
+- **Alternatives considered:** the brief's literal "a policy breaching a hard constraint in more than α cannot be
+  approved", applied to every scenario.
+- **Rationale:** against eight deliberately harsh scenarios, the incumbent itself breaches the constitution under
+  stress (chilled service under the correlated shock, for example). Under the literal reading, no policy could
+  ever be approved, and the brief's own demo ends in "approve". Approval should judge what the policy changes.
+  Under normal conditions the brief's rule applies in full.
+
+## D028: The rolling-optimisation baseline (P3)
+- **Model:** an LP over 8 periods, re-planned every 4 for each replication. It plans DC orders, plant material
+  orders, a production queue within capacity, stock, backorders and plant backlog. Pipelines are assumed to arrive
+  evenly over the mean lead time, because policies see pipeline totals. Material arrives at the suppliers' expected
+  fill rate.
+- **Objective:** holding cost (DC stock 1.2× plant stock), backorder or lost-sale penalties, plant backlog, and
+  soft safety-stock targets (7 days at DCs, 14 at plants; each unit below target costs half a shortage).
+- **Safety targets:** without them, the plan holds no buffer and reaches only 52 % fill, a straw man. With them,
+  it is a fair planning-system comparator: in normal times 94.7 % fill at €30,551/week, cheaper than the incumbent
+  (97.8 %, €30,699); under the correlated shock 87.7 % against 94.0 % (50 replications, before D029).
+- **Speed:** Pyomo builds the model once and its persistent interface loads it into HiGHS. The state enters as
+  variables whose bounds are set to the observed values (lower = upper), changed directly through HiGHS's
+  `changeColsBounds`, which keeps the basis warm. 1,300 solves take 1.2 s instead of 61 s (fixed variables
+  through appsi) or about 20 s (mutable parameters). A test checks that this path solves exactly the same LP as a
+  fresh Pyomo solve.
+- **Finding:** re-planning *every period* performs worse (55 % fill). The LP schedules its plant safety-stock
+  build-up a few weeks ahead, where capacity is free. Re-planned weekly, the build-up slides forward every week
+  and never happens, and low-penalty SKUs starve. Re-planning every 4 periods executes it. This is the classic
+  receding-horizon procrastination effect, and itself an example of plan-based fragility. Default: every 4.
+- **Bullwhip:** its orders follow lumpy plant production, so its DC bullwhip ratio is high (about 100). This is
+  reported as is.
+
+## D029: The incumbent meets the constitution under normal conditions (P3, revises D022)
+- **Choice:** FoodNet's incumbent holds 12 days of cover at DCs for chilled SKUs (10 for ambient), 35 at plants.
+  At 10 days, chilled fill averaged 97.0 % and breached the 97 % constraint in half the normal-conditions
+  replications. At 12 days: 98.5 %, no breaches, no extra cost, and spoilage +€3 a week.
+- **Rationale:** a deployed policy complies with the constitution in normal times. Otherwise every candidate would
+  be rejected for a breach it did not cause.
+
+## D030: Seasonal forecasts (P3, optional)
+- **Choice:** `SimConfig(seasonal_forecast=True)` smooths the deseasonalised signal and reseasonalises it for
+  the next period. Off by default.
+- **Measured on FoodNet:** fill +0.02 pp, cost −€22/week. Seasonal amplitudes are at most ±20 %, and smoothing
+  with α = 0.3 already tracks them. Kept as an option for networks with stronger seasonality.
+
+## D031: Report identity and missing values (P3)
+- The report id hashes only what determines the numbers: policies without provenance timestamps, the
+  constitution without its creation date, scenarios, network, run settings and the simulator config. The same
+  inputs give the same id.
+- Per-replication samples are `null` where a metric is undefined (no shock, so no recovery time).

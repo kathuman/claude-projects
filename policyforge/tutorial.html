@@ -16,7 +16,7 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.2.0</span>
+      <span class="ver">v0.3.0</span>
       <span class="sub">tutorial</span>
     </div>
     <nav class="actions">
@@ -29,12 +29,12 @@
   </header>
 
   <main>
-    <div class="eyebrow">Tutorial · about 15 minutes</div>
+    <div class="eyebrow">Tutorial · about 20 minutes</div>
     <h1>Your first stress test</h1>
     <p class="lede">You will write a sourcing policy as a typed rule with a mandate. Then you will run it against the current policy on the same 300 futures, and read what the numbers say about it. Everything here runs on your own machine.</p>
     <nav class="toc" aria-label="Steps">
       <a href="#s1">1 Set up</a><a href="#s2">2 Meet FoodNet</a><a href="#s3">3 Write the policy</a>
-      <a href="#s4">4 Pick the futures</a><a href="#s5">5 Run it</a><a href="#s6">6 Read the result</a><a href="#s7">7 Try it yourself</a>
+      <a href="#s4">4 Pick the futures</a><a href="#s5">5 Run it</a><a href="#s6">6 Read the result</a><a href="#s7">7 Get the verdict</a><a href="#s8">8 Try it yourself</a>
     </nav>
 
     <div class="note"><p><b>Where things stand.</b> PolicyForge has no web interface yet, and the step that turns plain language into a rule (the LLM compiler) comes in Phase 4. So in this tutorial you write the rule yourself, in Python, exactly as the compiler will produce it later.</p></div>
@@ -47,7 +47,7 @@ cd claude-projects/policyforge/backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
 .venv/bin/python -m pytest -q          <span class="c"># Windows: .venv\Scripts\python</span></pre>
-      <p>You should see 75 tests pass in under a minute. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
+      <p>You should see 89 tests pass in about a minute. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
     </section>
 
     <section class="panel" id="s2">
@@ -101,7 +101,7 @@ Policy(
         <li><b>Bounds are enforced.</b> <code>threshold=1.5</code> fails, because a fill rate lies between 0 and 1. So does <code>min_dwell_periods=500</code>.</li>
         <li><b>The mandate is separate from the rule.</b> The rule says what to do. The mandate says how much of it the agent may do without asking: here, at most 30 % of volume.</li>
       </ul>
-      <p>The incumbent, the rule running today, is plain base stock: order up to <b>10 days of cover</b> at each DC and <b>35 days</b> at each plant. The candidate is the incumbent plus the switch. Comparing the two isolates exactly what the switch adds.</p>
+      <p>The incumbent, the rule running today, is plain base stock: order up to <b>10 days of cover</b> at each DC (<b>12</b> for chilled SKUs) and <b>35 days</b> at each plant. It meets the constitution in normal times. The candidate is the incumbent plus the switch. Comparing the two isolates exactly what the switch adds.</p>
     </section>
 
     <section class="panel" id="s4">
@@ -135,14 +135,14 @@ candidate = simulate(lay, draws, compile_program(lay, candidate_policies))</pre>
       <div class="table-wrap"><table>
         <thead><tr><th>Scenario</th><th>Policy</th><th class="num">Fill</th><th class="num">Fill P5</th><th class="num">Chilled fill</th><th class="num">Cost €/week</th><th class="num">Switches</th></tr></thead>
         <tbody>
-          <tr><td>baseline</td><td>incumbent</td><td class="num">97.3 %</td><td class="num">96.7 %</td><td class="num">96.7 %</td><td class="num">30,018</td><td class="num">0.0</td></tr>
-          <tr class="cand"><td></td><td>candidate</td><td class="num">97.3 %</td><td class="num">96.8 %</td><td class="num">96.7 %</td><td class="num">30,107</td><td class="num">4.1</td></tr>
-          <tr><td>supplier-b-outage</td><td>incumbent</td><td class="num">95.4 %</td><td class="num">94.2 %</td><td class="num">96.1 %</td><td class="num">30,065</td><td class="num">0.0</td></tr>
-          <tr class="cand"><td></td><td>candidate</td><td class="num">97.2 %</td><td class="num">96.6 %</td><td class="num">96.3 %</td><td class="num">30,166</td><td class="num">5.4</td></tr>
-          <tr><td>correlated-shock</td><td>incumbent</td><td class="num">91.9 %</td><td class="num">84.6 %</td><td class="num">94.0 %</td><td class="num">30,609</td><td class="num">0.0</td></tr>
-          <tr class="cand"><td></td><td>candidate</td><td class="num">94.0 %</td><td class="num">88.5 %</td><td class="num">94.8 %</td><td class="num">30,498</td><td class="num">4.6</td></tr>
-          <tr><td>lead-time-inflation</td><td>incumbent</td><td class="num">82.9 %</td><td class="num">78.8 %</td><td class="num">92.7 %</td><td class="num">30,438</td><td class="num">0.0</td></tr>
-          <tr class="cand"><td></td><td>candidate</td><td class="num">84.5 %</td><td class="num">80.9 %</td><td class="num">92.7 %</td><td class="num">30,469</td><td class="num">4.1</td></tr>
+          <tr><td>baseline</td><td>incumbent</td><td class="num">98.2 %</td><td class="num">97.8 %</td><td class="num">98.5 %</td><td class="num">30,672</td><td class="num">0.0</td></tr>
+          <tr class="cand"><td></td><td>candidate</td><td class="num">98.2 %</td><td class="num">97.8 %</td><td class="num">98.5 %</td><td class="num">30,763</td><td class="num">4.1</td></tr>
+          <tr><td>supplier-b-outage</td><td>incumbent</td><td class="num">98.0 %</td><td class="num">97.6 %</td><td class="num">98.4 %</td><td class="num">30,576</td><td class="num">0.0</td></tr>
+          <tr class="cand"><td></td><td>candidate</td><td class="num">98.2 %</td><td class="num">97.8 %</td><td class="num">98.5 %</td><td class="num">30,764</td><td class="num">5.4</td></tr>
+          <tr><td>correlated-shock</td><td>incumbent</td><td class="num">94.1 %</td><td class="num">88.1 %</td><td class="num">96.9 %</td><td class="num">31,020</td><td class="num">0.0</td></tr>
+          <tr class="cand"><td></td><td>candidate</td><td class="num">96.6 %</td><td class="num">92.8 %</td><td class="num">97.4 %</td><td class="num">30,977</td><td class="num">4.6</td></tr>
+          <tr><td>lead-time-inflation</td><td>incumbent</td><td class="num">96.7 %</td><td class="num">95.2 %</td><td class="num">98.4 %</td><td class="num">30,179</td><td class="num">0.0</td></tr>
+          <tr class="cand"><td></td><td>candidate</td><td class="num">96.9 %</td><td class="num">95.6 %</td><td class="num">98.4 %</td><td class="num">30,261</td><td class="num">4.1</td></tr>
         </tbody>
       </table></div>
       <p class="caption">How to read it:
@@ -152,28 +152,60 @@ candidate = simulate(lay, draws, compile_program(lay, candidate_policies))</pre>
         <b>Switches</b> is the number of sourcing switches per future over two years.</p>
       <h3>What the numbers say</h3>
       <ul>
-        <li><b>In an outage, the switch earns its keep.</b> Fill holds at 97.2 % against 95.4 %, and the bad futures improve even more (P5 96.6 % against 94.2 %). It costs about €100 a week more, because Supplier C is 30 % dearer.</li>
-        <li><b>Under a correlated shock it helps most where it matters.</b> The worst 5 % of futures improve by almost 4 points, and cost goes <i>down</i>, because fewer penalties are paid.</li>
-        <li><b>In normal times it changes little, and it is not free.</b> B's normal variability (93 % ± 6) trips the trigger about once a year: 4.1 switches over two years count both switching over and switching back. On average that adds €89 a week, for no gain in service. That is a cue to tune the trigger: try 0.85, or four weeks running.</li>
-        <li><b>It does nothing for chilled SKUs.</b> They are out of its scope (ambient only), and chilled fill stays at 96.7 % in normal times. That is <b>below the constitution's 97 % for chilled SKUs</b>. This policy can't fix that; the chilled replenishment rule needs looking at.</li>
-        <li><b>Lead-time creep hurts both policies.</b> The trigger watches fill rate, not lead time, so when B gets slow but still ships in full, the switch barely fires. A second trigger on <code>observed_lead_time</code> would catch this.</li>
+        <li><b>Under a correlated shock, the switch earns its keep.</b> Fill holds at 96.6 % against 94.1 %, and the worst 5 % of futures improve by almost 5 points (92.8 % against 88.1 %). Cost goes <i>down</i>, because fewer penalties are paid.</li>
+        <li><b>In a Supplier B outage alone, the incumbent copes.</b> Plants hold 35 days of cover, enough to absorb eight weeks of a weak B. The switch adds 0.2 points of fill for €188 a week more, because Supplier C is 30 % dearer.</li>
+        <li><b>In normal times it changes little, and it is not free.</b> B's normal variability (93 % ± 6) trips the trigger about once a year: 4.1 switches over two years count both switching over and switching back. On average that adds €91 a week, for no gain in service. That is a cue to tune the trigger: try 0.85, or four weeks running.</li>
+        <li><b>It is blind to lead-time creep.</b> When B gets slow but still ships in full, the trigger, which watches fill rate, barely fires (96.7 % → 96.9 %). A second trigger on <code>observed_lead_time</code> would catch this.</li>
+        <li><b>Chilled SKUs meet the constitution's 97 % in normal times</b> (98.5 %), thanks to the incumbent's 12 days of chilled cover. Under the shock they slip below it, a little less with the switch (97.4 % against 96.9 %).</li>
       </ul>
-      <p>This is the point of evaluating a <i>policy</i> rather than a plan: the same rule looks free in one future, essential in another, and blind in a third. You see all three before it goes live.</p>
+      <p>This is the point of evaluating a <i>policy</i> rather than a plan: the same rule looks almost free in one future, essential in another, and blind in a third. You see all three before it goes live.</p>
     </section>
 
     <section class="panel" id="s7">
-      <h2>7 · Try it yourself</h2>
+      <h2>7 · Get the verdict</h2>
+      <p>The quick table above is your own reading. PolicyForge also evaluates a candidate formally, against the constitution and three baselines, on all eight scenarios:</p>
+<pre>python -m examples.evaluate_report              <span class="c"># 500 futures per scenario, about a minute</span></pre>
+      <p>It writes <a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/docs/example-report.md"><code>docs/example-report.md</code></a> (for people) and <code>docs/example-report.json</code> (every distribution, sample and fan chart series, for the interface to come). The report holds:</p>
+      <ul>
+        <li><b>A verdict</b>: approve, approve with conditions, or reject, with every reason generated from the numbers.
+          <ul>
+            <li>A hard constraint breached in more than 5 % of futures under normal conditions means reject.</li>
+            <li>Under stress, a breach becomes a condition only when the candidate makes it worse than the incumbent.</li>
+            <li>The candidate is then compared with the incumbent on each objective in the constitution's priority order (service, then resilience, cost, carbon), and the first one where they differ decides.</li>
+          </ul>
+        </li>
+        <li><b>The constitution table</b>: for each scenario and policy, the share of futures breaching each hard constraint.</li>
+        <li><b>Three baselines</b> on the same futures:
+          <ul>
+            <li>the <b>incumbent</b>;</li>
+            <li>a <b>naive</b> rule: mean demand × lead time, no safety stock, no forecast;</li>
+            <li><b>rolling optimisation</b>: a linear program solved with HiGHS every four weeks over an eight-week horizon, on the expected forecast with safety-stock targets. This is how a planning system works.</li>
+          </ul>
+        </li>
+        <li><b>Distributions</b> of every metric: mean, P5, P50, P95, and CVaR (the mean of the worst 5 %). Also regret, measured against the best policy in each future.</li>
+      </ul>
+      <p>For this switch, the verdict is <b>approve</b>.</p>
+      <ul>
+        <li>It beats the incumbent on service, the first priority: a worst-case fill rate of 95.3 % against 94.6 %, averaged over the eight scenarios.</li>
+        <li>The constraints it breaches under stress, the incumbent breaches as well.</li>
+        <li>Under the correlated shock, it cuts class A service breaches from 48.8 % of futures to 7.0 %.</li>
+      </ul>
+      <p>Rolling optimisation is the instructive comparator. It runs leaner than the incumbent, and the worst futures expose it: it misses the chilled target in 94 % of futures even in normal times. A plan optimised for the expected future has no answer to the unexpected one.</p>
+    </section>
+
+    <section class="panel" id="s8">
+      <h2>8 · Try it yourself</h2>
       <ol class="steps">
         <li><b>Exceed the mandate.</b> Set <code>shift_fraction=0.6</code> but leave the mandate at 30 %. The simulator blocks the extra volume and counts an escalation each time the agent wants more than it may do alone. Pass <code>SimConfig(on_limit="flag")</code> to <code>simulate</code> and the extra volume moves anyway, flagged for review.</li>
         <li><b>Catch the slow supplier.</b> Wrap the switch in a <code>Composite</code> with a second <code>SourcingSwitch</code> triggered by <code>observed_lead_time</code> above 21 days. Does lead-time creep improve?</li>
-        <li><b>Make the incumbent leaner.</b> In <code>run()</code>, change the incumbent to 7 days at DCs and 28 at plants. Fill falls to about 68 % even in the baseline. 28 days at a plant barely covers Supplier A's 21–24-day lead time plus a week of review, so the plant keeps running out and a backlog builds. Backlog is served first, so new demand waits. The order-up-to level has to exceed demand over the lead time, with room to spare.</li>
-        <li><b>Add an expedite trigger</b> on the DCs: <code>ExpediteTrigger(condition=CoverageBelow(days=3), mode="express_road", cost_cap_per_period=4000)</code>. How much of the shock's damage does expediting buy back, and at what cost?</li>
+        <li><b>Make the incumbent leaner.</b> Replace it with <code>background_policies(lay, dc_days=7, plant_days=21)</code>. Fill falls to about 69 % even in normal times. 21 days at a plant does not even cover Supplier A's 21–24-day lead time plus a week of review, so the plant keeps running out and a backlog builds. Backlog is served first, so new demand waits. The order-up-to level has to exceed demand over the lead time, with room to spare.</li>
+        <li><b>Add an expedite trigger</b> on the DCs: <code>ExpediteTrigger(condition=CoverageBelow(days=3), mode="express_road", cost_cap_per_period=4000)</code>. How much of the shock's damage does expediting buy back, and at what cost? Run the report and check whether the €20,000-a-month expedite budget holds.</li>
+        <li><b>Delay the information.</b> The <code>bullwhip</code> scenario delays what the agents see by two weeks and adds noise. Then try <code>SimConfig(own_orders_known=False)</code>, where an agent forgets even its own recent orders. That is the classic beer-game instability, with order swings many times those of demand.</li>
       </ol>
-      <p>Coming in Phase 3: the full metric set (service by SKU class and market, resilience, bullwhip ratio, CO₂, CVaR at the constitution's risk level, regret), a constitution pass/fail table, a robustness verdict and an exported report. Comparisons will also include a rolling-optimisation baseline: the plan-based way of doing things, on the same futures.</p>
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.2.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.3.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

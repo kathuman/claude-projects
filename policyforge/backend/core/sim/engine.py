@@ -35,7 +35,7 @@ from core.sim.executors import (
     replenishment_orders,
     sourcing_step,
 )
-from core.sim.layout import B, F, Layout
+from core.sim.layout import B, F, I, Layout
 from core.sim.program import Program, Sourcing
 from core.sim.scenarios.generate import Draws
 
@@ -48,6 +48,14 @@ class SimConfig:
     info_delay: int = 0  # periods; the scenario may add more
     on_limit: Literal["block", "flag"] = "block"  # actions beyond the mandate: clipped, or applied and flagged
     forecast_alpha: float = 0.3  # exponential smoothing of the observed demand signal
+    # With an information delay, does the agent still know the orders it placed itself since the stale snapshot?
+    # True (default): stock, demand and supplier state arrive late; the agent adds its own orders since then and
+    # subtracts forecast demand over the delay (D026). False: everything is late, the textbook supply-line-blind
+    # stressor, which is unstable for any delay ≥ 1.
+    own_orders_known: bool = True
+    # Forecast with each SKU's known seasonal profile: smooth the deseasonalised signal, then reseasonalise for the
+    # next period (D030). Off by default: plain smoothing lags seasonal peaks.
+    seasonal_forecast: bool = False
 
 
 @dataclass
@@ -79,6 +87,7 @@ class SimResult:
     escalations: F  # [R, T]: limit hits plus escalation conditions that fired
     switches: F  # [R, T] sourcing switches made
     shocked: B  # [R, T]
+    onset: I  # [R] first disrupted period of the scenario, −1 for none
     init_on_hand: F  # [R, N, K]
     init_wip: F  # [R, P, K]
     init_dc_pipeline: F  # [R, D, K] including unshipped DC orders
@@ -113,6 +122,9 @@ def simulate(lay: Layout, draws: Draws, prog: Program, cfg: SimConfig | None = N
     rep = prog.replenishment
     mean_out = lay.mean_node_demand()
     fc = np.broadcast_to(mean_out, (R, N, K)).copy()
+    level = fc.copy()  # deseasonalised level, for seasonal forecasts
+    tt = np.arange(T + 1)[:, None]
+    season = 1.0 + lay.season_amp[None, :] * np.cos(2 * np.pi * (tt - lay.season_peak[None, :]) / 52.0)  # [T+1, K]
 
     # ---- initial state: pipelines at their mean flow, stock topped up to the target position
     pipe_dc = np.zeros((R, D, K, H))
@@ -156,6 +168,8 @@ def simulate(lay: Layout, draws: Draws, prog: Program, cfg: SimConfig | None = N
     esc_counters = {(i, j): np.zeros(R) for i, mp in enumerate(prog.mandates) for j in range(len(mp.escalations))}
     delay = cfg.info_delay + draws.extra_delay
     obs_hist: list[Observation] = []
+    cum_q = np.zeros((R, N, K))  # orders placed so far
+    cum_hist: list[F] = []  # cum_q at each snapshot
     sig_hist: list[F] = []
 
     init = (inv.sum(-1).copy(), wip.copy(), pipe_dc.sum(-1) + owed, pipe_sup.sum(axis=(2, 4)))
@@ -228,14 +242,38 @@ def simulate(lay: Layout, draws: Draws, prog: Program, cfg: SimConfig | None = N
                                     pipeline=pipeline, forecast=fc, fill=fill_obs.copy(), lead_time=lt_obs.copy(),
                                     utilisation=util.copy()))
         sig_hist.append(np.concatenate([last_req_p, signal_dc], axis=1))
+        cum_hist.append(cum_q.copy())
         seen = max(0, t - delay)
-        fc = cfg.forecast_alpha * sig_hist[seen] + (1 - cfg.forecast_alpha) * fc
+        if cfg.seasonal_forecast:
+            level = cfg.forecast_alpha * sig_hist[seen] / season[seen][None, None] + (1 - cfg.forecast_alpha) * level
+            fc = level * season[t + 1][None, None]
+        else:
+            fc = cfg.forecast_alpha * sig_hist[seen] + (1 - cfg.forecast_alpha) * fc
         past = obs_hist[seen]
         o = Observation(ip=past.ip, on_hand=past.on_hand, backorders=past.backorders, pipeline=past.pipeline,
                         forecast=fc, fill=past.fill, lead_time=past.lead_time, utilisation=past.utilisation)
+        if seen < t and cfg.own_orders_known:
+            # the agent's own orders since the snapshot are known; consumption since then is estimated from the
+            # forecast, so the inventory position is unbiased (stale, not wrong on average)
+            known = cum_q - cum_hist[seen]
+            o = Observation(ip=past.ip + known - (t - seen) * fc, on_hand=past.on_hand, backorders=past.backorders,
+                            pipeline=past.pipeline + known, forecast=fc, fill=past.fill, lead_time=past.lead_time,
+                            utilisation=past.utilisation)
 
         # decisions: replenishment within the mandate
-        q = replenishment_orders(rep, o, t, pdays) * lay.cell[None]
+        if prog.decider is not None:  # a baseline that plans orders itself (e.g. rolling optimisation)
+            q = prog.decider(o, t) * lay.cell[None]
+        else:
+            q = replenishment_orders(rep, o, t, pdays) * lay.cell[None]
+            # The DC orders just placed are the plants' demand: plants see them before deciding (D025). The current
+            # snapshot is updated in place, so a plant that sees the present (no delay) orders on it, and one
+            # with a delay sees it when its delay has passed.
+            new_p = np.einsum("rdk,pdk->rpk", q[:, P:], src_mask)
+            now = obs_hist[t]
+            now.ip[:, :P] -= new_p
+            now.backorders[:, :P] += new_p
+            if seen == t:
+                q[:, :P] = replenishment_orders(rep, o, t, pdays)[:, :P] * lay.cell[None, :P]
         for mp in prog.mandates:
             if mp.order_change is None:
                 continue
@@ -246,6 +284,7 @@ def simulate(lay: Layout, draws: Draws, prog: Program, cfg: SimConfig | None = N
             if block:
                 q = np.where(hit, np.clip(q, lo, hi), q)
         prev_q = np.where(q > EPS, q, prev_q)
+        cum_q += q
         for (i, j), counter in esc_counters.items():
             cond, _ = prog.mandates[i].escalations[j]
             esc_counters[(i, j)] = persist(counter, holds(cond, o, lay))
@@ -394,7 +433,9 @@ def simulate(lay: Layout, draws: Draws, prog: Program, cfg: SimConfig | None = N
         on_hand=rec["on_hand"], receipts=rec["receipts"], outflow=rec["outflow"], spoiled=rec["spoiled"],
         wip=rec_wip, material_in=rec_mat, utilisation=rec_util, expedited_units=expedited, cost=cost, co2_t=co2,
         limit_hits=hits, escalations=esc, switches=switches, shocked=draws.shocked if draws.shocked.size else
-        np.zeros((R, T), dtype=bool), init_on_hand=init[0], init_wip=init[1], init_dc_pipeline=init[2],
+        np.zeros((R, T), dtype=bool),
+        onset=draws.onset if draws.onset.size else np.full(R, -1, dtype=np.int64), init_on_hand=init[0],
+        init_wip=init[1], init_dc_pipeline=init[2],
         init_material_pipeline=init[3], end_dc_pipeline=pipe_dc.sum(-1) + owed,
         end_material_pipeline=pipe_sup.sum(axis=(2, 4)), notes=prog.supported,
     )

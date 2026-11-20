@@ -123,3 +123,62 @@ logged as escalations, then either blocked (clipped to the limit) or applied wit
   simulated fill rate matches `1 − (E[(D_L − S)⁺] − E[(D_{L−1} − S)⁺])/μ` within ±1 percentage point. (Corrected
   during P2: the first draft of this plan used `L + 1`, which assumes orders are placed before demand.)
 - **Executors:** unit tests for every rule type and for mandate clipping and flagging.
+
+## Phase 3: baselines and evaluation
+
+### Baselines (`core/baselines/`)
+
+- **Incumbent:** FoodNet's current rule: base stock at 10 days of cover at DCs and 35 at plants (D022).
+  `incumbent_policies()` is the single place to change it; once the registry exists (P5), it returns whatever is
+  deployed for the scope.
+- **Naive:** a fixed base stock per cell of mean demand × mean lead time (in simulator periods), in units, so it
+  ignores forecasts entirely.
+- **Rolling optimisation:** a Pyomo LP solved with HiGHS (persistent `appsi` interface) every `k` periods, for
+  each replication, over a short horizon. It uses the expected forecast and plans orders, stock, backorders and
+  plant production within capacity; the first `k` periods of the plan are executed (receding horizon). It plugs
+  into the engine as an order "decider" in place of the rule executors. It runs on a subsample (default 50
+  replications), and the report says so.
+
+### Metrics (`core/evaluate/metrics.py`)
+
+All per replication, after a warm-up:
+- **service:** fill rate (overall, by class, by category, by market), OTIF line rate, backorder units, stockout
+  periods;
+- **cost:** the eight categories, the total, and the worst monthly expedite spend;
+- **resilience:** peak service loss and time to recover after the scenario's shock onset;
+- **stability:** bullwhip ratio per echelon, order nervousness, sourcing switches;
+- **governance:** escalations and limit hits;
+- **carbon:** t CO2e;
+- **inventory days:** per DC.
+
+Distributions get the mean, P5, P50, P95, and CVaR at the constitution's level (in each metric's bad direction).
+Regret is measured against the best policy in each replication.
+
+### Constitution and verdict (`core/evaluate/verdict.py`)
+
+- **Constitution check:** each hard constraint is evaluated per replication on its scope and window, and its
+  breach share is compared with α.
+- **Verdict:** deterministic rules, with reasons built from the numbers:
+  - **reject** if a constraint is breached beyond α under normal conditions (the baseline scenario), or if the
+    candidate is worse than the incumbent on the first priority objective where they differ;
+  - **approve with conditions** if constraints are breached beyond α only under stress, or the candidate is
+    worse on a lower priority;
+  - **approve** otherwise.
+
+### Report (`core/evaluate/report.py`)
+
+A Pydantic `EvaluationReport` holding:
+- run metadata (seed, replications, horizon, a hash of the inputs);
+- per scenario and policy: metric summaries, KPI samples for violin and scatter plots, and percentile fan series
+  over time;
+- the constitution table, the verdict and regret.
+
+It exports to Markdown; PDF follows with the frontend (P7).
+
+### Tests (P3 acceptance)
+
+- the naive policy's bullwhip ratio exceeds 1 under the noisy, delayed scenario;
+- the rolling-optimisation baseline solves with HiGHS (status optimal, plans respect capacity);
+- reports are generated for the full default suite;
+- a regression test locks the incumbent's default-suite KPIs at a fixed seed;
+- unit tests for every metric, the constitution check, the verdict rules, CVaR and regret.

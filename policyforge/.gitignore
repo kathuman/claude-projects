@@ -12,3 +12,5 @@ dist/
 *.sqlite
 *.db
 *.egg-info/
+docs/example-report.json
+*.out

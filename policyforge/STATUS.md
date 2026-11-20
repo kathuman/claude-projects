@@ -76,3 +76,51 @@ monitoring, frontend, packaging).
 - Added the about page with the roadmap (`index.html`) and the tutorial (`tutorial.html`). The tutorial runs
   `backend/examples/first_stress_test.py`, which `tests/test_examples.py` keeps working.
 - Listed on the AI Projects page as early development.
+
+## Phase 3: baselines and evaluation. Done, acceptance met.
+
+**What works**
+- **Baselines** (`core/baselines/`):
+  - incumbent: 35 days at plants, 10 at DCs, 12 for chilled SKUs, compliant under normal conditions (D029);
+  - naive: mean demand × lead time;
+  - rolling optimisation: Pyomo LP solved with HiGHS, re-planned every 4 periods, with safety targets and expected
+    yields (D028).
+- **Metrics** (`core/evaluate/metrics.py`, D023), per replication:
+  - service: fill rate overall and by class, category, market and SKU; OTIF; backorder units; stockout periods;
+  - cost: eight categories and the total, per week, and the worst monthly expedite spend;
+  - resilience: peak service loss and recovery time;
+  - stability: bullwhip per echelon, nervousness, switches;
+  - governance: escalations and limit hits;
+  - carbon, and inventory days per DC.
+  Each gets a mean, P5, P50, P95 and CVaR, plus regret against the best policy in each replication.
+- **Constitution check** (`core/evaluate/constitution.py`): every hard-constraint metric, on its scope (class,
+  category, SKU, market, DC) and window (horizon, worst month, worst period).
+- **Verdict** (`core/evaluate/verdict.py`, D027): approve, approve with conditions, or reject, with deterministic
+  reasons and a lexicographic comparison with the incumbent.
+- **Report** (`core/domain/results.py`, `core/evaluate/run.py`, `core/evaluate/report.py`): a typed, JSON-ready
+  `EvaluationReport`. It holds distributions, samples for violin and scatter plots, fan-chart percentile series,
+  constitution tables, regret and solver statistics, and exports to Markdown. `examples/evaluate_report.py` writes
+  `docs/example-report.md` and `.json` (500 replications, about a minute).
+- **Engine fixes and options:**
+  - plants see same-period DC orders (D025);
+  - information delay with the agent's own orders known (D026), or supply-line-blind as an option;
+  - seasonal forecasts as an option (D030);
+  - shock onset per replication, draw subsets, and an order-decider hook for baselines.
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| Bullwhip ratio > 1 under the information-delay scenario for the naive policy | DC ratio 3.59 under noisy, delayed signals against 1.87 without; plant ratio > 1 as well (`test_naive_bullwhip_ratio_exceeds_one_under_information_delay`) |
+| The rolling-optimisation baseline solves with HiGHS | every solve optimal, the expected number of solves, capacity respected; the fast solve path checked against a fresh Pyomo solve (same objective to 1e-7) |
+| Reports are generated for the default suite | `test_reports_are_generated_for_the_default_suite` (8 scenarios × 4 policies, JSON round trip, Markdown sections, same inputs give the same id and numbers); `docs/example-report.md` at 500 replications: verdict **approve** for the tutorial's sourcing switch |
+| Regression lock (brief §12) | `test_incumbent_default_suite_kpis_are_locked`: 7 KPIs × 8 scenarios against `tests/fixtures/incumbent_kpis.json` (regenerate with `UPDATE_GOLDEN=1`) |
+| Quality gates | 89 tests green; ruff clean; `mypy --strict` clean on `core/`; 96 % line coverage on `core/` |
+
+**Known limitations**
+- The rolling optimiser re-plans every 4 periods. Weekly re-planning procrastinates (D028). It runs on a
+  subsample (50 replications by default), and its regret is not computed.
+- A full default-suite evaluation at 1,000 replications takes about 2 minutes.
+- PDF export is not built yet: Markdown now, PDF with the frontend (P7).
+- The LLM narrative summary (brief §8.2) belongs with the compiler work (P4).
+- Results from P2 changed with D025 and D029. The tutorial and its test were updated.

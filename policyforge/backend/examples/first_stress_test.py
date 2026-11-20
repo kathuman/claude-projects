@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from core.baselines import incumbent_policies
 from core.domain.condition import Condition
 from core.domain.examples import EPOCH, default_constitution
 from core.domain.mandate import DEFAULT_TERM, AuthorityLimit, LimitKind, Mandate
@@ -25,7 +26,7 @@ from core.domain.policy import Policy, Scope, SourcingSwitch
 from core.domain.vocabulary import Variable, VarRef
 from core.sim.engine import SimResult, simulate
 from core.sim.layout import Layout, build_layout
-from core.sim.program import background_policies, compile_program
+from core.sim.program import compile_program
 from core.sim.scenarios import default_suite, generate
 
 SCENARIOS = ["baseline", "supplier-b-outage", "correlated-shock", "lead-time-inflation"]
@@ -88,8 +89,9 @@ def summarise(res: SimResult, lay: Layout) -> Summary:
 def run(reps: int = 300, seed: int = 42) -> dict[str, dict[str, Summary]]:
     # ---- step 1: the network
     lay = build_layout(load_foodnet())
-    # ---- step 2: the incumbent (base stock: 10 days of cover at DCs, 35 at plants) and the candidate on top of it
-    incumbent = background_policies(lay, dc_days=10, plant_days=35)
+    # ---- step 2: the incumbent (base stock: 35 days of cover at plants; at DCs 10 days, 12 for chilled SKUs) and the
+    # candidate on top of it
+    incumbent = incumbent_policies(lay)
     policies = {"incumbent": incumbent, "candidate": [*incumbent, candidate_policy()]}
     # ---- step 3: the same futures for both policies (common random numbers)
     suite = {s.id: s for s in default_suite().scenarios}
