@@ -16,7 +16,7 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.4.0</span>
+      <span class="ver">v0.5.0</span>
       <span class="sub">tutorial</span>
     </div>
     <nav class="actions">
@@ -47,7 +47,7 @@ cd claude-projects/policyforge/backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
 .venv/bin/python -m pytest -q          <span class="c"># Windows: .venv\Scripts\python</span></pre>
-      <p>You should see 125 tests pass in about a minute. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
+      <p>You should see 136 tests pass in about a minute. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
     </section>
 
     <section class="panel" id="s2">
@@ -205,7 +205,7 @@ candidate = simulate(lay, draws, compile_program(lay, candidate_policies))</pre>
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.4.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.5.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

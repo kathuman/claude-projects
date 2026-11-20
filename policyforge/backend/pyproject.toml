@@ -15,13 +15,16 @@ dependencies = [
   "pyomo>=6.7",
   "highspy>=1.7",
   "anthropic>=2.0",
+  "fastapi>=0.115",
+  "sqlmodel>=0.0.22",
+  "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5", "hypothesis>=6", "ruff>=0.5", "mypy>=1.10", "types-PyYAML"]
+dev = ["httpx>=0.27", "pytest>=8", "pytest-cov>=5", "hypothesis>=6", "ruff>=0.5", "mypy>=1.10", "types-PyYAML"]
 
 [tool.setuptools.packages.find]
-include = ["core*"]
+include = ["core*", "api*"]
 
 [tool.ruff]
 line-length = 120
@@ -37,7 +40,7 @@ allowed-confusables = ["−", "×", "–", "’", "α"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["core"]
+files = ["core", "api"]
 
 [[tool.mypy.overrides]]
 module = ["scipy.*", "pyomo.*", "highspy.*"]

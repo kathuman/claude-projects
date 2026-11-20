@@ -27,6 +27,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -e ".[dev]"
-      - run: ruff check core tests examples
+      - run: ruff check core api tests examples
       - run: mypy
-      - run: python -m pytest -o addopts="" -q --cov=core --cov-report=term --cov-fail-under=80
+      - run: python -m pytest -o addopts="" -q --cov=core --cov=api --cov-report=term --cov-fail-under=80

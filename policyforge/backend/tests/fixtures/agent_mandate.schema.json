@@ -1,0 +1,879 @@
+{
+  "$defs": {
+    "AllocationRule": {
+      "additionalProperties": false,
+      "description": "How a node shares scarce stock among the nodes it serves.",
+      "properties": {
+        "method": {
+          "enum": [
+            "fair_share",
+            "priority",
+            "proportional_to_demand"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "priority": {
+          "description": "Served nodes, first = most protected",
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Priority",
+          "type": "array"
+        },
+        "reservation_pct": {
+          "default": 0,
+          "description": "Share of stock held back for priority nodes",
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Reservation Pct",
+          "type": "number"
+        },
+        "type": {
+          "const": "allocation",
+          "default": "allocation",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "AllocationRule",
+      "type": "object"
+    },
+    "BaseStock": {
+      "additionalProperties": false,
+      "description": "Order up to a target inventory position every review period.",
+      "properties": {
+        "review_period": {
+          "default": 1,
+          "description": "Periods between reviews",
+          "maximum": 13,
+          "minimum": 1,
+          "title": "Review Period",
+          "type": "integer"
+        },
+        "target": {
+          "discriminator": {
+            "mapping": {
+              "days_of_cover": "#/$defs/DaysOfCover",
+              "units": "#/$defs/Units"
+            },
+            "propertyName": "unit"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Units"
+            },
+            {
+              "$ref": "#/$defs/DaysOfCover"
+            }
+          ],
+          "title": "Target"
+        },
+        "type": {
+          "const": "base_stock",
+          "default": "base_stock",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "title": "BaseStock",
+      "type": "object"
+    },
+    "Composite": {
+      "additionalProperties": false,
+      "description": "Several rules, applied in order: a later rule refines the actions of earlier ones in its scope.",
+      "properties": {
+        "rules": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "allocation": "#/$defs/AllocationRule",
+                "base_stock": "#/$defs/BaseStock",
+                "expedite": "#/$defs/ExpediteTrigger",
+                "min_max": "#/$defs/MinMax",
+                "sourcing_switch": "#/$defs/SourcingSwitch"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/BaseStock"
+              },
+              {
+                "$ref": "#/$defs/MinMax"
+              },
+              {
+                "$ref": "#/$defs/AllocationRule"
+              },
+              {
+                "$ref": "#/$defs/ExpediteTrigger"
+              },
+              {
+                "$ref": "#/$defs/SourcingSwitch"
+              }
+            ]
+          },
+          "maxItems": 10,
+          "minItems": 1,
+          "title": "Rules",
+          "type": "array"
+        },
+        "type": {
+          "const": "composite",
+          "default": "composite",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rules"
+      ],
+      "title": "Composite",
+      "type": "object"
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "description": "`var op threshold`, holding for `for_periods` consecutive periods. Only state variables are allowed.",
+      "properties": {
+        "for_periods": {
+          "default": 1,
+          "description": "Consecutive periods the condition must hold",
+          "maximum": 52,
+          "minimum": 1,
+          "title": "For Periods",
+          "type": "integer"
+        },
+        "op": {
+          "enum": [
+            "lt",
+            "le",
+            "gt",
+            "ge"
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "threshold": {
+          "description": "In the variable's unit (see the vocabulary)",
+          "maximum": 10000000.0,
+          "minimum": -10000000.0,
+          "title": "Threshold",
+          "type": "number"
+        },
+        "var": {
+          "$ref": "#/$defs/VarRef"
+        }
+      },
+      "required": [
+        "var",
+        "op",
+        "threshold"
+      ],
+      "title": "Condition",
+      "type": "object"
+    },
+    "ConditionTrigger": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "$ref": "#/$defs/Condition"
+        },
+        "kind": {
+          "const": "condition",
+          "default": "condition",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "condition"
+      ],
+      "title": "ConditionTrigger",
+      "type": "object"
+    },
+    "CoverageBelow": {
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "description": "Expedite when stock covers fewer days than this",
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Days",
+          "type": "number"
+        },
+        "kind": {
+          "const": "coverage_below",
+          "default": "coverage_below",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "days"
+      ],
+      "title": "CoverageBelow",
+      "type": "object"
+    },
+    "DaysOfCover": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "days_of_cover",
+          "default": "days_of_cover",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "description": "Days of expected demand",
+          "maximum": 365,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "DaysOfCover",
+      "type": "object"
+    },
+    "EscalationRule": {
+      "additionalProperties": false,
+      "description": "When to hand a decision back to a person.",
+      "properties": {
+        "escalate_to": {
+          "default": "owner",
+          "enum": [
+            "owner",
+            "approver"
+          ],
+          "title": "Escalate To",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Note",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "trigger": {
+          "discriminator": {
+            "mapping": {
+              "condition": "#/$defs/ConditionTrigger",
+              "limit_breach": "#/$defs/LimitBreach"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LimitBreach"
+            },
+            {
+              "$ref": "#/$defs/ConditionTrigger"
+            }
+          ],
+          "title": "Trigger"
+        }
+      },
+      "required": [
+        "trigger",
+        "severity"
+      ],
+      "title": "EscalationRule",
+      "type": "object"
+    },
+    "ExpediteTrigger": {
+      "additionalProperties": false,
+      "description": "When to pay for faster transport.",
+      "properties": {
+        "condition": {
+          "discriminator": {
+            "mapping": {
+              "coverage_below": "#/$defs/CoverageBelow",
+              "projected_stockout": "#/$defs/ProjectedStockout"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ProjectedStockout"
+            },
+            {
+              "$ref": "#/$defs/CoverageBelow"
+            }
+          ],
+          "title": "Condition"
+        },
+        "cost_cap_per_period": {
+          "description": "EUR of expedite cost allowed per period",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Cost Cap Per Period",
+          "type": "number"
+        },
+        "mode": {
+          "enum": [
+            "air",
+            "express_road"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "type": {
+          "const": "expedite",
+          "default": "expedite",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "condition",
+        "mode",
+        "cost_cap_per_period"
+      ],
+      "title": "ExpediteTrigger",
+      "type": "object"
+    },
+    "LimitBreach": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "limit_breach",
+          "default": "limit_breach",
+          "title": "Kind",
+          "type": "string"
+        },
+        "limit": {
+          "$ref": "#/$defs/LimitKind"
+        }
+      },
+      "required": [
+        "limit"
+      ],
+      "title": "LimitBreach",
+      "type": "object"
+    },
+    "LimitKind": {
+      "enum": [
+        "order_qty_change_pct",
+        "expedite_spend_per_period",
+        "consecutive_sourcing_switches",
+        "volume_shift_pct",
+        "parameter_drift_pct"
+      ],
+      "title": "LimitKind",
+      "type": "string"
+    },
+    "LimitView": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "unit": {
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "value",
+        "unit"
+      ],
+      "title": "LimitView",
+      "type": "object"
+    },
+    "MinMax": {
+      "additionalProperties": false,
+      "description": "(s, S): when the inventory position is at or below s, order up to S.",
+      "properties": {
+        "order_up_to": {
+          "description": "S",
+          "discriminator": {
+            "mapping": {
+              "days_of_cover": "#/$defs/DaysOfCover",
+              "units": "#/$defs/Units"
+            },
+            "propertyName": "unit"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Units"
+            },
+            {
+              "$ref": "#/$defs/DaysOfCover"
+            }
+          ],
+          "title": "Order Up To"
+        },
+        "reorder_point": {
+          "description": "s",
+          "discriminator": {
+            "mapping": {
+              "days_of_cover": "#/$defs/DaysOfCover",
+              "units": "#/$defs/Units"
+            },
+            "propertyName": "unit"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Units"
+            },
+            {
+              "$ref": "#/$defs/DaysOfCover"
+            }
+          ],
+          "title": "Reorder Point"
+        },
+        "type": {
+          "const": "min_max",
+          "default": "min_max",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reorder_point",
+        "order_up_to"
+      ],
+      "title": "MinMax",
+      "type": "object"
+    },
+    "ProjectedStockout": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "projected_stockout",
+          "default": "projected_stockout",
+          "title": "Kind",
+          "type": "string"
+        },
+        "within_periods": {
+          "description": "Expedite if a stockout is projected within this many periods",
+          "maximum": 26,
+          "minimum": 1,
+          "title": "Within Periods",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "within_periods"
+      ],
+      "title": "ProjectedStockout",
+      "type": "object"
+    },
+    "Scope": {
+      "additionalProperties": false,
+      "description": "Where a policy applies. An empty list puts no restriction on that dimension.",
+      "properties": {
+        "categories": {
+          "items": {
+            "enum": [
+              "chilled",
+              "ambient"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "title": "Categories",
+          "type": "array"
+        },
+        "lanes": {
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 500,
+          "title": "Lanes",
+          "type": "array"
+        },
+        "nodes": {
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 100,
+          "title": "Nodes",
+          "type": "array"
+        },
+        "sku_classes": {
+          "items": {
+            "enum": [
+              "A",
+              "B",
+              "C"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Sku Classes",
+          "type": "array"
+        },
+        "skus": {
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 200,
+          "title": "Skus",
+          "type": "array"
+        },
+        "suppliers": {
+          "items": {
+            "description": "Identifier",
+            "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+            "type": "string"
+          },
+          "maxItems": 50,
+          "title": "Suppliers",
+          "type": "array"
+        }
+      },
+      "title": "Scope",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SourcingSwitch": {
+      "additionalProperties": false,
+      "description": "Move volume from a primary to a secondary supplier when a trigger holds; switch back when allowed.",
+      "properties": {
+        "min_dwell_periods": {
+          "default": 0,
+          "description": "Periods to stay switched at least",
+          "maximum": 104,
+          "minimum": 0,
+          "title": "Min Dwell Periods",
+          "type": "integer"
+        },
+        "primary": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Primary",
+          "type": "string"
+        },
+        "secondary": {
+          "description": "Identifier",
+          "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+          "title": "Secondary",
+          "type": "string"
+        },
+        "shift_fraction": {
+          "default": 1,
+          "description": "Share of the primary's volume moved",
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Shift Fraction",
+          "type": "number"
+        },
+        "switch_back": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Condition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When to return; none = stay switched"
+        },
+        "trigger": {
+          "$ref": "#/$defs/Condition"
+        },
+        "type": {
+          "const": "sourcing_switch",
+          "default": "sourcing_switch",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary",
+        "secondary",
+        "trigger"
+      ],
+      "title": "SourcingSwitch",
+      "type": "object"
+    },
+    "Units": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "const": "units",
+          "default": "units",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "description": "Units of the SKU",
+          "maximum": 10000000.0,
+          "minimum": 0,
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "Units",
+      "type": "object"
+    },
+    "VarRef": {
+      "additionalProperties": false,
+      "description": "A variable with its qualifiers, written like `lead_time[supplier_B]` or `on_hand[DC_N, S01]`.",
+      "properties": {
+        "node": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Plant, DC or market id, for node variables",
+          "title": "Node"
+        },
+        "sku": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SKU id; empty means summed over the SKUs in scope",
+          "title": "Sku"
+        },
+        "supplier": {
+          "anyOf": [
+            {
+              "description": "Identifier",
+              "pattern": "^[A-Za-z][A-Za-z0-9_\\-]{0,63}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Supplier id, for supplier variables",
+          "title": "Supplier"
+        },
+        "var": {
+          "$ref": "#/$defs/Variable",
+          "description": "A name from the fixed vocabulary"
+        }
+      },
+      "required": [
+        "var"
+      ],
+      "title": "VarRef",
+      "type": "object"
+    },
+    "Variable": {
+      "enum": [
+        "inventory_position",
+        "on_hand",
+        "backorders",
+        "pipeline",
+        "forecast",
+        "observed_lead_time",
+        "supplier_fill_rate",
+        "capacity_utilisation",
+        "demand",
+        "lead_time",
+        "supplier_capacity",
+        "plant_capacity"
+      ],
+      "title": "Variable",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "What an executing agent reads: its active mandate, the rule it executes, and when it must escalate.",
+  "properties": {
+    "agent_id": {
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "approved_by": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Approved By"
+    },
+    "approver": {
+      "title": "Approver",
+      "type": "string"
+    },
+    "audit_hash": {
+      "description": "Hash of the audit entry that deployed this mandate",
+      "title": "Audit Hash",
+      "type": "string"
+    },
+    "autonomy": {
+      "items": {
+        "$ref": "#/$defs/LimitView"
+      },
+      "title": "Autonomy",
+      "type": "array"
+    },
+    "constitution_ref": {
+      "title": "Constitution Ref",
+      "type": "string"
+    },
+    "escalation": {
+      "items": {
+        "$ref": "#/$defs/EscalationRule"
+      },
+      "title": "Escalation",
+      "type": "array"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "network_ref": {
+      "title": "Network Ref",
+      "type": "string"
+    },
+    "owner": {
+      "title": "Owner",
+      "type": "string"
+    },
+    "policy_id": {
+      "title": "Policy Id",
+      "type": "string"
+    },
+    "policy_name": {
+      "title": "Policy Name",
+      "type": "string"
+    },
+    "policy_version": {
+      "title": "Policy Version",
+      "type": "integer"
+    },
+    "prohibited_actions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Prohibited Actions",
+      "type": "array"
+    },
+    "rule": {
+      "discriminator": {
+        "mapping": {
+          "allocation": "#/$defs/AllocationRule",
+          "base_stock": "#/$defs/BaseStock",
+          "composite": "#/$defs/Composite",
+          "expedite": "#/$defs/ExpediteTrigger",
+          "min_max": "#/$defs/MinMax",
+          "sourcing_switch": "#/$defs/SourcingSwitch"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/BaseStock"
+        },
+        {
+          "$ref": "#/$defs/MinMax"
+        },
+        {
+          "$ref": "#/$defs/AllocationRule"
+        },
+        {
+          "$ref": "#/$defs/ExpediteTrigger"
+        },
+        {
+          "$ref": "#/$defs/SourcingSwitch"
+        },
+        {
+          "$ref": "#/$defs/Composite"
+        }
+      ],
+      "title": "Rule"
+    },
+    "scope": {
+      "$ref": "#/$defs/Scope"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "expired"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "valid_from": {
+      "format": "date-time",
+      "title": "Valid From",
+      "type": "string"
+    }
+  },
+  "required": [
+    "agent_id",
+    "status",
+    "policy_id",
+    "policy_version",
+    "policy_name",
+    "owner",
+    "approver",
+    "valid_from",
+    "expires_at",
+    "autonomy",
+    "escalation",
+    "prohibited_actions",
+    "rule",
+    "scope",
+    "constitution_ref",
+    "network_ref",
+    "approved_by",
+    "audit_hash"
+  ],
+  "title": "AgentMandate",
+  "type": "object"
+}

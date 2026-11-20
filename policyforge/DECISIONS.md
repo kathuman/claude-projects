@@ -357,3 +357,57 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   view, in one of its displayed forms (as written, rounded to 0–3 decimals, or as a percentage with 0–2 decimals).
   If any number fails, the model is asked once more with the offending numbers named. If it still invents one, no
   summary is shown.
+
+## D039: What "a passing evaluation" means (P5)
+- **Choice:** a version can be approved only when all of these hold:
+  - it is `tested`;
+  - its latest evaluation is of **this exact content** (same content hash: everything but status, version number
+    and provenance);
+  - the verdict is **approve** (approve with conditions does not pass);
+  - it was run against the **active constitution version** and the **current network version**;
+  - the mandate has not expired.
+  Every unmet condition is reported, in words, by `GET /policies/{id}/{version}/approval-blockers`, and in the 409
+  that refuses the approval.
+- **Rationale:** the brief's rule ("cannot be approved without a passing evaluation run against the current
+  constitution version"), taken strictly. Conditions are for a person to resolve by editing and re-testing: the
+  brief's demo does exactly that.
+
+## D040: The audit log: triggers plus a hash chain (P5)
+- **Choice:**
+  - every entry stores a SHA-256 over its sequence number, time, actor, action, object, payload and the previous
+    entry's hash;
+  - SQLite triggers refuse `UPDATE` and `DELETE` on the table;
+  - `GET /audit/verify` recomputes the chain and names the first entry that is missing, does not link, or was
+    altered;
+  - it also returns the head hash, which can be anchored elsewhere to detect truncation.
+- **Rationale:** the triggers stop accidents; the chain catches anyone who goes around them (dropping a trigger,
+  editing the file). Both are tested. Writes and their audit entries share one transaction.
+
+## D041: One active mandate per agent (P5)
+- **Choice:** deploying a version retires whatever is deployed for the same `agent_id` (recorded as "superseded").
+  `GET /agents/{agent_id}/mandate` returns that one mandate, or 404.
+- **Rationale:** an agent must never have to choose between two mandates.
+
+## D042: Expiry is reported, not hidden (P5)
+- **Choice:** a deployed mandate past `expires_at` stays deployed, but the agent API returns it with
+  `status: "expired"`, and the expiry is written to the audit log once. An expired mandate cannot be approved or
+  deployed; renewing it means a new version with new dates, re-tested.
+- **Rationale:** the brief: "expired mandates are flagged and the agent API returns expired". The agent learns it
+  must stop, rather than silently finding no mandate.
+
+## D043: Versions and re-test flags (P5, for the Network Studio)
+- **Choice:**
+  - saving a network or constitution with changed content creates a new version, and identical content is not
+    duplicated;
+  - policies record the network version they were written for, and evaluations the network and constitution
+    versions they ran on;
+  - a tested, approved or deployed policy whose evaluation predates the current versions is flagged
+    `needs_retest`, and cannot be approved until re-tested.
+- **Rationale:** P5b's Studio edits networks. Every change must flow through to the policies that depend on it.
+
+## D044: The API's actor and evaluation mode (P5)
+- **Choice:** the acting person comes from the `X-Actor` header (default `local-user`), as the brief's
+  single-user local mode allows. Evaluations run synchronously in the request, with the number of replications
+  as a parameter (default 200).
+- **Rationale:** real authentication is out of scope (brief §3). Background jobs with progress come with the
+  frontend (P7), where a progress indicator is required.

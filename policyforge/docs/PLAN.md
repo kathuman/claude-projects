@@ -321,3 +321,73 @@ Each fixture holds:
 - The Anthropic provider's requests are checked against a stand-in client: model from `LLM_MODEL`, the schema in
   `output_config`, effort, fallbacks, no forced tool choice; refusal and truncation are raised.
 - The narrative check rejects an invented number and accepts the real ones.
+
+## Phase 5: registry and API
+
+### Registry (`core/registry/`), SQLModel on SQLite
+
+- **Tables:**
+  - `networks`: id, version, content hash, body;
+  - `constitutions`: id, version, body, which one is active;
+  - `policies`: id, version, status, content hash, agent, owner, expiry, the network version it was written for,
+    body;
+  - `evaluations`: the full report, the policy version and content hash it tested, network and constitution refs,
+    verdict;
+  - `audit`: append-only.
+- **Versions:**
+  - saving a network or constitution whose content changed creates a new version (unchanged content: no new
+    version);
+  - editing a policy creates a new version in `draft`;
+  - a version's content never changes after it is written; only a policy's status moves.
+- **Lifecycle:** draft → tested → approved → deployed → retired.
+  - *Tested:* an evaluation has been recorded for this exact version.
+  - *Approve:* only with a **passing** evaluation (verdict `approve`) of this exact version (same content hash),
+    against the **active constitution version** and the **current network version**. Otherwise the request is
+    refused with the reason ("re-test needed: the network changed since the evaluation", for example).
+  - *Deploy:* an approved version. Any policy already deployed for the same agent is retired, so one agent has one
+    active mandate.
+  - *Retire:* from any status except draft.
+- **Expiry:** a deployed mandate past `expires_at` is reported as expired (once, in the audit log), and the agent
+  API returns `status: "expired"` with it.
+- **Re-test flags:** a tested, approved or deployed policy whose evaluation predates the current network or
+  constitution version is flagged `needs_retest`. This is what P5b's Studio relies on.
+- **Audit log:** every save, edit, compilation, evaluation, approval, deployment, retirement and expiry is
+  appended with actor, time, object, and a payload (hashes, report id, verdict).
+  - Each entry's hash is SHA-256 over its fields and the previous entry's hash: a hash chain.
+  - SQLite triggers refuse `UPDATE` and `DELETE` on the table.
+  - Verification recomputes the chain and reports the first entry that does not match. This catches edits made by
+    going around the triggers.
+- **Diffs:** a path-level JSON diff between any two versions of a policy (DSL and mandate) or a network.
+
+### API (`api/`), FastAPI
+
+| Endpoint | What it does |
+|---|---|
+| `GET /health` | liveness and versions |
+| `GET/POST /networks`, `GET /networks/{id}`, `GET /networks/{id}/versions`, `GET /networks/{id}/diff` | versioned networks |
+| `POST /networks/validate` | the Pydantic model's errors as a list of `{path, message}`, for the Studio (P5b) |
+| `GET /constitutions/active`, `POST /constitutions`, `POST /constitutions/{id}/{version}/activate` | the constitution |
+| `POST /compile` | an intent becomes a compile result: the mock by default, Claude when `LLM_PROVIDER=anthropic` |
+| `GET/POST /policies`, `GET /policies/{id}`, `GET /policies/{id}/versions`, `GET /policies/{id}/{version}`, `PUT /policies/{id}`, `GET /policies/{id}/diff` | versioned policies |
+| `POST /policies/{id}/{version}/evaluate` | runs the evaluation (synchronous, with replications as a parameter; P7 adds background jobs), records it, and returns the report summary |
+| `POST /policies/{id}/{version}/approve`, `/deploy`, `/retire` | the lifecycle, gated |
+| `GET /audit`, `GET /audit/verify` | the log, and the chain check |
+| `GET /agents/{agent_id}/mandate` | the agent's active mandate: limits, escalation rules, prohibitions, rule and scope, expiry and status. 404 if it has none. |
+
+The actor for every change is taken from an `X-Actor` header (single-user local mode, brief §3).
+
+### Tests (P5 acceptance)
+
+- **Approval is blocked without a passing evaluation:**
+  - no evaluation;
+  - a rejecting one;
+  - one for an older version;
+  - one against an outdated constitution or network.
+
+  Then approval succeeds after a passing one.
+- **Tampering is detected:**
+  - direct `UPDATE` and `DELETE` are refused by the triggers;
+  - an edit made after dropping them is found by `GET /audit/verify` at the right entry.
+- **Agent mandate contract:** the response matches its published schema (a snapshot) and the brief's demo
+  (`sourcing-agent-01`).
+- **Lifecycle:** versions, diffs, expiry, one active mandate per agent, re-test flags after a network change.

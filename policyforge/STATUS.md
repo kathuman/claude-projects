@@ -163,3 +163,44 @@ monitoring, frontend, packaging).
   Anthropic provider is tested against a stand-in client (request shape, errors, refusal, truncation).
 - The narrative's number check is textual. A number written in words ("three scenarios") is not checked.
 - Mandate review triggers (links to monitors) are accepted but not used until P6.
+
+## Phase 5: registry and API. Done, acceptance met.
+
+**What works**
+- **Registry** (`core/registry/`), on SQLite through SQLModel:
+  - versioned networks, constitutions and policies;
+  - evaluations stored with their full reports;
+  - the lifecycle draft → tested → approved → deployed → retired, with the approval gate (D039) and one active
+    mandate per agent (D041);
+  - expiry reporting (D042) and re-test flags (D043);
+  - path-level diffs between versions of a policy or a network;
+  - an append-only, hash-chained audit log (D040).
+- **API** (`api/app.py`, FastAPI):
+  - health;
+  - networks, with versions, diffs and field-level validation for the Studio;
+  - constitutions;
+  - compile (the mock by default, Claude with `LLM_PROVIDER=anthropic`);
+  - policies: create, edit, versions, diffs, evaluate, approval blockers, approve, deploy, retire;
+  - evaluation reports as JSON or Markdown;
+  - the audit log and its verification;
+  - **`GET /agents/{agent_id}/mandate`**.
+
+  Run it with `uvicorn api.app:app` from `backend/`: FoodNet and the default constitution are loaded on first
+  start. OpenAPI docs are at `/docs`.
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| Approval is blocked without a passing evaluation | `test_approval_is_blocked_without_a_passing_evaluation`: a draft, a reject verdict, approve with conditions, a version with no evaluation of its own; then approval after a passing one. `test_a_new_constitution_or_network_means_re_test`: blocked again after a constitution or network change, cleared when the constitution is switched back. Over HTTP: a 409 with the reason. |
+| Tampering with the audit log is detected by a verification endpoint | `UPDATE` and `DELETE` refused by triggers; after dropping a trigger, an edited payload is reported at entry 5 ("altered") and a deleted entry at 4 ("missing"); `GET /audit/verify` |
+| Agent mandate API contract (brief §12) | `test_agent_mandate_contract`: the response schema matches the snapshot in `tests/fixtures/agent_mandate.schema.json`. The demo flow over HTTP ends with `GET /agents/sourcing-agent-01/mandate` returning the active mandate (30 % volume limit, approver, audit hash). |
+| Quality gates | 136 tests green; ruff clean; `mypy --strict` clean on `core/` and `api/`; 96 % line coverage |
+
+**Known limitations**
+- One person, no authentication: the actor is whatever `X-Actor` says (D044).
+- Evaluations run inside the request; a large one keeps the request open for minutes. Background jobs come with P7.
+- The incumbent used in evaluations is still the fixed FoodNet incumbent, not the policies deployed in the
+  registry.
+- The hash chain proves integrity within the database, not against someone who rewrites the whole chain. The head
+  hash (`GET /audit/verify`) is there to be anchored elsewhere.
