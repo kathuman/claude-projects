@@ -384,7 +384,7 @@ under the shocks. That is useful to know, and it is the planner's call whether t
 - On GitHub Pages only the Network area works without a local API.
 - The JS bundle is about 600 kB; code splitting is not done yet.
 
-## Phase 8: hardening. Done; the Docker acceptance is checked by CI on push.
+## Phase 8: hardening. Done, acceptance met.
 
 **What works**
 - **`docker compose up`** (D071):
@@ -414,7 +414,7 @@ under the shocks. That is useful to know, and it is the planner's call whether t
 
 | Criterion | Evidence |
 |---|---|
-| `docker-compose up` works on a clean machine | The CI job `docker` on a fresh Ubuntu runner: `docker compose up -d --build --wait`, the proxy answers (`/health`, `/app/`, `/` → 302), all six Playwright tests against the containers, `GET /agents/sourcing-agent-01/mandate` active. **Pending: the first run is on the 1.0.0 push** (Docker is not installed on the development PC) |
+| `docker-compose up` works on a clean machine | The CI job `docker` on a fresh Ubuntu runner: `docker compose up -d --build --wait`, the proxy answers (`/health`, `/app/`, `/` → 302), all six Playwright tests against the containers, `GET /agents/sourcing-agent-01/mandate` active. **Passed on its first run**, the 1.0.0 commit bbb53b4 ([run 45257589612](https://github.com/kathuman/claude-projects/actions/runs/45257589612)); it repeats on every change |
 | Coverage ≥ 80 % on `core/` | 95 % line coverage, enforced in CI (`--cov-fail-under=80`) |
 | docs/USER_GUIDE.md and docs/ARCHITECTURE.md written | Both, plus LIMITATIONS.md, from §13 |
 
