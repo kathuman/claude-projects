@@ -163,7 +163,9 @@ test("undo and redo restore exact states", async ({ page }) => {
 test("quick test, then a saved change flags the tested policy for re-test and the diff shows exactly that change", async ({ page, request }) => {
   const intent = json("tests/fixtures/intents/05-demo-b-to-c-30.json").intent;
   const compiled = await (await request.post("/compile", { data: { intent } })).json();
-  const created = await (await request.post("/policies", { data: compiled.policy })).json();
+  // its own id and name: other specs share this server and may have saved the same demo policy
+  const policy = { ...compiled.policy, id: "studio-retest-check", name: "Studio re-test check" };
+  const created = await (await request.post("/policies", { data: policy })).json();
   const ev = await request.post(`/policies/${created.id}/${created.version}/evaluate`,
     { data: { replications: 10, periods: 52, rolling_replications: 2 } });
   expect(ev.ok()).toBe(true);
@@ -177,14 +179,15 @@ test("quick test, then a saved change flags the tested policy for re-test and th
 
   await page.getByRole("tab", { name: "Versions" }).click();
   await expect(page.getByTestId("policies")).toBeVisible();
-  await expect(page.getByTestId("retest")).toHaveCount(0);
+  const mine = page.getByTestId("policies").locator("tr", { hasText: "Studio re-test check" });
+  await expect(mine.getByTestId("retest")).toHaveCount(0);
   await page.getByRole("tab", { name: "Diagram" }).click();
   await page.getByTestId("node-PLANT_N").click();
   await page.getByLabel("capacity_per_period").fill("6500");
   await page.getByRole("tab", { name: "Versions" }).click();
   await page.getByTestId("save-version").click();
   await expect(page.getByRole("status")).toContainText("Saved foodnet version 2");
-  await expect(page.getByTestId("retest")).toHaveCount(1);
+  await expect(mine.getByTestId("retest")).toHaveCount(1);
   await page.getByTestId("compare-latest").click();
   const diff = page.getByTestId("version-diff");
   await expect(diff.locator("tbody tr")).toHaveCount(1);

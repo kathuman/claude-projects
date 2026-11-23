@@ -16,13 +16,13 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.7.0</span>
+      <span class="ver">v0.8.0</span>
       <span class="sub">tutorial</span>
     </div>
     <nav class="actions">
       <a class="back-link" href="./">About</a>
       <a class="back-link" href="tutorial.html" aria-current="page">Tutorial</a>
-      <a class="back-link" href="frontend/dist/index.html">Network Studio</a>
+      <a class="back-link" href="frontend/dist/index.html">Open the app</a>
       <a class="back-link" href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a>
       <button class="back-link" id="theme" type="button" aria-label="Toggle colour theme">◐</button>
       <a class="back-link" href="../">← Projects</a>
@@ -38,7 +38,7 @@
       <a href="#s4">4 Pick the futures</a><a href="#s5">5 Run it</a><a href="#s6">6 Read the result</a><a href="#s7">7 Get the verdict</a><a href="#s8">8 Try it yourself</a>
     </nav>
 
-    <div class="note"><p><b>Where things stand.</b> PolicyForge's first screen, the <a href="frontend/dist/index.html">Network Studio</a>, builds and checks networks; the screens for writing and testing policies come in P7. In this tutorial you write the rule yourself, in Python, exactly as the compiler produces it from plain language. To see the compiler at work, run <code>python -m examples.compile_intent</code>: it compiles this tutorial's intent offline from a recorded answer, or any intent live with <code>--live</code> and an Anthropic API key.</p></div>
+    <div class="note"><p><b>Where things stand.</b> Everything here can now also be done in <a href="frontend/dist/index.html">the app</a> (Author, Stress test, Registry and Monitor) with the API running locally. This tutorial stays with Python, so you can see what each step really is. You write the rule yourself, in Python, exactly as the compiler produces it from plain language. To see the compiler at work, run <code>python -m examples.compile_intent</code>: it compiles this tutorial's intent offline from a recorded answer, or any intent live with <code>--live</code> and an Anthropic API key.</p></div>
 
     <section class="panel" id="s1">
       <h2>1 · Set up</h2>
@@ -48,7 +48,7 @@ cd claude-projects/policyforge/backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
 .venv/bin/python -m pytest -q          <span class="c"># Windows: .venv\Scripts\python</span></pre>
-      <p>You should see 179 tests pass in about five minutes. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
+      <p>You should see 185 tests pass in a few minutes. They include the checks that the simulator conserves stock and matches theory, so a green run means the engine you are about to use is sound.</p>
     </section>
 
     <section class="panel" id="s2">
@@ -209,7 +209,7 @@ candidate = simulate(lay, draws, compile_program(lay, candidate_policies))</pre>
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.7.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.8.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="./">About</a> · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

@@ -18,7 +18,8 @@ export function prepare(schema: Schema): Schema {
       out = {
         ...rest, type: "object", required: [tag], properties: { [tag]: { enum: Object.keys(mapping) } },
         allOf: Object.entries(mapping).map(([k, ref]) => ({
-          if: { properties: { [tag]: { const: k } }, required: [tag] }, then: { $ref: ref } })),
+          // `type: "object"` keeps null (a nullable union) from matching every branch
+          if: { type: "object", properties: { [tag]: { const: k } }, required: [tag] }, then: { $ref: ref } })),
       };
     }
     if (Array.isArray(out.anyOf) && out.anyOf.length === 2) {
@@ -27,7 +28,7 @@ export function prepare(schema: Schema): Schema {
         const { anyOf: _a, ...rest } = out;
         const t = nonNull[0];
         out = t.$ref ? { ...rest, if: { type: "null" }, else: { $ref: t.$ref } }
-          : { ...rest, ...t, type: [t.type, "null"] };
+          : { ...rest, ...t, type: [t.type, "null"], ...(t.enum ? { enum: [...t.enum, null] } : {}) };
       }
     }
     return out;
@@ -86,7 +87,7 @@ export class FieldChecker {
 
   constructor(schema: Schema) {
     this.schema = schema;
-    const ajv = new Ajv({ allErrors: true, strict: false });
+    const ajv = new Ajv({ allErrors: true, strict: false, validateFormats: false }); // date-times are checked by the API
     this.validate = ajv.compile(prepare(schema));
   }
 
@@ -177,7 +178,7 @@ export function fieldsAt(root: Schema, doc: any, path: string): Field[] {
   const req = new Set<string>(s.required ?? []);
   return Object.entries(s.properties as Record<string, Schema>).map(([key, raw]) => {
     const { schema, nullable } = nonNull(root, raw);
-    return { key, label: schema.title ?? raw.title ?? key, schema, required: req.has(key), nullable,
+    return { key, label: raw.title ?? schema.title ?? key, schema, required: req.has(key), nullable,
       description: raw.description ?? schema.description ?? "", kind: KIND_OF(schema) };
   });
 }

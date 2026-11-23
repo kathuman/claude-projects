@@ -8,10 +8,10 @@ A policy authoring and simulation workbench for supply chain managers who delega
 - **Pages:** [about](https://kathuman.github.io/claude-projects/policyforge/) ·
   [tutorial](https://kathuman.github.io/claude-projects/policyforge/tutorial.html) ·
   [Network Studio](https://kathuman.github.io/claude-projects/policyforge/frontend/dist/index.html)
-- **Status:** v0.7.0, early development. Phases 1–6 are done: domain and data, the simulator, baselines with
-  evaluation, the LLM compiler, the registry with its API, the Network Studio (a visual editor for networks and
-  scenarios), and monitoring (a live stream, drift monitors, a ranked escalation inbox and one-click re-tests).
-  Next: P7, the remaining screens. See [STATUS.md](STATUS.md) and the roadmap on the about page.
+- **Status:** v0.8.0, early development. Phases 1–7 are done: domain and data, the simulator, baselines with
+  evaluation, the LLM compiler, the registry with its API, the Network Studio, monitoring, and the screens: one web
+  app with Network, Constitution, Author, Stress test, Registry and Monitor, in which the brief's whole demo runs
+  (tested end to end). Next: P8, hardening. See [STATUS.md](STATUS.md) and the roadmap on the about page.
 
 ## Run it
 
@@ -19,7 +19,7 @@ A policy authoring and simulation workbench for supply chain managers who delega
 cd backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -e ".[dev]"
-.venv/bin/python -m pytest -q              # 179 tests
+.venv/bin/python -m pytest -q              # 185 tests
 .venv/bin/python -m examples.first_stress_test
 .venv/bin/python -m examples.evaluate_report  # full verdict report into docs/
 .venv/bin/python -m examples.compile_intent   # intent → policy, offline; --live "..." with a key
@@ -29,10 +29,10 @@ uv pip install --python .venv -e ".[dev]"
 
 Or use `make check` from this folder to run ruff, `mypy --strict` and the tests with coverage.
 
-### The Network Studio
+### The app
 
-The built Studio is committed in `frontend/dist`, so the API serves it at http://127.0.0.1:8000/app/ with no
-build step. To work on it (Node 22):
+The built app (the Network Studio and the five other screens) is committed in `frontend/dist`, so the API serves it
+at http://127.0.0.1:8000/app/ with no build step. To work on it (Node 22):
 
 ```bash
 cd frontend
@@ -67,8 +67,9 @@ backend/schemas/         exported JSON Schemas
 backend/examples/        the tutorial's runnable example, and the example report
 backend/tests/           pytest + Hypothesis; fixtures shared with the frontend (broken networks, scenario set)
 frontend/src/lib/        the Studio's pure logic: schema checks, edits, history, tables, map projection, diff
-frontend/src/            React screens: diagram, map, tables, inspector, issues, quick test, versions, scenarios
-frontend/tests/, e2e/    Vitest unit tests; Playwright end to end against the real API
+frontend/src/            React: the Studio (diagram, map, tables, inspector, versions, scenarios) and the screens
+                         (Constitution, Author, Stress test, Registry, Monitor), a schema form, SVG charts
+frontend/tests/, e2e/    Vitest unit tests; Playwright end to end against the real API, the §10 demo included
 frontend/dist/           the built Studio (committed, served by the API and by GitHub Pages)
 docs/                    PLAN.md, DSL_REFERENCE.md (generated), example-report.md
 DECISIONS.md, STATUS.md  design log and phase status

@@ -59,9 +59,10 @@ def trace_key(intent: str, answers: dict[str, str] | None = None) -> str:
 
 
 def load_fixtures(directory: Path) -> MockProvider:
-    """A provider loaded with every recorded intent in a folder (see tests/fixtures/intents)."""
+    """A provider loaded with every recorded intent in a folder (see tests/fixtures/intents), and the recorded answers
+    to clarifying questions in its `answers/` subfolder."""
     mock = MockProvider()
-    for path in sorted(directory.glob("*.json")):
+    for path in [*sorted(directory.glob("*.json")), *sorted(directory.glob("answers/*.json"))]:
         fx = json.loads(path.read_text(encoding="utf-8"))
         key = trace_key(fx["intent"], fx.get("answers"))
         mock.add("compile", key, *fx["responses"])

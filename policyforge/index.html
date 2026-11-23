@@ -16,13 +16,13 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.7.0</span>
+      <span class="ver">v0.8.0</span>
       <span class="sub">policy workbench for agent-run supply chains</span>
     </div>
     <nav class="actions">
       <a class="back-link" href="./" aria-current="page">About</a>
       <a class="back-link" href="tutorial.html">Tutorial</a>
-      <a class="back-link" href="frontend/dist/index.html">Network Studio</a>
+      <a class="back-link" href="frontend/dist/index.html">Open the app</a>
       <a class="back-link" href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a>
       <button class="back-link" id="theme" type="button" aria-label="Toggle colour theme">◐</button>
       <a class="back-link" href="../">← Projects</a>
@@ -84,8 +84,17 @@
     </section>
 
     <section class="panel" aria-labelledby="h-now">
-      <h2 id="h-now">What works today (v0.7.0)</h2>
-      <p>PolicyForge is in early development. Its first screen, the <b>Network Studio</b>, is live. The rest is a Python library and an API you run from the command line; the <a href="tutorial.html">tutorial</a> walks you through it.</p>
+      <h2 id="h-now">What works today (v0.8.0)</h2>
+      <p>PolicyForge is in early development, but the whole loop now runs in the browser: write a policy, stress-test it, approve and deploy it, and watch it in production. A browser test runs the brief's demo from start to finish on every change.</p>
+      <h3 id="screens">The screens <span class="badge done">built</span></h3>
+      <ul>
+        <li><b>Constitution:</b> the hard limits, the priority order, the weights and the risk attitude, as a form; saved as versions, one active.</li>
+        <li><b>Author:</b> type an intent and compile it. Answer its questions. Read the back-translation next to your words, edit the assumptions, adjust the rule as a form or as JSON, and save it.</li>
+        <li><b>Stress test:</b> choose the scenarios, baselines and number of futures; the run shows its progress. The report has the verdict with its reasons, the constitution table, fan charts over time, distributions, and cost against service per scenario. It exports to Markdown or PDF.</li>
+        <li><b>Registry:</b> every version with its status and expiry, what blocks its approval, Approve, Deploy and Retire, the mandate the agent reads, diffs, and the audit trail with its chain check.</li>
+        <li><b>Monitor:</b> play the live stream, inject drift, watch every monitor, and work the ranked inbox; one click re-tests the policy against what is now observed.</li>
+      </ul>
+      <p><a href="frontend/dist/index.html">Open the app</a>. On this site only the Network area works without a server; for the rest, run the API locally and open <code>http://127.0.0.1:8000/app/</code>.</p>
       <h3 id="studio">The Network Studio <span class="badge done">built</span></h3>
       <p>Policies are tested on a model of the supply network, so that model has to be easy to build and keep up to date. The Studio does it visually:</p>
       <ul>
@@ -184,8 +193,8 @@
           <tr><td>P5 Registry and API</td><td>Lifecycle, approval gate, hash-chained audit log, agent mandate endpoint, diffs</td><td>No approval without a passing evaluation; tampering detected</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P5b Network Studio</td><td>Build and maintain networks visually: a diagram, a world map, tables, an inspector generated from the schema, live checks, a quick test, YAML/CSV import and export, versions with diffs, and a scenario builder</td><td>FoodNet rebuilt from scratch in the Studio equals the shipped one; errors shown on the right element; versions flag policies for re-test</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge done">done</span></td></tr>
-          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge next">next</span></td></tr>
-          <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge done">done</span></td></tr>
+          <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge next">next</span></td></tr>
         </tbody>
       </table></div>
       <h3>Proposed additions</h3>
@@ -210,7 +219,7 @@
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.7.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v0.8.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

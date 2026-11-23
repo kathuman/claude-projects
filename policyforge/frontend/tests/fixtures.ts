@@ -15,3 +15,5 @@ export interface BrokenCase {
   name: string; level: "field" | "reference"; browser: boolean; ops: Op[]; expect: { path: string; message: string };
 }
 export const broken = (): BrokenCase[] => read("tests/fixtures/broken_networks.json");
+export const policySchema = () => read("schemas/policy.schema.json");
+export const constitutionSchema = () => read("schemas/constitution.schema.json");

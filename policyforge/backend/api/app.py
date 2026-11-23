@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import yaml
 from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
@@ -35,10 +35,12 @@ from core.llm.compiler import CompileError, CompileResult, compile_intent
 from core.llm.provider import LLMProvider
 from core.monitor.stream import Injection
 from core.registry.diff import Change
+from core.registry.jobs import Job, Jobs
 from core.registry.monitoring import AlertStatus, AlertView, Monitoring, RetestView, StreamView
 from core.registry.registry import (
     AgentMandate,
     AuditEntry,
+    ConstitutionVersion,
     EvaluationSummary,
     PolicySummary,
     Registry,
@@ -51,8 +53,9 @@ from core.registry.store import make_engine
 from core.sim.layout import build_layout
 from core.sim.scenarios import default_suite
 from core.sim.scenarios.preview import Preview, preview
+from core.validate.policy import validate_policy
 
-API_VERSION = "0.7.0"
+API_VERSION = "0.8.0"
 STUDIO = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 Actor = Annotated[str, Header(alias="X-Actor")]
 INTENTS = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "intents"
@@ -146,6 +149,8 @@ class EvaluateRequest(BaseModel):
     scenario_set: str | None = Field(default=None, description="A saved scenario set; empty = the default suite")
     scenario_set_version: int | None = None
     rolling_replications: int = Field(default=20, ge=2, le=200)
+    baselines: list[Literal["incumbent", "naive", "rolling_opt"]] | None = Field(
+        default=None, description="Baselines to run; empty = all three (the incumbent always runs)")
 
 
 class EvaluateResponse(BaseModel):
@@ -155,6 +160,18 @@ class EvaluateResponse(BaseModel):
 
 class Note(BaseModel):
     note: str = ""
+
+
+class PolicyIssue(BaseModel):
+    severity: Literal["error", "warning"]
+    path: str
+    message: str
+    code: str
+
+
+class PolicyCheck(BaseModel):
+    valid: bool
+    issues: list[PolicyIssue]
 
 
 class StreamRequest(BaseModel):
@@ -191,6 +208,8 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
     app = FastAPI(title="PolicyForge API", version=API_VERSION,
                   description="Policies for agent-run supply chains: compile, evaluate, approve, deploy, monitor.")
     app.state.registry = reg
+    jobs = Jobs()
+    app.state.jobs = jobs
     origins = os.environ.get("POLICYFORGE_CORS", CORS_ORIGINS).split(",")
     app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in origins if o.strip()],
                        allow_methods=["*"], allow_headers=["*"])
@@ -308,6 +327,14 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
         return reg.network_diff(nid, a, b)
 
     # ---------------------------------------------------------------- constitutions
+    @app.get("/constitutions", response_model=list[ConstitutionVersion])
+    def list_constitutions() -> list[ConstitutionVersion]:
+        return reg.constitutions()
+
+    @app.get("/constitutions/{cid}/{version}", response_model=Constitution)
+    def get_constitution(cid: str, version: int) -> Constitution:
+        return reg.get_constitution(cid, version)
+
     @app.get("/constitutions/active", response_model=Constitution)
     def active_constitution() -> Constitution:
         return reg.active_constitution()
@@ -361,6 +388,20 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
         return res
 
     # ---------------------------------------------------------------- policies
+    @app.post("/policies/validate", response_model=PolicyCheck)
+    def validate_policy_body(body: dict[str, Any] = Body(...), network_id: str | None = None) -> PolicyCheck:  # noqa: B008
+        """Schema errors first; when there are none, the deterministic validator's errors and warnings."""
+        try:
+            policy = Policy.model_validate(body)
+        except ValidationError as e:
+            return PolicyCheck(valid=False, issues=[
+                PolicyIssue(severity="error", path=".".join(str(x) for x in err["loc"]), message=err["msg"],
+                            code="schema") for err in e.errors()])
+        net, _ = reg.get_network(network_id or reg.default_network_id())
+        found = validate_policy(policy, net, reg.active_constitution())
+        return PolicyCheck(valid=not any(i.severity == "error" for i in found),
+                           issues=[PolicyIssue(**i.model_dump()) for i in found])
+
     @app.get("/policies", response_model=list[PolicySummary])
     def policies(status: str | None = None) -> list[PolicySummary]:
         return reg.policies(status)
@@ -398,9 +439,11 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
     def blockers(pid: str, version: int) -> list[str]:
         return reg.approval_blockers(pid, version)
 
-    @app.post("/policies/{pid}/{version}/evaluate", response_model=EvaluateResponse)
-    def evaluate(pid: str, version: int, req: EvaluateRequest | None = None,
-                 actor: Actor = "local-user") -> EvaluateResponse:
+    @app.post("/policies/{pid}/{version}/evaluate", response_model=None,
+              responses={200: {"model": EvaluateResponse}, 202: {"model": Job}})
+    def evaluate(pid: str, version: int, req: EvaluateRequest | None = None, actor: Actor = "local-user",
+                 background: bool = Query(default=False, description="Run as a job: 202 with the job at once")
+                 ) -> EvaluateResponse | JSONResponse:
         req = req or EvaluateRequest()
         suite = reg.get_scenario_set(req.scenario_set, req.scenario_set_version)[0] if req.scenario_set \
             else default_suite()
@@ -410,8 +453,17 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
             if unknown:
                 raise HTTPException(422, detail={"code": "unknown_scenario", "message": f"unknown {sorted(unknown)}"})
             suite = ScenarioSet(id=f"{suite.id}-subset", name=suite.name, scenarios=chosen)
-        ev, report = reg.evaluate(pid, version, actor, scenarios=suite, replications=req.replications,
-                                  periods=req.periods, seed=req.seed, rolling_reps=req.rolling_replications)
+        reg.get_policy(pid, version)  # 404 before queueing anything
+        base = tuple(dict.fromkeys(["incumbent", *(req.baselines or ["naive", "rolling_opt"])]))
+        kw: dict[str, Any] = {"scenarios": suite, "replications": req.replications, "periods": req.periods,
+                              "seed": req.seed, "rolling_reps": req.rolling_replications, "baselines": base}
+        if background:
+            def work(progress: Any) -> dict[str, Any]:
+                ev, rep = reg.evaluate(pid, version, actor, progress=progress, **kw)
+                return {"evaluation_id": ev.id, "verdict": rep.verdict.decision}
+            job = jobs.submit("evaluation", f"Stress test of {pid} v{version}", work)
+            return JSONResponse(status_code=202, content=job.model_dump(mode="json"))
+        ev, report = reg.evaluate(pid, version, actor, **kw)
         return EvaluateResponse(evaluation=ev, verdict=report.verdict)
 
     @app.post("/policies/{pid}/{version}/approve", status_code=204)
@@ -500,11 +552,36 @@ def create_app(engine: Engine | None = None, registry: Registry | None = None,
     def dismiss(aid: int, body: Note | None = None, actor: Actor = "local-user") -> AlertView:
         return _move(aid, "dismissed", body, actor)
 
-    @app.post("/alerts/{aid}/retest", response_model=RetestView)
-    def run_retest(aid: int, req: RetestRequest | None = None, actor: Actor = "local-user") -> RetestView:
+    @app.post("/alerts/{aid}/retest", response_model=None,
+              responses={200: {"model": RetestView}, 202: {"model": Job}})
+    def run_retest(aid: int, req: RetestRequest | None = None, actor: Actor = "local-user",
+                   background: bool = False) -> RetestView | JSONResponse:
         r = req or RetestRequest()
+        mon.alert(aid)
+        if background:
+            def work(progress: Any) -> dict[str, Any]:
+                rt = mon.run_retest(aid, actor, replications=r.replications, periods=r.periods,
+                                    rolling_reps=r.rolling_replications, progress=progress)
+                return {"retest_id": rt.id, "verdict": rt.verdict}
+            job = jobs.submit("retest", f"Re-test after alert {aid}", work)
+            return JSONResponse(status_code=202, content=job.model_dump(mode="json"))
         return mon.run_retest(aid, actor, replications=r.replications, periods=r.periods,
                               rolling_reps=r.rolling_replications)
+
+    @app.get("/jobs", response_model=list[Job])
+    def list_jobs() -> list[Job]:
+        return jobs.all()
+
+    @app.get("/jobs/{jid}", response_model=Job)
+    def get_job(jid: str) -> Job:
+        j = jobs.get(jid)
+        if j is None:
+            raise HTTPException(404, detail={"code": "job_not_found", "message": f"no job {jid}"})
+        return j
+
+    @app.get("/streams", response_model=list[dict[str, Any]])
+    def list_streams() -> list[dict[str, Any]]:
+        return mon.streams()
 
     @app.get("/retests/{rid}", response_model=RetestView)
     def get_retest(rid: int) -> RetestView:

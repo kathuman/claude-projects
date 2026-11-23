@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from api.app import create_app
+from api.app import API_VERSION, create_app
 from core.domain.assumption import Assumption
 from core.domain.distributions import Gamma
 from core.domain.examples import default_constitution
@@ -341,7 +341,7 @@ def test_the_demo_over_http() -> None:
     assert client.post(f"/streams/{sid}/inject", json={"component": {"kind": "signal_noise"}}).status_code == 422
     assert client.get(f"/alerts/{aid}").json()["status"] == "dismissed"
     assert client.get("/alerts", params={"status": "dismissed", "stream_id": sid}).json()[0]["id"] == aid
-    assert client.get("/health").json()["version"] == "0.7.0"
+    assert client.get("/health").json()["version"] == API_VERSION
 
 
 def test_ranking_for_every_kind_of_subject(demo: Policy, ref: Any) -> None:

@@ -70,6 +70,16 @@ class VersionInfo(Model):
     created_at: datetime
 
 
+class ConstitutionVersion(Model):
+    id: str
+    version: int
+    name: str
+    active: bool
+    content_hash: str
+    actor: str
+    created_at: datetime
+
+
 class PolicySummary(Model):
     policy_id: str
     version: int
@@ -254,6 +264,23 @@ class Registry:
             s.add(target)
             append_audit(s, actor, "constitution.activated", "constitution", f"{cid}@{version}", {}, self.clock())
             s.commit()
+
+    def constitutions(self) -> list[ConstitutionVersion]:
+        """Every stored constitution version, newest first, with the active one marked."""
+        with self.session() as s:
+            rows = s.exec(select(ConstitutionRow)).all()
+        out = [ConstitutionVersion(id=r.constitution_id, version=r.version, name=Constitution.model_validate_json(
+            r.body).name, active=r.active, content_hash=r.content_hash, actor=r.actor, created_at=r.created_at)
+               for r in rows]
+        return sorted(out, key=lambda c: (c.id, -c.version))
+
+    def get_constitution(self, cid: str, version: int) -> Constitution:
+        with self.session() as s:
+            row = s.exec(select(ConstitutionRow).where(ConstitutionRow.constitution_id == cid,
+                                                       ConstitutionRow.version == version)).first()
+        if row is None:
+            raise RegistryError(404, "constitution_not_found", f"no constitution {cid}@{version}")
+        return Constitution.model_validate_json(row.body)
 
     def active_constitution(self) -> Constitution:
         with self.session() as s:
@@ -454,8 +481,11 @@ class Registry:
                                      created_at=ev.created_at)
 
     def evaluate(self, pid: str, version: int, actor: str, scenarios: ScenarioSet | None = None,
-                 replications: int = 200, periods: int = 104, seed: int = 1,
-                 rolling_reps: int = 20) -> tuple[EvaluationSummary, EvaluationReport]:
+                 replications: int = 200, periods: int = 104, seed: int = 1, rolling_reps: int = 20,
+                 baselines: tuple[str, ...] | None = None,
+                 progress: Callable[[float, str], None] | None = None) -> tuple[EvaluationSummary, EvaluationReport]:
+        """Evaluate a stored policy and record the result. `progress(fraction, message)` hears each scenario."""
+        from core.evaluate.run import BASELINES
         from core.evaluate.run import evaluate as run_evaluation
         from core.sim.scenarios import default_suite
 
@@ -463,8 +493,19 @@ class Registry:
         with self.session() as s:
             nid = self._row(s, pid, version).network_ref.split("@")[0]
         net, _ = self.get_network(nid)
-        report = run_evaluation(policy, self.active_constitution(), scenarios or default_suite(), net=net,
-                                replications=replications, periods=periods, seed=seed, rolling_reps=rolling_reps)
+        suite = scenarios or default_suite()
+        done = [0]
+
+        def tick(message: str) -> None:
+            if progress:
+                progress(done[0] / len(suite.scenarios), message)
+                done[0] += 1
+
+        report = run_evaluation(policy, self.active_constitution(), suite, net=net, replications=replications,
+                                periods=periods, seed=seed, rolling_reps=rolling_reps,
+                                baselines=baselines or BASELINES, progress=tick)
+        if progress:
+            progress(1.0, "recording the report")
         return self.record_evaluation(pid, version, report, actor), report
 
     def evaluations(self, pid: str, version: int | None = None) -> list[EvaluationSummary]:

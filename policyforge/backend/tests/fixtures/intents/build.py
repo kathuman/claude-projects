@@ -344,6 +344,21 @@ add("competitor-price-out-of-vocabulary",
 
 EXPECTED_ATTEMPTS = {"competitor-price-out-of-vocabulary": 2}
 
+# Answers to clarifying questions, recorded too, so the §10 demo's "answer it" step runs offline (answers/).
+DEMO_QUESTION = "Should the agent ask you before going above 30%, or never go above 30% at all?"
+DEMO_ANSWER = "Ask me before going above 30%."
+ANSWERED = [("demo-b-to-c-30", {DEMO_QUESTION: DEMO_ANSWER})]
+
+
+def answered(slug: str, answers: dict[str, str]) -> dict[str, Any]:
+    intent, responses, back = next((i, r, b) for s, i, r, b in INTENTS if s == slug)
+    final = dict(responses[-1])
+    final["clarifying_questions"] = []
+    final["interpretation_notes"] = (final["interpretation_notes"] + " You confirmed: above 30% the agent asks you "
+                                     "first; it does not stop at 30%.")
+    return {"id": f"{slug}-answered", "intent": intent, "answers": answers, "responses": [final],
+            "back_translation": back}
+
 
 def main() -> None:
     assert len(INTENTS) == 20, len(INTENTS)
@@ -364,6 +379,10 @@ def main() -> None:
         }
         (HERE / f"{i:02d}-{slug}.json").write_text(json.dumps(fx, indent=2, ensure_ascii=False) + "\n",
                                                    encoding="utf-8")
+    (HERE / "answers").mkdir(exist_ok=True)
+    for slug, answers in ANSWERED:
+        (HERE / "answers" / f"{slug}.json").write_text(
+            json.dumps(answered(slug, answers), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

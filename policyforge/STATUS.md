@@ -312,3 +312,74 @@ under the shocks. That is useful to know, and it is the planner's call whether t
   matching scenario, or the monitors will report it as drift.
 - Exposure is a first-order estimate (volume × value at risk), not a simulation of the loss.
 - The Monitor screen (play, pause, inject, the inbox) is P7.
+
+## Phase 7: the screens. Done, acceptance met.
+
+**What works** (`frontend/`; one app at `/app`, D063)
+- **Network:** the Network Studio (P5b), unchanged.
+- **Constitution:**
+  - the active constitution as a generated form: hard limits, the priority ranking, soft weights, risk attitude, α;
+  - unsaved changes against the active version;
+  - saving a new version, active or not;
+  - the version history, with "Load" and "Make active".
+- **Author:**
+  - intent → Compile (the mock offline, Claude with `LLM_PROVIDER=anthropic`);
+  - clarifying questions with answers and "Recompile";
+  - the intent next to the back-translation, interpretation notes, confidence;
+  - the assumptions as an editable table;
+  - the policy as a generated form and as JSON, in sync;
+  - live checks from the schema and the server's validator, located on the fields;
+  - save as a new policy or a new version, then "Stress test it".
+- **Stress test:**
+  - policy and version, scenario set and which of its scenarios, baselines, futures;
+  - runs as a background job with a progress bar (D064);
+  - the report:
+    - the verdict and its reasons, and the objective-by-objective comparison;
+    - the constitution table per scenario and policy;
+    - fan charts of weekly fill rate and cost;
+    - per-future distributions;
+    - cost against service as small multiples per scenario (D069);
+  - export to Markdown or PDF (print).
+- **Registry:**
+  - every version with its status, owner, agent, expiry, scope, verdict and re-test flag;
+  - approval blockers; Approve, Deploy and Retire with a note;
+  - the agent's live mandate (`GET /agents/{id}/mandate`) once deployed;
+  - version diffs, evaluations, the audit trail per policy;
+  - the whole log with chain verification.
+- **Monitor:**
+  - start streams; Play, Pause, Step, speed, pause on a new alert;
+  - inject drift (supplier or plant capacity, lead time, demand), from the next week;
+  - optionally show the hidden world;
+  - KPIs and every monitor with a sparkline, its threshold and alarm weeks;
+  - the ranked inbox with Acknowledge, Resolve, Dismiss and one-click **Re-test**, run as a job, showing the
+    verdict, the model changes and the full report.
+- **Shared:**
+  - a schema form generated from the JSON Schemas (D065);
+  - SVG charts with colours checked by the palette validator;
+  - "acting as" for the audit log (D068).
+- **Backend:**
+  - background jobs (`GET /jobs/{id}`) for evaluations and re-tests;
+  - a choice of baselines;
+  - `GET /constitutions`, `GET /constitutions/{id}/{version}`, `GET /streams`, `POST /policies/validate`;
+  - the demo's answer recorded for offline compiles (D066).
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| The full demo script runs end to end in the browser | `frontend/e2e/demo.spec.ts`, against the real API on a fresh database, about 1.2 minutes. (1) The constitution checked and saved as version 2, active. (2) The demo intent compiled: a sourcing switch, three assumptions, one question; answered; recompiled with none; saved. (3) A stress test on the default suite against the incumbent and rolling optimisation, run as a job; the report's constitution table has 8 scenarios. (4) The rule edited (an expedite-spend cap in the mandate), saved as v2, re-tested: **approve**; approved with a note, deployed; the Registry shows its expiry, its audit trail (edited, evaluation, approved, deployed) and the agent's mandate; the chain verifies. (5) Monitor: a stream, Supplier C's capacity loss from week 20 injected, Play; the assumption alert tops the inbox by week 24; one click re-tests on C's observed capacity. (6) `GET /agents/sourcing-agent-01/mandate` returns version 2, active |
+| The screens of §11 | All six areas; the Network area is P5b's Studio, its 5 browser tests unchanged and green |
+| Quality gates | Backend: 185 tests green, ruff and `mypy --strict` clean, 95 % line coverage. Frontend: TypeScript strict, 59 Vitest tests, 6 Playwright tests |
+
+**Notes**
+- §10 narrates a first verdict of "approve with conditions or reject" (an expedite-budget breach). The compiled demo
+  rule has no expediting, so it gets **approve** at once; the test performs every step of the script anyway (D067).
+- The browser test found two real bugs, both fixed:
+  - empty 204 responses broke the screen's refresh after Approve (D070);
+  - nullable unions and enums were rejected by the browser's checks (D065).
+
+**Known limitations**
+- Jobs live in memory: a restart loses progress bars (never results).
+- One acting person, no login (D044, D068).
+- On GitHub Pages only the Network area works without a local API.
+- The JS bundle is about 600 kB; code splitting is not done yet.

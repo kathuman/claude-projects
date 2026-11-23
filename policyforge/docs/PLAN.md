@@ -340,6 +340,89 @@ The Monitor screen is P7.
 - **Re-test:** the observed network has C's capacity set to what was seen, and the verdict is stored.
 - **API flow:** the full demo through the API.
 
+## Phase 7: the screens (started and done 2026-11-20, see STATUS.md)
+
+Brief §11, and the acceptance in §9: the full §10 demo script runs end to end in the browser, tested with
+Playwright. The Network Studio (P5b) is the Network screen, so P7 adds five screens to the same app.
+
+### One app, six areas
+- The Studio's app becomes the PolicyForge app, with a top-level navigation: **Network** (the Studio, unchanged),
+  **Constitution**, **Author**, **Stress test**, **Registry**, **Monitor**. Hash routes (`#/author`), so it works
+  under `/app` and on GitHub Pages.
+- Every screen reads and writes through the API with TanStack Query; without the API, each one says so.
+
+### Screens
+- **Constitution:**
+  - the active constitution as a form generated from its JSON Schema: hard constraints (add, remove, edit),
+    the priority order (move up and down), soft weights, the risk attitude and α;
+  - "Save as new version", with "make it active";
+  - the version history, with a diff against the active one;
+  - field errors at once, from the schema.
+- **Author:**
+  - an intent box, and **Compile** (the mock offline; Claude when the API runs with `LLM_PROVIDER=anthropic`);
+  - the compiled policy as a generated form **and** as JSON, the two kept in sync;
+  - the assumptions table, editable;
+  - the clarifying questions, with an answer box each and **Recompile with answers**;
+  - the intent and the back-translation side by side;
+  - interpretation notes, confidence, the validator's warnings;
+  - **Save** creates the policy in the registry, or a new version of an existing one.
+- **Stress test:**
+  - choose a policy and version, the scenario set (default suite or a saved set, and which of its scenarios), the
+    baselines (incumbent always; naive; rolling optimisation), and the replications;
+  - **Run** starts a background job with a progress bar;
+  - the report:
+    - the verdict with its reasons;
+    - the constitution table (share of replications breaching each limit, per policy and scenario);
+    - fan charts over time (P5–P95 and P25–P75 bands, median line) for the candidate and the incumbent;
+    - distributions per scenario (violin-style density, P5/P50/P95 marks);
+    - the cost against service scatter, coloured by scenario;
+  - export: Markdown (the API's) and PDF (the browser's print to PDF, with a print stylesheet).
+- **Registry:**
+  - every policy with its status, owner, agent, expiry, scope, latest verdict and re-test flag;
+  - a policy's versions with a diff (rule and mandate), its evaluations, its approval blockers;
+  - Approve, Deploy, Retire, with a note;
+  - the audit log (filtered to the policy, and whole), with chain verification.
+- **Monitor:**
+  - start a stream (seed, horizon, matching scenario);
+  - Play, Pause, Step, and a speed setting;
+  - **Inject drift**: a form for the four kinds, with the week it bites;
+  - the KPIs so far (service, cost) against time;
+  - every monitor's state with a sparkline of what it watches and where it fires;
+  - the escalation inbox, ranked, with Acknowledge, Resolve, Dismiss and **Re-test**, which runs as a background
+    job and shows the re-test's verdict and the changes to the model.
+
+### Backend additions
+- **Background jobs** (`core/registry/jobs.py`): evaluations and re-tests run in a worker thread, report their
+  progress (scenario by scenario), and are polled at `GET /jobs/{id}`. `?background=true` on
+  `POST /policies/{id}/{v}/evaluate` and `POST /alerts/{id}/retest` returns a job at once. The synchronous forms
+  stay for scripts and tests.
+- `EvaluateRequest.baselines`, so the Stress test screen can leave out the naive or rolling-optimisation
+  baselines.
+- `GET /constitutions` (versions, active marked) and `GET /constitutions/{id}/{version}`; `GET /streams`;
+  `POST /policies/validate` (schema, then the deterministic validator, as located issues).
+- A recorded answered compile for the demo intent (`tests/fixtures/intents/answers/`), so the demo's "answer the
+  clarifying question" step runs offline.
+- The exported schemas the screens generate forms from, read at build time as the Studio does.
+
+### Shared frontend pieces
+- A generic **schema form** (the Inspector's approach, extracted): objects, nullable fields, enums, numbers with
+  bounds, arrays of objects with add and remove, discriminated unions with a kind picker, and pickers for ids
+  from the network.
+- Charts as small SVG components (fan, density, scatter, sparkline, bars), themed with the app's tokens.
+
+### Tests
+- Vitest for the new pure modules: routing, the report's chart data, the job poller, the schema form's edits.
+- **Playwright, the §10 demo:**
+  1. constitution set and saved;
+  2. intent compiled, with three assumptions and one question; the question answered;
+  3. policy saved; stress test on the default suite against the incumbent and rolling optimisation; the verdict
+     read;
+  4. the rule edited, re-tested, approved as owner, deployed; the Registry shows its expiry and audit trail;
+  5. Monitor: stream started, Supplier C's capacity loss injected from week 20, the assumption alert tops the
+     inbox, one click re-tests;
+  6. `GET /agents/sourcing-agent-01/mandate` returns the active mandate.
+- The existing Studio tests keep passing.
+
 ## Phase 4: LLM compiler
 
 ### Packages

@@ -586,3 +586,69 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
   episode (a week with hits after a week without), with the escalation rule's severity.
 - **Rationale:** the brief: each item links to "the breached assumption or limit". Escalations and drift alerts
   belong in one queue, ranked against each other.
+
+## D063: One app, six areas, hash routes (P7)
+- **Choice:** the Network Studio's app became the PolicyForge app: Network (the Studio), Constitution, Author, Stress
+  test, Registry, Monitor, with hash routes (`#/author?policy=…`). The build stays committed and relative, so it runs
+  at `/app` on the API and as files on GitHub Pages (where only the Network area works without a local API).
+- **Rationale:** one deployable, and links that work both ways without server routing.
+
+## D064: Long work runs as background jobs (P7)
+- **Choice:**
+  - `?background=true` on evaluate and re-test returns 202 with a job at once;
+  - one worker thread runs the jobs in order and reports progress scenario by scenario at `GET /jobs/{id}`;
+  - jobs live in memory, while their results (evaluations, re-tests) are stored in the registry as before;
+  - the synchronous forms remain for scripts and tests;
+  - `EvaluateRequest.baselines` lets the screen leave out the naive or rolling-optimisation baselines.
+- **Rationale:** the brief's progress indicator, without a queue service. A restart loses only progress bars, not
+  results.
+
+## D065: Forms are generated from the JSON Schemas (P7)
+- **Choice:** the policy and the constitution are edited with one schema form.
+  - It handles objects, nullable fields, enums, bounded numbers, lists of objects (add, remove, move),
+    discriminated unions (a kind picker that keeps the fields both kinds share), maps keyed by an enum (soft
+    weights), rankings (priorities), and id pickers from the network.
+  - The browser's field checks use the same schemas.
+  - A nullable discriminated union needed `type: "object"` in its `if` tests: `properties` and `required` only
+    constrain objects, so `null` matched every branch.
+- **Rationale:** the screens cannot fall behind the Python models (the same principle as the Studio, D046).
+
+## D066: The demo's answers are recorded too (P7)
+- **Choice:** answers to clarifying questions are recorded fixtures as well (`tests/fixtures/intents/answers/`),
+  keyed by the intent and the answers, so the §10 step "answer it" runs offline with the mock. With
+  `LLM_PROVIDER=anthropic`, any answer works.
+- **Rationale:** the browser demo must run in CI without an API key.
+
+## D067: The demo follows the script; its verdicts are what the numbers say (P7)
+- **Choice:**
+  - §10 narrates the first stress test breaching the expedite budget in 7 % of futures. The compiled demo rule has
+    no expediting in it, so it cannot; on the default suite it gets **approve** at once, better than the incumbent
+    under the correlated shock.
+  - The browser test performs every step of the script: it checks the first verdict is a verdict, then edits the
+    rule (an expedite-spend cap in the mandate), re-tests, gets **approve**, and approves and deploys.
+- **Rationale:** the brief's numbers were illustrative. Forcing a rejection would mean tuning the model to a story;
+  the test instead holds every step of the flow to account.
+
+## D068: Who is acting (P7)
+- **Choice:** the shell has no login. Each request carries `X-Actor`, which the screens set to "Planning manager"
+  (stored in the browser), and the audit log records it. Real authentication stays out of scope (D044).
+- **Rationale:** the single-user local mode the brief allows.
+
+## D069: Charts (P7)
+- **Choice:**
+  - Series colours for candidate, incumbent, naive and rolling optimisation: orange, aqua, violet and amber, from
+    the reference palette, re-stepped and checked with the palette validator on both of the app's surfaces (navy
+    and white).
+  - Where a colour is below 3:1 contrast, legends and tables carry the identity as well.
+  - Fan charts show P5–P95 and P25–P75 bands with a median line; distributions are densities with P5, median and
+    P95 marks.
+  - Cost against service is drawn as **small multiples per scenario**, with shared scales and two series, instead
+    of one scatter in eight scenario colours, which no palette can keep apart.
+  - PDF export is the browser's print to PDF, with a print stylesheet.
+- **Rationale:** readable, honest charts without a chart library. PDF from the browser avoids a server-side
+  renderer.
+
+## D070: The API client tolerates empty responses (P7)
+- **Choice:** a 204 (approve, retire, activate) returns null without parsing. FastAPI labels empty 204s as JSON, and
+  parsing them threw, so the screen never refreshed after an approval. The browser test caught it.
+- **Rationale:** the screens must react to every successful action.

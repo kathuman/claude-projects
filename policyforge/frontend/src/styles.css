@@ -26,6 +26,8 @@
   --pf-ok: #7ee2a8; --pf-warn: #ffd27a; --pf-bad: #f87171;
   --pf-land: #123f6b; --pf-sea: #082444;
   --g-suppliers: #c4b5fd; --g-plants: #7dd3fc; --g-dcs: #7ee2a8; --g-markets: #ffd27a;
+  /* chart series, validated on the navy surface (dataviz validator): candidate, incumbent, naive, rolling */
+  --s1: #d95926; --s2: #1baf7a; --s3: #9085e9; --s4: #c98500;
   color-scheme: dark;
 }
 :root[data-theme="light"] {
@@ -34,6 +36,7 @@
   --pf-ok: #17824a; --pf-warn: #9a6200; --pf-bad: #c62828;
   --pf-land: #d5e3ef; --pf-sea: #f3f8fc;
   --g-suppliers: #6d28d9; --g-plants: #0b6aa2; --g-dcs: #17824a; --g-markets: #9a6200;
+  --s1: #eb6834; --s2: #1baf7a; --s3: #6250d6; --s4: #eda100;
   color-scheme: light;
 }
 
@@ -59,3 +62,12 @@ body { background: var(--pf-bg); color: var(--pf-ink); font-family: var(--font-b
 .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
 .scroll-thin::-webkit-scrollbar-thumb { background: var(--pf-line); border-radius: 4px; }
 svg text { user-select: none; }
+
+.tip { position: absolute; pointer-events: none; z-index: 20; background: var(--pf-panel); border: 1px solid var(--pf-line);
+  border-radius: 6px; padding: 6px 8px; font-size: 12px; color: var(--pf-ink); box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  white-space: nowrap; }
+@media print {
+  header, nav, .no-print { display: none !important; }
+  body, .bg-panel, .bg-panel-2 { background: #fff !important; color: #000 !important; }
+  main { overflow: visible !important; }
+}

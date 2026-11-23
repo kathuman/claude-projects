@@ -10,6 +10,7 @@ says so.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from core.domain.common import Model
@@ -110,7 +111,8 @@ class Retest(Model):
 
 def retest(policy: Policy, constitution: Constitution, net: Network, updates: list[dict[str, Any]], *,
            week: int | None = None, scenarios: ScenarioSet | None = None, replications: int = 200,
-           periods: int = 104, seed: int = 1, rolling_reps: int = 20) -> Retest:
+           periods: int = 104, seed: int = 1, rolling_reps: int = 20,
+           progress: Callable[[float, str], None] | None = None) -> Retest:
     from core.evaluate.run import evaluate
 
     observed, changes = observed_network(net, updates, week)
@@ -118,6 +120,14 @@ def retest(policy: Policy, constitution: Constitution, net: Network, updates: li
     if not changes:
         notes.append("Nothing in the alert maps onto the model (a state variable, or no observation yet): the "
                      "stress test re-runs on the unchanged network.")
-    report = evaluate(policy, constitution, scenarios or default_suite(), net=observed, replications=replications,
-                      periods=periods, seed=seed, rolling_reps=rolling_reps)
+    suite = scenarios or default_suite()
+    done = [0]
+
+    def tick(message: str) -> None:
+        if progress:
+            progress(done[0] / len(suite.scenarios), message)
+            done[0] += 1
+
+    report = evaluate(policy, constitution, suite, net=observed, replications=replications, periods=periods,
+                      seed=seed, rolling_reps=rolling_reps, progress=tick)
     return Retest(policy_id=policy.id, policy_version=policy.version, changes=changes, notes=notes, report=report)

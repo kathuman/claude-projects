@@ -161,6 +161,18 @@ class Monitoring:
         assert row.id is not None
         return self.stream(row.id)
 
+    def streams(self) -> list[dict[str, Any]]:
+        """Every stream, newest first: id, network, policies, week and horizon."""
+        with self.reg.session() as s:
+            rows = s.exec(select(StreamRow)).all()
+        out = []
+        for r in rows:
+            cfg = StreamConfig.model_validate_json(r.config)
+            out.append({"id": r.id, "network_ref": r.network_ref, "scenario_id": r.scenario_id, "week": r.week,
+                        "horizon": cfg.horizon, "seed": cfg.seed,
+                        "policies": [f"{p}@{v}" for p, v in json.loads(r.policies)], "created_at": r.created_at})
+        return sorted(out, key=lambda x: -int(x["id"] or 0))
+
     def stream(self, sid: int, reveal: bool = False) -> StreamView:
         row = self._row(sid)
         cfg, _, live, _, res = self._compute(row)
@@ -289,7 +301,7 @@ class Monitoring:
 
     # ---------------------------------------------------------------- re-test
     def run_retest(self, aid: int, actor: str, replications: int = 200, periods: int = 104,
-                   rolling_reps: int = 20) -> RetestView:
+                   rolling_reps: int = 20, progress: Any = None) -> RetestView:
         """Re-run the stress test with the updated assumption: the policy, on the network as observed."""
         alert = self.alert(aid)
         row = self._row(alert.stream_id)
@@ -307,7 +319,8 @@ class Monitoring:
         updates = [self._fresh(u, live, row.week) for u in updates]
         net, _ = self.reg.get_network(row.network_ref.split("@")[0], int(row.network_ref.split("@")[1]))
         result = retest(policy, self.reg.active_constitution(), net, updates, week=row.week,
-                        replications=replications, periods=periods, seed=cfg.seed, rolling_reps=rolling_reps)
+                        replications=replications, periods=periods, seed=cfg.seed, rolling_reps=rolling_reps,
+                        progress=progress)
         result = result.model_copy(update={"alert_id": aid})
         now = self.reg.clock()
         with self.reg.session() as s:
