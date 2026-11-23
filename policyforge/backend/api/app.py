@@ -55,7 +55,7 @@ from core.sim.scenarios import default_suite
 from core.sim.scenarios.preview import Preview, preview
 from core.validate.policy import validate_policy
 
-API_VERSION = "0.8.0"
+API_VERSION = "1.0.0"
 STUDIO = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 Actor = Annotated[str, Header(alias="X-Actor")]
 INTENTS = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "intents"

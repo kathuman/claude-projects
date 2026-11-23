@@ -652,3 +652,34 @@ One entry per non-trivial decision: context, options, choice, rationale. Newest 
 - **Choice:** a 204 (approve, retire, activate) returns null without parsing. FastAPI labels empty 204s as JSON, and
   parsing them threw, so the screen never refreshed after an approval. The browser test caught it.
 - **Rationale:** the screens must react to every successful action.
+
+## D071: Two containers, one origin (P8)
+- **Choice:** `docker compose up` starts two services:
+  - **`api`:** FastAPI from `backend/Dockerfile`, Python 3.12 slim, an editable install so the data files stay where
+    the code expects them, SQLite on the `pfdata` volume, a non-root user, a health check;
+  - **`web`:** the frontend **built from source** by Node 22 (type-checked first), served by nginx at `/app/`, with
+    every other path proxied to `api`.
+- **Rationale:** the brief's "starts the backend and frontend". One origin means the app finds the API with no
+  configuration. Building from source proves the committed build is not needed, and the type check runs in the
+  image too.
+
+## D072: The clean machine is a CI runner (P8)
+- **Choice:**
+  - Docker is not installed on the development PC.
+  - The acceptance "works on a clean machine" is checked by a CI job on a fresh Ubuntu runner. It builds both
+    images, starts the stack and waits for the health checks. Then it checks the proxy, runs every Playwright test
+    against the containers (`PF_BASE_URL`), the §10 demo included, and reads the agent's mandate through nginx.
+- **Rationale:** a fresh runner is a cleaner machine than a developer's, and the check repeats on every change.
+
+## D073: `make test` runs everything (P8)
+- **Choice:**
+  - `make test` = ruff, mypy, pytest with the 80 % coverage gate, TypeScript, Vitest and Playwright.
+  - `make up` / `down` / `logs` drive Docker; `make demo` runs the command-line examples.
+  - The interpreter is overridable (`PY=python`), and CI runs the backend half through the Makefile, so the
+    Makefile cannot rot.
+- **Rationale:** the brief's "make test runs everything", kept honest by CI.
+
+## D074: 1.0.0 (P8)
+- **Choice:** with every phase of the brief accepted, the version is 1.0.0 across the API, the package, the app and
+  the pages. Remaining gaps are stated in `docs/LIMITATIONS.md` and in each phase's known limitations.
+- **Rationale:** a version number that means "the brief is done", not "nothing is left".

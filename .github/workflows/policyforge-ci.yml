@@ -28,9 +28,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -e ".[dev]"
-      - run: ruff check core api tests examples
-      - run: mypy
-      - run: python -m pytest -o addopts="" -q --cov=core --cov=api --cov-report=term --cov-fail-under=80
+      - name: Lint, types and tests with coverage, through the Makefile (as `make test-backend`)
+        run: make -C .. test-backend PY=python
       - name: Exported schemas are up to date
         run: python -m core.domain.schema_export && git diff --exit-code -- schemas data ../docs/DSL_REFERENCE.md
 
@@ -59,3 +58,38 @@ jobs:
       - run: npm run e2e
         env:
           PF_PYTHON: python
+
+  # The brief's "docker-compose up works on a clean machine": a fresh runner builds both images from source, starts
+  # the stack, and runs the browser tests (the §10 demo included) against it through nginx.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: policyforge
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+      - name: The app and the API answer through the proxy
+        run: |
+          curl -fsS http://localhost:8080/health
+          curl -fsS http://localhost:8080/app/ | grep -q '<div id="root">'
+          curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8080/ | grep -q 302
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: policyforge/frontend/package-lock.json
+      - run: npm ci && npx playwright install --with-deps chromium
+        working-directory: policyforge/frontend
+      - name: Browser tests against the containers
+        run: npx playwright test
+        working-directory: policyforge/frontend
+        env:
+          PF_BASE_URL: http://localhost:8080
+      - name: The agent reads its mandate
+        run: curl -fsS http://localhost:8080/agents/sourcing-agent-01/mandate | grep -q '"status":"active"'
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail 200

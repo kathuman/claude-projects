@@ -1,0 +1,21 @@
+# Keep the build context small and the images clean: the web image builds the app from source.
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.hypothesis
+**/.coverage
+**/htmlcov
+**/*.egg-info
+**/*.db
+**/*.sqlite
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+docs/example-report.json
+index.html
+tutorial.html
+assets

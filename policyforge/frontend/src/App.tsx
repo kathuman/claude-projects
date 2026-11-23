@@ -16,7 +16,7 @@ import StressTest from "./screens/StressTest";
 import Studio from "./Studio";
 import { useStore } from "./store";
 
-export const VERSION = "0.8.0";
+export const VERSION = "1.0.0";
 
 /** What the Studio's screens share (checks, issues by element, health, the colouring measure). */
 export interface Shared {

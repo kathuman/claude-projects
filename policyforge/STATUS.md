@@ -383,3 +383,60 @@ under the shocks. That is useful to know, and it is the planner's call whether t
 - One acting person, no login (D044, D068).
 - On GitHub Pages only the Network area works without a local API.
 - The JS bundle is about 600 kB; code splitting is not done yet.
+
+## Phase 8: hardening. Done; the Docker acceptance is checked by CI on push.
+
+**What works**
+- **`docker compose up`** (D071):
+  - `api` (FastAPI, SQLite on a volume, health check, non-root);
+  - `web` (the app built from source, served by nginx at `/app/`, the API proxied: one origin on port 8080).
+
+  The offline compiler is the default; `LLM_PROVIDER=anthropic` with a key switches to Claude.
+- **The clean-machine check** (D072): a CI job builds both images on a fresh runner and starts the stack. Then it
+  runs every Playwright test against it (the §10 demo included) and reads the agent's mandate through the proxy.
+- **Makefile** (D073):
+  - `make up`, `down` and `logs`;
+  - `make test` runs everything: ruff, mypy, pytest with the coverage gate, TypeScript, Vitest, Playwright;
+  - `make e2e-docker` and `make demo`.
+
+  CI runs the backend half through the Makefile.
+- **Docs:**
+  - [USER_GUIDE.md](docs/USER_GUIDE.md): run it, the §10 demo screen by screen, intents that compile well,
+    reading a report, the agent API, troubleshooting;
+  - [ARCHITECTURE.md](docs/ARCHITECTURE.md): Mermaid component and sequence diagrams, modules, guarantees, tests,
+    runtime;
+  - [LIMITATIONS.md](docs/LIMITATIONS.md): what the simulator does not model, where the evaluation could mislead,
+    and the compiler's, monitoring's and governance's limits;
+  - [DSL_REFERENCE.md](docs/DSL_REFERENCE.md), generated.
+- **Version 1.0.0** (D074).
+
+**Acceptance**
+
+| Criterion | Evidence |
+|---|---|
+| `docker-compose up` works on a clean machine | The CI job `docker` on a fresh Ubuntu runner: `docker compose up -d --build --wait`, the proxy answers (`/health`, `/app/`, `/` → 302), all six Playwright tests against the containers, `GET /agents/sourcing-agent-01/mandate` active. **Pending: the first run is on the 1.0.0 push** (Docker is not installed on the development PC) |
+| Coverage ≥ 80 % on `core/` | 95 % line coverage, enforced in CI (`--cov-fail-under=80`) |
+| docs/USER_GUIDE.md and docs/ARCHITECTURE.md written | Both, plus LIMITATIONS.md, from §13 |
+
+**The brief's final checklist (§13)**
+
+| Item | Where |
+|---|---|
+| Running app via `docker-compose up` | `docker-compose.yml`, checked in CI |
+| All phases' acceptance criteria met and recorded in STATUS.md | Phases 1–8 above, and 5b |
+| DECISIONS.md with all design decisions | D001–D074 |
+| docs/ARCHITECTURE.md (with a component diagram in Mermaid), docs/USER_GUIDE.md, docs/DSL_REFERENCE.md (generated from schema) | `docs/` |
+| The demo script in §10 reproducible end to end | `frontend/e2e/demo.spec.ts`, against a local server and against Docker; `examples/monitor_demo.py` for its monitoring step |
+| docs/LIMITATIONS.md | `docs/LIMITATIONS.md` |
+
+**Testing requirements (§12)**, all in place:
+- unit tests for validators, executors and metrics;
+- Hypothesis for conservation laws and DSL bounds;
+- golden compiler tests with the mock;
+- the incumbent's KPIs locked at a fixed seed;
+- the agent-mandate contract test;
+- the Playwright §10 demo.
+
+Overall: 185 backend tests, 59 Vitest, 6 Playwright.
+
+**Known limitations:** see [LIMITATIONS.md](docs/LIMITATIONS.md).

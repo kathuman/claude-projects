@@ -423,6 +423,45 @@ Playwright. The Network Studio (P5b) is the Network screen, so P7 adds five scre
   6. `GET /agents/sourcing-agent-01/mandate` returns the active mandate.
 - The existing Studio tests keep passing.
 
+## Phase 8: hardening (started and done 2026-11-23, see STATUS.md)
+
+Brief §9 and §13: `docker-compose up` works on a clean machine; coverage ≥ 80 % on `core/` (95 % already);
+docs/USER_GUIDE.md, docs/ARCHITECTURE.md (with a Mermaid component diagram) and docs/LIMITATIONS.md; `make test`
+runs everything.
+
+### Containers
+- **`api`** (`backend/Dockerfile`): Python 3.12 slim, the backend installed from `pyproject.toml`, uvicorn on port
+  8000. The SQLite database lives on a named volume (`/data`). It uses the mock compiler unless `LLM_PROVIDER` and
+  `ANTHROPIC_API_KEY` are set. It has a health check on `/health`.
+- **`web`** (`frontend/Dockerfile`): the frontend **built from source** with Node 22 (not the committed build), served
+  by nginx at `/app/`. Every other path goes to `api`, so the app and the API share one origin (port 8080).
+- `docker-compose.yml` at the root of `policyforge/`; `.dockerignore` keeps `node_modules`, virtual environments,
+  build output and databases out of the build context.
+
+### The clean machine is CI
+Docker is not installed on the development PC. A CI job on a fresh Ubuntu runner:
+1. builds both images from scratch;
+2. runs `docker compose up -d` and waits for health;
+3. runs the Playwright §10 demo against the stack (`PF_BASE_URL=http://localhost:8080`, no dev server);
+4. reads `GET /agents/sourcing-agent-01/mandate` through the proxy.
+
+### Makefile
+- `make up`, `down` and `logs`;
+- `make test` runs everything: ruff, mypy, pytest with coverage, TypeScript, Vitest and Playwright;
+- `make test-backend` and `make test-frontend` run each half;
+- `make demo` runs the command-line examples.
+
+### Docs
+- **ARCHITECTURE.md:** the components (Mermaid), the life of a policy, the modules and what each owns, how
+  determinism, the single source of truth (schemas) and the audit chain are kept, and where the decisions are.
+- **USER_GUIDE.md:** run it (Docker, or locally), then the §10 demo screen by screen; writing intents that compile
+  well; reading a report; the agent API; the CLI examples; troubleshooting.
+- **LIMITATIONS.md:** what the simulator does not model, where the evaluation could mislead, and what the
+  compiler, monitors and governance do not guarantee.
+
+### Version
+1.0.0: every phase of the brief is done.
+
 ## Phase 4: LLM compiler
 
 ### Packages

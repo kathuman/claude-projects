@@ -16,7 +16,7 @@
   <header class="topbar">
     <div class="brand">
       <a class="mark" href="./">Policy<span>Forge</span></a>
-      <span class="ver">v0.8.0</span>
+      <span class="ver">v1.0.0</span>
       <span class="sub">policy workbench for agent-run supply chains</span>
     </div>
     <nav class="actions">
@@ -84,8 +84,9 @@
     </section>
 
     <section class="panel" aria-labelledby="h-now">
-      <h2 id="h-now">What works today (v0.8.0)</h2>
-      <p>PolicyForge is in early development, but the whole loop now runs in the browser: write a policy, stress-test it, approve and deploy it, and watch it in production. A browser test runs the brief's demo from start to finish on every change.</p>
+      <h2 id="h-now">What works today (v1.0.0)</h2>
+      <p>Every phase of the brief is done. The whole loop runs in the browser: write a policy, stress-test it, approve and deploy it, and watch it in production. A browser test runs the brief's demo from start to finish on every change, including against the Docker stack built from scratch.</p>
+      <p><b>Run it:</b> <code>docker compose up</code> in <code>policyforge/</code>, then open <code>http://localhost:8080/</code>. <b>Read:</b> the <a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/docs/USER_GUIDE.md">user guide</a>, the <a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/docs/ARCHITECTURE.md">architecture</a>, and <a href="https://github.com/kathuman/claude-projects/blob/main/policyforge/docs/LIMITATIONS.md">what it does not do</a>.</p>
       <h3 id="screens">The screens <span class="badge done">built</span></h3>
       <ul>
         <li><b>Constitution:</b> the hard limits, the priority order, the weights and the risk attitude, as a form; saved as versions, one active.</li>
@@ -194,7 +195,7 @@
           <tr><td>P5b Network Studio</td><td>Build and maintain networks visually: a diagram, a world map, tables, an inspector generated from the schema, live checks, a quick test, YAML/CSV import and export, versions with diffs, and a scenario builder</td><td>FoodNet rebuilt from scratch in the Studio equals the shipped one; errors shown on the right element; versions flag policies for re-test</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P6 Monitoring</td><td>Live stream, input, assumption and performance drift monitors, escalation inbox</td><td>Assumption drift alerts within 4 weeks of injected drift</td><td><span class="badge done">done</span></td></tr>
           <tr><td>P7 Frontend</td><td>Constitution, Author, Stress test, Registry and Monitor screens, around the Network Studio</td><td>The full demo runs in the browser</td><td><span class="badge done">done</span></td></tr>
-          <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge next">next</span></td></tr>
+          <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge done">done</span></td></tr>
         </tbody>
       </table></div>
       <h3>Proposed additions</h3>
@@ -219,7 +220,7 @@
     </section>
   </main>
 
-  <footer class="foot">PolicyForge v0.8.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
+  <footer class="foot">PolicyForge v1.0.0 · by Daniel Alberto Sepulveda Estay, PhD · <a href="https://github.com/kathuman/claude-projects/tree/main/policyforge">Source</a> · <a href="../">AI Projects</a> · Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a></footer>
   <script>
     document.getElementById('theme').addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';

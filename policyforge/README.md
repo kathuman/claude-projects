@@ -7,13 +7,27 @@ A policy authoring and simulation workbench for supply chain managers who delega
   thousands of futures, approved, and monitored.
 - **Pages:** [about](https://kathuman.github.io/claude-projects/policyforge/) ·
   [tutorial](https://kathuman.github.io/claude-projects/policyforge/tutorial.html) ·
-  [Network Studio](https://kathuman.github.io/claude-projects/policyforge/frontend/dist/index.html)
-- **Status:** v0.8.0, early development. Phases 1–7 are done: domain and data, the simulator, baselines with
-  evaluation, the LLM compiler, the registry with its API, the Network Studio, monitoring, and the screens: one web
-  app with Network, Constitution, Author, Stress test, Registry and Monitor, in which the brief's whole demo runs
-  (tested end to end). Next: P8, hardening. See [STATUS.md](STATUS.md) and the roadmap on the about page.
+  [the app](https://kathuman.github.io/claude-projects/policyforge/frontend/dist/index.html)
+- **Docs:** [user guide](docs/USER_GUIDE.md) · [architecture](docs/ARCHITECTURE.md) ·
+  [limitations](docs/LIMITATIONS.md) · [DSL reference](docs/DSL_REFERENCE.md) · [decisions](DECISIONS.md) ·
+  [status](STATUS.md)
+- **Status:** v1.0.0. All eight phases of the brief are done: domain and data, the simulator, baselines with
+  evaluation, the LLM compiler, the registry with its API (plus the Network Studio), monitoring, the screens, and
+  hardening. The brief's whole demo runs end to end in the browser, tested on every change, also against the
+  Docker stack. What it does not do is in [LIMITATIONS.md](docs/LIMITATIONS.md).
 
 ## Run it
+
+With Docker:
+
+```bash
+docker compose up -d --build     # or: make up
+```
+
+Then open http://localhost:8080/ (the API's docs are at http://localhost:8000/docs). The compiler replays recorded
+answers offline; set `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` to compile any intent with Claude.
+
+Without Docker (Python 3.12; uv installs it):
 
 ```bash
 cd backend
@@ -27,7 +41,8 @@ uv pip install --python .venv -e ".[dev]"
 .venv/bin/python -m uvicorn api.app:app        # the API on http://127.0.0.1:8000 (docs at /docs)
 ```
 
-Or use `make check` from this folder to run ruff, `mypy --strict` and the tests with coverage.
+`make test` from this folder runs every check: ruff, `mypy --strict`, the tests with the 80 % coverage gate, the
+frontend's TypeScript and unit tests, and the browser tests. `make help` lists the rest.
 
 ### The app
 
@@ -71,7 +86,10 @@ frontend/src/            React: the Studio (diagram, map, tables, inspector, ver
                          (Constitution, Author, Stress test, Registry, Monitor), a schema form, SVG charts
 frontend/tests/, e2e/    Vitest unit tests; Playwright end to end against the real API, the §10 demo included
 frontend/dist/           the built Studio (committed, served by the API and by GitHub Pages)
-docs/                    PLAN.md, DSL_REFERENCE.md (generated), example-report.md
+docs/                    USER_GUIDE.md, ARCHITECTURE.md, LIMITATIONS.md, DSL_REFERENCE.md (generated), PLAN.md,
+                         example-report.md
+docker-compose.yml       api (backend/Dockerfile) + web (frontend/Dockerfile, nginx.conf)
+Makefile                 make up / down / test / demo
 DECISIONS.md, STATUS.md  design log and phase status
 index.html, tutorial.html  the about page and tutorial on GitHub Pages
 ```
