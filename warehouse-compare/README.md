@@ -100,6 +100,31 @@ data/scenario.json ──► scenario.resolve() ──► the same sc (demand, p
   lines per picker-hour, pickers needed at the peak, and share of time walking. Each comes with a readable trace of
   how it was derived.
 
+## Technology screening (from the integration spec of 2026-11-25)
+
+The spec places six picking technologies on a flexibility vs efficiency frontier and recommends one from a
+site's context:
+
+- **The catalogue:** fixed AS/RS, cube storage, climbing robots, shelf-to-person (= WH-A), collaborative AMRs and
+  manual (= WH-B/WH-C). It is in [data/archetypes.json](data/archetypes.json), with the coordinates, constraints
+  and sub-scores (volume, mix, exit flexibility) and every decision setting: weights, normalisation bounds, the
+  30-point shift and the ±10 boundary.
+- **The sub-scores:** the spec gave them for shelf-to-person only. The other five are expert-judgement defaults,
+  tested to agree with the spec's "Favours" table and to average within 10 of each archetype's F.
+- **The engine:** [src/frontier.js](src/frontier.js) ports the spec's decision logic. It fills the spec's two gaps:
+  the frontier between archetypes is straight lines (held flat beyond the ends), and every failing constraint is
+  recorded, in the spec's reason format.
+- **The checks** ([tests/frontier.test.js](tests/frontier.test.js)):
+  - It reproduces the spec's worked example value for value.
+  - It matches the spec's own Python ([tools/frontier_reference.py](tools/frontier_reference.py)) on 400 random
+    sites to the last bit. Matching rounding ties exactly needed Python's compensated summation (Python 3.12+
+    `sum()`), now used by the port too, and CI pins Python 3.12.
+  - It behaves sensibly: more volatility never asks for less flexibility, and more cost pressure never moves the
+    target towards flexibility.
+
+The result is a screening recommendation, dated with the catalogue version, not an investment decision. The
+coordinates are expert judgement and uncalibrated, and costs are in EUR, as in the spec.
+
 ## The views
 
 - **WH-A / WH-B / WH-C:** each plan at one scale, coloured by travel time or by the popularity class stored
@@ -166,6 +191,7 @@ node warehouse-compare/tests/cost.test.js          # cost by hand, in the compar
 node warehouse-compare/tests/dataimport.test.js    # order-line import: hand-checked file, formats, languages, bad files, sample
 node warehouse-compare/tests/scene3d.test.js       # what the 3D view draws
 node warehouse-compare/tests/i18n.test.js          # every text translated into Spanish and Danish
+node warehouse-compare/tests/frontier.test.js      # technology screening: the spec's worked example, parity with its Python
 node warehouse-compare/tests/whb.test.js    # WH-B closed-form distances, bay geometry, aisles clear, sizing
 node warehouse-compare/tests/core.test.js   # graph, demand, routing vs brute force, slotting, KPIs
 ```
@@ -263,3 +289,9 @@ order data, at its own volume of 4,547 lines a day, it is $361 against $392–39
 3. ✅ WH-A moving racks: discrete-event simulation, stations and robot fleet sized, four put-away policies, demand shock
 4. ✅ Comparison views: side-by-side animation, sensitivity sweeps, demand-shock experiment
 5. ✅ Cost of ownership, order-data import, share links, 3D, Spanish and Danish, About page, AI Projects entry
+6. Technology screening (integration spec, 2026-11-25)
+   - 6.0 ✅ Catalogue and screening engine: the spec's worked example, and parity with the spec's Python
+   - 6.1 A "Technology screen" view: site inputs, the frontier map, the recommendation with its drivers,
+     exclusions and boundary flag; "See it simulated" for shelf-to-person (WH-A) and manual (WH-C)
+   - 6.2 Evidence from the simulation: measured efficiency and flexibility indicators for WH-A and WH-C beside
+     the spec's expert points

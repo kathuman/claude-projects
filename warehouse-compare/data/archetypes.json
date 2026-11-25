@@ -1,0 +1,99 @@
+{
+  "$schema": "Warehouse picking technology archetypes on a flexibility (F) vs efficiency (E) frontier, from the integration spec of 2026-11-25. Coordinates, sub-scores, constraints and the decision settings are expert-judgement defaults on 0–100 scales, not measured data: calibrate before relying on them. Vendors are examples, not an exhaustive list.",
+  "version": "2026-11-25",
+  "scale": { "F": [0, 100], "E": [0, 100] },
+  "config": {
+    "$comment": "The decision settings. flexibility: inputs → F_required (a → 0, b → 1; a > b inverts). efficiency: inputs → efficiency pressure P. F_target = clamp(F_required − shift × (P − 0.5)). boundary: the recommendation is a boundary case if it changes when F_target moves by ± this much. Costs in EUR.",
+    "flexibility": [
+      { "input": "demand_cv_weekly",      "a": 0.10, "b": 0.60, "weight": 0.25 },
+      { "input": "annual_sku_churn",      "a": 0.05, "b": 0.40, "weight": 0.20 },
+      { "input": "lease_horizon_years",   "a": 15,   "b": 3,    "weight": 0.25 },
+      { "input": "peak_to_average_ratio", "a": 1.3,  "b": 3.0,  "weight": 0.15 },
+      { "input": "growth_uncertainty",    "levels": { "low": 0, "medium": 0.5, "high": 1 }, "weight": 0.15 }
+    ],
+    "efficiency": [
+      { "input": "rent_eur_per_m2_year",     "a": 50,   "b": 200,    "weight": 0.40 },
+      { "input": "labour_cost_eur_per_hour", "a": 10,   "b": 40,     "weight": 0.35 },
+      { "input": "order_lines_per_day",      "a": 5000, "b": 100000, "weight": 0.25 }
+    ],
+    "shift": 30,
+    "boundary": 10
+  },
+  "archetypes": [
+    {
+      "id": "fixed_asrs", "name": "Fixed AS/RS shuttles", "category": "goods_to_person", "F": 10, "E": 95,
+      "vendors": ["Dematic", "Knapp", "SSI Schaefer"],
+      "mechanism": "Aisle-bound shuttles and lifts feed totes to fixed stations",
+      "strengths": "Highest throughput, very dense",
+      "weaknesses": "Long lead time, high sunk capex, hard to relocate or resize",
+      "best_fit": "Stable, high-volume, owned site, 10+ year horizon",
+      "constraints": { "max_share_skus_outside_container": 0.10, "min_lease_years": 10, "requires_flat_floor": false },
+      "sub_scores": { "volume_flex": 10, "mix_flex": 15, "exit_flex": 5 }
+    },
+    {
+      "id": "cube_storage", "name": "Cube storage", "category": "goods_to_person", "F": 25, "E": 88,
+      "vendors": ["AutoStore (via integrators such as Swisslog)"],
+      "mechanism": "Robots on top of a stacked bin grid dig out bins and deliver them to ports",
+      "strengths": "Highest density per m², modular grid",
+      "weaknesses": "Bin size limit, slower deep digs, grid tied to building",
+      "best_fit": "High rent, small-to-medium items, stable mix",
+      "constraints": { "max_share_skus_outside_container": 0.15, "min_lease_years": 7, "requires_flat_floor": false },
+      "sub_scores": { "volume_flex": 45, "mix_flex": 20, "exit_flex": 15 }
+    },
+    {
+      "id": "climbing_robots", "name": "Climbing robots", "category": "goods_to_person", "F": 42, "E": 72,
+      "vendors": ["Exotec", "Hai Robotics"],
+      "mechanism": "Robots climb racks to retrieve totes and drive them to stations",
+      "strengths": "Good density, robots scale with peak",
+      "weaknesses": "Tote size limit, rack install",
+      "best_fit": "Mid-volume e-commerce and retail, moderate volatility",
+      "constraints": { "max_share_skus_outside_container": 0.20, "min_lease_years": 5, "requires_flat_floor": false },
+      "sub_scores": { "volume_flex": 65, "mix_flex": 30, "exit_flex": 35 }
+    },
+    {
+      "id": "shelf_to_person", "name": "Shelf-to-person (Kiva-type)", "category": "goods_to_person", "F": 60, "E": 55,
+      "vendors": ["Amazon Robotics", "Geek+", "GreyOrange", "Quicktron"],
+      "mechanism": "Robots lift mobile shelves and bring them to pick stations",
+      "strengths": "Fast install, flexible item sizes, relayout in software",
+      "weaknesses": "Aisles cost density, needs flat floor",
+      "best_fit": "Volatile SKU mix, 3PL, medium lease horizon",
+      "constraints": { "max_share_skus_outside_container": 1.0, "min_lease_years": 3, "requires_flat_floor": true },
+      "sub_scores": { "volume_flex": 75, "mix_flex": 70, "exit_flex": 60 },
+      "simulated_as": "A"
+    },
+    {
+      "id": "collaborative_amr", "name": "Collaborative AMRs", "category": "person_to_goods", "F": 78, "E": 35,
+      "vendors": ["Locus Robotics"],
+      "mechanism": "Robots carry totes, pickers walk to fixed shelving",
+      "strengths": "Minimal capex, works in existing racking, subscription pricing",
+      "weaknesses": "Walking remains, lower throughput per picker",
+      "best_fit": "Short contracts, brownfield sites, uncertain growth",
+      "constraints": { "max_share_skus_outside_container": 1.0, "min_lease_years": 0, "requires_flat_floor": false },
+      "sub_scores": { "volume_flex": 80, "mix_flex": 80, "exit_flex": 90 }
+    },
+    {
+      "id": "manual", "name": "Manual picking", "category": "person_to_goods", "F": 95, "E": 15,
+      "vendors": [],
+      "mechanism": "Pickers walk to static shelving with carts",
+      "strengths": "Maximum flexibility, no capex",
+      "weaknesses": "Labour-intensive, low density",
+      "best_fit": "Low volume, very volatile, low labour cost",
+      "constraints": { "max_share_skus_outside_container": 1.0, "min_lease_years": 0, "requires_flat_floor": false },
+      "sub_scores": { "volume_flex": 90, "mix_flex": 95, "exit_flex": 100 },
+      "simulated_as": "C"
+    }
+  ],
+  "example_site": {
+    "site_name": "Worked example (spec section 5)",
+    "demand_cv_weekly": 0.35,
+    "annual_sku_churn": 0.20,
+    "lease_horizon_years": 5,
+    "peak_to_average_ratio": 2.0,
+    "growth_uncertainty": "medium",
+    "share_skus_outside_container": 0.08,
+    "flat_floor": true,
+    "rent_eur_per_m2_year": 120,
+    "labour_cost_eur_per_hour": 30,
+    "order_lines_per_day": 40000
+  }
+}

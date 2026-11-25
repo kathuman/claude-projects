@@ -22,7 +22,7 @@ const pageKeys = Object.keys(english);
 check("the pages have translatable text (" + pageKeys.length + " keys)", pageKeys.length > 40);
 
 // ---- the scripts' messages: the first string literal of every T( … ) call
-const files = ["src/app.js", "src/views.js", "src/charts.js", "src/kpi.js", "src/cost.js", "src/rmfs.js", "src/layouts/wha.js", "src/layouts/whb.js", "src/layouts/whc.js", "src/dataimport.js"];
+const files = ["src/app.js", "src/views.js", "src/charts.js", "src/kpi.js", "src/cost.js", "src/rmfs.js", "src/layouts/wha.js", "src/layouts/whb.js", "src/layouts/whc.js", "src/dataimport.js", "src/frontier.js"];
 const src = files.map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join(";\n"), msgs = new Set();
 for (const m of src.matchAll(/(?<![\w.$])T\(\s*"((?:[^"\\]|\\.)*)"/g)) msgs.add(JSON.parse('"' + m[1] + '"'));
 // labels kept as data and translated where shown

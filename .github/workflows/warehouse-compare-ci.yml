@@ -25,10 +25,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # the frontier test runs the spec's Python as a reference; 3.12+ sums floats with
+      # compensation, which the JavaScript port reproduces bit for bit
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: for f in warehouse-compare/tests/*.test.js; do echo "== $f"; node "$f" || exit 1; done
         shell: bash
       - name: The language files are up to date with tools/translations.py
-        run: python3 warehouse-compare/tools/build_i18n.py && git diff --exit-code warehouse-compare/i18n-es.js warehouse-compare/i18n-da.js
+        run: python warehouse-compare/tools/build_i18n.py && git diff --exit-code warehouse-compare/i18n-es.js warehouse-compare/i18n-da.js
       - name: Syntax-check the page scripts
         run: for f in warehouse-compare/src/*.js warehouse-compare/src/layouts/*.js warehouse-compare/src/*.mjs warehouse-compare/*.js; do node --check "$f"; done
         shell: bash
