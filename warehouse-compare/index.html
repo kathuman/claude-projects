@@ -24,13 +24,14 @@
   <div class="layout">
     <aside class="rail" id="rail">
       <p class="intro">Order picking, one order line at a time. Every warehouse gets the same SKUs, the same
-        orders and the same number of storage locations; each is sized to the smallest floor that holds them.</p>
+        orders and the same number of storage locations; each is sized to the smallest floor that holds them.
+        In WH-A robots bring racks to the pickers; in WH-B and WH-C the pickers walk.</p>
       <div id="controls"></div>
     </aside>
 
     <section class="main">
       <div class="tabs" role="tablist">
-        <button class="tab" disabled title="Phase 3">WH-A · moving racks<small>phase 3</small></button>
+        <button class="tab" data-id="A" role="tab">WH-A · moving racks</button>
         <button class="tab" data-id="B" role="tab">WH-B · semicircle</button>
         <button class="tab" data-id="C" role="tab">WH-C · rectangle</button>
       </div>
@@ -39,6 +40,7 @@
         <button class="btn" id="colPop">Colour: SKU popularity</button>
         <button class="btn" id="net">Travel network</button>
         <button class="btn" id="order">Show an order</button>
+        <span class="busy" id="busy">simulating…</span>
         <span class="note" id="route"></span>
       </div>
       <canvas id="plan" aria-label="Plan view of the warehouse"></canvas>
@@ -64,6 +66,8 @@
 <script src="src/routing.js"></script>
 <script src="src/slotting.js"></script>
 <script src="src/kpi.js"></script>
+<script src="src/layouts/wha.js"></script>
+<script src="src/rmfs.js"></script>
 <script src="src/layouts/whb.js"></script>
 <script src="src/layouts/whc.js"></script>
 <script src="src/scenario.js"></script>

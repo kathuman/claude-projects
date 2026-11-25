@@ -49,6 +49,15 @@ const rnd = demand.mulberry32(7);
     check("skew " + sk + ": top 20% of SKUs = " + sk + "% of lines", near(top, sk / 100, 1e-9), top);
     check("skew " + sk + ": popularity never increases", w.every((v, i) => i === 0 || v <= w[i - 1] + 1e-15));
   });
+  // the two curves agree at the 20% point but not at the very top
+  ["bender", "power"].forEach((kind) => {
+    const w = demand.skuWeights(6000, 80, kind), top = w.slice(0, 1200).reduce((a, v) => a + v, 0);
+    check(kind + ": top 20% of SKUs = 80% of lines", near(top, 0.8, 1e-9), top);
+  });
+  const wb = demand.skuWeights(6000, 80, "bender"), wp = demand.skuWeights(6000, 80, "power");
+  check("Bender: no single SKU dominates (top SKU " + (100 * wb[0]).toFixed(2) + "% of lines)", wb[0] < 0.005);
+  check("power: the top SKU takes " + (100 * wp[0]).toFixed(0) + "% of lines (why it isn't the default)", wp[0] > 0.25);
+  check("Bender's A = 1/15 at 80/20", near(demand.benderA(80), 1 / 15, 1e-12));
   const s = Object.assign({}, inputs.sc, { skus: 500, lines_per_order: 3, max_lines: 10 });
   const st = demand.orderStream(s, 99);
   let lines = 0, top = 0, distinct = true; const N = 20000;
@@ -132,7 +141,7 @@ const rnd = demand.mulberry32(7);
   });
   const again = kpi.evaluate(L, Object.assign({}, inputs.sc, { slotting: "ranked" }));
   check("same seed, same result", again.kpi.travelPerOrder === res.ranked.kpi.travelPerOrder);
-  check("every KPI in the contract is reported and finite", kpi.KPI_DEFS.every((d) => isFinite(res.ranked.kpi[d.key])));
+  check("every KPI in the contract that applies to C is reported and finite", kpi.KPI_DEFS.every((d) => !kpi.applies(d, "C") || isFinite(res.ranked.kpi[d.key])));
   check("every trace step has label/expr/value", res.ranked.trace.every((t) => t.label && t.expr && t.value !== undefined && t.value !== ""));
   const k = res.ranked.kpi;
   check("time per line = 3600 / lines per hour", near(k.timePerLine * k.linesPerHour, 3600, 1e-6));

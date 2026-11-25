@@ -1,10 +1,10 @@
 /*
  * demand.js — one demand model shared by all three warehouses.
  *
- * SKU popularity follows the same curve as the Warehouse Model's ABC policy:
- * the fastest-moving fraction u of SKUs generates F(u) = u^k of the order
- * lines, with k chosen so that F(0.2) = demand_skew. SKU 0 is the most
- * popular; weights sum to 1.
+ * SKU popularity: the most popular fraction u of SKUs generates F(u) of the
+ * order lines, with F(0.2) = demand_skew. Default curve is Bender's
+ * F(u) = (1 + A)u / (A + u); the Warehouse Model's class-level u^k is an
+ * option (see curve()). SKU 0 is the most popular; weights sum to 1.
  *
  * Orders are sets of distinct SKUs (one order line per SKU). The number of
  * lines per order is geometric with the given mean (1 line is the most
@@ -35,11 +35,30 @@
     return Math.log(s) / Math.log(0.2);
   }
 
+  // Bender's curve F(u) = (1 + A)·u / (A + u), with A set so F(0.2) = skew.
+  function benderA(skewPct) {
+    const s = Math.max(0.2, Math.min(0.99, skewPct / 100));
+    return s <= 0.2 + 1e-9 ? Infinity : 0.2 * (1 - s) / (s - 0.2);
+  }
+
+  // Cumulative share of lines from the most popular fraction u of SKUs.
+  //   "bender" (default)  F(u) = (1 + A)·u / (A + u) — finite slope at u = 0, so
+  //                       no single SKU dominates (top SKU of 6,000 at 80/20:
+  //                       0.27% of lines)
+  //   "power"             F(u) = u^k, the Warehouse Model's class-level curve —
+  //                       infinitely steep at u = 0 (top SKU of 6,000: 30%)
+  // Both pass through F(0.2) = demand_skew.
+  function curve(skewPct, kind) {
+    if (kind === "power") { const k = skewExponent(skewPct); return function (u) { return Math.pow(u, k); }; }
+    const A = benderA(skewPct);
+    return A === Infinity ? function (u) { return u; } : function (u) { return (1 + A) * u / (A + u); };
+  }
+
   // Share of order lines for each SKU, most popular first.
-  function skuWeights(nSku, skewPct) {
-    const k = skewExponent(skewPct), w = new Float64Array(nSku);
+  function skuWeights(nSku, skewPct, kind) {
+    const F = curve(skewPct, kind), w = new Float64Array(nSku);
     let prev = 0;
-    for (let i = 0; i < nSku; i++) { const F = Math.pow((i + 1) / nSku, k); w[i] = F - prev; prev = F; }
+    for (let i = 0; i < nSku; i++) { const v = F((i + 1) / nSku); w[i] = v - prev; prev = v; }
     return w;
   }
 
@@ -61,18 +80,21 @@
   // A generator of orders: next() returns an array of distinct SKU indices.
   function orderStream(s, seed) {
     const rnd = mulberry32(seed >>> 0);
-    const w = skuWeights(s.skus, s.demand_skew), pick = sampler(w);
+    let w = skuWeights(s.skus, s.demand_skew, s.demand_curve), pick = sampler(w);
     const maxL = Math.min(s.max_lines, s.skus), pmf = linesPmf(s.lines_per_order, maxL);
     const nextLines = sampler(Float64Array.from(pmf));
-    return {
+    const self = {
       weights: w,
       next: function () {
         const L = nextLines(rnd()) + 1, seen = new Set(), out = [];
         while (out.length < L) { const k = pick(rnd()); if (!seen.has(k)) { seen.add(k); out.push(k); } }
         return out;
       },
+      // change which SKUs are popular from now on (the demand-shock experiment)
+      reweight: function (nw) { w = nw; pick = sampler(w); self.weights = w; },
       rnd: rnd
     };
+    return self;
   }
 
   // Mean lines per order after the cap (what the stream really produces).
@@ -81,5 +103,5 @@
     return pmf.reduce(function (a, v, i) { return a + v * (i + 1); }, 0);
   }
 
-  return { mulberry32, skewExponent, skuWeights, sampler, linesPmf, orderStream, meanLines };
+  return { mulberry32, skewExponent, benderA, curve, skuWeights, sampler, linesPmf, orderStream, meanLines };
 });

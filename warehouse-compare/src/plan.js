@@ -48,8 +48,9 @@
 
     // bays, coloured by the mean over their locations
     const loc = L.locations, mode = opts.color || "cost";
-    const val = new Float64Array(loc.n).fill(NaN);
-    if (mode === "cost") {
+    const val = new Float64Array(res.bayColors ? 0 : loc.n).fill(NaN);
+    if (res.bayColors) { /* colours come with the result */ }
+    else if (mode === "cost") {
       const cost = WC.slotting.locationCost(L, opts.sc).cost;
       let mn = Infinity, mx = -Infinity;
       for (let i = 0; i < loc.n; i++) { mn = Math.min(mn, cost[i]); mx = Math.max(mx, cost[i]); }
@@ -58,9 +59,10 @@
       const n = res.skuLoc.length, b = WC.slotting.ABC_BOUNDS;
       for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; val[res.skuLoc[k]] = u < b[0] ? 0 : u < b[1] ? 0.5 : 1; }
     }
-    L.bays.forEach(function (b) {
+    L.bays.forEach(function (b, bi) {
       let v = 0, m = 0;
-      for (let i = b.loc0; i < b.loc0 + b.nLoc; i++) if (!isNaN(val[i])) { v += val[i]; m++; }
+      if (res.bayColors) { const x = res.bayColors[mode][bi]; if (!isNaN(x)) { v = x; m = 1; } }   // WH-A: one value per slot, from the simulation's end state
+      else for (let i = b.loc0; i < b.loc0 + b.nLoc; i++) if (!isNaN(val[i])) { v += val[i]; m++; }
       c.fillStyle = !m ? "#1d4470" : mode === "cost" ? heat(v / m) : heat(Math.round(2 * v / m) / 2);
       const hx = b.ux * b.w / 2, hy = b.uy * b.w / 2, vx = -b.uy * b.d / 2, vy = b.ux * b.d / 2;
       c.beginPath();
@@ -79,8 +81,21 @@
       c.stroke();
     }
 
+    // WH-A: each pod an order needs makes a robot trip to a station and back
+    if (opts.route && opts.route.segments) {
+      c.strokeStyle = "#ffffff"; c.lineWidth = 2.5; c.lineJoin = "round";
+      opts.route.segments.forEach(function (sg) {
+        const p = g.path(g.keys[sg[0]], g.keys[sg[1]]);
+        c.beginPath(); c.moveTo(X(sg[2]), Y(sg[3])); p.forEach(function (n) { c.lineTo(X(g.x[n]), Y(g.y[n])); }); c.stroke();
+      });
+      opts.route.segments.forEach(function (sg, i) {
+        c.fillStyle = "#ffffff"; c.beginPath(); c.arc(X(sg[2]), Y(sg[3]), 7, 0, 2 * Math.PI); c.fill();
+        c.fillStyle = "#04202b"; c.font = "600 9px 'IBM Plex Mono', monospace"; c.textAlign = "center"; c.textBaseline = "middle";
+        c.fillText(String(i + 1), X(sg[2]), Y(sg[3]) + 0.5);
+      });
+    }
     // one order's route
-    if (opts.route) {
+    else if (opts.route) {
       const rt = opts.route, seq = [rt.depot].concat(rt.order, [rt.depot]);
       c.strokeStyle = "#ffffff"; c.lineWidth = 2.5; c.lineJoin = "round"; c.beginPath();
       let started = false;

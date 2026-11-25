@@ -84,3 +84,8 @@ table.kpi td.worse{color:#ff8a89;}
 table.kpi td.same{color:var(--ink-faint);}
 table.kpi .unit{color:var(--ink-faint); font-family:var(--mono); font-size:10.5px;}
 .rail h2{margin-top:4px;}
+table.kpi td small{display:block; font-size:10px; line-height:1.1;}
+table.kpi td small.better{color:var(--good);}
+table.kpi td small.worse{color:#ff8a89;}
+table.kpi td small.same{color:var(--ink-faint);}
+.busy{font-family:var(--mono); font-size:11.5px; color:var(--warn);}

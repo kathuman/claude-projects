@@ -25,6 +25,20 @@
       "group": "Demand",
       "description": "Share of order lines that come from the most popular 20% of SKUs (F(u) = u^k)."
     },
+    "demand_curve": {
+      "value": "bender",
+      "type": "choice",
+      "options": [
+        "bender",
+        "power"
+      ],
+      "labels": {
+        "bender": "Bender (no SKU dominates)",
+        "power": "Power u^k (Warehouse Model)"
+      },
+      "group": "Demand",
+      "description": "Shape of the popularity curve; both put demand_skew % of lines on the top 20% of SKUs. Power gives the single top SKU of 6,000 about 30% of all lines; Bender about 0.3%."
+    },
     "lines_per_order": {
       "value": 3,
       "unit": "",
@@ -147,6 +161,201 @@
     }
   },
   "layouts": {
+    "A": {
+      "$comment": "Moving racks (robotic mobile fulfilment). Racks (pods) are sized so a location is about the size of a WH-B/WH-C shelf location (0.6 m wide × 0.6 m deep). Stations and robots are results: as many picker-stations as the peak needs, and the smallest robot fleet that keeps up.",
+      "put_away": {
+        "value": "frequency",
+        "type": "choice",
+        "options": [
+          "fixed",
+          "random",
+          "nearest",
+          "frequency"
+        ],
+        "labels": {
+          "fixed": "Fixed home slot",
+          "random": "Random free slot",
+          "nearest": "Nearest free slot",
+          "frequency": "By popularity rank"
+        },
+        "group": "WH-A",
+        "description": "Where a robot puts a pod back after picking. Nearest: popular pods come back often, so they gather near the stations. By popularity rank: the slot whose distance rank matches the pod's recent visit rank."
+      },
+      "pod_fill": {
+        "value": "by_popularity",
+        "type": "choice",
+        "options": [
+          "by_popularity",
+          "random"
+        ],
+        "labels": {
+          "by_popularity": "Similar popularity together",
+          "random": "Spread at random"
+        },
+        "group": "WH-A",
+        "description": "Which SKUs share a pod. Together: hot and cold pods, so where a pod stands matters. Spread: every pod about equally busy."
+      },
+      "pod_width": {
+        "value": 1.2,
+        "unit": "m",
+        "minimum": 0.6,
+        "maximum": 2,
+        "group": "WH-A",
+        "description": "Pod footprint (square)."
+      },
+      "pod_faces": {
+        "value": 2,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 4,
+        "group": "WH-A",
+        "description": "Pod faces with shelves."
+      },
+      "pod_levels": {
+        "value": 4,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 8,
+        "group": "WH-A",
+        "description": "Shelf levels per face."
+      },
+      "bins_per_face_level": {
+        "value": 2,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 6,
+        "group": "WH-A",
+        "description": "Bins (storage locations) per level on each face."
+      },
+      "block_length": {
+        "value": 5,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 20,
+        "group": "WH-A",
+        "description": "Pods in a row along a storage block (blocks are 2 pods deep)."
+      },
+      "robot_aisle_width": {
+        "value": 1.6,
+        "unit": "m",
+        "minimum": 0.8,
+        "maximum": 4,
+        "group": "WH-A",
+        "description": "Robot aisle width (a loaded robot needs a pod width plus clearance)."
+      },
+      "storage_fill": {
+        "value": 0.85,
+        "unit": "×",
+        "minimum": 0.5,
+        "maximum": 0.98,
+        "group": "WH-A",
+        "description": "Share of slots holding a pod; the rest stay free so put-away has somewhere to choose."
+      },
+      "station_zone": {
+        "value": 5,
+        "unit": "m",
+        "minimum": 2,
+        "maximum": 15,
+        "group": "WH-A",
+        "description": "Depth of the station area along the west wall (stations and their queue lanes)."
+      },
+      "station_spacing": {
+        "value": 5,
+        "unit": "m",
+        "minimum": 2,
+        "maximum": 15,
+        "group": "WH-A",
+        "description": "Distance between stations along the wall."
+      },
+      "aspect": {
+        "value": 1.5,
+        "unit": "×",
+        "minimum": 0.5,
+        "maximum": 4,
+        "group": "WH-A",
+        "description": "Preferred length:width of the floor (WH-C's default is 1.5)."
+      },
+      "robot_speed": {
+        "value": 1.3,
+        "unit": "m/s",
+        "minimum": 0.3,
+        "maximum": 3,
+        "group": "WH-A",
+        "description": "Effective robot speed, including acceleration, turns and congestion."
+      },
+      "lift_time": {
+        "value": 2,
+        "unit": "s",
+        "minimum": 0,
+        "maximum": 10,
+        "group": "WH-A",
+        "description": "Time to lift or set down a pod."
+      },
+      "pod_switch_time": {
+        "value": 4,
+        "unit": "s",
+        "minimum": 0,
+        "maximum": 20,
+        "group": "WH-A",
+        "description": "Picker time between pods: one leaves, the next moves in and turns to the right face."
+      },
+      "order_slots": {
+        "value": 8,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 30,
+        "group": "WH-A",
+        "description": "Orders open at a station at once (its put wall)."
+      },
+      "pipeline": {
+        "value": 4,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 10,
+        "group": "WH-A",
+        "description": "Pods on their way to or queuing at a station at most."
+      },
+      "robot_availability": {
+        "value": 0.85,
+        "unit": "×",
+        "minimum": 0.5,
+        "maximum": 1,
+        "group": "WH-A",
+        "description": "Share of time a robot is available (the rest is charging)."
+      },
+      "max_order_wait": {
+        "value": 120,
+        "unit": "s",
+        "minimum": 10,
+        "maximum": 1800,
+        "group": "WH-A",
+        "description": "Fleet sizing: robots are added until orders wait no longer than this, on average, for a station."
+      },
+      "frequency_half_life_h": {
+        "value": 2,
+        "unit": "h",
+        "minimum": 0.25,
+        "maximum": 24,
+        "group": "WH-A",
+        "description": "By popularity rank: half-life of the smoothed visit counts."
+      },
+      "warmup_hours": {
+        "value": 3,
+        "unit": "h",
+        "minimum": 0,
+        "maximum": 24,
+        "group": "WH-A",
+        "description": "Simulated time before measuring (lets put-away settle)."
+      },
+      "measure_hours": {
+        "value": 3,
+        "unit": "h",
+        "minimum": 0.5,
+        "maximum": 24,
+        "group": "WH-A",
+        "description": "Simulated time measured."
+      }
+    },
     "C": {
       "$comment": "Warehouse Model parameter names (warehouse-model/data/parameters.json); values not listed here take that file's defaults. Shelving for hand picking; picking points on the west wall. warehouse_length/width set the aspect ratio — the building is scaled to target_locations.",
       "rack_type": "shelving",

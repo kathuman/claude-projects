@@ -138,7 +138,7 @@ function checkExact(p, label) {
   const r1 = kpi.evaluate(L, s1), ex = kpi.exactSingleLine(L, r1);
   check(arr + ": single-line travel sample " + r1.kpi.travelPerOrder.toFixed(2) + " vs exact " + ex.toFixed(2) + " m (within 4 SE)", Math.abs(r1.kpi.travelPerOrder - ex) < 4 * r1.travelSE);
   const r = kpi.evaluate(L, inputs.sc);
-  check(arr + ": every KPI finite", kpi.KPI_DEFS.every((dd) => isFinite(r.kpi[dd.key])));
+  check(arr + ": every KPI finite", kpi.KPI_DEFS.every((dd) => !kpi.applies(dd, "B") || isFinite(r.kpi[dd.key])));
   console.log("  " + arr + ": R " + L.radius.toFixed(1) + " m, " + L.locations.n + " locations, " + Math.round(L.footprint) + " m², " +
     r.kpi.travelPerLine.toFixed(1) + " m/line, " + r.kpi.linesPerHour.toFixed(0) + " lines/picker-h");
 });

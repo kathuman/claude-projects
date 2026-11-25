@@ -5,7 +5,7 @@ capacity**.
 
 | | Layout | Who travels | Status |
 |---|---|---|---|
-| **WH-A** | Moving racks: robots carry racks (pods) to fixed picking points, and put them back after picking where a put-away policy decides, so popular racks drift towards the picking points | the racks (goods-to-person) | phase 3 |
+| **WH-A** | Moving racks: robots carry racks (pods) to fixed picking stations and put them back after picking wherever a put-away policy decides. The default policy brings popular pods closer to the stations | the racks (goods-to-person) | **phase 3 — done** |
 | **WH-B** | Semicircular, a D-shaped building with the picking points at the middle of the flat wall: **radial** rows pointing out from an open hub, or **concentric** rows along arcs cut by radial aisles | the picker (person-to-goods) | **phase 2 — done** |
 | **WH-C** | Rectangular, the [Warehouse Model](../warehouse-model/)'s layout | the picker (person-to-goods) | **phase 1 — done** |
 
@@ -19,15 +19,15 @@ data/scenario.json ──► scenario.resolve() ──► the same sc (demand, p
                                      │
           ┌──────────────────────────┼──────────────────────────┐
           ▼                          ▼                          ▼
-   layouts/wha.js (ph. 3)    layouts/whb.js            layouts/whc.js ◄── warehouse-model computeLayout()
+   layouts/wha.js            layouts/whb.js            layouts/whc.js ◄── warehouse-model computeLayout()
           └──────────── each builds a travel network (graph.js) ┘
                                      │
                      graph.keyMatrix(): shortest path between every
                      picking point and access point
                                      │
-          demand.js (seeded orders) ─► slotting.js ─► routing.js ─► kpi.js
-                                                                   one KPI contract,
-                                                                   with a trace
+          demand.js (seeded orders) ─► slotting.js ─► routing.js ─► kpi.js   (WH-B, WH-C)
+                                    └──────────► rmfs.js: discrete-event simulation (WH-A)
+                                                 both report one KPI contract, with a trace
 ```
 
 - **One distance engine.** The Warehouse Model uses closed-form rectilinear formulas, which only work for straight
@@ -40,6 +40,37 @@ data/scenario.json ──► scenario.resolve() ──► the same sc (demand, p
 
   The check runs on the baseline and on 40 random designs (I/U-flow, 0–3 mid cross-aisles, every rack type).
   Breaking the cross-aisle links on purpose makes 41 of these checks fail.
+- **WH-A is simulated, not estimated.** Its performance depends on what happened before: which pods are where,
+  which orders are open at each station, and which robots are free. So [rmfs.js](src/rmfs.js) runs it event by
+  event:
+  - Orders arrive at the peak rate into a backlog.
+  - Each station keeps `order_slots` orders open and claims the pod holding most of their lines.
+  - The nearest idle robot drives under it, lifts it and brings it to the station, where it queues.
+  - The picker takes every matching line on the pod (*pile-on*).
+  - A robot puts the pod back where the **put-away policy** says:
+    - `fixed`: its home slot
+    - `random`: any free slot
+    - `nearest`: the free slot nearest the station it left
+    - `frequency` (default): the slot whose distance rank matches the pod's popularity rank, from smoothed visit
+      counts
+
+  WH-A is then sized on the same terms as the other two. It gets as many picker-stations as the peak needs, using
+  the same staffing rule as WH-B/WH-C, and the smallest robot fleet that keeps the mean wait for a station within
+  `max_order_wait`.
+
+  The WH-A tests check:
+  - the floor geometry, and station → slot distances against a closed form
+  - one robot, one station and one pod against a hand-computed cycle
+  - pod and slot conservation
+  - "one robot fewer doesn't keep up"
+  - the behaviour of each policy, including the demand shock
+
+  Each check was mutation-tested. Not modelled: robot congestion (the speed is an effective speed), charging
+  (`robot_availability`), and pods passed from station to station.
+- **Demand curve.** The default is Bender's F(u) = (1 + A)u / (A + u), which puts `demand_skew` % of lines on the
+  top 20% of SKUs. The Warehouse Model's u^k matches it at the 20% point, but gives the single top SKU of 6,000 about
+  30% of all lines. That top SKU would make one pod a false bottleneck in WH-A, and it flattered WH-B's radial rows
+  (see below). u^k remains selectable.
 - **Paired comparison.** Orders come from a seeded stream (popularity curve F(u) = u^k with F(0.2) = demand skew;
   geometric lines per order), so every layout picks exactly the same orders.
 - **Layout-agnostic routing.** S-shape and largest-gap routing were designed for rectangular warehouses and would
@@ -82,39 +113,67 @@ Tests (Node ≥ 18, no dependencies):
 
 ```bash
 node warehouse-compare/tests/whc.test.js    # WH-C graph = Warehouse Model formulas; equal-capacity sizing
+node warehouse-compare/tests/wha.test.js    # WH-A floor, hand-computed cycle, conservation, fleet sizing, put-away, shock
 node warehouse-compare/tests/whb.test.js    # WH-B closed-form distances, bay geometry, aisles clear, sizing
 node warehouse-compare/tests/core.test.js   # graph, demand, routing vs brute force, slotting, KPIs
 ```
 
-## Findings so far (WH-B vs WH-C, travel per line)
+## Findings so far
 
-Default scenario: 7,000 locations, 6,000 SKUs. WH-B's footprint relative to WH-C's 1,411 m²: radial 2,142 m²
-(+52%), concentric 1,500 m² (+6%).
+Default scenario: 7,000 locations, 6,000 SKUs, 80/20 demand (Bender), 3 lines per order on average, 12,000
+lines a day, peak 1,125 lines/h.
+
+| | WH-A moving racks | WH-B radial | WH-B concentric | WH-C rectangle |
+|---|---|---|---|---|
+| Floor area | 2,011 m² | 2,142 m² | 1,500 m² | 1,411 m² |
+| Picker time per line | 21.5 s | 34.0 s | 35.1 s | 34.5 s |
+| Pickers at the peak | **9** | 14 | 14 | 14 |
+| Robots at the peak | 32 | — | — | — |
+
+### WH-A: what put-away buys
+
+Same floor and the same orders throughout. Popular pods' distance is the popularity-weighted loaded distance of
+pods to their nearest station. The demand shock moves popularity half-way down the SKU order at 3 h.
+
+| Policy | Steady demand | After a demand shock |
+|---|---|---|
+| fixed, ranked placement | best: 30 robots, popular pods 10 m from the stations | stays stuck at 25 m |
+| nearest | 33 robots, popular pods about 22 m away: it never sorts pods by popularity | barely notices the shock |
+| frequency (default) | 32 robots, popular pods about 15 m away | jumps to 22 m, then re-learns to about 17 m within roughly 1.5 h |
+
+- **Robots replace walking, not picking.** WH-A's picker spends 21 s per line against WH-C's 34 s, so it needs 9
+  pickers instead of 14. It pays for that with 32 robots and 43% more floor. A pod holds 16 locations of shelf size
+  on 1.44 m², and 15% of the slots stay free so the put-away policy has somewhere to choose.
+- **Few lines per pod visit (1.2).** With 6,000 SKUs over 438 pods and 8 orders open per station, a pod rarely
+  serves two lines at once. More open orders per station raise it (tested).
+- **Dynamic repositioning is insurance, not a gain.** While demand holds, a correctly ranked fixed layout is
+  best. Frequency-based put-away gives up a little of that, then recovers by itself when demand moves, while the
+  fixed layout stays wrong until someone re-slots it. The comparison page in Phase 4 will make that trade-off
+  explorable.
+
+### WH-B vs WH-C, travel per line
 
 | Slotting | Skew | Lines/order | WH-C | Radial | Concentric |
 |---|---|---|---|---|---|
-| Ranked | 50% | 3 | 22.7 m | +5% | +2% |
-| Ranked | 80% | 1 | 17.9 m | −5% | +16% |
-| Ranked | 80% | 3 | 15.4 m | +1% | +8% |
-| Ranked | 95% | 1 | 10.2 m | **−22%** | +26% |
-| Ranked | 95% | 3 | 12.0 m | −1% | +15% |
+| Ranked | 50% | 1 | 31.2 m | +5% | +10% |
+| Ranked | 50% | 3 | 22.7 m | +4% | +0% |
+| Ranked | 80% | 1 | 19.7 m | +3% | +24% |
+| Ranked | 80% | 3 | 16.6 m | −3% | +4% |
+| Ranked | 95% | 1 | 12.3 m | −9% | +35% |
+| Ranked | 95% | 3 | 10.4 m | −6% | +20% |
 | Random | any | 1 | 53.1 m | −7% | −9% |
-| Random | any | 3 | ≈31.5 m | +3% | −6% |
+| Random | any | 3 | 31.3 m | +3% | −6% |
 
-- **The rectangle is hard to beat at equal capacity.** Radial only wins clearly when there is little to route:
-  skewed demand, single-line orders and the best slotting. There the top SKUs sit on straight rays from the
-  picking points. Its cost is half as much floor again, lost in the wedges between rows.
-- **Concentric is nearly as dense as the rectangle.** It does better when slotting is random, because its average
-  location is closer. It does worse when slotting is good: its closest locations sit behind radial aisles that
-  cut the inner rings.
-- **Multi-line orders erase most differences.** Once a tour visits several aisles, the layout matters less than
-  the routing.
+- **The rectangle is hard to beat at equal capacity.** Radial gains at most 9%, at high skew. Under the old u^k
+  curve that looked like 22%, because the single top SKU (30% of all lines) sat at the end of a straight ray from
+  the picking points. Radial also needs half as much floor again, lost in the wedges between rows.
+- **Concentric is nearly as dense as the rectangle.** It does better when slotting is random, and worse when
+  slotting is good: its closest locations sit behind the radial aisles that cut the inner rings.
 
 ## Roadmap
 
 1. ✅ Graph distance engine, shared demand and KPI contract, WH-C adapter checked against the Warehouse Model
 2. ✅ WH-B semicircular (radial and concentric), plans at one scale, B-vs-C column
-3. WH-A moving racks: pods, robots, queues at the picking points, put-away policies (fixed home, random,
-   nearest free, frequency-based), discrete-event simulation
+3. ✅ WH-A moving racks: discrete-event simulation, stations and robot fleet sized, four put-away policies, demand shock
 4. Comparison page: side-by-side animation, sensitivity charts, demand-shock experiment
 5. TCO, data import, share links, 3D, Spanish/Danish, About page, projects-page entry

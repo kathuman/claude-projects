@@ -26,18 +26,23 @@
   "use strict";
 
   // The KPI contract: what is reported for every layout, with its unit and
-  // which direction is better. Phase 3 adds robot/station measures for WH-A.
+  // which direction is better. `only` marks a measure that applies to some
+  // layouts (the others show "—").
   const KPI_DEFS = [
-    { key: "locations",        label: "Storage locations",          unit: "",          better: "higher", d: 0 },
-    { key: "footprint",        label: "Floor area",                 unit: "m²",        better: "lower",  d: 0 },
-    { key: "density",          label: "Locations per m²",           unit: "/m²",       better: "higher", d: 2 },
-    { key: "travelPerOrder",   label: "Travel per order",           unit: "m",         better: "lower",  d: 1 },
-    { key: "travelPerLine",    label: "Travel per line",            unit: "m",         better: "lower",  d: 1 },
-    { key: "timePerLine",      label: "Picker time per line",       unit: "s",         better: "lower",  d: 1 },
-    { key: "linesPerHour",     label: "Lines per picker-hour",      unit: "lines/h",   better: "higher", d: 0 },
-    { key: "pickersNeeded",    label: "Pickers needed at the peak", unit: "",          better: "lower",  d: 0 },
-    { key: "travelShare",      label: "Share of time walking",      unit: "%",         better: "lower",  d: 0 }
+    { key: "locations",          label: "Storage locations",          unit: "",        better: "higher", d: 0 },
+    { key: "footprint",          label: "Floor area",                 unit: "m²",      better: "lower",  d: 0 },
+    { key: "density",            label: "Locations per m²",           unit: "/m²",     better: "higher", d: 2 },
+    { key: "travelPerOrder",     label: "Picker travel per order",    unit: "m",       better: "lower",  d: 1 },
+    { key: "travelPerLine",      label: "Picker travel per line",     unit: "m",       better: "lower",  d: 1 },
+    { key: "timePerLine",        label: "Picker time per line",       unit: "s",       better: "lower",  d: 1 },
+    { key: "linesPerHour",       label: "Lines per picker-hour",      unit: "lines/h", better: "higher", d: 0 },
+    { key: "pickersNeeded",      label: "Pickers needed at the peak", unit: "",        better: "lower",  d: 0 },
+    { key: "travelShare",        label: "Share of time walking",      unit: "%",       better: "lower",  d: 0 },
+    { key: "robotsNeeded",       label: "Robots needed at the peak",  unit: "",        better: "lower",  d: 0, only: "A" },
+    { key: "robotTravelPerLine", label: "Robot travel per line",      unit: "m",       better: "lower",  d: 1, only: "A" },
+    { key: "pileOn",             label: "Lines per pod visit",        unit: "",        better: "higher", d: 2, only: "A" }
   ];
+  function applies(def, id) { return !def.only || def.only.indexOf(id) >= 0; }
 
   const fmt = function (v, d) { return Number(v).toFixed(d === undefined ? 1 : d); };
 
@@ -128,5 +133,5 @@
     };
   }
 
-  return { KPI_DEFS, evaluate, exactSingleLine };
+  return { KPI_DEFS, applies, evaluate, exactSingleLine };
 });
