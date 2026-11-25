@@ -46,6 +46,40 @@
     this.edges.push([a, b, L]);
   };
 
+  // A path along a circular arc centred at (cx, cy) from node a to node b
+  // (both on the circle), going the short way. Its length is r·Δθ, and the
+  // shape is kept so the plan can draw it as a curve.
+  Graph.prototype.addArc = function (a, b, cx, cy) {
+    if (a === b) return;
+    const r = Math.hypot(this.x[a] - cx, this.y[a] - cy);
+    const t0 = Math.atan2(this.y[a] - cy, this.x[a] - cx), t1 = Math.atan2(this.y[b] - cy, this.x[b] - cx);
+    let dt = t1 - t0;
+    while (dt > Math.PI) dt -= 2 * Math.PI;
+    while (dt < -Math.PI) dt += 2 * Math.PI;
+    this.addEdge(a, b, r * Math.abs(dt));
+    this.edges[this.edges.length - 1].push({ cx: cx, cy: cy, r: r, t0: t0, t1: t0 + dt });
+  };
+
+  // Join nodes lying on one circle in order of angle with arcs.
+  Graph.prototype.arcChain = function (ids, cx, cy) {
+    const self = this, ang = function (i) { return Math.atan2(self.y[i] - cy, self.x[i] - cx); };
+    const s = ids.slice().sort(function (a, b) { return ang(a) - ang(b); });
+    for (let i = 1; i < s.length; i++) this.addArc(s[i - 1], s[i], cx, cy);
+    return s;
+  };
+
+  // The arc shape of the edge between a and b, or null for a straight edge.
+  Graph.prototype.shapeOf = function (a, b) {
+    if (!this._shape) {
+      this._shape = new Map();
+      for (let i = 0; i < this.edges.length; i++) { const e = this.edges[i]; if (e[3]) this._shape.set(e[0] + "," + e[1], e[3]); }
+    }
+    const s = this._shape.get(a + "," + b);
+    if (s) return s;
+    const r = this._shape.get(b + "," + a);
+    return r ? { cx: r.cx, cy: r.cy, r: r.r, t0: r.t1, t1: r.t0 } : null;
+  };
+
   // Join a list of nodes in order of their position along one coordinate
   // ("x" or "y") with straight edges — an aisle or a cross-aisle.
   Graph.prototype.chain = function (ids, axis) {

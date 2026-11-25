@@ -41,11 +41,36 @@
 
   const fmt = function (v, d) { return Number(v).toFixed(d === undefined ? 1 : d); };
 
-  // Exact expected round trip for a single-line order from the nearest picking point.
-  function exactSingleLine(layout, skuLoc, weights) {
+  // Random and ABC slotting place SKUs by chance. Judged on one draw, the few
+  // top SKUs land near or far by luck and that luck dominates the result at
+  // high skew (it moved WH-C's travel per line by ±15% between seeds). So those
+  // policies are evaluated in expectation over every possible draw: each
+  // order's SKUs get fresh distinct locations, uniform over all locations
+  // (random) or over their class's locations (ABC) — exactly the distribution
+  // an order sees under a random slotting. Ranked slotting has nothing random.
+  function orderLocations(order, model, fixed, rnd) {
+    const out = new Array(order.length);
+    if (!model) { for (let i = 0; i < order.length; i++) out[i] = fixed[order[i]]; return out; }
+    const used = new Set();
+    for (let i = 0; i < order.length; i++) {
+      const pool = model.locs[model.skuClass[order[i]]];
+      let loc;
+      do { loc = pool[Math.floor(rnd() * pool.length)]; } while (used.has(loc));
+      used.add(loc); out[i] = loc;
+    }
+    return out;
+  }
+
+  // Exact expected round trip for a single-line order from the nearest picking
+  // point: Σ_sku share × round trip to its location (fixed slotting), or to the
+  // mean location of its class (random / ABC, in expectation).
+  function exactSingleLine(layout, res) {
     const near = slotting.locationCost(layout, { picker_speed: 1, lift_speed: 1, reach_height: Infinity }).nearest;
+    const key = layout.locations.key, w = res.weights, m = res.slotModel;
     let e = 0;
-    for (let s = 0; s < skuLoc.length; s++) e += weights[s] * 2 * near[layout.locations.key[skuLoc[s]]];
+    if (!m) { for (let s = 0; s < w.length; s++) e += w[s] * 2 * near[key[res.skuLoc[s]]]; return e; }
+    const clsMean = m.locs.map(function (pool) { let t = 0; for (let i = 0; i < pool.length; i++) t += near[key[pool[i]]]; return t / pool.length; });
+    for (let s = 0; s < w.length; s++) e += w[s] * 2 * clsMean[m.skuClass[s]];
     return e;
   }
 
@@ -59,14 +84,16 @@
       return { layout: layout, infeasible: true, warnings: warnings.concat([{ level: "critical", text: "Only " + layout.locations.n + " storage locations for " + sc.skus + " SKUs." }]) };
     }
     const stream = demand.orderStream(sc, seed);
-    const skuLoc = slotting.assign(layout, sc.skus, sc.slotting, op, demand.mulberry32((seed ^ 0x9e3779b9) >>> 0));
+    const slotRnd = demand.mulberry32((seed ^ 0x9e3779b9) >>> 0);
+    const skuLoc = slotting.assign(layout, sc.skus, sc.slotting, op, slotRnd);     // one draw: what the plan shows
+    const slotModel = slotting.classes(layout, sc.skus, sc.slotting, op);        // null for ranked
     const L = layout.locations;
 
     let sumTour = 0, sumLines = 0, sumStops = 0, sumReach = 0;
     const tours = new Float64Array(nOrders);
     for (let o = 0; o < nOrders; o++) {
-      const order = stream.next(), keys = new Array(order.length);
-      for (let i = 0; i < order.length; i++) { const loc = skuLoc[order[i]]; keys[i] = L.key[loc]; sumReach += slotting.reachTime(L.z[loc], op); }
+      const order = stream.next(), locs = orderLocations(order, slotModel, skuLoc, slotRnd), keys = new Array(order.length);
+      for (let i = 0; i < order.length; i++) { const loc = locs[i]; keys[i] = L.key[loc]; sumReach += slotting.reachTime(L.z[loc], op); }
       const r = routing.route(layout.M, layout.depots, keys);
       tours[o] = r.dist; sumTour += r.dist; sumLines += order.length; sumStops += r.stops;
     }
@@ -89,14 +116,14 @@
     };
     const trace = [
       { label: "Orders sampled", expr: "seeded order stream, same for every layout", value: nOrders + " orders, " + fmt(linesPerOrder, 2) + " lines and " + fmt(sumStops / nOrders, 2) + " stops each" },
-      { label: "Slotting", expr: sc.slotting === "ranked" ? "k-th most popular SKU → k-th closest location" : sc.slotting === "abc" ? "ABC classes 20/30/50% of SKUs and of locations" : "random", value: sc.skus + " SKUs in " + L.n + " locations (" + fmt(100 * sc.skus / L.n, 0) + "% full)" },
+      { label: "Slotting", expr: sc.slotting === "ranked" ? "k-th most popular SKU → k-th closest location" : sc.slotting === "abc" ? "ABC classes 20/30/50% of SKUs and of locations" : "random", value: sc.skus + " SKUs in " + L.n + " locations (" + fmt(100 * sc.skus / L.n, 0) + "% full)" + (slotModel ? "; travel is the expectation over every possible " + (sc.slotting === "abc" ? "ABC" : "random") + " slotting" : "") },
       { label: "Travel per order", expr: "mean shortest tour (exact up to " + routing.EXACT_MAX + " stops, else nearest neighbour + 2-opt)", value: fmt(travelPerOrder, 1) + " m ± " + fmt(1.96 * travelSE, 1) },
       { label: "Time per order", expr: "setup + travel / speed + lines × pick time + reach time", value: fmt(sc.order_setup_time, 0) + " + " + fmt(walkTime, 0) + " + " + fmt(linesPerOrder * sc.pick_time_per_line, 0) + " + " + fmt(sumReach / nOrders, 0) + " = " + fmt(orderTime, 0) + " s" },
       { label: "Time per line", expr: "time per order / lines per order", value: fmt(timePerLine, 1) + " s → " + fmt(linesPerHour, 0) + " lines per picker-hour" },
       { label: "Pickers at the peak", expr: "ceil(lines/day ÷ hours × peak factor × time per line ÷ efficiency)", value: fmt(peakLinesPerHour, 0) + " lines/h × " + fmt(timePerLine, 1) + " s = " + fmt(workload, 2) + " → " + pickersNeeded }
     ];
     return {
-      layout: layout, kpi: k, skuLoc: skuLoc, weights: stream.weights, travelSE: travelSE,
+      layout: layout, kpi: k, skuLoc: skuLoc, slotModel: slotModel, weights: stream.weights, travelSE: travelSE,
       warnings: warnings, trace: (layout.trace || []).concat(trace)
     };
   }

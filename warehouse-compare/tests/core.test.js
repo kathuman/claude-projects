@@ -111,10 +111,10 @@ const rnd = demand.mulberry32(7);
 
   // single-line orders: sample vs exact expectation
   const s1 = Object.assign({}, inputs.sc, { lines_per_order: 1, max_lines: 1, sample_orders: 20000 });
-  ["random", "ranked"].forEach((pol) => {
+  ["random", "abc", "ranked"].forEach((pol) => {
     const sc = Object.assign({}, s1, { slotting: pol });
     const r = kpi.evaluate(L, sc);
-    const exact = kpi.exactSingleLine(L, r.skuLoc, r.weights);
+    const exact = kpi.exactSingleLine(L, r);
     check(pol + ": single-line travel sample " + r.kpi.travelPerOrder.toFixed(2) + " m vs exact " + exact.toFixed(2) + " m (within 4 SE)", Math.abs(r.kpi.travelPerOrder - exact) < 4 * r.travelSE);
   });
 
@@ -123,6 +123,13 @@ const rnd = demand.mulberry32(7);
   ["random", "abc", "ranked"].forEach((pol) => { res[pol] = kpi.evaluate(L, Object.assign({}, inputs.sc, { slotting: pol })); });
   check("travel: ranked < ABC < random (" + ["ranked", "abc", "random"].map((p) => res[p].kpi.travelPerLine.toFixed(1)).join(" < ") + " m/line)",
     res.ranked.kpi.travelPerLine < res.abc.kpi.travelPerLine && res.abc.kpi.travelPerLine < res.random.kpi.travelPerLine);
+  // random slotting is judged in expectation, not on one lucky or unlucky draw:
+  // high skew and single-line orders are where a single draw swung by ±15%
+  ["random", "abc"].forEach((pol) => {
+    const v = [1, 2, 3, 4, 5].map((sd) => kpi.evaluate(L, Object.assign({}, inputs.sc, { slotting: pol, demand_skew: 95, lines_per_order: 1, max_lines: 1, seed: sd, sample_orders: 4000 })).kpi.travelPerLine);
+    const spread = (Math.max(...v) - Math.min(...v)) / (v.reduce((a, b) => a + b, 0) / v.length);
+    check(pol + ": result stable across seeds at 95% skew (spread " + (100 * spread).toFixed(1) + "%)", spread < 0.05, v.map((x) => x.toFixed(1)).join(" "));
+  });
   const again = kpi.evaluate(L, Object.assign({}, inputs.sc, { slotting: "ranked" }));
   check("same seed, same result", again.kpi.travelPerOrder === res.ranked.kpi.travelPerOrder);
   check("every KPI in the contract is reported and finite", kpi.KPI_DEFS.every((d) => isFinite(res.ranked.kpi[d.key])));

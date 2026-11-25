@@ -31,8 +31,8 @@
     <section class="main">
       <div class="tabs" role="tablist">
         <button class="tab" disabled title="Phase 3">WH-A · moving racks<small>phase 3</small></button>
-        <button class="tab" disabled title="Phase 2">WH-B · semicircle<small>phase 2</small></button>
-        <button class="tab on" aria-selected="true">WH-C · rectangle</button>
+        <button class="tab" data-id="B" role="tab">WH-B · semicircle</button>
+        <button class="tab" data-id="C" role="tab">WH-C · rectangle</button>
       </div>
       <div class="toolbar">
         <button class="btn on" id="colCost">Colour: travel time</button>
@@ -52,7 +52,7 @@
         <table class="kpi" id="kpi"></table>
       </div>
       <div>
-        <h2>How WH-C's numbers are derived</h2>
+        <h2 id="traceTitle">How the numbers are derived</h2>
         <ul class="trace" id="trace"></ul>
       </div>
     </aside>
@@ -64,6 +64,7 @@
 <script src="src/routing.js"></script>
 <script src="src/slotting.js"></script>
 <script src="src/kpi.js"></script>
+<script src="src/layouts/whb.js"></script>
 <script src="src/layouts/whc.js"></script>
 <script src="src/scenario.js"></script>
 <script src="src/plan.js"></script>

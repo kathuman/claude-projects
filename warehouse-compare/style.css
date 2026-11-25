@@ -1,3 +1,4 @@
+[hidden]{display:none !important;}
 :root{
   --bg:#0a2f52; --panel:#0d3a63; --panel-2:#082444; --line:#2a5580; --line-soft:#1d4470;
   --ink:#bfe4ff; --ink-dim:#8fd0f2; --ink-faint:#6fa8c9; --accent:#7dd3fc; --accent-ink:#04202b;
@@ -78,3 +79,8 @@ table.kpi td.unit{color:var(--ink-faint); font-size:11px; text-align:left;}
   .main{order:-1; height:auto;}
   #plan{flex:none; height:60vh;}
 }
+table.kpi td.better{color:var(--good);}
+table.kpi td.worse{color:#ff8a89;}
+table.kpi td.same{color:var(--ink-faint);}
+table.kpi .unit{color:var(--ink-faint); font-family:var(--mono); font-size:10.5px;}
+.rail h2{margin-top:4px;}

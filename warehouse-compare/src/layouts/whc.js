@@ -85,11 +85,15 @@
     const n = locationsPerLayout(lay, p), ppl = p.positions_per_level_per_bay;
     const key = new Int32Array(n), z = new Float64Array(n), x = new Float64Array(n), y = new Float64Array(n);
     let i = 0;
+    const bays = [];                                     // one rectangle per (row, bay); its locations are contiguous
     lay.rows.forEach(function (row) {
-      for (let b = 0; b < lay.baysPerRow; b++) for (let l = 0; l < p.levels_per_rack; l++) for (let q = 0; q < ppl; q++) {
-        key[i] = accessKey[row.aisle][b]; z[i] = lay.levelHeights[l];
-        x[i] = lay.bayX[b] + (q + 0.5) * p.bay_width / ppl; y[i] = row.y + row.depth / 2;
-        i++;
+      for (let b = 0; b < lay.baysPerRow; b++) {
+        bays.push({ cx: lay.bayX[b] + p.bay_width / 2, cy: row.y + row.depth / 2, ux: 1, uy: 0, w: p.bay_width, d: row.depth, loc0: i, nLoc: p.levels_per_rack * ppl, group: row.aisle });
+        for (let l = 0; l < p.levels_per_rack; l++) for (let q = 0; q < ppl; q++) {
+          key[i] = accessKey[row.aisle][b]; z[i] = lay.levelHeights[l];
+          x[i] = lay.bayX[b] + (q + 0.5) * p.bay_width / ppl; y[i] = row.y + row.depth / 2;
+          i++;
+        }
       }
     });
 
@@ -98,7 +102,7 @@
     if (!g.connected()) warnings.push({ level: "critical", text: "Some storage can't be reached from a picking point." });
     return {
       id: "C", name: "WH-C · rectangular", graph: g, M: opts.matrix === false ? null : g.keyMatrix(), depots: depots,
-      locations: { n: n, key: key, z: z, x: x, y: y },
+      locations: { n: n, key: key, z: z, x: x, y: y }, bays: bays,
       footprint: footprint, outline: [[0, 0], [p.warehouse_length, 0], [p.warehouse_length, p.warehouse_width], [0, p.warehouse_width]],
       wh: lay, accessKey: accessKey, params: p,
       warnings: warnings,

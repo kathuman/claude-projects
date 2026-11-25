@@ -1,13 +1,14 @@
 /*
  * plan.js — draws a layout in plan view on a canvas: the building outline,
- * the storage locations coloured by travel cost or by SKU popularity, the
- * travel network, the picking points and (optionally) one order's route.
+ * every bay as a (possibly rotated) rectangle coloured by travel cost or by
+ * the popularity class of what it stores, the travel network (straight and
+ * arc paths), the picking points and optionally one order's route.
  * Works for any layout object from src/layouts/ — no layout-specific code.
  */
 (function (root) {
   "use strict";
 
-  // sequential blue→amber scale for "near → far" (cheap → expensive)
+  // blue → amber for near → far, or A → C
   function heat(t) {
     t = Math.max(0, Math.min(1, t));
     const a = [125, 211, 252], b = [237, 161, 0];
@@ -25,58 +26,71 @@
 
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     L.outline.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
-    const pad = 24, s = Math.min((W - 2 * pad) / (x1 - x0), (H - 2 * pad) / (y1 - y0));
-    const ox = (W - s * (x1 - x0)) / 2, oy = (H - s * (y1 - y0)) / 2;
+    // opts.span = [width, height] in metres to fit — pass the largest of the
+    // layouts being compared so they are all drawn at one scale
+    const sx = opts.span ? Math.max(opts.span[0], x1 - x0) : x1 - x0, sy = opts.span ? Math.max(opts.span[1], y1 - y0) : y1 - y0;
+    const pad = 24, s = Math.min((W - 2 * pad) / sx, (H - 2 * pad - 14) / sy);
+    const ox = (W - s * (x1 - x0)) / 2, oy = (H - 14 - s * (y1 - y0)) / 2 + 14;
     const X = function (x) { return ox + (x - x0) * s; }, Y = function (y) { return H - (oy + (y - y0) * s); };
-    const view = { X: X, Y: Y, s: s };
+    // canvas y runs down, plan y runs up: angles flip sign
+    function arcTo(sh, first) {
+      const n = Math.max(2, Math.ceil(Math.abs(sh.t1 - sh.t0) * sh.r * s / 4));
+      for (let k = first ? 0 : 1; k <= n; k++) {
+        const a = sh.t0 + (sh.t1 - sh.t0) * k / n, px = X(sh.cx + sh.r * Math.cos(a)), py = Y(sh.cy + sh.r * Math.sin(a));
+        if (first && k === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+    }
 
     // building
     c.strokeStyle = "#8fd0f2"; c.lineWidth = 2; c.beginPath();
     L.outline.forEach(function (p, i) { if (i) c.lineTo(X(p[0]), Y(p[1])); else c.moveTo(X(p[0]), Y(p[1])); });
     c.closePath(); c.stroke();
 
-    // storage locations
+    // bays, coloured by the mean over their locations
     const loc = L.locations, mode = opts.color || "cost";
     const val = new Float64Array(loc.n).fill(NaN);
     if (mode === "cost") {
-      const near = WC.slotting.locationCost(L, opts.sc).cost;
+      const cost = WC.slotting.locationCost(L, opts.sc).cost;
       let mn = Infinity, mx = -Infinity;
-      for (let i = 0; i < loc.n; i++) { mn = Math.min(mn, near[i]); mx = Math.max(mx, near[i]); }
-      for (let i = 0; i < loc.n; i++) val[i] = (near[i] - mn) / Math.max(1e-9, mx - mn);
+      for (let i = 0; i < loc.n; i++) { mn = Math.min(mn, cost[i]); mx = Math.max(mx, cost[i]); }
+      for (let i = 0; i < loc.n; i++) val[i] = (cost[i] - mn) / Math.max(1e-9, mx - mn);
     } else {
-      // ABC class of the SKU stored there (A = most popular 20%, B = next 30%,
-      // C = the rest) as 0 / 0.5 / 1; empty locations stay NaN
       const n = res.skuLoc.length, b = WC.slotting.ABC_BOUNDS;
-      for (let s2 = 0; s2 < n; s2++) { const u = (s2 + 0.5) / n; val[res.skuLoc[s2]] = u < b[0] ? 0 : u < b[1] ? 0.5 : 1; }
+      for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; val[res.skuLoc[k]] = u < b[0] ? 0 : u < b[1] ? 0.5 : 1; }
     }
-    // a location's dot shows the mean over the levels stacked on it
-    const cell = new Map();
-    for (let i = 0; i < loc.n; i++) {
-      const k = Math.round(loc.x[i] * 100) + "," + Math.round(loc.y[i] * 100);
-      const e = cell.get(k) || { x: loc.x[i], y: loc.y[i], v: 0, m: 0 };
-      if (!isNaN(val[i])) { e.v += val[i]; e.m++; }
-      cell.set(k, e);
-    }
-    const r = Math.max(1.2, Math.min(5, s * 0.35));
-    cell.forEach(function (e) {
-      c.fillStyle = !e.m ? "#1d4470" : mode === "cost" ? heat(e.v / e.m) : heat(Math.round(2 * e.v / e.m) / 2);
-      c.fillRect(X(e.x) - r, Y(e.y) - r, 2 * r, 2 * r);
+    L.bays.forEach(function (b) {
+      let v = 0, m = 0;
+      for (let i = b.loc0; i < b.loc0 + b.nLoc; i++) if (!isNaN(val[i])) { v += val[i]; m++; }
+      c.fillStyle = !m ? "#1d4470" : mode === "cost" ? heat(v / m) : heat(Math.round(2 * v / m) / 2);
+      const hx = b.ux * b.w / 2, hy = b.uy * b.w / 2, vx = -b.uy * b.d / 2, vy = b.ux * b.d / 2;
+      c.beginPath();
+      c.moveTo(X(b.cx - hx - vx), Y(b.cy - hy - vy)); c.lineTo(X(b.cx + hx - vx), Y(b.cy + hy - vy));
+      c.lineTo(X(b.cx + hx + vx), Y(b.cy + hy + vy)); c.lineTo(X(b.cx - hx + vx), Y(b.cy - hy + vy));
+      c.closePath(); c.fill();
     });
 
     // travel network
     if (opts.network) {
-      c.strokeStyle = "rgba(123,224,196,.45)"; c.lineWidth = 1; c.beginPath();
-      g.edges.forEach(function (e) { c.moveTo(X(g.x[e[0]]), Y(g.y[e[0]])); c.lineTo(X(g.x[e[1]]), Y(g.y[e[1]])); });
+      c.strokeStyle = "rgba(123,224,196,.5)"; c.lineWidth = 1; c.beginPath();
+      g.edges.forEach(function (e) {
+        if (e[3]) arcTo(e[3], true);
+        else { c.moveTo(X(g.x[e[0]]), Y(g.y[e[0]])); c.lineTo(X(g.x[e[1]]), Y(g.y[e[1]])); }
+      });
       c.stroke();
     }
 
-    // route of one order
+    // one order's route
     if (opts.route) {
       const rt = opts.route, seq = [rt.depot].concat(rt.order, [rt.depot]);
       c.strokeStyle = "#ffffff"; c.lineWidth = 2.5; c.lineJoin = "round"; c.beginPath();
+      let started = false;
       for (let i = 1; i < seq.length; i++) {
         const p = g.path(g.keys[seq[i - 1]], g.keys[seq[i]]);
-        p.forEach(function (n, j) { if (i === 1 && j === 0) c.moveTo(X(g.x[n]), Y(g.y[n])); else c.lineTo(X(g.x[n]), Y(g.y[n])); });
+        if (!started) { c.moveTo(X(g.x[p[0]]), Y(g.y[p[0]])); started = true; }
+        for (let j = 1; j < p.length; j++) {
+          const sh = g.shapeOf(p[j - 1], p[j]);
+          if (sh) arcTo(sh, false); else c.lineTo(X(g.x[p[j]]), Y(g.y[p[j]]));
+        }
       }
       c.stroke();
       rt.order.forEach(function (k, i) {
@@ -94,12 +108,11 @@
       c.beginPath(); c.rect(X(g.x[n]) - 6, Y(g.y[n]) - 6, 12, 12); c.fill(); c.stroke();
     });
 
-    // scale bar: 10 m
+    // scale bar: 10 m, top left
     const bar = 10 * s;
-    c.strokeStyle = "#8fd0f2"; c.lineWidth = 2; c.beginPath(); c.moveTo(pad, H - 10); c.lineTo(pad + bar, H - 10); c.stroke();
-    c.fillStyle = "#8fd0f2"; c.font = "11px 'IBM Plex Mono', monospace"; c.textAlign = "left"; c.textBaseline = "bottom";
-    c.fillText("10 m", pad + bar + 6, H - 4);
-    return view;
+    c.strokeStyle = "#8fd0f2"; c.lineWidth = 2; c.beginPath(); c.moveTo(pad, 14); c.lineTo(pad + bar, 14); c.stroke();
+    c.fillStyle = "#8fd0f2"; c.font = "11px 'IBM Plex Mono', monospace"; c.textAlign = "left"; c.textBaseline = "middle";
+    c.fillText("10 m", pad + bar + 6, 14);
   }
 
   root.WC = root.WC || {}; root.WC.plan = { draw: draw, heat: heat };

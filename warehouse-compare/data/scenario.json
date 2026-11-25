@@ -1,23 +1,150 @@
 {
   "$schema": "One scenario shared by every layout: the same SKUs, the same orders, the same pickers. Layout-specific inputs live under 'layouts'. Every value is an input; nothing here is a result.",
   "shared": {
-    "skus":                   { "value": 6000, "unit": "",      "minimum": 100,  "maximum": 50000, "group": "Demand",  "description": "Number of SKUs stocked; each one needs its own storage location." },
-    "target_locations":       { "value": 7000, "unit": "",      "minimum": 100,  "maximum": 60000, "group": "Demand",  "description": "Equal capacity: every layout is sized to the smallest footprint with at least this many storage locations." },
-    "demand_skew":            { "value": 80,   "unit": "%",     "minimum": 20,   "maximum": 99,    "group": "Demand",  "description": "Share of order lines that come from the most popular 20% of SKUs (F(u) = u^k)." },
-    "lines_per_order":        { "value": 3,    "unit": "",      "minimum": 1,    "maximum": 20,    "group": "Demand",  "description": "Mean lines per order (geometric distribution: single-line orders are the most common)." },
-    "max_lines":              { "value": 15,   "unit": "",      "minimum": 1,    "maximum": 40,    "group": "Demand",  "description": "Largest order, in lines." },
-    "lines_per_day":          { "value": 12000,"unit": "",      "minimum": 100,  "maximum": 200000,"group": "Demand",  "description": "Order lines picked per day." },
-    "operating_hours_per_day":{ "value": 16,   "unit": "h",     "minimum": 1,    "maximum": 24,    "group": "Demand",  "description": "Hours of picking per day." },
-    "peak_hour_factor":       { "value": 1.5,  "unit": "×",     "minimum": 1,    "maximum": 4,     "group": "Demand",  "description": "Busiest hour as a multiple of the average hour." },
-    "slotting":               { "value": "ranked", "type": "choice", "options": ["random", "abc", "ranked"], "labels": { "random": "Random", "abc": "ABC classes", "ranked": "Most popular closest" }, "group": "Operations", "description": "How SKUs are assigned to locations." },
-    "picker_speed":           { "value": 1.0,  "unit": "m/s",   "minimum": 0.3,  "maximum": 3,     "group": "Operations", "description": "Picker travel speed with a cart, including turns and congestion." },
-    "lift_speed":             { "value": 0.3,  "unit": "m/s",   "minimum": 0.1,  "maximum": 1,     "group": "Operations", "description": "Vertical speed for locations above reach (step ladder or order-picker platform)." },
-    "reach_height":           { "value": 1.8,  "unit": "m",     "minimum": 0,    "maximum": 3,     "group": "Operations", "description": "Highest location a picker reaches from the floor without lifting." },
-    "pick_time_per_line":     { "value": 8,    "unit": "s",     "minimum": 1,    "maximum": 60,    "group": "Operations", "description": "Time to find, pick and confirm one order line." },
-    "order_setup_time":       { "value": 30,   "unit": "s",     "minimum": 0,    "maximum": 300,   "group": "Operations", "description": "Time per order to take the task, set up the cart and drop the order at the picking point." },
-    "picker_efficiency":      { "value": 0.8,  "unit": "×",     "minimum": 0.4,  "maximum": 1,     "group": "Operations", "description": "Share of a picker's paid time spent on picking work." },
-    "sample_orders":          { "value": 2000, "unit": "",      "minimum": 200,  "maximum": 20000, "group": "Model",   "description": "Orders sampled to estimate travel (the same orders for every layout)." },
-    "seed":                   { "value": 20261125, "unit": "",  "minimum": 1,    "maximum": 4294967295, "group": "Model", "description": "Random seed for orders and slotting." }
+    "skus": {
+      "value": 6000,
+      "unit": "",
+      "minimum": 100,
+      "maximum": 50000,
+      "group": "Demand",
+      "description": "Number of SKUs stocked; each one needs its own storage location."
+    },
+    "target_locations": {
+      "value": 7000,
+      "unit": "",
+      "minimum": 100,
+      "maximum": 60000,
+      "group": "Demand",
+      "description": "Equal capacity: every layout is sized to the smallest footprint with at least this many storage locations."
+    },
+    "demand_skew": {
+      "value": 80,
+      "unit": "%",
+      "minimum": 20,
+      "maximum": 99,
+      "group": "Demand",
+      "description": "Share of order lines that come from the most popular 20% of SKUs (F(u) = u^k)."
+    },
+    "lines_per_order": {
+      "value": 3,
+      "unit": "",
+      "minimum": 1,
+      "maximum": 20,
+      "group": "Demand",
+      "description": "Mean lines per order (geometric distribution: single-line orders are the most common)."
+    },
+    "max_lines": {
+      "value": 15,
+      "unit": "",
+      "minimum": 1,
+      "maximum": 40,
+      "group": "Demand",
+      "description": "Largest order, in lines."
+    },
+    "lines_per_day": {
+      "value": 12000,
+      "unit": "",
+      "minimum": 100,
+      "maximum": 200000,
+      "group": "Demand",
+      "description": "Order lines picked per day."
+    },
+    "operating_hours_per_day": {
+      "value": 16,
+      "unit": "h",
+      "minimum": 1,
+      "maximum": 24,
+      "group": "Demand",
+      "description": "Hours of picking per day."
+    },
+    "peak_hour_factor": {
+      "value": 1.5,
+      "unit": "×",
+      "minimum": 1,
+      "maximum": 4,
+      "group": "Demand",
+      "description": "Busiest hour as a multiple of the average hour."
+    },
+    "slotting": {
+      "value": "ranked",
+      "type": "choice",
+      "options": [
+        "random",
+        "abc",
+        "ranked"
+      ],
+      "labels": {
+        "random": "Random",
+        "abc": "ABC classes",
+        "ranked": "Most popular closest"
+      },
+      "group": "Operations",
+      "description": "How SKUs are assigned to locations."
+    },
+    "picker_speed": {
+      "value": 1,
+      "unit": "m/s",
+      "minimum": 0.3,
+      "maximum": 3,
+      "group": "Operations",
+      "description": "Picker travel speed with a cart, including turns and congestion."
+    },
+    "lift_speed": {
+      "value": 0.3,
+      "unit": "m/s",
+      "minimum": 0.1,
+      "maximum": 1,
+      "group": "Operations",
+      "description": "Vertical speed for locations above reach (step ladder or order-picker platform)."
+    },
+    "reach_height": {
+      "value": 1.8,
+      "unit": "m",
+      "minimum": 0,
+      "maximum": 3,
+      "group": "Operations",
+      "description": "Highest location a picker reaches from the floor without lifting."
+    },
+    "pick_time_per_line": {
+      "value": 8,
+      "unit": "s",
+      "minimum": 1,
+      "maximum": 60,
+      "group": "Operations",
+      "description": "Time to find, pick and confirm one order line."
+    },
+    "order_setup_time": {
+      "value": 30,
+      "unit": "s",
+      "minimum": 0,
+      "maximum": 300,
+      "group": "Operations",
+      "description": "Time per order to take the task, set up the cart and drop the order at the picking point."
+    },
+    "picker_efficiency": {
+      "value": 0.8,
+      "unit": "×",
+      "minimum": 0.4,
+      "maximum": 1,
+      "group": "Operations",
+      "description": "Share of a picker's paid time spent on picking work."
+    },
+    "sample_orders": {
+      "value": 2000,
+      "unit": "",
+      "minimum": 200,
+      "maximum": 20000,
+      "group": "Model",
+      "description": "Orders sampled to estimate travel (the same orders for every layout)."
+    },
+    "seed": {
+      "value": 20261125,
+      "unit": "",
+      "minimum": 1,
+      "maximum": 4294967295,
+      "group": "Model",
+      "description": "Random seed for orders and slotting."
+    }
   },
   "layouts": {
     "C": {
@@ -30,18 +157,75 @@
       "levels_per_rack": 4,
       "load_height": 0.25,
       "rack_depth": 0.6,
-      "bay_width": 1.0,
+      "bay_width": 1,
       "positions_per_level_per_bay": 2,
       "aisle_width": 1.2,
       "flue_space": 0.1,
       "mid_cross_aisles": 1,
-      "mid_cross_aisle_width": 2.0,
-      "cross_aisle_width": 3.0,
+      "mid_cross_aisle_width": 2,
+      "cross_aisle_width": 3,
       "flow_layout": "u_flow",
       "num_receiving_docks": 1,
       "num_shipping_docks": 1,
       "picking_points": 4,
       "station_spacing": 3
+    },
+    "B": {
+      "$comment": "Semicircular, person-to-goods. Rack dimensions (rack_height, levels_per_rack, load_height, rack_depth, bay_width, positions_per_level_per_bay, aisle_width, flue_space) and the picking points are taken from layouts.C so the two differ only in arrangement. The outer radius is a result: the building is sized to target_locations.",
+      "arrangement": {
+        "value": "radial",
+        "type": "choice",
+        "options": [
+          "radial",
+          "concentric"
+        ],
+        "labels": {
+          "radial": "Radial rows",
+          "concentric": "Concentric rows"
+        },
+        "group": "WH-B",
+        "description": "Radial: rack rows point straight out from the picking points. Concentric: rack rows follow arcs, cut by radial aisles."
+      },
+      "hub_radius": {
+        "value": 6,
+        "unit": "m",
+        "minimum": 3,
+        "maximum": 20,
+        "group": "WH-B",
+        "description": "Radius of the open floor around the picking points (staging, like WH-C's front cross-aisle)."
+      },
+      "zones": {
+        "value": 2,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 6,
+        "group": "WH-B",
+        "description": "Radial: rings of racking separated by ring cross-aisles. Each ring further out fits more rows."
+      },
+      "ring_aisle_width": {
+        "value": 2,
+        "unit": "m",
+        "minimum": 1,
+        "maximum": 6,
+        "group": "WH-B",
+        "description": "Radial: width of the ring cross-aisles between zones (and around the outside)."
+      },
+      "radial_aisles": {
+        "value": 5,
+        "unit": "",
+        "minimum": 1,
+        "maximum": 15,
+        "group": "WH-B",
+        "description": "Concentric: straight aisles leading out from the hub through the rings."
+      },
+      "radial_aisle_width": {
+        "value": 2,
+        "unit": "m",
+        "minimum": 1,
+        "maximum": 6,
+        "group": "WH-B",
+        "description": "Concentric: width of the radial aisles."
+      }
     }
   }
 }

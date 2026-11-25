@@ -72,5 +72,23 @@
     return out;
   }
 
-  return { ABC_BOUNDS, reachTime, locationCost, assign };
+  // The random part of a policy, for evaluating it in expectation. Under random
+  // slotting every SKU is equally likely to be in any location; under ABC, in
+  // any location of its class. Returns { skuClass, locs: [Int32Array per class] },
+  // or null for ranked slotting (nothing random). Each class has at least as
+  // many locations as SKUs (both are split by the same fractions, nSku ≤ n).
+  function classes(layout, nSku, policy, op) {
+    const n = layout.locations.n;
+    if (policy === "ranked") return null;
+    if (policy !== "abc") return { skuClass: new Uint8Array(nSku), locs: [Int32Array.from({ length: n }, function (_, i) { return i; })] };
+    const cost = locationCost(layout, op).cost;
+    const byCost = Array.from({ length: n }, function (_, i) { return i; }).sort(function (a, b) { return cost[a] - cost[b] || a - b; });
+    const locCls = [[], [], []], skuClass = new Uint8Array(nSku), count = [0, 0, 0];
+    byCost.forEach(function (loc, r) { const u = (r + 0.5) / n; locCls[u < ABC_BOUNDS[0] ? 0 : u < ABC_BOUNDS[1] ? 1 : 2].push(loc); });
+    for (let s = 0; s < nSku; s++) { const u = (s + 0.5) / nSku; skuClass[s] = u < ABC_BOUNDS[0] ? 0 : u < ABC_BOUNDS[1] ? 1 : 2; count[skuClass[s]]++; }
+    for (let c = 0; c < 3; c++) if (count[c] > locCls[c].length) throw new Error("ABC class " + "ABC"[c] + " has more SKUs than locations");
+    return { skuClass: skuClass, locs: locCls.map(function (a) { return Int32Array.from(a); }) };
+  }
+
+  return { ABC_BOUNDS, reachTime, locationCost, assign, classes };
 });
