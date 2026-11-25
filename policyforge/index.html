@@ -71,10 +71,52 @@
       <p class="caption">The core flow. Box outlines show progress: green is built, amber is partly built or next, blue-grey is planned.</p>
     </section>
 
+    <section class="panel" aria-labelledby="h-vision">
+      <h2 id="h-vision">The vision: delegation you can verify</h2>
+      <p>Supply chains are starting to hand their routine decisions to AI agents: replenishment, allocation, expediting, switching suppliers. Agents act at machine speed, around the clock, across thousands of SKUs and lanes. The manager's question changes from <i>"what is the plan?"</i> to <i>"what may the agent decide on its own, and how do we know that is safe?"</i> PolicyForge is built to answer that second question.</p>
+
+      <h3>The world we are building for</h3>
+      <ul>
+        <li><b>Agents execute; people govern.</b> Most routine decisions are made by agents. People set the rules, the limits, the priorities, and the conditions under which an agent must stop and ask.</li>
+        <li><b>Intent is the interface.</b> A manager says what they want in plain language. A language model turns it into a precise, bounded rule, and shows back what it understood.</li>
+        <li><b>Trust is earned with evidence, not demonstrations.</b> Every delegation carries a stress test against thousands of futures, an approval by a named person, and an audit trail that cannot be quietly changed.</li>
+        <li><b>The world drifts, so trust is never permanent.</b> Every rule rests on assumptions about suppliers, demand and capacity. Those assumptions are watched, and when they break, the people who approved the rule hear about it first.</li>
+        <li><b>Language models and engineering models work together.</b> Language models are good at intent, explanation and imagining what could go wrong. Engineering models are good at numbers. Neither is trusted alone.</li>
+      </ul>
+
+      <h3>What PolicyForge becomes: the layer between people and agents</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Layer</th><th>The question it answers</th><th>Today</th><th>Where it is going</th></tr></thead>
+        <tbody>
+          <tr><td><b>Express</b></td><td>What do we want the agent to do?</td><td>Intent compiled into a typed rule and mandate, with questions and a back-translation</td><td>A compiler measured in public on hundreds of real intents; a constitution drafted by interview</td></tr>
+          <tr><td><b>Prove</b></td><td>Is it safe, and better than what we do now?</td><td>Stress tests against a fixed suite, a verdict built from the numbers</td><td>Repairs proposed when a rule fails; a red team that searches for the futures that break it; properties proved, not only sampled</td></tr>
+          <tr><td><b>Enforce</b></td><td>Is the agent staying inside its mandate?</td><td>Agents read their mandate from an API</td><td>Every action checked before it happens; any agent connected through a standard tool protocol (MCP); the agent itself stress-tested, not only its rule</td></tr>
+          <tr><td><b>Learn</b></td><td>Is the world still the one we tested for?</td><td>Calibrated drift monitors, a ranked inbox, one-click re-tests</td><td>Outcomes that recalibrate the model; autonomy that widens with a clean record and narrows when assumptions break</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Principles that will not change</h3>
+      <ul>
+        <li><b>The language model proposes; the numbers decide.</b> It may write rules, scenarios, repairs and explanations. It never sets a number that is not checked, and it never runs code.</li>
+        <li><b>Every action traces back to a person.</b> Each agent decision can be followed to a mandate, an approval, an evaluation and the assumptions behind it.</li>
+        <li><b>Autonomy is proportional to evidence.</b> An agent's freedom grows with its record and shrinks when the world changes, always within limits a person set.</li>
+        <li><b>Honesty about limits.</b> What the model does not capture is written down, next to every result that could be misread.</li>
+        <li><b>Open and reproducible.</b> Seeds, versions and hashes make every number recomputable; benchmarks and methods are published.</li>
+      </ul>
+
+      <h3>How we will know it is working</h3>
+      <ul>
+        <li>The compiler's accuracy on real, messy intents is measured and published, including how often it rightly refuses or asks.</li>
+        <li>Every agent action in a pilot passes through a mandate check, and every escalation reaches a person with the evidence attached.</li>
+        <li>Monitors catch real drift within weeks, at a false-alarm rate stated in advance.</li>
+        <li>A policy's verdict on a calibrated real network matches what actually happens, within the stated uncertainty.</li>
+      </ul>
+    </section>
+
     <section class="panel" aria-labelledby="h-design">
       <h2 id="h-design">Design principles</h2>
       <ul>
-        <li><b>The LLM never produces code.</b> It will compile plain language into a typed, bounded policy language, and nothing else. Every rule is a validated object; execution is deterministic Python.</li>
+        <li><b>The LLM never produces code.</b> It compiles plain language into a typed, bounded policy language, and nothing else. Every rule is a validated object; execution is deterministic Python.</li>
         <li><b>A closed vocabulary.</b> Rules may read only eight observable state variables (inventory position, on-hand, backorders, pipeline, forecast, observed lead time, supplier fill rate, capacity utilisation). Anything else fails validation.</li>
         <li><b>Every number has bounds and a unit.</b> Cover and lead times are in days, persistence in weeks, money in EUR. A test checks that every number in every schema is bounded.</li>
         <li><b>Mandates expire.</b> Ninety days by default, never more than 366 days without review.</li>
@@ -183,7 +225,7 @@
 
     <section class="panel" aria-labelledby="h-road">
       <h2 id="h-road">Roadmap</h2>
-      <p>The build goes phase by phase, and each phase starts only when the previous one passes its acceptance tests.</p>
+      <p>The brief's eight phases are done; each started only when the previous one passed its acceptance tests. What comes next is laid out below, towards <a href="#h-vision">the vision</a>.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Phase</th><th>What it delivers</th><th>Accepted when</th><th>Status</th></tr></thead>
         <tbody>
@@ -198,10 +240,23 @@
           <tr><td>P8 Hardening</td><td>Docker, Makefile, user guide, architecture, limitations</td><td>Runs on a clean machine; coverage ≥ 80 %</td><td><span class="badge done">done</span></td></tr>
         </tbody>
       </table></div>
+      <h3>Beyond 1.0: towards the vision</h3>
+      <p>Each step keeps the same discipline: the language model proposes, the numbers decide.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Version</th><th>What it delivers</th><th>Layer</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>1.1 Truth first</td><td>A public benchmark of the compiler on real Claude, with ~120 intents (ambiguous, out of scope, adversarial); evaluations against the policies actually deployed; DC storage limits, minimum order quantities and lot sizes; a public demo that runs without a server</td><td>Express · Prove</td><td><span class="badge next">next</span></td></tr>
+          <tr><td>1.2 Propose and verify</td><td>When a rule fails, three repaired versions proposed and stress-tested side by side; parameters tuned by optimisation; questions about a report answered by running the evaluation, every number checked</td><td>Prove</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>1.3 Red team</td><td>Stress scenarios written by the language model from a described risk, a news item or real disruption data (the Global Disruption Atlas); a worst-case search giving each policy its margin of safety</td><td>Prove</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>1.4 Agents for real</td><td>A check before every agent action, logged in the audit chain; an MCP server so any agent can read its mandate, check an action and escalate; real language-model agents stress-tested inside the simulator; autonomy earned by track record</td><td>Enforce</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>2.0 A learning system</td><td>Predicted against realised outcomes, with the model recalibrated from data; conflicts between deployed policies found and simulated; properties of rules proved by analysis; a constitution drafted by interview</td><td>Learn · Prove · Express</td><td><span class="badge plan">planned</span></td></tr>
+          <tr><td>Research</td><td>An open benchmark for compiling intents into policies, and a paper on verifiable delegation</td><td>all</td><td><span class="badge plan">planned</span></td></tr>
+        </tbody>
+      </table></div>
       <h3>Proposed additions</h3>
       <ul>
         <li><b>A leaner incumbent for FoodNet</b> <span class="badge done">done in P3</span>. 35 days at plants; at DCs 10 days, 12 for chilled SKUs. It meets the constitution in normal times and is fragile enough under shocks for stress tests to tell policies apart.</li>
-        <li><b>A public demo on this site (after P7).</b> GitHub Pages cannot run the Python backend. Two options: precomputed stress-test reports shown in the browser, or the simulator itself in the browser through Pyodide, which ships NumPy.</li>
+        <li><b>A public demo on this site</b> <span class="badge next">part of 1.1</span>. GitHub Pages cannot run the Python backend. Two options: precomputed stress-test reports shown in the browser, or the simulator itself in the browser through Pyodide, which ships NumPy.</li>
         <li><b>Seasonal forecasts</b> <span class="badge done">done in P3, as an option</span>. On FoodNet they change little (+0.02 points of fill): its seasonal swings are mild, and smoothing tracks them.</li>
         <li><b>An LLM-written report narrative</b> <span class="badge done">done in P4</span>. A summary that may cite only numbers present in the report, checked automatically; one retry, then no summary.</li>
       </ul>
