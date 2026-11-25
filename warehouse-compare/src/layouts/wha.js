@@ -25,10 +25,11 @@
  * Pure, no DOM: window.WC.layouts.A in the browser, module.exports in Node.
  */
 (function (root, factory) {
-  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("../graph.js"));
-  else { root.WC = root.WC || {}; root.WC.layouts = root.WC.layouts || {}; root.WC.layouts.A = factory(root.WC.graph); }
-})(typeof self !== "undefined" ? self : this, function (G) {
+  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("../graph.js"), require("../t.js"));
+  else { root.WC = root.WC || {}; root.WC.layouts = root.WC.layouts || {}; root.WC.layouts.A = factory(root.WC.graph, root.WC.t); }
+})(typeof self !== "undefined" ? self : this, function (G, tr) {
   "use strict";
+  const T = tr.T, fx = tr.fx, int = tr.int;
 
   function locsPerPod(p) { return p.pod_faces * p.pod_levels * p.bins_per_face_level; }
   function podsFor(p, target) { return Math.ceil(target / locsPerPod(p)); }
@@ -89,9 +90,9 @@
       const aisle = c + j, node = acc[aisle].get(y);
       slots.push({ x: x, y: y, key: g.markKey(node), offset: Math.abs(x - Xv[aisle]) });
     }
-    if (slots.length < pods) warnings.push({ level: "critical", text: "Grid has fewer slots than pods." });
-    if (!g.connected()) warnings.push({ level: "critical", text: "Some slots can't be reached from a station." });
-    if (p.robot_aisle_width < p.pod_width) warnings.push({ level: "warning", text: "Robot aisles (" + p.robot_aisle_width + " m) are narrower than a pod (" + p.pod_width + " m)." });
+    if (slots.length < pods) warnings.push({ level: "critical", text: T("Grid has fewer slots than pods.") });
+    if (!g.connected()) warnings.push({ level: "critical", text: T("Some slots can't be reached from a station.") });
+    if (p.robot_aisle_width < p.pod_width) warnings.push({ level: "warning", text: T("Robot aisles ({a} m) are narrower than a pod ({p} m).", { a: fx(p.robot_aisle_width, 1), p: fx(p.pod_width, 1) }) });
 
     const M = g.keyMatrix();
     // loaded distance slot ↔ station, and empty (Manhattan) distance between points
@@ -100,16 +101,16 @@
     const footprint = D.X * D.Y, perPod = locsPerPod(p);
     const bays = slots.map(function (s, i) { return { cx: s.x, cy: s.y, ux: 1, uy: 0, w: pw * 0.9, d: pw * 0.9, slot: i }; });
     return {
-      id: "A", name: "WH-A · moving racks", graph: g, M: M, depots: depots, stations: stXY,
+      id: "A", name: T("WH-A · moving racks"), graph: g, M: M, depots: depots, stations: stXY,
       slots: slots, toStation: toStation, pods: pods, perPod: perPod, bays: bays,
       locations: { n: pods * perPod },
       footprint: footprint, outline: [[0, 0], [D.X, 0], [D.X, D.Y], [0, D.Y]], size: D, grid: { nC: nC, nR: nR },
       params: p, warnings: warnings,
       trace: [
-        { label: "Pods", expr: "ceil(target locations / (faces × levels × bins))", value: "ceil(" + target + " / " + perPod + ") = " + pods + " pods, " + (pods * perPod) + " locations" },
-        { label: "Slot grid", expr: "blocks of 2 × " + L + " slots; slots ≥ pods / storage fill (" + Math.round(p.storage_fill * 100) + "%)", value: nC + " × " + nR + " blocks = " + slots.length + " slots (" + (slots.length - pods) + " free)" },
-        { label: "Travel network", expr: "robot aisles round every block + station gates", value: g.size() + " nodes, " + g.edges.length + " paths" },
-        { label: "Floor area", expr: "(station zone + grid) × grid width", value: D.X.toFixed(1) + " × " + D.Y.toFixed(1) + " = " + Math.round(footprint) + " m²" }
+        { label: T("Pods"), expr: T("ceil(target locations / (faces × levels × bins))"), value: T("ceil({t} / {p}) = {n} pods, {l} locations", { t: int(target), p: perPod, n: int(pods), l: int(pods * perPod) }) },
+        { label: T("Slot grid"), expr: T("blocks of 2 × {L} slots; slots ≥ pods / storage fill ({f}%)", { L: L, f: Math.round(p.storage_fill * 100) }), value: T("{c} × {r} blocks = {s} slots ({f} free)", { c: nC, r: nR, s: int(slots.length), f: int(slots.length - pods) }) },
+        { label: T("Travel network"), expr: T("robot aisles round every block + station gates"), value: T("{n} nodes, {e} paths", { n: int(g.size()), e: int(g.edges.length) }) },
+        { label: T("Floor area"), expr: T("(station zone + grid) × grid width"), value: fx(D.X, 1) + " × " + fx(D.Y, 1) + " = " + int(footprint) + " m²" }
       ]
     };
   }

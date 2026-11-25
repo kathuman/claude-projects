@@ -24,10 +24,11 @@
  * Pure, no DOM: window.WC.layouts.C in the browser, module.exports in Node.
  */
 (function (root, factory) {
-  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("../graph.js"), require("../../../warehouse-model/web/src/calculations.js"));
-  else { root.WC = root.WC || {}; root.WC.layouts = root.WC.layouts || {}; root.WC.layouts.C = factory(root.WC.graph, root.WH.calc); }
-})(typeof self !== "undefined" ? self : this, function (G, calc) {
+  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("../graph.js"), require("../../../warehouse-model/web/src/calculations.js"), require("../t.js"));
+  else { root.WC = root.WC || {}; root.WC.layouts = root.WC.layouts || {}; root.WC.layouts.C = factory(root.WC.graph, root.WH.calc, root.WC.t); }
+})(typeof self !== "undefined" ? self : this, function (G, calc, tr) {
   "use strict";
+  const T = tr.T, fx = tr.fx, int = tr.int;
 
   // Hand-picking shelving, added beside the Warehouse Model's pallet-rack types
   // (a walking picker with a cart needs about a metre of aisle).
@@ -99,18 +100,18 @@
 
     const footprint = p.warehouse_length * p.warehouse_width;
     const warnings = lay.warnings.slice();
-    if (!g.connected()) warnings.push({ level: "critical", text: "Some storage can't be reached from a picking point." });
+    if (!g.connected()) warnings.push({ level: "critical", text: T("Some storage can't be reached from a picking point.") });
     return {
-      id: "C", name: "WH-C · rectangular", graph: g, M: opts.matrix === false ? null : g.keyMatrix(), depots: depots,
+      id: "C", name: T("WH-C · rectangle"), graph: g, M: opts.matrix === false ? null : g.keyMatrix(), depots: depots,
       locations: { n: n, key: key, z: z, x: x, y: y }, bays: bays,
       footprint: footprint, outline: [[0, 0], [p.warehouse_length, 0], [p.warehouse_length, p.warehouse_width], [0, p.warehouse_width]],
       wh: lay, accessKey: accessKey, params: p,
       warnings: warnings,
       trace: [
-        { label: "Rectangular layout", expr: "Warehouse Model computeLayout()", value: lay.numRackRows + " rows × " + lay.baysPerRow + " bays × " + p.levels_per_rack + " levels" },
-        { label: "Storage locations", expr: "rows × bays × levels × positions per level", value: lay.numRackRows + " × " + lay.baysPerRow + " × " + p.levels_per_rack + " × " + ppl + " = " + n },
-        { label: "Travel network", expr: "aisles + front line + back line + cross-aisles", value: g.size() + " nodes, " + g.edges.length + " paths, " + g.keys.length + " stops" },
-        { label: "Floor area", expr: "length × width (inside the walls)", value: p.warehouse_length.toFixed(1) + " × " + p.warehouse_width.toFixed(1) + " = " + Math.round(footprint) + " m²" }
+        { label: T("Rectangular layout"), expr: T("Warehouse Model computeLayout()"), value: T("{r} rows × {b} bays × {l} levels", { r: lay.numRackRows, b: lay.baysPerRow, l: p.levels_per_rack }) },
+        { label: T("Storage locations"), expr: T("rows × bays × levels × positions per level"), value: lay.numRackRows + " × " + lay.baysPerRow + " × " + p.levels_per_rack + " × " + ppl + " = " + int(n) },
+        { label: T("Travel network"), expr: T("aisles + front line + back line + cross-aisles"), value: T("{n} nodes, {e} paths, {k} stops", { n: int(g.size()), e: int(g.edges.length), k: int(g.keys.length) }) },
+        { label: T("Floor area"), expr: T("length × width (inside the walls)"), value: fx(p.warehouse_length, 1) + " × " + fx(p.warehouse_width, 1) + " = " + int(footprint) + " m²" }
       ]
     };
   }

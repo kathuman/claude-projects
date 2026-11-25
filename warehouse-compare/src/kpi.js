@@ -20,9 +20,9 @@
  * Pure, no DOM: window.WC.kpi in the browser, module.exports in Node.
  */
 (function (root, factory) {
-  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("./demand.js"), require("./routing.js"), require("./slotting.js"));
-  else { root.WC = root.WC || {}; root.WC.kpi = factory(root.WC.demand, root.WC.routing, root.WC.slotting); }
-})(typeof self !== "undefined" ? self : this, function (demand, routing, slotting) {
+  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("./demand.js"), require("./routing.js"), require("./slotting.js"), require("./t.js"));
+  else { root.WC = root.WC || {}; root.WC.kpi = factory(root.WC.demand, root.WC.routing, root.WC.slotting, root.WC.t); }
+})(typeof self !== "undefined" ? self : this, function (demand, routing, slotting, tr) {
   "use strict";
 
   // The KPI contract: what is reported for every layout, with its unit and
@@ -40,11 +40,15 @@
     { key: "travelShare",        label: "Share of time walking",      unit: "%",       better: "lower",  d: 0 },
     { key: "robotsNeeded",       label: "Robots needed at the peak",  unit: "",        better: "lower",  d: 0, only: "A" },
     { key: "robotTravelPerLine", label: "Robot travel per line",      unit: "m",       better: "lower",  d: 1, only: "A" },
-    { key: "pileOn",             label: "Lines per pod visit",        unit: "",        better: "higher", d: 2, only: "A" }
+    { key: "pileOn",             label: "Lines per pod visit",        unit: "",        better: "higher", d: 2, only: "A" },
+    { key: "capex",              label: "Build cost",                 unit: "$k",      better: "lower",  d: 0, scale: 1e-3, stage: "cost" },
+    { key: "annualCost",         label: "Cost per year",              unit: "$k",      better: "lower",  d: 0, scale: 1e-3, stage: "cost" },
+    { key: "costPer1000Lines",   label: "Cost per 1,000 lines",       unit: "$",       better: "lower",  d: 0, stage: "cost" }
   ];
+  // stage "cost": added by scenario.run (cost.js) after the layout is evaluated
   function applies(def, id) { return !def.only || def.only.indexOf(id) >= 0; }
 
-  const fmt = function (v, d) { return Number(v).toFixed(d === undefined ? 1 : d); };
+  const T = tr.T, fmt = function (v, d) { return tr.fx(v, d === undefined ? 1 : d); };
 
   // Random and ABC slotting place SKUs by chance. Judged on one draw, the few
   // top SKUs land near or far by luck and that luck dominates the result at
@@ -86,7 +90,7 @@
     const op = sc;                                         // picker_speed, lift_speed, reach_height, …
     const warnings = (layout.warnings || []).slice();
     if (sc.skus > layout.locations.n) {
-      return { layout: layout, infeasible: true, warnings: warnings.concat([{ level: "critical", text: "Only " + layout.locations.n + " storage locations for " + sc.skus + " SKUs." }]) };
+      return { layout: layout, infeasible: true, warnings: warnings.concat([{ level: "critical", text: T("Only {n} storage locations for {s} SKUs.", { n: tr.int(layout.locations.n), s: tr.int(sc.skus) }) }]) };
     }
     const stream = demand.orderStream(sc, seed);
     const slotRnd = demand.mulberry32((seed ^ 0x9e3779b9) >>> 0);
@@ -123,12 +127,13 @@
       travelShare: 100 * walkTime / orderTime
     };
     const trace = [
-      { label: "Orders sampled", expr: "seeded order stream, same for every layout", value: nOrders + " orders, " + fmt(linesPerOrder, 2) + " lines and " + fmt(sumStops / nOrders, 2) + " stops each" },
-      { label: "Slotting", expr: sc.slotting === "ranked" ? "k-th most popular SKU → k-th closest location" : sc.slotting === "abc" ? "ABC classes 20/30/50% of SKUs and of locations" : "random", value: sc.skus + " SKUs in " + L.n + " locations (" + fmt(100 * sc.skus / L.n, 0) + "% full)" + (slotModel ? "; travel is the expectation over every possible " + (sc.slotting === "abc" ? "ABC" : "random") + " slotting" : "") },
-      { label: "Travel per order", expr: "mean shortest tour (exact up to " + routing.EXACT_MAX + " stops, else nearest neighbour + 2-opt)", value: fmt(travelPerOrder, 1) + " m ± " + fmt(1.96 * travelSE, 1) },
-      { label: "Time per order", expr: "setup + travel / speed + lines × pick time + reach time", value: fmt(sc.order_setup_time, 0) + " + " + fmt(walkTime, 0) + " + " + fmt(linesPerOrder * sc.pick_time_per_line, 0) + " + " + fmt(sumReach / nOrders, 0) + " = " + fmt(orderTime, 0) + " s" },
-      { label: "Time per line", expr: "time per order / lines per order", value: fmt(timePerLine, 1) + " s → " + fmt(linesPerHour, 0) + " lines per picker-hour" },
-      { label: "Pickers at the peak", expr: "ceil(lines/day ÷ hours × peak factor × time per line ÷ efficiency)", value: fmt(peakLinesPerHour, 0) + " lines/h × " + fmt(timePerLine, 1) + " s = " + fmt(workload, 2) + " → " + pickersNeeded }
+      { label: T("Orders sampled"), expr: T("seeded order stream, same for every layout"), value: T("{n} orders, {l} lines and {s} stops each", { n: tr.int(nOrders), l: fmt(linesPerOrder, 2), s: fmt(sumStops / nOrders, 2) }) },
+      { label: T("Slotting"), expr: sc.slotting === "ranked" ? T("k-th most popular SKU → k-th closest location") : sc.slotting === "abc" ? T("ABC classes 20/30/50% of SKUs and of locations") : T("random"),
+        value: T("{s} SKUs in {n} locations ({p}% full)", { s: tr.int(sc.skus), n: tr.int(L.n), p: fmt(100 * sc.skus / L.n, 0) }) + (slotModel ? (sc.slotting === "abc" ? T("; travel is the expectation over every possible ABC slotting") : T("; travel is the expectation over every possible random slotting")) : "") },
+      { label: T("Travel per order"), expr: T("mean shortest tour (exact up to {n} stops, else nearest neighbour + 2-opt)", { n: routing.EXACT_MAX }), value: fmt(travelPerOrder, 1) + " m ± " + fmt(1.96 * travelSE, 1) },
+      { label: T("Time per order"), expr: T("setup + travel / speed + lines × pick time + reach time"), value: fmt(sc.order_setup_time, 0) + " + " + fmt(walkTime, 0) + " + " + fmt(linesPerOrder * sc.pick_time_per_line, 0) + " + " + fmt(sumReach / nOrders, 0) + " = " + fmt(orderTime, 0) + " s" },
+      { label: T("Time per line"), expr: T("time per order / lines per order"), value: T("{t} s → {n} lines per picker-hour", { t: fmt(timePerLine, 1), n: fmt(linesPerHour, 0) }) },
+      { label: T("Pickers at the peak"), expr: T("ceil(lines/day ÷ hours × peak factor × time per line ÷ efficiency)"), value: T("{l} lines/h × {t} s = {w} → {n}", { l: fmt(peakLinesPerHour, 0), t: fmt(timePerLine, 1), w: fmt(workload, 2), n: pickersNeeded }) }
     ];
     return {
       layout: layout, kpi: k, skuLoc: skuLoc, slotModel: slotModel, weights: stream.weights, travelSE: travelSE,

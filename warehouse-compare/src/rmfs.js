@@ -33,9 +33,9 @@
  * Pure, no DOM: window.WC.rmfs in the browser, module.exports in Node.
  */
 (function (root, factory) {
-  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("./demand.js"), require("./layouts/wha.js"));
-  else { root.WC = root.WC || {}; root.WC.rmfs = factory(root.WC.demand, root.WC.layouts.A); }
-})(typeof self !== "undefined" ? self : this, function (demand, wha) {
+  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("./demand.js"), require("./layouts/wha.js"), require("./t.js"));
+  else { root.WC = root.WC || {}; root.WC.rmfs = factory(root.WC.demand, root.WC.layouts.A, root.WC.t); }
+})(typeof self !== "undefined" ? self : this, function (demand, wha, tr) {
   "use strict";
 
   // ---------------------------------------------------------------- event heap
@@ -373,10 +373,10 @@
   function evaluate(sc, A, opts) {
     opts = opts || {};
     const target = sc.target_locations;
-    const z = size(sc, A, target, opts), r = z.run, L = z.layout, fmt = function (v, d) { return Number(v).toFixed(d === undefined ? 1 : d); };
+    const z = size(sc, A, target, opts), r = z.run, L = z.layout, fmt = function (v, d) { return tr.fx(v, d === undefined ? 1 : d); }, T = tr.T, int = tr.int;
     const warnings = L.warnings.slice();
-    if (!z.keepsUp) warnings.push({ level: "critical", text: "Even " + (z.stations * A.pipeline) + " robots (every station's pipeline full) don't keep up — raise the pipeline or the order slots." });
-    if (sc.skus > L.locations.n) warnings.push({ level: "critical", text: "Only " + L.locations.n + " locations for " + sc.skus + " SKUs." });
+    if (!z.keepsUp) warnings.push({ level: "critical", text: T("Even {n} robots (every station's pipeline full) don't keep up — raise the pipeline or the order slots.", { n: z.stations * A.pipeline }) });
+    if (sc.skus > L.locations.n) warnings.push({ level: "critical", text: T("Only {n} storage locations for {s} SKUs.", { n: int(L.locations.n), s: int(sc.skus) }) });
     const k = {
       locations: L.locations.n, footprint: L.footprint, density: L.locations.n / L.footprint,
       travelPerOrder: 0, travelPerLine: 0, timePerLine: r.timePerLine, linesPerHour: 3600 / r.timePerLine,
@@ -387,21 +387,24 @@
     const sr = slotRank(L), P = L.pods, NS = L.slots.length;
     const byPop = Array.from({ length: P }, function (_, i) { return i; }).sort(function (a, b) { return r.podW[b] - r.podW[a] || a - b; });
     const cls = new Float64Array(P); byPop.forEach(function (p, i) { const u = (i + 0.5) / P; cls[p] = u < 0.2 ? 0 : u < 0.5 ? 0.5 : 1; });
-    const occ = new Int32Array(NS).fill(-1); for (let p = 0; p < P; p++) occ[r.podSlot[p]] = p;
+    // who is in each slot at the end: the simulation's own slot table (a pod still
+    // travelling keeps the number of the slot it left, which may hold another pod by now)
+    const occ = r._state.slotOcc;
     const mx = Math.max.apply(null, sr.near), mn = Math.min.apply(null, sr.near);
     const bayColors = {
       cost: L.slots.map(function (_, i) { return occ[i] < 0 ? NaN : (sr.near[i] - mn) / Math.max(1e-9, mx - mn); }),
       pop: L.slots.map(function (_, i) { return occ[i] < 0 ? NaN : cls[occ[i]]; })
     };
-    const labels = { fixed: "fixed home slot", random: "random free slot", nearest: "nearest free slot to the station", frequency: "slot rank matched to popularity rank" };
+    const labels = { fixed: T("fixed home slot"), random: T("random free slot"), nearest: T("nearest free slot to the station"), frequency: T("slot rank matched to popularity rank") };
+    const firsts = { ranked: T("most popular closest"), abc: T("ABC classes"), random: T("random") };
     const trace = L.trace.concat([
-      { label: "Simulated", expr: fmt(A.warmup_hours, 1) + " h to settle, then " + fmt(A.measure_hours, 1) + " h measured at the peak rate; same orders as WH-B and WH-C", value: r.orders + " orders, " + r.lines + " lines, " + r.visits + " pod visits" },
-      { label: "Put-away", expr: labels[A.put_away] + "; pods filled " + (A.pod_fill === "random" ? "at random" : "with SKUs of similar popularity") + "; first placement " + sc.slotting, value: "popularity-weighted pod distance at the end " + fmt(r.podDistance) + " m" },
-      { label: "Lines per pod visit", expr: "lines picked ÷ pod visits (" + A.order_slots + " orders open per station)", value: fmt(r.pileOn, 2) },
-      { label: "Picker time per line", expr: "(pod switch + lines × pick time + orders × setup) ÷ lines", value: fmt(r.timePerLine) + " s → " + fmt(3600 / r.timePerLine, 0) + " lines per picker-hour" },
-      { label: "Stations (one picker each)", expr: "ceil(peak lines/h × time per line ÷ efficiency), re-simulated until it agrees", value: fmt(z.peakLines, 0) + " lines/h → " + z.stations + " stations, busy " + Math.round(100 * Math.max.apply(null, r.workerUtil)) + "% at most" },
-      { label: "Robots", expr: "smallest fleet with mean wait for a station ≤ " + A.max_order_wait + " s, ÷ availability " + A.robot_availability, value: z.robotsActive + " working → " + z.robotsNeeded + " robots; " + fmt(r.robotTravelPerLine) + " m per line (" + fmt(r.emptyPerLine) + " empty + " + fmt(r.loadedPerLine) + " loaded)" },
-      { label: "Order cycle", expr: "arrival → last line picked", value: fmt(r.orderCycle / 60, 1) + " min on average; robots wait " + fmt(r.queueWait, 0) + " s in station queues" }
+      { label: T("Simulated"), expr: T("{w} h to settle, then {m} h measured at the peak rate; same orders as WH-B and WH-C", { w: fmt(A.warmup_hours, 1), m: fmt(A.measure_hours, 1) }), value: T("{o} orders, {l} lines, {v} pod visits", { o: int(r.orders), l: int(r.lines), v: int(r.visits) }) },
+      { label: T("Put-away"), expr: labels[A.put_away] + "; " + (A.pod_fill === "random" ? T("pods filled at random") : T("pods filled with SKUs of similar popularity")) + "; " + T("first placement: {p}", { p: firsts[sc.slotting] }), value: T("popularity-weighted pod distance at the end {d} m", { d: fmt(r.podDistance) }) },
+      { label: T("Lines per pod visit"), expr: T("lines picked ÷ pod visits ({n} orders open per station)", { n: A.order_slots }), value: fmt(r.pileOn, 2) },
+      { label: T("Picker time per line"), expr: T("(pod switch + lines × pick time + orders × setup) ÷ lines"), value: T("{t} s → {n} lines per picker-hour", { t: fmt(r.timePerLine), n: fmt(3600 / r.timePerLine, 0) }) },
+      { label: T("Stations (one picker each)"), expr: T("ceil(peak lines/h × time per line ÷ efficiency), re-simulated until it agrees"), value: T("{l} lines/h → {s} stations, busy {u}% at most", { l: fmt(z.peakLines, 0), s: z.stations, u: Math.round(100 * Math.max.apply(null, r.workerUtil)) }) },
+      { label: T("Robots"), expr: T("smallest fleet with mean wait for a station ≤ {w} s, ÷ availability {a}", { w: A.max_order_wait, a: fmt(A.robot_availability, 2) }), value: T("{a} working → {n} robots; {t} m per line ({e} empty + {l} loaded)", { a: z.robotsActive, n: z.robotsNeeded, t: fmt(r.robotTravelPerLine), e: fmt(r.emptyPerLine), l: fmt(r.loadedPerLine) }) },
+      { label: T("Order cycle"), expr: T("arrival → last line picked"), value: T("{m} min on average; robots wait {q} s in station queues", { m: fmt(r.orderCycle / 60, 1), q: fmt(r.queueWait, 0) }) }
     ]);
     return { layout: L, kpi: k, run: r, sizing: z, bayColors: bayColors, warnings: warnings, trace: trace, skuPod: r.skuPod, podSlot: r.podSlot };
   }

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="ab.title">About Warehouse Compare</title>
+  <meta data-i18n-attr="content=ab.meta" name="description" content="Warehouse Compare puts three order-picking warehouses side by side on equal terms: moving racks, a semicircle and a rectangle. Designed and built by Daniel Alberto Sepulveda Estay, PhD." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .about{max-width:980px; margin:0 auto; padding:34px 22px 10px;}
+    .about .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);}
+    .about h1{font-family:var(--head); font-weight:700; font-size:40px; letter-spacing:.02em; margin:8px 0 12px; color:var(--ink);}
+    .about .lede{font-size:18px; line-height:1.6; color:var(--ink-dim); max-width:760px; margin:0 0 22px;}
+    .about h2{font-family:var(--head); font-weight:700; font-size:20px; letter-spacing:.05em; text-transform:uppercase; margin:0 0 12px; color:var(--ink);}
+    .about p{line-height:1.65; color:var(--ink-dim); margin:0 0 12px;}
+    .about b{color:var(--ink);}
+    .cols{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:28px;}
+    .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px 22px;}
+    .card ul{list-style:none; margin:0; padding:0;}
+    .card li{padding:10px 0; border-bottom:1px dashed var(--line-soft); line-height:1.55; color:var(--ink-dim);}
+    .card li:last-child{border-bottom:none;}
+    .card li b{display:block; font-family:var(--head); font-weight:600; font-size:15px; letter-spacing:.04em; color:var(--ink); margin-bottom:2px;}
+    .open{display:inline-block; font-family:var(--head); font-weight:700; font-size:14px; letter-spacing:.06em; text-transform:uppercase; background:var(--accent); color:var(--accent-ink) !important; text-decoration:none; padding:10px 16px; border-radius:8px;}
+    .open:hover{filter:brightness(1.08);}
+    .cite{font-size:13px !important; color:var(--ink-faint) !important; margin-top:16px !important;}
+    .foot{max-width:980px; margin:30px auto 0; padding:18px 22px 30px; border-top:1px solid var(--line-soft); font-size:12.5px; color:var(--ink-faint); display:flex; flex-direction:column; gap:4px;}
+    @media (max-width:760px){ .cols{grid-template-columns:1fr;} .about h1{font-size:32px;} .about .lede{font-size:16px;} }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">Warehouse <span>Compare</span></span>
+      <span class="ver" id="ver"></span>
+      <span data-i18n="ab.sub" class="sub">about the app</span>
+    </div>
+    <div class="head-links">
+      <select id="langSel" class="lang-sel"></select>
+      <a data-i18n="ab.open" class="back-link" href="index.html">Open the comparison</a>
+      <a data-i18n="nav.projects" class="back-link" href="../">← Projects</a>
+    </div>
+  </header>
+
+  <main class="about">
+    <div data-i18n="ab.eyebrow" class="eyebrow">About the app</div>
+    <h1 data-i18n="ab.h1">Warehouse Compare</h1>
+    <p data-i18n="ab.lede" class="lede">Three ways to pick orders, compared on equal terms. Racks that robots bring to the pickers, a semicircle around the picking points, and a classic rectangle each get the same SKUs, the same orders and the same number of storage locations. Each is built on the smallest floor that holds them, and judged by the same measures.</p>
+    <p data-i18n="ab.openbtn"><a class="open" href="index.html">Open Warehouse Compare →</a></p>
+
+    <div class="cols">
+      <section class="card">
+        <h2 data-i18n="ab.what.h">What it does</h2>
+        <ul data-i18n="ab.what.list">
+          <li><b>Moving racks (WH-A)</b>Robots carry racks to fixed picking stations and put them back where a put-away policy says, so busy racks can move towards the pickers. A simulation of every robot, rack and station sizes the stations and the robot fleet.</li>
+          <li><b>Semicircle and rectangle (WH-B, WH-C)</b>Pickers walk the shortest tour for each order. The rectangle is the Warehouse Model's own layout; the semicircle has radial or concentric rows.</li>
+          <li><b>Compares on equal terms</b>Floor area, picker time, pickers and robots needed, build cost and cost per order line, side by side, each with the steps that produced it.</li>
+          <li><b>Shows what changes the answer</b>An animation of the peak hour in all three, sensitivity sweeps, and a demand shock that moves popularity to other SKUs.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="ab.how.h">How it is built</h2>
+        <p data-i18n="ab.how.p">Every layout becomes a travel network, curved aisles included, and every distance is a shortest path through it. The rectangle reproduces the Warehouse Model's travel formulas exactly. The semicircle's distances match closed forms, and its racks are proven not to overlap or block an aisle. The moving-rack simulation is checked against a cycle worked out by hand. Each of these checks was itself tested by breaking the code on purpose. Everything runs in your browser.</p>
+
+        <h2 data-i18n="ab.author.h" style="margin-top:22px;">Author</h2>
+        <p data-i18n="ab.author.p">Warehouse Compare was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics, simulation and network optimisation for supply chains and operations. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
+        <p data-i18n="ab.author.links"><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a></p>
+        <p data-i18n="ab.cite" class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Warehouse Compare</em> [Software]. https://kathuman.github.io/claude-projects/warehouse-compare/</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <span data-i18n="ab.foot">Part of <a href="../">AI Projects</a>. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
+  </footer>
+<script src="i18n-es.js"></script>
+<script src="i18n-da.js"></script>
+<script src="i18n.js"></script>
+<script>document.getElementById("ver").textContent = "v0.5.0";</script>
+</body>
+</html>

@@ -2,6 +2,7 @@
   "$schema": "One scenario shared by every layout: the same SKUs, the same orders, the same pickers. Layout-specific inputs live under 'layouts'. Every value is an input; nothing here is a result.",
   "shared": {
     "skus": {
+      "label": "SKUs",
       "value": 6000,
       "unit": "",
       "minimum": 100,
@@ -10,6 +11,7 @@
       "description": "Number of SKUs stocked; each one needs its own storage location."
     },
     "target_locations": {
+      "label": "Storage locations",
       "value": 7000,
       "unit": "",
       "minimum": 100,
@@ -18,14 +20,16 @@
       "description": "Equal capacity: every layout is sized to the smallest footprint with at least this many storage locations."
     },
     "demand_skew": {
+      "label": "Demand skew",
       "value": 80,
       "unit": "%",
       "minimum": 20,
       "maximum": 99,
       "group": "Demand",
-      "description": "Share of order lines that come from the most popular 20% of SKUs (F(u) = u^k)."
+      "description": "Share of order lines that come from the most popular 20% of SKUs."
     },
     "demand_curve": {
+      "label": "Demand curve",
       "value": "bender",
       "type": "choice",
       "options": [
@@ -40,6 +44,7 @@
       "description": "Shape of the popularity curve; both put demand_skew % of lines on the top 20% of SKUs. Power gives the single top SKU of 6,000 about 30% of all lines; Bender about 0.3%."
     },
     "lines_per_order": {
+      "label": "Lines per order",
       "value": 3,
       "unit": "",
       "minimum": 1,
@@ -48,6 +53,7 @@
       "description": "Mean lines per order (geometric distribution: single-line orders are the most common)."
     },
     "max_lines": {
+      "label": "Largest order",
       "value": 15,
       "unit": "",
       "minimum": 1,
@@ -56,6 +62,7 @@
       "description": "Largest order, in lines."
     },
     "lines_per_day": {
+      "label": "Lines per day",
       "value": 12000,
       "unit": "",
       "minimum": 100,
@@ -64,6 +71,7 @@
       "description": "Order lines picked per day."
     },
     "operating_hours_per_day": {
+      "label": "Hours per day",
       "value": 16,
       "unit": "h",
       "minimum": 1,
@@ -72,6 +80,7 @@
       "description": "Hours of picking per day."
     },
     "peak_hour_factor": {
+      "label": "Peak-hour factor",
       "value": 1.5,
       "unit": "×",
       "minimum": 1,
@@ -80,6 +89,7 @@
       "description": "Busiest hour as a multiple of the average hour."
     },
     "slotting": {
+      "label": "Slotting",
       "value": "ranked",
       "type": "choice",
       "options": [
@@ -96,6 +106,7 @@
       "description": "How SKUs are assigned to locations."
     },
     "picker_speed": {
+      "label": "Picker speed",
       "value": 1,
       "unit": "m/s",
       "minimum": 0.3,
@@ -104,6 +115,7 @@
       "description": "Picker travel speed with a cart, including turns and congestion."
     },
     "lift_speed": {
+      "label": "Lift speed",
       "value": 0.3,
       "unit": "m/s",
       "minimum": 0.1,
@@ -112,6 +124,7 @@
       "description": "Vertical speed for locations above reach (step ladder or order-picker platform)."
     },
     "reach_height": {
+      "label": "Reach height",
       "value": 1.8,
       "unit": "m",
       "minimum": 0,
@@ -120,6 +133,7 @@
       "description": "Highest location a picker reaches from the floor without lifting."
     },
     "pick_time_per_line": {
+      "label": "Pick time per line",
       "value": 8,
       "unit": "s",
       "minimum": 1,
@@ -128,6 +142,7 @@
       "description": "Time to find, pick and confirm one order line."
     },
     "order_setup_time": {
+      "label": "Order set-up time",
       "value": 30,
       "unit": "s",
       "minimum": 0,
@@ -136,6 +151,7 @@
       "description": "Time per order to take the task, set up the cart and drop the order at the picking point."
     },
     "picker_efficiency": {
+      "label": "Picker efficiency",
       "value": 0.8,
       "unit": "×",
       "minimum": 0.4,
@@ -144,6 +160,7 @@
       "description": "Share of a picker's paid time spent on picking work."
     },
     "sample_orders": {
+      "label": "Orders sampled",
       "value": 2000,
       "unit": "",
       "minimum": 200,
@@ -152,18 +169,110 @@
       "description": "Orders sampled to estimate travel (the same orders for every layout)."
     },
     "seed": {
+      "label": "Random seed",
       "value": 20261125,
       "unit": "",
       "minimum": 1,
       "maximum": 4294967295,
       "group": "Model",
       "description": "Random seed for orders and slotting."
+    },
+    "building_cost_per_sqm": {
+      "label": "Building cost per m²",
+      "value": 550,
+      "unit": "$",
+      "minimum": 100,
+      "maximum": 3000,
+      "group": "Cost",
+      "description": "Building shell per m² of floor (the Warehouse Model's default)."
+    },
+    "shelving_cost_per_location": {
+      "label": "Shelving per location",
+      "value": 30,
+      "unit": "$",
+      "minimum": 5,
+      "maximum": 500,
+      "group": "Cost",
+      "description": "WH-B and WH-C: shelving per storage location."
+    },
+    "pod_cost": {
+      "label": "Pod price",
+      "value": 900,
+      "unit": "$",
+      "minimum": 100,
+      "maximum": 5000,
+      "group": "Cost",
+      "description": "WH-A: one pod (a mobile rack of 16 locations)."
+    },
+    "robot_cost": {
+      "label": "Robot price",
+      "value": 25000,
+      "unit": "$",
+      "minimum": 5000,
+      "maximum": 150000,
+      "group": "Cost",
+      "description": "WH-A: one drive unit that carries pods."
+    },
+    "robot_running_cost_per_year": {
+      "label": "Robot upkeep per year",
+      "value": 1500,
+      "unit": "$",
+      "minimum": 0,
+      "maximum": 20000,
+      "group": "Cost",
+      "description": "WH-A: upkeep and energy per robot per year."
+    },
+    "gtp_station_cost": {
+      "label": "Goods-to-person station",
+      "value": 40000,
+      "unit": "$",
+      "minimum": 5000,
+      "maximum": 200000,
+      "group": "Cost",
+      "description": "WH-A: one goods-to-person picking station (frame, put wall, screens, safety)."
+    },
+    "pack_station_cost": {
+      "label": "Pack station",
+      "value": 8000,
+      "unit": "$",
+      "minimum": 0,
+      "maximum": 100000,
+      "group": "Cost",
+      "description": "WH-B and WH-C: one pack station at a picking point."
+    },
+    "labour_cost_per_hour": {
+      "label": "Pay per hour",
+      "value": 32,
+      "unit": "$",
+      "minimum": 5,
+      "maximum": 150,
+      "group": "Cost",
+      "description": "Picker pay per paid hour, all-in."
+    },
+    "operating_days_per_year": {
+      "label": "Days per year",
+      "value": 250,
+      "unit": "",
+      "minimum": 50,
+      "maximum": 365,
+      "group": "Cost",
+      "description": "Picking days a year."
+    },
+    "discount_rate": {
+      "label": "Discount rate",
+      "value": 7,
+      "unit": "%",
+      "minimum": 0,
+      "maximum": 20,
+      "group": "Cost",
+      "description": "Discount rate for turning build costs into equivalent annual costs."
     }
   },
   "layouts": {
     "A": {
       "$comment": "Moving racks (robotic mobile fulfilment). Racks (pods) are sized so a location is about the size of a WH-B/WH-C shelf location (0.6 m wide × 0.6 m deep). Stations and robots are results: as many picker-stations as the peak needs, and the smallest robot fleet that keeps up.",
       "put_away": {
+        "label": "Put-away",
         "value": "frequency",
         "type": "choice",
         "options": [
@@ -182,6 +291,7 @@
         "description": "Where a robot puts a pod back after picking. Nearest: popular pods come back often, so they gather near the stations. By popularity rank: the slot whose distance rank matches the pod's recent visit rank."
       },
       "pod_fill": {
+        "label": "Pod fill",
         "value": "by_popularity",
         "type": "choice",
         "options": [
@@ -196,6 +306,7 @@
         "description": "Which SKUs share a pod. Together: hot and cold pods, so where a pod stands matters. Spread: every pod about equally busy."
       },
       "pod_width": {
+        "label": "Pod width",
         "value": 1.2,
         "unit": "m",
         "minimum": 0.6,
@@ -204,6 +315,7 @@
         "description": "Pod footprint (square)."
       },
       "pod_faces": {
+        "label": "Pod faces",
         "value": 2,
         "unit": "",
         "minimum": 1,
@@ -212,6 +324,7 @@
         "description": "Pod faces with shelves."
       },
       "pod_levels": {
+        "label": "Pod levels",
         "value": 4,
         "unit": "",
         "minimum": 1,
@@ -220,6 +333,7 @@
         "description": "Shelf levels per face."
       },
       "bins_per_face_level": {
+        "label": "Bins per face and level",
         "value": 2,
         "unit": "",
         "minimum": 1,
@@ -228,6 +342,7 @@
         "description": "Bins (storage locations) per level on each face."
       },
       "block_length": {
+        "label": "Block length",
         "value": 5,
         "unit": "",
         "minimum": 1,
@@ -236,6 +351,7 @@
         "description": "Pods in a row along a storage block (blocks are 2 pods deep)."
       },
       "robot_aisle_width": {
+        "label": "Robot aisle width",
         "value": 1.6,
         "unit": "m",
         "minimum": 0.8,
@@ -244,6 +360,7 @@
         "description": "Robot aisle width (a loaded robot needs a pod width plus clearance)."
       },
       "storage_fill": {
+        "label": "Storage fill",
         "value": 0.85,
         "unit": "×",
         "minimum": 0.5,
@@ -252,6 +369,7 @@
         "description": "Share of slots holding a pod; the rest stay free so put-away has somewhere to choose."
       },
       "station_zone": {
+        "label": "Station zone depth",
         "value": 5,
         "unit": "m",
         "minimum": 2,
@@ -260,6 +378,7 @@
         "description": "Depth of the station area along the west wall (stations and their queue lanes)."
       },
       "station_spacing": {
+        "label": "Station spacing",
         "value": 5,
         "unit": "m",
         "minimum": 2,
@@ -268,6 +387,7 @@
         "description": "Distance between stations along the wall."
       },
       "aspect": {
+        "label": "Floor proportions",
         "value": 1.5,
         "unit": "×",
         "minimum": 0.5,
@@ -276,6 +396,7 @@
         "description": "Preferred length:width of the floor (WH-C's default is 1.5)."
       },
       "robot_speed": {
+        "label": "Robot speed",
         "value": 1.3,
         "unit": "m/s",
         "minimum": 0.3,
@@ -284,6 +405,7 @@
         "description": "Effective robot speed, including acceleration, turns and congestion."
       },
       "lift_time": {
+        "label": "Lift time",
         "value": 2,
         "unit": "s",
         "minimum": 0,
@@ -292,6 +414,7 @@
         "description": "Time to lift or set down a pod."
       },
       "pod_switch_time": {
+        "label": "Pod switch time",
         "value": 4,
         "unit": "s",
         "minimum": 0,
@@ -300,6 +423,7 @@
         "description": "Picker time between pods: one leaves, the next moves in and turns to the right face."
       },
       "order_slots": {
+        "label": "Order slots",
         "value": 8,
         "unit": "",
         "minimum": 1,
@@ -308,6 +432,7 @@
         "description": "Orders open at a station at once (its put wall)."
       },
       "pipeline": {
+        "label": "Pods per station",
         "value": 4,
         "unit": "",
         "minimum": 1,
@@ -316,6 +441,7 @@
         "description": "Pods on their way to or queuing at a station at most."
       },
       "robot_availability": {
+        "label": "Robot availability",
         "value": 0.85,
         "unit": "×",
         "minimum": 0.5,
@@ -324,6 +450,7 @@
         "description": "Share of time a robot is available (the rest is charging)."
       },
       "max_order_wait": {
+        "label": "Longest mean wait",
         "value": 120,
         "unit": "s",
         "minimum": 10,
@@ -332,6 +459,7 @@
         "description": "Fleet sizing: robots are added until orders wait no longer than this, on average, for a station."
       },
       "frequency_half_life_h": {
+        "label": "Popularity memory",
         "value": 2,
         "unit": "h",
         "minimum": 0.25,
@@ -340,6 +468,7 @@
         "description": "By popularity rank: half-life of the smoothed visit counts."
       },
       "warmup_hours": {
+        "label": "Settling time",
         "value": 3,
         "unit": "h",
         "minimum": 0,
@@ -348,6 +477,7 @@
         "description": "Simulated time before measuring (lets put-away settle)."
       },
       "measure_hours": {
+        "label": "Measured time",
         "value": 3,
         "unit": "h",
         "minimum": 0.5,
@@ -382,6 +512,7 @@
     "B": {
       "$comment": "Semicircular, person-to-goods. Rack dimensions (rack_height, levels_per_rack, load_height, rack_depth, bay_width, positions_per_level_per_bay, aisle_width, flue_space) and the picking points are taken from layouts.C so the two differ only in arrangement. The outer radius is a result: the building is sized to target_locations.",
       "arrangement": {
+        "label": "Arrangement",
         "value": "radial",
         "type": "choice",
         "options": [
@@ -396,6 +527,7 @@
         "description": "Radial: rack rows point straight out from the picking points. Concentric: rack rows follow arcs, cut by radial aisles."
       },
       "hub_radius": {
+        "label": "Hub radius",
         "value": 6,
         "unit": "m",
         "minimum": 3,
@@ -404,6 +536,7 @@
         "description": "Radius of the open floor around the picking points (staging, like WH-C's front cross-aisle)."
       },
       "zones": {
+        "label": "Zones",
         "value": 2,
         "unit": "",
         "minimum": 1,
@@ -412,6 +545,7 @@
         "description": "Radial: rings of racking separated by ring cross-aisles. Each ring further out fits more rows."
       },
       "ring_aisle_width": {
+        "label": "Ring aisle width",
         "value": 2,
         "unit": "m",
         "minimum": 1,
@@ -420,6 +554,7 @@
         "description": "Radial: width of the ring cross-aisles between zones (and around the outside)."
       },
       "radial_aisles": {
+        "label": "Radial aisles",
         "value": 5,
         "unit": "",
         "minimum": 1,
@@ -428,6 +563,7 @@
         "description": "Concentric: straight aisles leading out from the hub through the rings."
       },
       "radial_aisle_width": {
+        "label": "Radial aisle width",
         "value": 2,
         "unit": "m",
         "minimum": 1,

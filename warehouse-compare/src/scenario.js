@@ -18,9 +18,9 @@
  * Pure, no DOM: window.WC.scenario in the browser, module.exports in Node.
  */
 (function (root, factory) {
-  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("./kpi.js"), require("./rmfs.js"), require("./layouts/whb.js"), require("./layouts/whc.js"));
-  else { root.WC = root.WC || {}; root.WC.scenario = factory(root.WC.kpi, root.WC.rmfs, root.WC.layouts.B, root.WC.layouts.C); }
-})(typeof self !== "undefined" ? self : this, function (kpi, rmfs, whb, whc) {
+  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("./kpi.js"), require("./rmfs.js"), require("./cost.js"), require("./layouts/whb.js"), require("./layouts/whc.js"));
+  else { root.WC = root.WC || {}; root.WC.scenario = factory(root.WC.kpi, root.WC.rmfs, root.WC.cost, root.WC.layouts.B, root.WC.layouts.C); }
+})(typeof self !== "undefined" ? self : this, function (kpi, rmfs, cost, whb, whc) {
   "use strict";
 
   function values(defs) {
@@ -52,8 +52,18 @@
     if (want.indexOf("A") >= 0) out.A = rmfs.evaluate(sc, inputs.layouts.A, opts);
     if (want.indexOf("B") >= 0) out.B = kpi.evaluate(buildB(inputs), sc, opts);
     if (want.indexOf("C") >= 0) out.C = kpi.evaluate(buildC(inputs), sc, opts);
+    want.forEach(function (id) { addCost(id, out[id], inputs); });
     return out;
   }
 
-  return { values, syncB, resolve, buildB, buildC, run };
+  // cost: build cost, cost per year and per 1,000 lines into the KPIs, and its steps into the trace
+  function addCost(id, r, inputs) {
+    if (!r || r.infeasible) return;
+    const n = id === "A" ? { stations: r.sizing.stations, pods: r.layout.pods } : { stations: Math.max(1, Math.round(inputs.layouts.C.picking_points || 1)), pods: 0 };
+    const c = cost.compute(id, r.kpi, inputs.sc, n);
+    r.kpi.capex = c.capex; r.kpi.annualCost = c.annualCost; r.kpi.costPer1000Lines = c.costPer1000Lines;
+    r.cost = c; r.trace = r.trace.concat(c.trace);
+  }
+
+  return { values, syncB, resolve, buildB, buildC, run, addCost };
 });

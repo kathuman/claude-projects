@@ -54,9 +54,16 @@
     return A === Infinity ? function (u) { return u; } : function (u) { return (1 + A) * u / (A + u); };
   }
 
-  // Share of order lines for each SKU, most popular first.
-  function skuWeights(nSku, skewPct, kind) {
-    const F = curve(skewPct, kind), w = new Float64Array(nSku);
+  // Share of order lines for each SKU, most popular first. kind "data": the
+  // shares imported from real order lines (dataimport.js), renormalised to nSku.
+  function skuWeights(nSku, skewPct, kind, data) {
+    if (kind === "data" && data && data.length) {
+      const w = new Float64Array(nSku); let s = 0;
+      for (let i = 0; i < nSku && i < data.length; i++) { w[i] = data[i]; s += data[i]; }
+      for (let i = 0; i < nSku; i++) w[i] = s > 0 ? w[i] / s : 1 / nSku;
+      return w;
+    }
+    const F = curve(skewPct, kind === "data" ? "bender" : kind), w = new Float64Array(nSku);
     let prev = 0;
     for (let i = 0; i < nSku; i++) { const v = F((i + 1) / nSku); w[i] = v - prev; prev = v; }
     return w;
@@ -80,7 +87,7 @@
   // A generator of orders: next() returns an array of distinct SKU indices.
   function orderStream(s, seed) {
     const rnd = mulberry32(seed >>> 0);
-    let w = skuWeights(s.skus, s.demand_skew, s.demand_curve), pick = sampler(w);
+    let w = skuWeights(s.skus, s.demand_skew, s.demand_curve, s.data_weights), pick = sampler(w);
     const maxL = Math.min(s.max_lines, s.skus), pmf = linesPmf(s.lines_per_order, maxL);
     const nextLines = sampler(Float64Array.from(pmf));
     const self = {

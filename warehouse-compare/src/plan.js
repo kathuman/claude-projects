@@ -15,6 +15,29 @@
     return "rgb(" + a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }).join(",") + ")";
   }
 
+  // one fill colour per bay: travel cost (near → far) or the popularity class
+  // of what it stores, averaged over its locations; empty bays in navy
+  function bayFills(res, opts) {
+    const L = res.layout, loc = L.locations, mode = opts.color || "cost";
+    const val = new Float64Array(res.bayColors ? 0 : loc.n).fill(NaN);
+    if (res.bayColors) { /* WH-A: one value per slot, from the simulation's end state */ }
+    else if (mode === "cost") {
+      const cost = WC.slotting.locationCost(L, opts.sc).cost;
+      let mn = Infinity, mx = -Infinity;
+      for (let i = 0; i < loc.n; i++) { mn = Math.min(mn, cost[i]); mx = Math.max(mx, cost[i]); }
+      for (let i = 0; i < loc.n; i++) val[i] = (cost[i] - mn) / Math.max(1e-9, mx - mn);
+    } else {
+      const n = res.skuLoc.length, b = WC.slotting.ABC_BOUNDS;
+      for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; val[res.skuLoc[k]] = u < b[0] ? 0 : u < b[1] ? 0.5 : 1; }
+    }
+    return L.bays.map(function (b, bi) {
+      let v = 0, m = 0;
+      if (res.bayColors) { const x = res.bayColors[mode][bi]; if (!isNaN(x)) { v = x; m = 1; } }
+      else for (let i = b.loc0; i < b.loc0 + b.nLoc; i++) if (!isNaN(val[i])) { v += val[i]; m++; }
+      return !m ? "#1d4470" : mode === "cost" ? heat(v / m) : heat(Math.round(2 * v / m) / 2);
+    });
+  }
+
   function draw(canvas, res, opts) {
     opts = opts || {};
     const L = res.layout, g = L.graph, dpr = window.devicePixelRatio || 1;
@@ -46,24 +69,10 @@
     L.outline.forEach(function (p, i) { if (i) c.lineTo(X(p[0]), Y(p[1])); else c.moveTo(X(p[0]), Y(p[1])); });
     c.closePath(); c.stroke();
 
-    // bays, coloured by the mean over their locations
-    const loc = L.locations, mode = opts.color || "cost";
-    const val = new Float64Array(res.bayColors ? 0 : loc.n).fill(NaN);
-    if (res.bayColors) { /* colours come with the result */ }
-    else if (mode === "cost") {
-      const cost = WC.slotting.locationCost(L, opts.sc).cost;
-      let mn = Infinity, mx = -Infinity;
-      for (let i = 0; i < loc.n; i++) { mn = Math.min(mn, cost[i]); mx = Math.max(mx, cost[i]); }
-      for (let i = 0; i < loc.n; i++) val[i] = (cost[i] - mn) / Math.max(1e-9, mx - mn);
-    } else {
-      const n = res.skuLoc.length, b = WC.slotting.ABC_BOUNDS;
-      for (let k = 0; k < n; k++) { const u = (k + 0.5) / n; val[res.skuLoc[k]] = u < b[0] ? 0 : u < b[1] ? 0.5 : 1; }
-    }
+    // bays, coloured by the mean over their locations (bayFills, shared with the 3D view)
+    const fills = bayFills(res, opts);
     L.bays.forEach(function (b, bi) {
-      let v = 0, m = 0;
-      if (res.bayColors) { const x = res.bayColors[mode][bi]; if (!isNaN(x)) { v = x; m = 1; } }   // WH-A: one value per slot, from the simulation's end state
-      else for (let i = b.loc0; i < b.loc0 + b.nLoc; i++) if (!isNaN(val[i])) { v += val[i]; m++; }
-      c.fillStyle = !m ? "#1d4470" : mode === "cost" ? heat(v / m) : heat(Math.round(2 * v / m) / 2);
+      c.fillStyle = fills[bi];
       const hx = b.ux * b.w / 2, hy = b.uy * b.w / 2, vx = -b.uy * b.d / 2, vy = b.ux * b.d / 2;
       c.beginPath();
       c.moveTo(X(b.cx - hx - vx), Y(b.cy - hy - vy)); c.lineTo(X(b.cx + hx - vx), Y(b.cy + hy - vy));
@@ -131,5 +140,5 @@
     return { X: X, Y: Y, s: s };
   }
 
-  root.WC = root.WC || {}; root.WC.plan = { draw: draw, heat: heat };
+  root.WC = root.WC || {}; root.WC.plan = { draw: draw, heat: heat, bayFills: bayFills };
 })(typeof self !== "undefined" ? self : this);

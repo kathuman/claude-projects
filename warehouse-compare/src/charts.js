@@ -43,7 +43,9 @@
     }
     const wrap = document.createElement("div"); wrap.className = "chart-wrap"; host.appendChild(wrap);
     const W = Math.max(280, host.clientWidth || 600), H = spec.height || 230;
-    const m = { l: 52, r: series.length <= 4 ? 96 : 16, t: 10, b: 38 };
+    // right margin wide enough for the longest direct label (≈ 6.3 px a character at 11.5 px)
+    const longest = series.reduce(function (a, s) { return Math.max(a, s.name.length); }, 0);
+    const m = { l: 52, r: series.length <= 4 ? Math.max(60, Math.round(longest * 6.3) + 16) : 16, t: 20, b: 38 };
     const svg = el("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: H, role: "img", "aria-label": spec.title }, wrap);
     const xs = [], ys = [];
     series.forEach(function (s) { s.points.forEach(function (p) { if (isFinite(p.y)) { xs.push(p.x); ys.push(p.y); } }); });
@@ -71,7 +73,7 @@
     // reference marks
     (spec.marks || []).forEach(function (mk) {
       el("line", { x1: X(mk.x), x2: X(mk.x), y1: m.t, y2: H - m.b, class: "refline" }, svg);
-      const t = el("text", { x: X(mk.x) + 4, y: H - m.b - 6, class: "reflabel" }, svg); t.textContent = mk.label;
+      const t = el("text", { x: X(mk.x) + 4, y: m.t - 6, class: "reflabel" }, svg); t.textContent = mk.label;     // in the top margin, clear of the lines
     });
 
     // lines + markers on sparse series
@@ -133,7 +135,7 @@
 
     // table view
     const det = document.createElement("details"); det.className = "chart-table";
-    const sum = document.createElement("summary"); sum.textContent = "Table"; det.appendChild(sum);
+    const sum = document.createElement("summary"); const T = WC.t.T; sum.textContent = T("Table"); det.appendChild(sum);
     const tb = document.createElement("table"), hr = document.createElement("tr");
     [spec.xName || spec.xLabel].concat(series.map(function (s) { return s.name; })).forEach(function (h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
     tb.appendChild(hr);

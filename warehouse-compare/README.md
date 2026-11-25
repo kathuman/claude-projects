@@ -71,7 +71,7 @@ data/scenario.json ──► scenario.resolve() ──► the same sc (demand, p
   top 20% of SKUs. The Warehouse Model's u^k matches it at the 20% point, but gives the single top SKU of 6,000 about
   30% of all lines. That top SKU would make one pod a false bottleneck in WH-A, and it flattered WH-B's radial rows
   (see below). u^k remains selectable.
-- **Paired comparison.** Orders come from a seeded stream (popularity curve F(u) = u^k with F(0.2) = demand skew;
+- **Paired comparison.** Orders come from a seeded stream (the popularity curve above, or your own data;
   geometric lines per order), so every layout picks exactly the same orders.
 - **Layout-agnostic routing.** S-shape and largest-gap routing were designed for rectangular warehouses and would
   favour WH-C. Instead, each order's tour is exact (Held–Karp) up to 9 stops, and nearest neighbour + 2-opt
@@ -110,6 +110,36 @@ data/scenario.json ──► scenario.resolve() ──► the same sc (demand, p
   ([experiments.js](src/experiments.js), [charts.js](src/charts.js)). Every point re-sizes all three
   warehouses.
 - **Demand shock:** see the findings below.
+- **3D:** the 3D button on a plan shows the same layout in three.js, reusing the Warehouse Model's vendored copy:
+  shelving to the top of the top load, WH-A's pods as they stand at the end of the simulation, coloured like the
+  plan, with orbit and zoom ([scene3d.js](src/scene3d.js) describes the boxes and is tested;
+  [view3d.mjs](src/view3d.mjs) draws them, rendering only when something changes).
+- **Your order data:** import a CSV of order lines (an order column and a SKU column; a date column is optional;
+  headers in English, Spanish or Danish; comma, semicolon or tab). The comparison then uses the data's own
+  popularity curve, lines per order, largest order and lines per day, with storage sized to the data's SKUs at the
+  scenario's 85% fill. "Try the sample data" loads [data/sample-orders.csv](data/sample-orders.csv) (two days,
+  3,000 orders, made by [tools/make_sample.py](tools/make_sample.py)). Files are read in the browser and never
+  uploaded ([dataimport.js](src/dataimport.js)).
+- **Cost:** build cost, cost per year and cost per 1,000 lines for each layout ([cost.js](src/cost.js)):
+  - Building, storage (shelving or pods), stations and robots are turned into annual costs with the Warehouse
+    Model's capital-recovery factor.
+  - Pickers are paid for the hours the day's lines take: lines × time per line ÷ efficiency. No layout is charged
+    for a peak-hour crew all day.
+  - Robots add upkeep.
+
+  All figures are illustrative, not a quotation.
+- **Share links:** the URL always carries the inputs you changed (`#s=…`), and "Copy link" copies it
+  ([share.js](src/share.js)). A link is untrusted input, so only inputs the scenario defines are accepted:
+  numbers are clamped to their range and choices are limited to their options. Imported data is not carried in
+  a link.
+- **Languages:** English, Latin American Spanish and Danish (`?lang=es|da`, or the selector in the header).
+  Danish uses decimal commas and thousands points.
+  - Every message, control, choice and page text comes from one table, [tools/translations.py](tools/translations.py),
+    built into `i18n-es.js` and `i18n-da.js` by `tools/build_i18n.py`.
+  - [tests/i18n.test.js](tests/i18n.test.js) fails if anything is untranslated or left over.
+  - CI fails if the built files are out of date.
+  - WH-C's own layout warnings come from the Warehouse Model and stay in English.
+- **About:** [about.html](about.html) has the author and how to cite the app.
 
 Chart colours were checked with the dataviz palette validator against the navy chart surface `#0a2f52`:
 - WH-A/B/C (blue, orange, aqua) pass every pair.
@@ -132,6 +162,10 @@ Tests (Node ≥ 18, no dependencies):
 node warehouse-compare/tests/whc.test.js    # WH-C graph = Warehouse Model formulas; equal-capacity sizing
 node warehouse-compare/tests/wha.test.js    # WH-A floor, hand-computed cycle, conservation, fleet sizing, put-away, shock
 node warehouse-compare/tests/experiments.test.js   # animation timelines (continuity, speed), sweeps (monotone), the shock
+node warehouse-compare/tests/cost.test.js          # cost by hand, in the comparison; share links (round trip, hostile links)
+node warehouse-compare/tests/dataimport.test.js    # order-line import: hand-checked file, formats, languages, bad files, sample
+node warehouse-compare/tests/scene3d.test.js       # what the 3D view draws
+node warehouse-compare/tests/i18n.test.js          # every text translated into Spanish and Danish
 node warehouse-compare/tests/whb.test.js    # WH-B closed-form distances, bay geometry, aisles clear, sizing
 node warehouse-compare/tests/core.test.js   # graph, demand, routing vs brute force, slotting, KPIs
 ```
@@ -190,6 +224,19 @@ after:
 - **Fleet headroom decides whether that shows up as waiting.** With the bare fleet sized for steady demand, every
   policy's queue grows after the shock. With +15%, only random put-away's does.
 
+### Cost (default scenario)
+
+| | WH-A | WH-B | WH-C |
+|---|---|---|---|
+| Build cost | $2.66M | $1.42M | $1.03M |
+| Cost per year | $1.08M | $1.25M | $1.24M |
+| **Cost per 1,000 lines** | **$359** | $417 | $413 |
+| Paid picker-hours a day | 90 | 142 | 144 |
+
+WH-A costs 2.6× as much to build: robots, goods-to-person stations, and 43% more floor. It is still the cheapest
+per line, because pickers' pay dominates the yearly cost and WH-A needs about 37% fewer picker-hours. On the sample
+order data, at its own volume of 4,547 lines a day, it is $361 against $392–399 per 1,000 lines.
+
 ### WH-B vs WH-C, travel per line
 
 | Slotting | Skew | Lines/order | WH-C | Radial | Concentric |
@@ -215,4 +262,4 @@ after:
 2. ✅ WH-B semicircular (radial and concentric), plans at one scale, B-vs-C column
 3. ✅ WH-A moving racks: discrete-event simulation, stations and robot fleet sized, four put-away policies, demand shock
 4. ✅ Comparison views: side-by-side animation, sensitivity sweeps, demand-shock experiment
-5. TCO, data import, share links, 3D, Spanish/Danish, About page, projects-page entry
+5. ✅ Cost of ownership, order-data import, share links, 3D, Spanish and Danish, About page, AI Projects entry

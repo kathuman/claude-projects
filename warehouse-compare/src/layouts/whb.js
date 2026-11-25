@@ -29,10 +29,11 @@
  * building. Pure, no DOM: window.WC.layouts.B in the browser, module.exports in Node.
  */
 (function (root, factory) {
-  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("../graph.js"));
-  else { root.WC = root.WC || {}; root.WC.layouts = root.WC.layouts || {}; root.WC.layouts.B = factory(root.WC.graph); }
-})(typeof self !== "undefined" ? self : this, function (G) {
+  if (typeof module !== "undefined" && module.exports) module.exports = factory(require("../graph.js"), require("../t.js"));
+  else { root.WC = root.WC || {}; root.WC.layouts = root.WC.layouts || {}; root.WC.layouts.B = factory(root.WC.graph, root.WC.t); }
+})(typeof self !== "undefined" ? self : this, function (G, tr) {
   "use strict";
+  const T = tr.T, fx = tr.fx, int = tr.int;
 
   const BEAM_ALLOWANCE = 0.25;                 // as in the Warehouse Model
   // rack dimensions WH-B takes from WH-C, so the two differ only in arrangement
@@ -147,7 +148,7 @@
     const hub = [], depotNodes = [];
     const xs = opts.depotsAt || stationXs(p);
     xs.forEach(function (x) { const n = g.addNode(x, 0, "depot"); hub.push(n); depotNodes.push(n); });
-    if (xs.some(function (x) { return Math.abs(x) > p.hub_radius - 0.5; })) warnings.push({ level: "warning", text: "The picking points (" + xs.length + " at " + p.station_spacing + " m) don't fit inside a " + p.hub_radius + " m hub." });
+    if (xs.some(function (x) { return Math.abs(x) > p.hub_radius - 0.5; })) warnings.push({ level: "warning", text: T("The picking points ({n} at {s} m) don't fit inside a {r} m hub.", { n: xs.length, s: fx(p.station_spacing, 1), r: fx(p.hub_radius, 1) }) });
 
     const bayNode = new Map();                        // bay -> access node
     if (pl.kind === "radial") {
@@ -203,26 +204,26 @@
       for (let l = 0; l < p.levels_per_rack; l++) for (let q = 0; q < ppl; q++) { key[i] = k; z[i] = lev.z[l]; x[i] = b.cx; y[i] = b.cy; i++; }
     });
 
-    if (lev.pitch + 1e-9 < p.load_height + BEAM_ALLOWANCE) warnings.push({ level: "critical", text: p.levels_per_rack + " levels in a " + p.rack_height + " m rack leave " + lev.pitch.toFixed(2) + " m per level — too little for the load." });
-    if (!pl.bays.length) warnings.push({ level: "critical", text: "No racking fits in a " + p.outer_radius.toFixed(1) + " m radius." });
-    if (!g.connected()) warnings.push({ level: "critical", text: "Some storage can't be reached from a picking point." });
+    if (lev.pitch + 1e-9 < p.load_height + BEAM_ALLOWANCE) warnings.push({ level: "critical", text: T("{n} levels in a {h} m rack leave {p} m per level — too little for the load.", { n: p.levels_per_rack, h: fx(p.rack_height, 2), p: fx(lev.pitch, 2) }) });
+    if (!pl.bays.length) warnings.push({ level: "critical", text: T("No racking fits in a {r} m radius.", { r: fx(p.outer_radius, 1) }) });
+    if (!g.connected()) warnings.push({ level: "critical", text: T("Some storage can't be reached from a picking point.") });
 
     const outline = [];
     for (let s = 0; s <= 64; s++) { const t = Math.PI * s / 64; outline.push([Rb * Math.cos(t), Rb * Math.sin(t)]); }
     const footprint = Math.PI * Rb * Rb / 2;
     const shape = pl.kind === "radial"
-      ? { label: "Radial arrangement", expr: "aisle units along rays, " + pl.zones.length + " zone(s) between ring cross-aisles", value: pl.zones.map(function (zn) { return zn.n + " units × " + zn.nb + " bays"; }).join(" · ") }
-      : { label: "Concentric arrangement", expr: "ring units cut by " + pl.thetas.length + " radial aisles", value: pl.units.length + " ring units, " + pl.bays.length + " bays" };
+      ? { label: T("Radial arrangement"), expr: T("aisle units along rays, {z} zone(s) between ring cross-aisles", { z: pl.zones.length }), value: pl.zones.map(function (zn) { return T("{u} units × {b} bays", { u: zn.n, b: zn.nb }); }).join(" · ") }
+      : { label: T("Concentric arrangement"), expr: T("ring units cut by {n} radial aisles", { n: pl.thetas.length }), value: T("{u} ring units, {b} bays", { u: pl.units.length, b: int(pl.bays.length) }) };
     return {
-      id: "B", name: "WH-B · semicircle", graph: g, M: opts.matrix === false ? null : g.keyMatrix(), depots: depots,
+      id: "B", name: T("WH-B · semicircle"), graph: g, M: opts.matrix === false ? null : g.keyMatrix(), depots: depots,
       locations: { n: nLoc, key: key, z: z, x: x, y: y }, bays: bays,
       footprint: footprint, outline: outline, radius: Rb, plan: pl, params: p,
       warnings: warnings,
       trace: [
         shape,
-        { label: "Storage locations", expr: "bays × levels × positions per level", value: pl.bays.length + " × " + p.levels_per_rack + " × " + ppl + " = " + nLoc },
-        { label: "Travel network", expr: pl.kind === "radial" ? "hub + radial aisles + ring cross-aisles (arcs)" : "hub + radial aisles + arc aisles", value: g.size() + " nodes, " + g.edges.length + " paths, " + g.keys.length + " stops" },
-        { label: "Floor area", expr: "π R² / 2 (half-disc to the outermost rack corner)", value: "R = " + Rb.toFixed(1) + " m → " + Math.round(footprint) + " m² (bounding rectangle " + Math.round(2 * Rb * Rb) + " m²)" }
+        { label: T("Storage locations"), expr: T("bays × levels × positions per level"), value: int(pl.bays.length) + " × " + p.levels_per_rack + " × " + ppl + " = " + int(nLoc) },
+        { label: T("Travel network"), expr: pl.kind === "radial" ? T("hub + radial aisles + ring cross-aisles (arcs)") : T("hub + radial aisles + arc aisles"), value: T("{n} nodes, {e} paths, {k} stops", { n: int(g.size()), e: int(g.edges.length), k: int(g.keys.length) }) },
+        { label: T("Floor area"), expr: T("π R² / 2 (half-disc to the outermost rack corner)"), value: T("R = {r} m → {a} m² (bounding rectangle {b} m²)", { r: fx(Rb, 1), a: int(footprint), b: int(2 * Rb * Rb) }) }
       ]
     };
   }

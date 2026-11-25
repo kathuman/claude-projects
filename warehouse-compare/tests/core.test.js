@@ -141,7 +141,7 @@ const rnd = demand.mulberry32(7);
   });
   const again = kpi.evaluate(L, Object.assign({}, inputs.sc, { slotting: "ranked" }));
   check("same seed, same result", again.kpi.travelPerOrder === res.ranked.kpi.travelPerOrder);
-  check("every KPI in the contract that applies to C is reported and finite", kpi.KPI_DEFS.every((d) => !kpi.applies(d, "C") || isFinite(res.ranked.kpi[d.key])));
+  check("every KPI in the contract that applies to C is reported and finite", kpi.KPI_DEFS.every((d) => !kpi.applies(d, "C") || d.stage === "cost" || isFinite(res.ranked.kpi[d.key])));
   check("every trace step has label/expr/value", res.ranked.trace.every((t) => t.label && t.expr && t.value !== undefined && t.value !== ""));
   const k = res.ranked.kpi;
   check("time per line = 3600 / lines per hour", near(k.timePerLine * k.linesPerHour, 3600, 1e-6));
