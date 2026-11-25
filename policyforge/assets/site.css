@@ -2,7 +2,7 @@
 :root {
   --bg: #0a2f52; --panel: #0d3a63; --panel-2: #082444; --line: #2a5580; --line-soft: #1d4470;
   --ink: #bfe4ff; --ink-dim: #8fd0f2; --ink-faint: #6fa8c9; --accent: #7dd3fc; --accent-ink: #04202b;
-  --ok: #7ee2a8; --next: #ffd27a; --plan: #6fa8c9;
+  --ok: #7ee2a8; --next: #ffd27a; --plan: #6fa8c9; --bad: #f87171;
   --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --head: 'Rajdhani', 'Arial Narrow', sans-serif;
   --body: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
@@ -10,7 +10,7 @@
 :root[data-theme="light"] {
   --bg: #e9f1f8; --panel: #ffffff; --panel-2: #f3f8fc; --line: #c3d7e8; --line-soft: #dbe7f1;
   --ink: #0a2f52; --ink-dim: #2d5677; --ink-faint: #4f7495; --accent: #0b6aa2; --accent-ink: #ffffff;
-  --ok: #17824a; --next: #9a6200; --plan: #4f7495;
+  --ok: #17824a; --next: #9a6200; --plan: #4f7495; --bad: #c62828;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); }

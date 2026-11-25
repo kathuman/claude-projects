@@ -48,7 +48,7 @@
       <p>PolicyForge follows that sequence:</p>
       <svg class="flow" viewBox="0 0 600 250" role="img" aria-labelledby="flow-title flow-desc">
         <title id="flow-title">The PolicyForge flow</title>
-        <desc id="flow-desc">Six stages in order: intent, compile, validate, stress-test, approve and deploy, monitor. Intent, compile, validate, stress-test and approve are built; monitoring comes next.</desc>
+        <desc id="flow-desc">Six stages in order: intent, compile, validate, stress-test, approve and deploy, monitor. All six are built.</desc>
         <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink-faint)"/></marker></defs>
         <g stroke="var(--ink-faint)" stroke-width="1.5" fill="none" marker-end="url(#arr)">
           <path d="M184 60h26"/><path d="M384 60h26"/><path d="M500 92v34H100v32"/><path d="M184 190h26"/><path d="M384 190h26"/>
@@ -85,6 +85,39 @@
       </ul>
 
       <h3>What PolicyForge becomes: the layer between people and agents</h3>
+      <svg class="flow" viewBox="0 0 600 370" role="img" aria-labelledby="loop-title loop-desc">
+        <title id="loop-title">The four layers around the agent</title>
+        <desc id="loop-desc">A loop of four layers around an agent. Express (what do we want?) leads to Prove (is it safe?), then Enforce (is the agent inside its mandate?), then Learn (is the world still the one we tested for?), which leads back to Express. The agent receives its mandate from Express and its approved rule from Prove; each of its actions is checked by Enforce, and its outcomes are observed by Learn.</desc>
+        <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+          <marker id="arr2f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink-faint)"/></marker></defs>
+        <g stroke="var(--accent)" stroke-width="2" fill="none" marker-end="url(#arr2)">
+          <path d="M386 41 Q505 41 505 146"/><path d="M505 210 Q505 319 390 319"/>
+          <path d="M214 319 Q95 319 95 214"/><path d="M95 150 Q95 41 210 41"/>
+        </g>
+        <g stroke="var(--ink-faint)" stroke-width="1.3" stroke-dasharray="4 3" fill="none" marker-end="url(#arr2f)">
+          <path d="M300 71 V120"/><path d="M419 180 H360"/><path d="M300 236 V286"/><path d="M244 180 H183"/>
+        </g>
+        <g font-size="10" class="small">
+          <text x="306" y="104">mandate</text>
+          <text x="366" y="172">approved</text><text x="366" y="196">rule</text>
+          <text x="306" y="264">every action checked</text>
+          <text x="188" y="172">outcomes</text>
+        </g>
+        <circle cx="300" cy="180" r="57" fill="var(--panel-2)" stroke="var(--ok)" stroke-width="2"/>
+        <text x="300" y="177" text-anchor="middle" font-size="17" font-weight="700">AGENT</text>
+        <text x="300" y="194" text-anchor="middle" class="small">decides and acts</text>
+        <g font-size="15">
+          <rect x="215" y="11" width="170" height="60" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+          <text x="227" y="34" font-weight="700">1 · EXPRESS</text><text x="227" y="54" class="small">what do we want?</text>
+          <rect x="420" y="150" width="170" height="60" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+          <text x="432" y="173" font-weight="700">2 · PROVE</text><text x="432" y="193" class="small">is it safe, and better?</text>
+          <rect x="215" y="289" width="170" height="60" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+          <text x="227" y="312" font-weight="700">3 · ENFORCE</text><text x="227" y="332" class="small">inside its mandate?</text>
+          <rect x="10" y="150" width="170" height="60" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+          <text x="22" y="173" font-weight="700">4 · LEARN</text><text x="22" y="193" class="small">is the world the same?</text>
+        </g>
+      </svg>
+      <p class="caption">Read it clockwise. People say what they want (Express), the rule is tested and approved (Prove), every action is checked against the mandate (Enforce), and what happens is compared with what was assumed (Learn), which feeds back into what people ask for. Governance is a loop, not a gate.</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Layer</th><th>The question it answers</th><th>Today</th><th>Where it is going</th></tr></thead>
         <tbody>
@@ -96,6 +129,37 @@
       </table></div>
 
       <h3>Principles that will not change</h3>
+      <svg class="flow" viewBox="0 0 600 300" role="img" aria-labelledby="gate-title gate-desc">
+        <title id="gate-title">The language model proposes; the numbers decide</title>
+        <desc id="gate-desc">Two columns separated by a validation gate. On the left, what the language model proposes: an intent's meaning, a scenario idea, a repair to a failing rule, an explanation. Each passes the gate only after checks and becomes, on the right: a typed rule and mandate, a bounded stress-test scenario, a re-evaluated policy, a summary whose every number is in the report. Code and unchecked numbers are stopped at the gate.</desc>
+        <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--ink-faint)"/></marker></defs>
+        <text x="100" y="22" text-anchor="middle" font-size="14" font-weight="700">LANGUAGE MODEL · proposes</text>
+        <text x="500" y="22" text-anchor="middle" font-size="14" font-weight="700">ENGINEERING MODEL · decides</text>
+        <rect x="258" y="34" width="84" height="258" rx="6" fill="var(--panel-2)" stroke="var(--next)" stroke-dasharray="5 3"/>
+        <text x="300" y="52" text-anchor="middle" class="small" style="fill: var(--next)">VALIDATION</text>
+        <text x="300" y="64" text-anchor="middle" class="small" style="fill: var(--next)">GATE</text>
+        <g stroke="var(--ink-faint)" stroke-width="1.5" fill="none" marker-end="url(#arr3)">
+          <path d="M190 95 H408"/><path d="M190 145 H408"/><path d="M190 195 H408"/><path d="M190 245 H408"/>
+        </g>
+        <g font-size="14">
+          <rect x="10" y="75" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--line)"/><text x="22" y="99">intent's meaning</text>
+          <rect x="10" y="125" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--line)"/><text x="22" y="149">scenario idea</text>
+          <rect x="10" y="175" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--line)"/><text x="22" y="199">repair to a failing rule</text>
+          <rect x="10" y="225" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--line)"/><text x="22" y="249">explanation</text>
+          <rect x="410" y="75" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--ok)"/><text x="422" y="99">typed rule + mandate</text>
+          <rect x="410" y="125" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--ok)"/><text x="422" y="149">bounded scenario</text>
+          <rect x="410" y="175" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--ok)"/><text x="422" y="199">re-evaluated policy</text>
+          <rect x="410" y="225" width="180" height="40" rx="7" fill="var(--panel-2)" stroke="var(--ok)"/><text x="422" y="249">numbers checked</text>
+        </g>
+        <g font-size="10" class="small" text-anchor="middle">
+          <text x="300" y="91">schema</text><text x="300" y="141">bounds</text><text x="300" y="191">stress test</text><text x="300" y="241">report</text>
+        </g>
+        <path d="M190 282 H248" stroke="var(--bad)" stroke-width="1.5" fill="none"/>
+        <path d="M250 274 l12 16 M262 274 l-12 16" stroke="var(--bad)" stroke-width="2.5"/>
+        <text x="22" y="286" class="small" style="fill: var(--bad)">code · unchecked numbers</text>
+        <text x="352" y="286" class="small" style="fill: var(--bad)">stopped: never reach the right side</text>
+      </svg>
+      <p class="caption">Everything the language model produces crosses a gate before it counts: the schema and its bounds, the validator, the simulator, or a check that every number it quotes is in the report. Code and unchecked numbers never cross.</p>
       <ul>
         <li><b>The language model proposes; the numbers decide.</b> It may write rules, scenarios, repairs and explanations. It never sets a number that is not checked, and it never runs code.</li>
         <li><b>Every action traces back to a person.</b> Each agent decision can be followed to a mandate, an approval, an evaluation and the assumptions behind it.</li>
@@ -103,6 +167,29 @@
         <li><b>Honesty about limits.</b> What the model does not capture is written down, next to every result that could be misread.</li>
         <li><b>Open and reproducible.</b> Seeds, versions and hashes make every number recomputable; benchmarks and methods are published.</li>
       </ul>
+      <svg class="flow" viewBox="0 0 600 270" role="img" aria-labelledby="auto-title auto-desc">
+        <title id="auto-title">Earned autonomy, illustrated</title>
+        <desc id="auto-desc">An illustrative step chart of the share of volume an agent may shift on its own, over 52 weeks. It starts at 10 percent, widens to 20 and then 30 percent after clean quarters, drops back to 10 percent in week 32 when a monitored assumption breaks, and widens to 20 percent after a passing re-test in week 40. A dashed ceiling at 40 percent, set by a person in the mandate, is never crossed.</desc>
+        <g stroke="var(--line-soft)" stroke-width="1">
+          <path d="M60 220 H580"/><path d="M60 175 H580"/><path d="M60 130 H580"/><path d="M60 85 H580"/>
+        </g>
+        <g class="small" text-anchor="end"><text x="52" y="224">0 %</text><text x="52" y="179">10 %</text><text x="52" y="134">20 %</text><text x="52" y="89">30 %</text><text x="52" y="44">40 %</text></g>
+        <g class="small" text-anchor="middle"><text x="60" y="238">0</text><text x="190" y="238">13</text><text x="320" y="238">26</text><text x="450" y="238">39</text><text x="580" y="238">52 weeks</text></g>
+        <path d="M60 40 H580" stroke="var(--next)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="575" y="33" text-anchor="end" class="small" style="fill: var(--next)">ceiling set by a person in the mandate</text>
+        <path d="M60 175 H190 V130 H320 V85 H380 V175 H460 V130 H580" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+        <circle cx="380" cy="85" r="5" fill="var(--bad)" stroke="var(--panel)" stroke-width="2"/>
+        <g class="small">
+          <text x="70" y="166">start narrow</text>
+          <text x="196" y="122">clean record: wider</text>
+          <text x="326" y="76">wider again</text>
+          <text x="386" y="110" style="fill: var(--bad)">assumption broke:</text>
+          <text x="386" y="122" style="fill: var(--bad)">back to 10 %</text>
+          <text x="466" y="122">re-test passed</text>
+        </g>
+        <text x="60" y="262" class="small">Share of volume the agent may shift alone (illustrative; not built yet)</text>
+      </svg>
+      <p class="caption">How earned autonomy would work: the agent's limit widens one step at a time with a clean record, narrows at once when a monitored assumption breaks, and never passes the ceiling a person set. Every change is a new mandate version, audited.</p>
 
       <h3>How we will know it is working</h3>
       <ul>
