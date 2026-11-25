@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Warehouse Compare — moving racks vs semicircle vs rectangle</title>
+  <meta name="description" content="Compare three order-picking warehouses on equal terms: moving racks that come to fixed picking points, a semicircular layout and a rectangular one — same SKUs, same orders, same capacity." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark">Warehouse <span>Compare</span></span>
+      <span class="ver" id="ver"></span>
+      <span class="sub">moving racks · semicircle · rectangle — same SKUs, same orders, same capacity</span>
+    </div>
+    <a class="back-link" href="../">← Projects</a>
+  </header>
+
+  <div class="layout">
+    <aside class="rail" id="rail">
+      <p class="intro">Order picking, one order line at a time. Every warehouse gets the same SKUs, the same
+        orders and the same number of storage locations; each is sized to the smallest floor that holds them.</p>
+      <div id="controls"></div>
+    </aside>
+
+    <section class="main">
+      <div class="tabs" role="tablist">
+        <button class="tab" disabled title="Phase 3">WH-A · moving racks<small>phase 3</small></button>
+        <button class="tab" disabled title="Phase 2">WH-B · semicircle<small>phase 2</small></button>
+        <button class="tab on" aria-selected="true">WH-C · rectangle</button>
+      </div>
+      <div class="toolbar">
+        <button class="btn on" id="colCost">Colour: travel time</button>
+        <button class="btn" id="colPop">Colour: SKU popularity</button>
+        <button class="btn" id="net">Travel network</button>
+        <button class="btn" id="order">Show an order</button>
+        <span class="note" id="route"></span>
+      </div>
+      <canvas id="plan" aria-label="Plan view of the warehouse"></canvas>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <aside class="side">
+      <div class="warns" id="warns"></div>
+      <div>
+        <h2>Results</h2>
+        <table class="kpi" id="kpi"></table>
+      </div>
+      <div>
+        <h2>How WH-C's numbers are derived</h2>
+        <ul class="trace" id="trace"></ul>
+      </div>
+    </aside>
+  </div>
+
+<script src="../warehouse-model/web/src/calculations.js"></script>
+<script src="src/graph.js"></script>
+<script src="src/demand.js"></script>
+<script src="src/routing.js"></script>
+<script src="src/slotting.js"></script>
+<script src="src/kpi.js"></script>
+<script src="src/layouts/whc.js"></script>
+<script src="src/scenario.js"></script>
+<script src="src/plan.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

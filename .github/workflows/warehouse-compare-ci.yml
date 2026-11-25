@@ -1,0 +1,32 @@
+name: Warehouse Compare tests
+
+# Graph engine, demand, routing, slotting, KPIs — and the parity check that WH-C's travel network reproduces the
+# Warehouse Model's own travel formulas. WH-C is built by that app's calculations.js, so its changes run this too.
+on:
+  push:
+    paths:
+      - 'warehouse-compare/**'
+      - 'warehouse-model/web/src/calculations.js'
+      - 'warehouse-model/data/parameters.json'
+      - '.github/workflows/warehouse-compare-ci.yml'
+  pull_request:
+    paths:
+      - 'warehouse-compare/**'
+      - 'warehouse-model/web/src/calculations.js'
+      - 'warehouse-model/data/parameters.json'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: for f in warehouse-compare/tests/*.test.js; do echo "== $f"; node "$f" || exit 1; done
+        shell: bash
+      - name: Syntax-check the page scripts
+        run: for f in warehouse-compare/src/*.js warehouse-compare/src/layouts/*.js; do node --check "$f"; done
+        shell: bash
