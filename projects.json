@@ -11,6 +11,16 @@
     "demoUrl": "https://kathuman.github.io/estay-dynamics/atlas/"
   },
   {
+    "title": "Warehouse Compare",
+    "discipline": "supply-chain",
+    "thumb": "assets/thumbs/warehouse-compare.webp",
+    "description": "Three order-picking warehouses compared on equal terms: the same SKUs, the same orders and the same number of storage locations, each sized to the smallest floor that holds them. WH-A has moving racks: robots carry pods to fixed picking stations and put them back where a put-away policy says (fixed home slot, random, nearest free slot, or matched to the pod's popularity rank, so busy pods drift towards the stations). WH-B is semicircular, with radial or concentric rows around the picking points. WH-C is the rectangular layout of the Warehouse Model, built by its own layout code. Every layout becomes a travel network with curved aisles where needed, and every distance is a shortest path through it. WH-C reproduces the Warehouse Model's travel formulas to a millionth of a metre; WH-B's distances match closed forms, and its bays are proven not to overlap or block an aisle. Orders are routed the same way everywhere (exact up to nine stops). WH-A is a discrete-event simulation of pods, robots and stations: stations are sized to the peak like pickers elsewhere, and the robot fleet is the smallest that keeps up. A side-by-side view animates 20 minutes of the peak hour in all three. A sensitivity view sweeps demand skew, order size, volume, capacity or pick time. A demand-shock view moves popularity to other SKUs: fixed layouts lose 41 to 96% in travel, while popularity-rank put-away recovers by itself. Tested and mutation-tested.",
+    "date": "2026-11-25",
+    "tags": ["javascript", "web", "supply-chain", "warehousing", "simulation", "optimization", "robotics"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/warehouse-compare",
+    "demoUrl": "https://kathuman.github.io/claude-projects/warehouse-compare/"
+  },
+  {
     "title": "String Art",
     "discipline": "other",
     "thumb": "assets/thumbs/string-art.webp",

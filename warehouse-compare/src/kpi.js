@@ -92,6 +92,9 @@
     const slotRnd = demand.mulberry32((seed ^ 0x9e3779b9) >>> 0);
     const skuLoc = slotting.assign(layout, sc.skus, sc.slotting, op, slotRnd);     // one draw: what the plan shows
     const slotModel = slotting.classes(layout, sc.skus, sc.slotting, op);        // null for ranked
+    // opts.shift: the demand shock — the SKUs stay where slotting put them, but
+    // popularity moves along the SKU order (demand.shifted) before any order is drawn
+    if (opts.shift !== undefined) stream.reweight(demand.shifted(stream.weights, opts.shift));
     const L = layout.locations;
 
     let sumTour = 0, sumLines = 0, sumStops = 0, sumReach = 0;
@@ -133,5 +136,5 @@
     };
   }
 
-  return { KPI_DEFS, applies, evaluate, exactSingleLine };
+  return { KPI_DEFS, applies, evaluate, exactSingleLine, orderLocations };
 });

@@ -97,11 +97,21 @@
     return self;
   }
 
+  // The demand shock: SKU k now sells like SKU k − shift·n did, so the SKUs
+  // `shift` of the way down the ranking become the best-sellers. Shifting (not
+  // shuffling) keeps similar SKUs together, so in WH-A hot pods stay hot as a
+  // group; only which ones are hot changes.
+  function shifted(w, shift) {
+    const n = w.length, off = Math.round((shift === undefined ? 0.5 : shift) * n), out = new Float64Array(n);
+    for (let k = 0; k < n; k++) out[k] = w[((k - off) % n + n) % n];
+    return out;
+  }
+
   // Mean lines per order after the cap (what the stream really produces).
   function meanLines(s) {
     const pmf = linesPmf(s.lines_per_order, Math.min(s.max_lines, s.skus));
     return pmf.reduce(function (a, v, i) { return a + v * (i + 1); }, 0);
   }
 
-  return { mulberry32, skewExponent, benderA, curve, skuWeights, sampler, linesPmf, orderStream, meanLines };
+  return { mulberry32, skewExponent, benderA, curve, skuWeights, sampler, linesPmf, orderStream, meanLines, shifted };
 });

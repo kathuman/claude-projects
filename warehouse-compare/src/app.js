@@ -6,14 +6,14 @@
  */
 (function () {
   "use strict";
-  const APP_VERSION = "0.3.0";
+  const APP_VERSION = "0.4.0";
   const IDS = ["A", "B", "C"];
   const SHARED = ["target_locations", "skus", "demand_skew", "demand_curve", "lines_per_order", "slotting", "lines_per_day", "picker_speed", "pick_time_per_line"];
   // layout controls, and (for WH-B) which arrangement each applies to
   const A_CTRL = { put_away: null, pod_fill: null, order_slots: null, pipeline: null, robot_speed: null, storage_fill: null };
   const B_CTRL = { arrangement: null, hub_radius: null, zones: "radial", ring_aisle_width: "radial", radial_aisles: "concentric", radial_aisle_width: "concentric" };
   const $ = function (id) { return document.getElementById(id); };
-  let scJson, inputs, result = {}, tab = "A", view = { color: "cost", network: false }, order = null, orderSeed = 1;
+  let scJson, inputs, result = {}, tab = "A", mode = "plan", view = { color: "cost", network: false }, order = null, orderSeed = 1;
 
   function fmt(v, d) { return Number(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }); }
   function label(k) { return k.replace(/_/g, " ").replace(/^./, function (c) { return c.toUpperCase(); }); }
@@ -73,6 +73,7 @@
     result = WC.scenario.run(inputs, null, which, result);
     if (order) routeOrder();
     render();
+    WC.views.invalidate();
   }
 
   function span() {
@@ -85,7 +86,17 @@
     return [sx, sy];
   }
 
+  // which panel is on screen: a plan (tab = A/B/C) or one of the comparison views
+  function showPanel() {
+    document.querySelectorAll(".tab[data-id]").forEach(function (t) { const on = mode === "plan" && t.dataset.id === tab; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); });
+    document.querySelectorAll(".tab[data-view]").forEach(function (t) { const on = t.dataset.view === mode; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); });
+    $("planView").hidden = mode !== "plan";
+    $("viewSide").hidden = mode !== "side"; $("viewSens").hidden = mode !== "sens"; $("viewShock").hidden = mode !== "shock";
+    if (mode === "plan") render(); else WC.views.show(mode);
+  }
+
   function render() {
+    if (mode !== "plan") { renderSide(); return; }
     document.querySelectorAll(".tab[data-id]").forEach(function (t) { const on = t.dataset.id === tab; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); });
     const r = result[tab];
     $("warns").innerHTML = IDS.map(function (id) {
@@ -101,6 +112,15 @@
       : "<span>" + (tab === "A" ? "popularity class of the pod in the slot" : "SKU class stored there (averaged over the shelf levels)") + ": </span><span>" + cls(0) + "A — most popular 20%</span><span>" + cls(0.5) + "B — next 30%</span><span>" + cls(1) + "C — the rest</span>") +
       "<span><i style='background:#1d4470'></i>empty</span><span><i style='background:#7be0c4'></i>" + (tab === "A" ? "station" : "picking point") + "</span><span>all plans at one scale</span>";
 
+    renderSide();
+  }
+
+  // the results table, warnings and trace (on screen in every mode)
+  function renderSide() {
+    const r = result[tab];
+    $("warns").innerHTML = IDS.map(function (id) {
+      return (result[id] && result[id].warnings || []).map(function (w) { return "<div>⚠ " + id + ": " + w.text + "</div>"; }).join("");
+    }).join("");
     const ok = function (id) { return result[id] && !result[id].infeasible; };
     const cell = function (id, d) {
       if (!WC.kpi.applies(d, id) || !ok(id)) return "<td class='na'>—</td>";
@@ -164,15 +184,17 @@
   $("colPop").onclick = function () { view.color = "pop"; toggle("colCost", false); toggle("colPop", true); render(); };
   $("net").onclick = function () { view.network = !view.network; toggle("net", view.network); render(); };
   $("order").onclick = newOrder;
-  document.querySelectorAll(".tab[data-id]").forEach(function (t) { t.onclick = function () { tab = t.dataset.id; render(); }; });
-  window.addEventListener("resize", function () { if (result.C) render(); });
+  document.querySelectorAll(".tab[data-id]").forEach(function (t) { t.onclick = function () { tab = t.dataset.id; mode = "plan"; showPanel(); }; });
+  document.querySelectorAll(".tab[data-view]").forEach(function (t) { t.onclick = function () { mode = t.dataset.view; showPanel(); }; });
+  window.addEventListener("resize", function () { if (result.C && mode === "plan") render(); });
 
   $("ver").textContent = "v" + APP_VERSION;
   Promise.all([fetch("data/scenario.json").then(function (r) { return r.json(); }), fetch("../warehouse-model/data/parameters.json").then(function (r) { return r.json(); })])
     .then(function (j) {
       scJson = j[0]; inputs = WC.scenario.resolve(j[0], j[1]);
+      WC.views.init({ inputs: function () { return inputs; }, results: function () { return result; }, span: span });
       buildControls(); recompute(IDS); $("busy").hidden = true;
-      window.wcDebug = { inputs: inputs, result: function () { return result; }, recompute: recompute, setTab: function (t) { tab = t; render(); }, version: APP_VERSION };
+      window.wcDebug = { inputs: inputs, result: function () { return result; }, recompute: recompute, setTab: function (t) { tab = t; mode = "plan"; showPanel(); }, setView: function (v) { mode = v; showPanel(); }, version: APP_VERSION };
     })
     .catch(function (e) { $("warns").textContent = "Could not load the scenario: " + e.message; });
 })();

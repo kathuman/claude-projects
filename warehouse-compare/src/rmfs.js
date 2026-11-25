@@ -124,7 +124,7 @@
     const score = new Float64Array(P), scoreT = new Float64Array(P), halfLife = (A.frequency_half_life_h || 2) * 3600;
 
     const robots = [];
-    for (let r = 0; r < R; r++) { const sl = L.slots[sr.byNear[Math.floor(r * NS / R)]]; robots.push({ x: sl.x, y: sl.y, busy: false, pod: -1, st: -1, t0: 0 }); }
+    for (let r = 0; r < R; r++) { const sl = L.slots[sr.byNear[Math.floor(r * NS / R)]]; robots.push({ x: sl.x, y: sl.y, px: sl.x, py: sl.y, busy: false, pod: -1, st: -1, t0: 0 }); }   // px/py: where its latest move ends
     const stations = [];
     for (let s = 0; s < S; s++) stations.push({ orders: [], pipe: 0, queue: [], busy: false });
     const backlog = [], pending = [];
@@ -138,6 +138,17 @@
       queueWait: 0, queued: 0, podDist: 0, podDistN: 0 };
     const history = [];
     const measuring = function (t) { return t >= warm; };
+    // running totals from time 0 (for the history), and the movement trace for the animation
+    const tot = { lines: 0, dist: 0, wait: 0, started: 0, visits: 0 };
+    const tr = opts.trace ? { from: opts.trace.from, to: opts.trace.to, legs: [], picks: [], start: [] } : null;
+    const tracing = function (t) { return tr && t >= tr.from && t <= tr.to; };
+    function leg(r, t0, t1, kind, pts) { if (tr && t1 >= tr.from && t0 <= tr.to) tr.legs.push({ r: r, t0: t0, t1: t1, kind: kind, pts: pts }); }
+    function loadedPts(slot, s, toStation) {
+      // slot centre → its aisle → shortest path → station (or reversed)
+      const sl = L.slots[slot], g = L.graph, path = g.path(g.keys[sl.key], g.keys[L.depots[s]]);
+      const pts = [[sl.x, sl.y]].concat(path.map(function (n) { return [g.x[n], g.y[n]]; }));
+      return toStation ? pts : pts.reverse();
+    }
 
     function newOrder(t) {
       const skus = stream.next();
@@ -146,6 +157,7 @@
     function openOrder(s, o, t) {
       o.start = t; stations[s].orders.push(o);
       if (measuring(t)) { st.wait += t - o.arr; st.started++; }
+      tot.wait += t - o.arr; tot.started++;
     }
     function assignOrders(t) {
       for (;;) {
@@ -180,6 +192,9 @@
       const rb = robots[br];
       rb.busy = true; rb.pod = p; rb.st = s; rb.t0 = t;
       if (measuring(t)) st.empty += bd;
+      tot.dist += bd;
+      if (tr) leg(br, t, t + bd / v, "empty", [[rb.x, rb.y], [sl.x, rb.y], [sl.x, sl.y]]);
+      rb.px = sl.x; rb.py = sl.y;
       H.push(t + bd / v + lift, { k: "lift", r: br });
     }
 
@@ -215,6 +230,8 @@
       const dur = A.pod_switch_time + n * sc.pick_time_per_line + done * sc.order_setup_time;
       stn.busy = true;
       if (measuring(t)) { st.lines += n; st.visits++; st.workerBusy[s] += dur; }
+      tot.lines += n; tot.visits++;
+      if (tracing(t)) tr.picks.push({ t: t + dur, s: s, n: n });
       // frequency score: exponentially smoothed visit count
       score[p] = score[p] * Math.pow(0.5, (t - scoreT[p]) / halfLife) + 1; scoreT[p] = t;
       H.push(t + dur, { k: "done", s: s, r: ri });
@@ -224,6 +241,7 @@
     if (opts.mode !== "saturated") H.push(-Math.log(1 - rnd()) / orderRate, { k: "arrive" });
     if (opts.shock) H.push(opts.shock.at_h * 3600, { k: "shock" });
     if (opts.history) H.push(0, { k: "snap" });
+    if (tr) H.push(tr.from, { k: "traceStart" });
 
     let t = 0;
     while (H.size()) {
@@ -238,6 +256,9 @@
         slotOcc[sl] = -1;                                    // the slot is free once the pod is lifted (fixed: still reserved)
         const d = L.toStation[sl][rb.st];
         if (measuring(t)) st.loaded += d;
+        tot.dist += d;
+        if (tr) leg(e.r, t, t + d / v, "toStation", loadedPts(sl, rb.st, true));
+        rb.px = L.stations[rb.st][0]; rb.py = L.stations[rb.st][1];
         H.push(t + d / v, { k: "atStation", r: e.r });
       } else if (e.k === "atStation") {
         const rb = robots[e.r], stn = stations[rb.st];
@@ -257,6 +278,9 @@
         rb.to = to;
         const d = L.toStation[to][e.s];
         if (measuring(t)) st.loaded += d;
+        tot.dist += d;
+        if (tr) leg(e.r, t, t + d / v, "toSlot", loadedPts(to, e.s, false));
+        rb.px = L.slots[to].x; rb.py = L.slots[to].y;
         H.push(t + d / v + lift, { k: "drop", r: e.r });
         if (stn.queue.length) startPresent(e.s, t);
         assignOrders(t);
@@ -270,18 +294,16 @@
         if (pending.length) { const q = pending.shift(); dispatch(q.s, q.p, t); }
         for (let s = 0; s < S; s++) requestPods(s, t);
       } else if (e.k === "shock") {
-        // demand moves along the SKU order: SKU k now sells like SKU k − shift·n
-        // did, so the SKUs that were `shift` of the way down the ranking are the
-        // new best-sellers. Shifting (not shuffling) keeps hot SKUs together in
-        // hot pods; only which pods are hot changes.
-        const w0 = stream.weights, n = w0.length, off = Math.round((opts.shock.shift === undefined ? 0.5 : opts.shock.shift) * n);
-        const nw = new Float64Array(n);
-        for (let k = 0; k < n; k++) nw[k] = w0[((k - off) % n + n) % n];
+        const nw = demand.shifted(stream.weights, opts.shock.shift);
         stream.reweight(nw);
+      } else if (e.k === "traceStart") {
+        // where every robot stands when the animation window opens (a robot on
+        // its way somewhere is covered by its leg)
+        tr.start = robots.map(function (rb) { return [rb.px, rb.py, rb.busy && rb.pod >= 0 && rb.st >= 0 ? 1 : 0]; });
       } else if (e.k === "snap") {
         let wd = 0; const pw = podWeights();
         for (let p = 0; p < P; p++) wd += pw[p] * sr.near[podSlot[p]];
-        history.push({ t: t, podDist: wd, lines: st.lines });
+        history.push({ t: t, podDist: wd, lines: tot.lines, dist: tot.dist, wait: tot.wait, started: tot.started, visits: tot.visits, backlog: backlog.length });
         if (t + opts.history <= Tend) H.push(t + opts.history, { k: "snap" });
       }
     }
@@ -304,7 +326,7 @@
       backlogWait: st.started ? st.wait / st.started : Infinity, backlogEnd: backlog.length,
       queueWait: st.queued ? st.queueWait / st.queued : 0,
       podDistance: wd,                                        // popularity-weighted loaded distance of pods to their nearest station, at the end
-      podSlot: podSlot, skuPod: fill.skuPod, podW: pw, history: history,
+      podSlot: podSlot, skuPod: fill.skuPod, podW: pw, history: history, trace: tr,
       _state: { slotOcc: slotOcc, claim: claim, stations: stations, robots: robots, backlog: backlog }
     };
   }

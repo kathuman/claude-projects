@@ -34,7 +34,11 @@
         <button class="tab" data-id="A" role="tab">WH-A · moving racks</button>
         <button class="tab" data-id="B" role="tab">WH-B · semicircle</button>
         <button class="tab" data-id="C" role="tab">WH-C · rectangle</button>
+        <button class="tab view-tab" data-view="side" role="tab">Side by side</button>
+        <button class="tab view-tab" data-view="sens" role="tab">Sensitivity</button>
+        <button class="tab view-tab" data-view="shock" role="tab">Demand shock</button>
       </div>
+      <div id="planView" class="plan-view">
       <div class="toolbar">
         <button class="btn on" id="colCost">Colour: travel time</button>
         <button class="btn" id="colPop">Colour: SKU popularity</button>
@@ -45,6 +49,47 @@
       </div>
       <canvas id="plan" aria-label="Plan view of the warehouse"></canvas>
       <div class="legend" id="legend"></div>
+      </div>
+
+      <div id="viewSide" class="view" hidden>
+        <div class="toolbar">
+          <button class="btn on" id="sidePlay">Play</button>
+          <button class="btn" id="sideRestart">Restart</button>
+          <label class="inline">Speed <select id="sideSpeed"><option value="10">10×</option><option value="30" selected>30×</option><option value="60">60×</option><option value="120">120×</option></select></label>
+          <span class="clock" id="sideClock">0:00 / 20:00</span>
+          <span class="note" id="sideNote"></span>
+        </div>
+        <div class="side-grid">
+          <figure><figcaption>WH-A · moving racks</figcaption><canvas id="sideA" aria-label="WH-A animation"></canvas><div class="count" id="sideCountA"></div></figure>
+          <figure><figcaption>WH-B · semicircle</figcaption><canvas id="sideB" aria-label="WH-B animation"></canvas><div class="count" id="sideCountB"></div></figure>
+          <figure><figcaption>WH-C · rectangle</figcaption><canvas id="sideC" aria-label="WH-C animation"></canvas><div class="count" id="sideCountC"></div></figure>
+        </div>
+        <div class="legend"><span><i class="dot"></i>picker</span><span><i class="sq"></i>robot, empty</span><span><i class="sq loaded"></i>robot carrying a pod</span>
+          <span>storage by popularity class:</span><span><i style="background:#7dd3fc"></i>A</span><span><i style="background:#b2bb7e"></i>B</span><span><i style="background:#eda100"></i>C</span><span>all at one scale</span></div>
+      </div>
+
+      <div id="viewSens" class="view" hidden>
+        <div class="toolbar">
+          <label class="inline">Vary <select id="sensInput"></select></label>
+          <label class="inline">Show <select id="sensMeasure"></select></label>
+          <span class="note" id="sensNote"></span>
+        </div>
+        <div class="view-body"><div id="sensChart"></div></div>
+      </div>
+
+      <div id="viewShock" class="view" hidden>
+        <div class="toolbar">
+          <label class="inline">Popularity moves <select id="shockShift"><option value="0.25">a quarter of the way down</option><option value="0.5" selected>half-way down</option><option value="0.75">three quarters down</option></select></label>
+          <label class="inline">Robot headroom <select id="shockHead"><option value="0">none (the sized fleet)</option><option value="0.15" selected>+15%</option><option value="0.3">+30%</option></select></label>
+        </div>
+        <div class="view-body">
+          <p class="note-block" id="shockNote"></p>
+          <div id="shockTravel"></div>
+          <div id="shockWait"></div>
+          <h2>Before and after</h2>
+          <table class="kpi shock-table" id="shockTable"></table>
+        </div>
+      </div>
     </section>
 
     <aside class="side">
@@ -71,7 +116,11 @@
 <script src="src/layouts/whb.js"></script>
 <script src="src/layouts/whc.js"></script>
 <script src="src/scenario.js"></script>
+<script src="src/replay.js"></script>
+<script src="src/experiments.js"></script>
 <script src="src/plan.js"></script>
+<script src="src/charts.js"></script>
+<script src="src/views.js"></script>
 <script src="src/app.js"></script>
 </body>
 </html>

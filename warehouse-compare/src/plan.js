@@ -128,6 +128,7 @@
     c.strokeStyle = "#8fd0f2"; c.lineWidth = 2; c.beginPath(); c.moveTo(pad, 14); c.lineTo(pad + bar, 14); c.stroke();
     c.fillStyle = "#8fd0f2"; c.font = "11px 'IBM Plex Mono', monospace"; c.textAlign = "left"; c.textBaseline = "middle";
     c.fillText("10 m", pad + bar + 6, 14);
+    return { X: X, Y: Y, s: s };
   }
 
   root.WC = root.WC || {}; root.WC.plan = { draw: draw, heat: heat };

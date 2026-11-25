@@ -100,6 +100,23 @@ data/scenario.json ──► scenario.resolve() ──► the same sc (demand, p
   lines per picker-hour, pickers needed at the peak, and share of time walking. Each comes with a readable trace of
   how it was derived.
 
+## The views
+
+- **WH-A / WH-B / WH-C:** each plan at one scale, coloured by travel time or by the popularity class stored
+  there. It can show the travel network and one sample order: walked in WH-B and WH-C, robot trips in WH-A.
+- **Side by side:** 20 minutes of the peak hour with the same orders in all three ([replay.js](src/replay.js)).
+  Pickers walk the travel network's real paths, arcs included; WH-A's robots replay the simulation's own legs.
+- **Sensitivity:** vary skew, lines per order, volume, capacity or pick time, and chart any result for all three
+  ([experiments.js](src/experiments.js), [charts.js](src/charts.js)). Every point re-sizes all three
+  warehouses.
+- **Demand shock:** see the findings below.
+
+Chart colours were checked with the dataviz palette validator against the navy chart surface `#0a2f52`:
+- WH-A/B/C (blue, orange, aqua) pass every pair.
+- The four WH-A policies (yellow, magenta, green, violet) pass adjacent pairs.
+
+Every chart has a crosshair tooltip, a legend, direct labels and a table view.
+
 ## Run
 
 Open `index.html` through any static server from the repository root, because the page loads
@@ -114,6 +131,7 @@ Tests (Node ≥ 18, no dependencies):
 ```bash
 node warehouse-compare/tests/whc.test.js    # WH-C graph = Warehouse Model formulas; equal-capacity sizing
 node warehouse-compare/tests/wha.test.js    # WH-A floor, hand-computed cycle, conservation, fleet sizing, put-away, shock
+node warehouse-compare/tests/experiments.test.js   # animation timelines (continuity, speed), sweeps (monotone), the shock
 node warehouse-compare/tests/whb.test.js    # WH-B closed-form distances, bay geometry, aisles clear, sizing
 node warehouse-compare/tests/core.test.js   # graph, demand, routing vs brute force, slotting, KPIs
 ```
@@ -151,6 +169,27 @@ pods to their nearest station. The demand shock moves popularity half-way down t
   fixed layout stays wrong until someone re-slots it. The comparison page in Phase 4 will make that trade-off
   explorable.
 
+### The demand shock (Demand shock view)
+
+At 3 h the best-sellers become the SKUs half-way down the ranking. WH-A runs its four policies on the same floor
+with the same fleet (+15% headroom); WH-B and WH-C keep their slotting. Travel per line, 2 h before against 2–4 h
+after:
+
+| | Before | After | Change |
+|---|---|---|---|
+| WH-A · fixed home slot | 57 m robot | 80 m | **+41%** |
+| WH-A · random free slot | 84 m | 85 m | +1% |
+| WH-A · nearest free slot | 67 m | 73 m | +10% |
+| WH-A · by popularity rank | 67 m | 69 m | **+4%** |
+| WH-B · slotting unchanged | 16 m picker | 32 m | **+96%** |
+| WH-C · slotting unchanged | 17 m picker | 27 m | **+64%** |
+
+- **This is the case for moving racks that re-sort themselves.** Any layout whose slotting is fixed pays heavily
+  when demand moves, and WH-B pays most: its advantage was entirely in where the best-sellers sat. Until someone
+  re-slots, a picker walks 64–96% further. WH-A's popularity-rank put-away fixes itself as it works.
+- **Fleet headroom decides whether that shows up as waiting.** With the bare fleet sized for steady demand, every
+  policy's queue grows after the shock. With +15%, only random put-away's does.
+
 ### WH-B vs WH-C, travel per line
 
 | Slotting | Skew | Lines/order | WH-C | Radial | Concentric |
@@ -175,5 +214,5 @@ pods to their nearest station. The demand shock moves popularity half-way down t
 1. ✅ Graph distance engine, shared demand and KPI contract, WH-C adapter checked against the Warehouse Model
 2. ✅ WH-B semicircular (radial and concentric), plans at one scale, B-vs-C column
 3. ✅ WH-A moving racks: discrete-event simulation, stations and robot fleet sized, four put-away policies, demand shock
-4. Comparison page: side-by-side animation, sensitivity charts, demand-shock experiment
+4. ✅ Comparison views: side-by-side animation, sensitivity sweeps, demand-shock experiment
 5. TCO, data import, share links, 3D, Spanish/Danish, About page, projects-page entry
