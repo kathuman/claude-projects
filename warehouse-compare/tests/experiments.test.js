@@ -102,4 +102,40 @@ function segDist(a, b, p) {
   check("series cover the whole run in equal steps", ex.POLICIES.every((pa) => s.series[pa].length === s.series.fixed.length && near(s.series[pa][s.series[pa].length - 1].t, at + s.after, 1e-9)));
 }
 
+// ---------------------------------------------------------------- evidence for the technology screen (6.2)
+{
+  const cat = JSON.parse(fs.readFileSync(path.join(__dirname, "../data/archetypes.json"), "utf8"));
+  const ev = ex.evidence(inputs, res, cat), row = (k) => ev.rows.find((r) => r.key === k);
+  check("evidence: six dimensions in order", ev.rows.map((r) => r.key).join(",") === "labour,floor,cost,volume,mix,exit");
+  const s2p = cat.archetypes.find((a) => a.id === "shelf_to_person"), man = cat.archetypes.find((a) => a.id === "manual");
+  check("evidence: the experts' side is the catalogue's (E for efficiency, sub-scores for flexibility)",
+    row("labour").expert.A === s2p.E && row("floor").expert.C === man.E && row("volume").expert.A === s2p.sub_scores.volume_flex && row("mix").expert.C === man.sub_scores.mix_flex && row("exit").expert.A === s2p.sub_scores.exit_flex);
+  check("evidence: labour, floor and cost are the comparison's own KPIs",
+    row("labour").measured.A === res.A.kpi.linesPerHour && row("labour").measured.C === res.C.kpi.linesPerHour && row("floor").measured.A === res.A.kpi.density && row("cost").measured.C === res.C.kpi.costPer1000Lines);
+  const p = res.A.cost.parts, q = res.C.cost.parts;
+  check("evidence: exit = equipment share of the build cost, from the cost breakdown",
+    near(row("exit").measured.A, 100 * (p.storage + p.stations + p.robots) / res.A.cost.capex, 1e-9) && near(row("exit").measured.C, 100 * (q.storage + q.stations) / res.C.cost.capex, 1e-9));
+  const more = ex.point(inputs, "lines_per_day", Math.round(sc.lines_per_day * 1.25));
+  check("evidence: volume = yearly cost of 25% more lines, re-sized from scratch",
+    near(row("volume").measured.A, 100 * (more.A.annualCost / res.A.kpi.annualCost - 1), 1e-9) && near(row("volume").measured.C, 100 * (more.C.annualCost / res.C.kpi.annualCost - 1), 1e-9));
+  const sh = ex.shock(inputs, res, { policies: [inputs.layouts.A.put_away], robots: Math.round(res.A.sizing.robotsActive * 1.15), step_s: 1800 });
+  check("evidence: mix = the demand shock (WH-C with its slotting kept, WH-A with its own put-away)",
+    near(row("mix").measured.C, 100 * (sh.static.C.after / sh.static.C.before - 1), 1e-9) && near(row("mix").measured.A, 100 * (ex.mean(sh.series[inputs.layouts.A.put_away], "travel", sh.at + 2, sh.at + sh.after) / ex.mean(sh.series[inputs.layouts.A.put_away], "travel", sh.at - 2, sh.at) - 1), 1e-9));
+  // the verdict rule: the direction the simulation points vs the experts' order, unless within 10%
+  const rule = (r) => {
+    const close = Math.abs(r.measured.A - r.measured.C) < ex.CLOSE * Math.max(Math.abs(r.measured.A), Math.abs(r.measured.C));
+    const simA = r.better === "higher" ? r.measured.A > r.measured.C : r.measured.A < r.measured.C;
+    return close ? "close" : simA === (r.expert.A > r.expert.C) ? "agrees" : "disagrees";
+  };
+  check("evidence: every verdict follows the rule", ev.rows.every((r) => r.verdict === rule(r)));
+  check("evidence (default scenario): WH-A picks more lines per hour and costs less per line, as the experts say", row("labour").verdict === "agrees" && row("cost").verdict === "agrees");
+  check("evidence (default scenario): manual shelving is the denser store, against the experts' E", row("floor").verdict === "disagrees");
+  check("evidence (default scenario): WH-A's re-sorting rides out a demand shift that manual slotting doesn't", row("mix").verdict === "disagrees" && row("mix").measured.A < 10 && row("mix").measured.C > 40);
+  check("evidence (default scenario): WH-A ties up far more of its cost in equipment, as the experts' exit scores say", row("exit").verdict === "agrees");
+  check("evidence (default scenario): scaling volume costs both about the same (" + row("volume").measured.A.toFixed(1) + "% vs " + row("volume").measured.C.toFixed(1) + "%)", row("volume").verdict === "close");
+  const again = ex.evidence(inputs, res, cat);
+  check("evidence: same inputs, same evidence", JSON.stringify(again) === JSON.stringify(ev));
+  check("evidence doesn't change the inputs it was given", JSON.stringify(inputs.sc) === JSON.stringify(scenario.resolve(J, JSON.parse(fs.readFileSync(path.join(__dirname, "../../warehouse-model/data/parameters.json"), "utf8"))).sc));
+}
+
 summary("experiments");

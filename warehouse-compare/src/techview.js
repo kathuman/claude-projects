@@ -130,6 +130,7 @@
         });
         const st = p.status === "recommended" ? T("recommended") : p.status === "runner_up" ? T("runner-up") : p.status === "excluded" ? T("excluded: {r}", { r: p.excluded.reasons.map(function (x) { return x.text; }).join(" ") }) : "";
         if (st) el("div", { class: "tip-status" }, tip, st);
+        if (p.simulated_as) el("div", { class: "tip-status" }, tip, T("Simulated in this app as WH-{id}: see the evidence below the result.", { id: p.simulated_as }));
         tip.hidden = false;
         const px = X(p.F) / W * wrap.clientWidth;
         tip.style.left = Math.min(wrap.clientWidth - tip.offsetWidth - 4, Math.max(4, px + 14)) + "px";
@@ -207,8 +208,66 @@
     el("h2", {}, box, rec.name);
     const card = el("dl", { class: "tech-card" }, box);
     [[T("How it works"), rec.mechanism], [T("Strengths"), rec.strengths], [T("Weaknesses"), rec.weaknesses], [T("Best fit"), rec.best_fit], [T("Example vendors"), rec.vendors.length ? rec.vendors.join(", ") : "—"]].forEach(function (r) { el("dt", {}, card, r[0]); el("dd", {}, card, r[1]); });
+    el("div", { id: "techEvidence", class: "tech-evidence" }, box);
+    drawEvidence();
     el("p", { class: "note-block tech-disclaimer" }, box, T("Indicative screening (catalogue {v}). The positions are expert judgement on 0–100 scales, not measurements, and the model leaves out capex, integration risk, labour availability and building limits such as clear height and floor load. A starting point, not an investment decision.", { v: res.version }));
   }
+
+  // ---------------------------------------------------------------- evidence from the simulation
+  // The spec's two technologies this app simulates (shelf-to-person = WH-A, manual = WH-C),
+  // checked dimension by dimension against the comparison's current scenario
+  // (WC.experiments.evidence). Computed once per set of comparison results.
+  let ev = null, evFor = null, evBusy = false;
+  function invalidate() { ev = null; evFor = null; }
+  function drawEvidence() {
+    const box = $("techEvidence"); if (!box) return;
+    box.innerHTML = "";
+    el("h2", {}, box, T("Evidence from the simulation"));
+    const res = ctx.results();
+    if (!res || !res.A || !res.C || !res.A.cost || !res.C.cost) { el("div", { class: "help" }, box, T("Waiting for the comparison…")); return; }
+    if (!ev || evFor !== res.A) {
+      el("div", { class: "help" }, box, T("Measuring WH-A and WH-C…"));
+      if (evBusy) return;
+      evBusy = true;
+      setTimeout(function () {
+        ev = WC.experiments.evidence(ctx.inputs(), res, cat); evFor = res.A; evBusy = false;
+        drawEvidence();
+      }, 30);
+      return;
+    }
+    const a = arch(cat.archetypes.find(function (x) { return x.simulated_as === "A"; }).id).name, c = arch(cat.archetypes.find(function (x) { return x.simulated_as === "C"; }).id).name;
+    el("p", { class: "note-block" }, box, T("The spec rates {a} and {c} by expert judgement; this app simulates them as WH-A and WH-C. For the comparison's current scenario ({l} lines a day, put-away: {p}), does the simulation point the same way? Each row reads {a} / WH-A first.",
+      { a: a, c: c, l: WC.t.int(ev.lines_per_day), p: putAwayName(ev.policy) }));
+    const tb = el("table", { class: "kpi evidence" }, box), hr = el("tr", {}, tb);
+    [T("Dimension"), T("Experts (spec)"), T("Simulation"), T("Verdict")].forEach(function (h) { el("th", {}, hr, h); });
+    const label = { labour: T("Efficiency: labour"), floor: T("Efficiency: floor"), cost: T("Efficiency: cost"), volume: T("Volume flexibility"), mix: T("Mix flexibility"), exit: T("Exit flexibility") };
+    const expert = function (r) { return (["labour", "floor", "cost"].indexOf(r.key) >= 0 ? "E " : "") + T("{a} vs {c}", { a: fmt(r.expert.A, 0), c: fmt(r.expert.C, 0) }); };
+    const measured = function (r) {
+      const m = r.measured;
+      switch (r.key) {
+        case "labour": return T("{a} vs {c} lines per picker-hour", { a: fmt(m.A, 0), c: fmt(m.C, 0) });
+        case "floor": return T("{a} vs {c} locations per m²", { a: fmt(m.A, 2), c: fmt(m.C, 2) });
+        case "cost": return T("${a} vs ${c} per 1,000 lines", { a: fmt(m.A, 0), c: fmt(m.C, 0) });
+        case "volume": return T("+{a}% vs +{c}% a year for {s}% more lines", { a: fmt(m.A, 1), c: fmt(m.C, 1), s: ev.volumeStep });
+        case "mix": return T("+{a}% vs +{c}% travel per line after a demand shift", { a: fmt(m.A, 1), c: fmt(m.C, 1) });
+        default: return T("{a}% vs {c}% of the build cost in equipment", { a: fmt(m.A, 0), c: fmt(m.C, 0) });
+      }
+    };
+    const verdict = { agrees: "✓ " + T("agrees"), disagrees: "✗ " + T("disagrees"), close: "≈ " + T("too close to call") };
+    ev.rows.forEach(function (r) {
+      const tr = el("tr", {}, tb);
+      el("td", {}, tr, label[r.key]); el("td", {}, tr, expert(r)); el("td", {}, tr, measured(r));
+      el("td", { class: "v-" + r.verdict }, tr, verdict[r.verdict]);
+    });
+    const n = { agrees: 0, disagrees: 0, close: 0 }; ev.rows.forEach(function (r) { n[r.verdict]++; });
+    el("p", { class: "note-block" }, box, T("The simulation agrees on {a} of {n} points, disagrees on {d} and can't separate the two on {c}.", { a: n.agrees, n: ev.rows.length, d: n.disagrees, c: n.close }));
+    const ul = el("ul", { class: "ev-notes" }, box);
+    [T("Floor: WH-C here is hand-picking shelving with 1.2 m aisles; WH-A's pods need robot aisles and spare slots, so manual shelving can be the denser store."),
+     T("Mix: the simulation moves popularity between SKUs; the spec's mix flexibility also covers new item sizes and categories, which it doesn't model."),
+     T("Exit: equipment is robots, pods and stations (WH-A) or shelving and pack stations (WH-C); the building is assumed to be reusable."),
+     T("Costs here are the comparison's (in $), not the screen's euros. Two technologies and one scenario: evidence to weigh, not a calibration of the catalogue.")].forEach(function (t) { el("li", {}, ul, t); });
+  }
+  function putAwayName(pa) { return { fixed: T("Fixed home slot"), random: T("Random free slot"), nearest: T("Nearest free slot"), frequency: T("By popularity rank") }[pa]; }
 
   function update() {
     const res = WC.frontier.recommend(ctx.inputs().site, cat);
@@ -233,5 +292,5 @@
   }
   window.addEventListener("resize", function () { if (built && !$("viewTech").hidden) update(); });
 
-  root.WC = root.WC || {}; root.WC.techview = { init: init, show: show };
+  root.WC = root.WC || {}; root.WC.techview = { init: init, show: show, invalidate: invalidate };
 })(typeof self !== "undefined" ? self : this);

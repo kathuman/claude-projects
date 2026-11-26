@@ -142,6 +142,9 @@
     if (order) routeOrder();
     render();
     WC.views.invalidate();
+    // the technology screen's evidence comes from these results: redo it (now, if it's on screen)
+    WC.techview.invalidate();
+    if (mode === "tech") WC.techview.show();
   }
 
   function span() {
@@ -283,7 +286,7 @@
       const site0 = Object.assign({}, j[2].example_site); delete site0.site_name;
       inputs.site = Object.assign({}, site0); defaults.site = Object.assign({}, site0);
       WC.share.decode(location.hash, inputs, scJson, j[2].site_inputs);
-      WC.techview.init({ catalogue: j[2], inputs: function () { return inputs; }, changed: saveLink, goto: function (id) { tab = id; mode = "plan"; showPanel(); } });
+      WC.techview.init({ catalogue: j[2], inputs: function () { return inputs; }, results: function () { return result; }, changed: saveLink, goto: function (id) { tab = id; mode = "plan"; showPanel(); } });
       WC.scenario.syncB(inputs);
       WC.views.init({ inputs: function () { return inputs; }, results: function () { return result; }, span: span });
       buildControls(); recompute(IDS); $("busy").hidden = true;

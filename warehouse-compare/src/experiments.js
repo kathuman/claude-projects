@@ -48,13 +48,13 @@
   const POLICIES = ["fixed", "random", "nearest", "frequency"];
 
   // opts: { shift (default 0.5), at_h (default A.warmup_hours), after_h (4), step_s (900),
-  //         robots (default: the fleet WH-A was sized to) }
+  //         robots (default: the fleet WH-A was sized to), policies (default: all four) }
   function shock(inputs, results, opts) {
     opts = opts || {};
     const sc = inputs.sc, A = inputs.layouts.A, z = results.A.sizing;
     const robots = opts.robots || z.robotsActive, at = opts.at_h === undefined ? A.warmup_hours : opts.at_h, after = opts.after_h || 4, step = opts.step_s || 900, shift = opts.shift === undefined ? 0.5 : opts.shift;
     const series = {};
-    POLICIES.forEach(function (pa) {
+    (opts.policies || POLICIES).forEach(function (pa) {
       const r = rmfs.simulate(z.layout, sc, Object.assign({}, A, { put_away: pa }), { robots: robots, warmup_h: at, measure_h: after, history: step, shock: { at_h: at, shift: shift } });
       const h = r.history, pts = [];
       for (let k = 1; k < h.length; k++) {
@@ -78,5 +78,51 @@
     return xs.length ? xs.reduce(function (a, b) { return a + b; }, 0) / xs.length : NaN;
   }
 
-  return { SWEEPS, POLICIES, point, shock, mean };
+  // ---------------------------------------------------------------- evidence for the technology screen
+  // The spec rates shelf-to-person (= WH-A) and manual picking (= WH-C) by expert
+  // judgement. For the comparison's current scenario, measure what the simulation
+  // can say about each dimension, and whether it points the same way:
+  //   efficiency  labour: lines per picker-hour · floor: locations per m² · cost: cost per 1,000 lines
+  //   volume      extra yearly cost of handling 25% more lines a day (less = more volume-flexible)
+  //   mix         travel per line after a demand shift, against before (WH-A with its own put-away
+  //               policy; WH-C keeps its slotting) — popularity shifts only: the spec's mix
+  //               flexibility also covers new item sizes, which the simulation doesn't model
+  //   exit        share of the build cost in equipment that is hard to reuse elsewhere
+  //               (robots, pods, stations, shelving), against the building
+  // Each row: { key, expert: { A, C } (0–100, higher = better on that dimension),
+  //   measured: { A, C }, better: "higher" | "lower",
+  //   verdict: "agrees" | "disagrees" | "close" } — "close" when the two measurements
+  //   differ by less than CLOSE (relative): too near to say which way the simulation points.
+  const CLOSE = 0.10;
+  function evidence(inputs, results, catalogue) {
+    const sc = inputs.sc, A = results.A, C = results.C;
+    const by = function (id) { return catalogue.archetypes.find(function (a) { return a.simulated_as === id; }); };
+    const eA = by("A"), eC = by("C");
+    const rows = [];
+    const row = function (key, exA, exC, mA, mC, better) {
+      const simA = better === "higher" ? mA > mC : mA < mC, expA = exA > exC;
+      const close = Math.abs(mA - mC) < CLOSE * Math.max(Math.abs(mA), Math.abs(mC));
+      rows.push({ key: key, expert: { A: exA, C: exC }, measured: { A: mA, C: mC }, better: better, verdict: close ? "close" : simA === expA ? "agrees" : "disagrees" });
+    };
+    row("labour", eA.E, eC.E, A.kpi.linesPerHour, C.kpi.linesPerHour, "higher");
+    row("floor", eA.E, eC.E, A.kpi.density, C.kpi.density, "higher");
+    row("cost", eA.E, eC.E, A.kpi.costPer1000Lines, C.kpi.costPer1000Lines, "lower");
+    // volume: re-size both for 25% more lines a day
+    const more = point(inputs, "lines_per_day", Math.round(sc.lines_per_day * 1.25));
+    const vA = 100 * (more.A.annualCost / A.kpi.annualCost - 1), vC = 100 * (more.C.annualCost / C.kpi.annualCost - 1);
+    row("volume", eA.sub_scores.volume_flex, eC.sub_scores.volume_flex, vA, vC, "lower");
+    // mix: the demand shock, WH-A with its configured put-away and +15% robots
+    const s = shock(inputs, results, { policies: [inputs.layouts.A.put_away], robots: Math.round(A.sizing.robotsActive * 1.15), step_s: 1800 });
+    const ser = s.series[inputs.layouts.A.put_away], at = s.at;
+    const mA = 100 * (mean(ser, "travel", at + 2, at + s.after) / mean(ser, "travel", at - 2, at) - 1);
+    const mC = 100 * (s.static.C.after / s.static.C.before - 1);
+    row("mix", eA.sub_scores.mix_flex, eC.sub_scores.mix_flex, mA, mC, "lower");
+    // exit: equipment share of the build cost
+    const xA = 100 * (A.cost.parts.storage + A.cost.parts.stations + A.cost.parts.robots) / A.cost.capex;
+    const xC = 100 * (C.cost.parts.storage + C.cost.parts.stations) / C.cost.capex;
+    row("exit", eA.sub_scores.exit_flex, eC.sub_scores.exit_flex, xA, xC, "lower");
+    return { rows: rows, volumeStep: 25, policy: inputs.layouts.A.put_away, lines_per_day: sc.lines_per_day };
+  }
+
+  return { SWEEPS, POLICIES, CLOSE, point, shock, mean, evidence };
 });

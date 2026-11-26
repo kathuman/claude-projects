@@ -143,6 +143,27 @@ Two buttons help fill the form:
 The site inputs travel in share links, checked against their definitions like every other input. Everything
 is in Spanish and Danish, including the six technologies' descriptions.
 
+**Evidence from the simulation (6.2).** The spec rates shelf-to-person (= WH-A) and manual (= WH-C) by expert
+judgement. For the comparison's current scenario, `experiments.evidence()` measures each dimension and asks
+whether the simulation points the same way as the experts. A row is "too close to call" when the two
+measurements are within 10% of each other.
+
+| Dimension | Experts (spec) | Simulation, WH-A vs WH-C (default scenario) | Verdict |
+|---|---|---|---|
+| Efficiency: labour | E 55 vs 15 | 167 vs 104 lines per picker-hour | ✓ agrees |
+| Efficiency: floor | E 55 vs 15 | 3.49 vs 5.17 locations per m² | ✗ disagrees |
+| Efficiency: cost | E 55 vs 15 | $359 vs $413 per 1,000 lines | ✓ agrees |
+| Volume flexibility | 75 vs 90 | +25.0% vs +23.2% a year for 25% more lines | ≈ too close |
+| Mix flexibility | 70 vs 95 | +3.7% vs +63.9% travel per line after a demand shift | ✗ disagrees |
+| Exit flexibility | 60 vs 100 | 58% vs 24% of the build cost in equipment | ✓ agrees |
+
+- **Density:** the spec's E bundles density with throughput. Manual shelving with 1.2 m aisles stores more
+  per m² than pods, which need robot aisles and spare slots.
+- **Mix flexibility:** the simulation can only move popularity between SKUs. The spec's mix flexibility also
+  covers new item sizes, which favours manual picking.
+- **What it is:** two technologies and one scenario, so this is evidence to weigh, not a calibration. The
+  expert points are never moved.
+
 The result is a screening recommendation, dated with the catalogue version, not an investment decision. The
 coordinates are expert judgement and uncalibrated, and costs are in EUR, as in the spec.
 
@@ -314,5 +335,5 @@ order data, at its own volume of 4,547 lines a day, it is $361 against $392–39
    - 6.0 ✅ Catalogue and screening engine: the spec's worked example, and parity with the spec's Python
    - 6.1 ✅ The Technology view: site inputs, the frontier map, the recommendation with its drivers,
      exclusions and boundary flag; "See it simulated" for shelf-to-person (WH-A) and manual (WH-C)
-   - 6.2 Evidence from the simulation: measured efficiency and flexibility indicators for WH-A and WH-C beside
-     the spec's expert points
+   - 6.2 ✅ Evidence from the simulation: each dimension measured for WH-A and WH-C against the spec's expert
+     ratings of shelf-to-person and manual

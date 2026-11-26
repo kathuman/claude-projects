@@ -73,7 +73,7 @@ for (const [lang, D] of Object.entries(DICTS)) {
   const empty = [].concat(Object.entries(D.H), Object.entries(D.T), Object.entries(D.C)).filter(([, v]) => !String(v).trim());
   check(lang + ": no translation is empty", !empty.length, empty.map((e) => e[0]).join(", "));
   // words that really are the same in the language; anything else equal to the English is untranslated
-  const SAME = { es: ["robot", "Pods", "Robots"], da: ["station", "Pause", "robot", "Status", "Pods", "Exit"] }[lang];
+  const SAME = { es: ["robot", "Pods", "Robots"], da: ["station", "Pause", "robot", "Status", "Pods", "Exit", "Dimension"] }[lang];
   const same = Object.entries(D.T).filter(([k, v]) => k === v && /[a-z]{4,}/i.test(k) && !/^(WH-|R = |\{)/.test(k) && SAME.indexOf(k) < 0);
   check(lang + ": no message is left in English", same.length === 0, same.map((e) => e[0]).join(" | "));
 }
