@@ -1,0 +1,30 @@
+name: HP 48 emulator tests
+
+# The Saturn CPU against hand-assembled programs and its own disassembler. The ROM test runs only where a
+# ROM is supplied (HP's copyrighted firmware is never in the repository), so here it is skipped.
+on:
+  push:
+    paths:
+      - 'hp48/**'
+      - '.github/workflows/hp48-ci.yml'
+  pull_request:
+    paths:
+      - 'hp48/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: for f in hp48/tests/*.test.js; do echo "== $f"; node "$f" || exit 1; done
+        shell: bash
+      - name: Syntax-check the scripts
+        run: for f in hp48/src/*.js; do node --check "$f"; done
+        shell: bash
+      - name: No ROM in the repository
+        run: test -z "$(git ls-files hp48 | grep -iE '\.rom$|gxrom|sxrom|/rom/')"

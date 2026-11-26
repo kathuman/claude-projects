@@ -1,0 +1,5 @@
+# The ROM is HP's copyrighted firmware: never commit it
+*.rom
+gxrom*
+sxrom*
+rom/
