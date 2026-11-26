@@ -14,8 +14,8 @@ The emulator targets the 48GX, revision R.
 |---|---|---|
 | 1 | Saturn CPU core and disassembler | ✅ |
 | 2 | Memory controller, I/O registers, timers, interrupts → the ROM boots | ✅ |
-| 3 | Display (131 × 64 LCD, annunciators) and keyboard, in the browser | next |
-| 4 | Memory kept between visits, loading programs, speed control, translations | |
+| 3 | Display (131 × 64 LCD, annunciators) and keyboard, in the browser | ✅ |
+| 4 | Memory kept between visits, loading programs, translations | next |
 
 ## Phase 1: the Saturn CPU
 
@@ -118,9 +118,53 @@ menu labels, then idles in the main loop. YES (line 1, bit 4) starts recovering 
 - **Mutation tests:** planted mistakes are all caught — instruction fetches counting in the CRC, a wrong module
   ID, timer 1 at twice its rate. The boot test catches the CRC mistake by itself.
 
+## Phase 3: the calculator in the browser
+
+[index.html](index.html) is the calculator. [src/app.js](src/app.js) runs the page:
+- **The ROM:** you load your own file (button or drag and drop). [src/romfile.js](src/romfile.js) accepts a
+  512 KB packed image or a 1 MB one-nibble-per-byte image, reads the revision, and explains why it refuses
+  anything else: a 48S/SX ROM, a 49G ROM, a file of another size. The ROM is kept in this browser's IndexedDB
+  so it is there on the next visit, and *Forget ROM* deletes it. It is never uploaded.
+- **The display:**
+  - the 131 × 64 LCD, drawn from the display registers, with the contrast the ROM sets
+  - the six annunciators: shifts, α, battery, busy, transmitting
+- **Running:** at the 48GX's own speed (3.69 MHz), 4× or as fast as the device can, with pause and restart.
+  The emulator itself runs about 16 million instructions a second in Node, so real speed costs little.
+- **The keyboard:** [src/keys.js](src/keys.js) has all 49 keys:
+  - each key's place in the key matrix (OUT line, IN bit), from MAME's BSD-licensed driver (facts only)
+  - the labels of what each key does: main, left-shifted, right-shifted and alpha
+  - the computer keys that press it
+
+  Click, touch or type. The drawing is this project's own, in the blueprint theme, with no HP marks.
+- **Holding keys down long enough:** a click can be shorter than the ROM's keyboard scan, so the Keypad holds
+  every key down for at least 60 ms of emulated time. Without it, quick clicks are lost: the keyboard test fails
+  5 checks.
+
+### How phase 3 is checked
+- **[tests/keys.test.js](tests/keys.test.js) (26 checks, no ROM):**
+  - the layout and matrix positions
+  - the alpha letters A–Z, once each
+  - the computer-key mapping
+  - the Keypad's minimum hold, in emulated time
+  - every ROM file layout, accepted or refused with its reason
+- **[tests/keyboard.test.js](tests/keyboard.test.js) (28 checks, real ROM, local only):** pairs of key sequences
+  that must leave identical screens, such as `2 ENTER 3 ×` and `6 ENTER`, `1 ENTER 2 ENTER ↰ ▶` (SWAP) and
+  `2 ENTER 1 ENTER`, or `1 0 0 ↱ yˣ` (LOG) and `2 ENTER`. A key wired to the wrong matrix position breaks them.
+  The test also checks that the shift and α annunciators light, that all 49 keys do something at the stack, and
+  that ON cancels the command line.
+- **The page in Chrome**, driven over the DevTools protocol:
+  - the ROM loaded through the file input
+  - NO pressed with F6, `1 ENTER 2 +` typed, `4 ×` clicked, giving 12
+  - the shift annunciator lit
+  - the ROM back from IndexedDB after a reload
+- **Mutation tests:** planted mistakes are all caught — two keys on one position, SIN wired as COS, 8 wired as
+  5, × wired as ÷, no minimum hold, an unpacked ROM packed high nibble first.
+
 ```bash
 node hp48/tests/saturn.test.js
 node hp48/tests/machine.test.js
+node hp48/tests/keys.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/boot.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/rom.test.js
+HP48_ROM=/path/to/gxrom-r node hp48/tests/keyboard.test.js
 ```
