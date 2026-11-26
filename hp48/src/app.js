@@ -1,17 +1,20 @@
 /*
  * app.js — the page: loads the ROM the user supplies (kept in this browser's
- * IndexedDB, never uploaded), runs the machine in step with real time, draws
- * the display and annunciators, and turns clicks, touches and computer keys
- * into key presses.
+ * IndexedDB, never uploaded), keeps the calculator between visits, runs the
+ * machine in step with real time, draws the display and annunciators, turns
+ * clicks, touches and computer keys into key presses, and types programs.
  */
 (function () {
   "use strict";
-  const { Machine, Keys, RomFile } = window.HP48;
-  const VERSION = "0.3.0";
+  const { Machine, Keys, RomFile, Typer } = window.HP48;
+  const I = window.ESi18n || { T: (s, v) => String(s).replace(/\{(\w+)\}/g, (m, k) => (v && v[k] != null ? v[k] : m)), locale: "en-US" };
+  const T = I.T;
+  const VERSION = "0.4.0";
   const CLOCK = Machine.CLOCK;
   const $ = (id) => document.getElementById(id);
+  const say = (id, text, kind) => { const el = $(id); el.textContent = text; el.classList.toggle("err", kind === "err"); el.classList.toggle("ok", kind === "ok"); };
 
-  // ------------------------------------------------------------ ROM storage (this browser only)
+  // ------------------------------------------------------------ storage (this browser only)
   const DB = "hp48-emulator", STORE = "files";
   function db() {
     return new Promise((ok, fail) => {
@@ -27,39 +30,61 @@
       tx.oncomplete = () => ok(req && req.result); tx.onerror = () => fail(tx.error);
     });
   }
-  const saveRom = (bytes) => dbOp("readwrite", (s) => s.put(bytes, "rom")).catch(() => {});
-  const readRom = () => dbOp("readonly", (s) => s.get("rom")).catch(() => null);
-  const forgetRom = () => dbOp("readwrite", (s) => s.delete("rom")).catch(() => {});
+  const put = (k, v) => dbOp("readwrite", (s) => s.put(v, k)).catch(() => {});
+  const get = (k) => dbOp("readonly", (s) => s.get(k)).catch(() => null);
+  const del = (k) => dbOp("readwrite", (s) => s.delete(k)).catch(() => {});
 
   // ------------------------------------------------------------ state
-  let rom = null, m = null, pad = null, running = false, speed = 1, error = null;
+  let rom = null, m = null, pad = null, running = false, speed = 1, error = null, typist = null;
+  const ENABLE = ["btnPause", "btnReset", "btnForget", "btnSave", "btnOpen", "btnType"];
 
-  function start(bytes) {
-    rom = bytes; m = new Machine(bytes); pad = new Keys.Keypad(m); error = null; running = true;
+  // a machine for this ROM: carried on from the snapshot kept in this browser, if there is one
+  async function start(bytes, fresh) {
+    rom = bytes; m = new Machine(bytes); pad = new Keys.Keypad(m); error = null; running = true; typist = null;
+    let resumed = false;
+    if (!fresh) {
+      const kept = await get("state");
+      if (kept && kept.snapshot && kept.snapshot.rom === m.romId()) {
+        try { m.restore(kept.snapshot); m.elapse((Date.now() - kept.savedAt) / 1000); resumed = true; }
+        catch (e) { m = new Machine(bytes); pad = new Keys.Keypad(m); }
+      }
+    }
     $("norom").hidden = true;
-    ["btnPause", "btnReset", "btnForget"].forEach((id) => { $(id).disabled = false; });
-    $("btnPause").textContent = "Pause";
+    ENABLE.forEach((id) => { $(id).disabled = false; });
+    $("btnPause").textContent = T("Pause");
+    say("memStatus", resumed ? T("Carried on from your last visit.") : "");
+    lastSave = performance.now();
     status();
   }
-  async function accept(buf, remember) {
+  async function acceptRom(buf, remember) {
     const r = RomFile.load(new Uint8Array(buf));
-    if (r.error) { $("romStatus").textContent = r.error; $("romStatus").classList.add("err"); return; }
-    $("romStatus").classList.remove("err");
-    $("romStatus").textContent = "48GX ROM, revision " + r.revision + ", kept in this browser.";
-    if (remember) await saveRom(r.bytes);
-    start(r.bytes);
+    if (r.error) { say("romStatus", T(r.errorKey, r.vars), "err"); return; }
+    say("romStatus", T("48GX ROM, revision {r}, kept in this browser.", { r: r.revision }));
+    if (remember) await put("rom", r.bytes);
+    await start(r.bytes, false);
   }
+
+  // keeping the calculator: every few seconds while it runs, and when the page is hidden or closed
+  let lastSave = 0;
+  function save() {
+    if (!m || error) return;
+    put("state", { snapshot: m.snapshot(), savedAt: Date.now() });
+    lastSave = performance.now();
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(); });
+  window.addEventListener("pagehide", save);
 
   // ------------------------------------------------------------ the display
   const lcd = $("lcd"), g = lcd.getContext("2d"), img = g.createImageData(131, 64);
   const annun = Array.from($("annun").children);
   const LCD_BG = [0xb9, 0xc9, 0xb2], LCD_INK = [0x17, 0x24, 0x1c];
   let lastFrame = "";
+  function blank() { g.fillStyle = "rgb(185,201,178)"; g.fillRect(0, 0, 131, 64); lastFrame = ""; annun.forEach((s) => s.classList.remove("on")); }
   function draw() {
     if (!m) return;
     const d = m.display();
     const rows = d.on ? m.pixels() : null;
-    // contrast: the ROM's default is about 9–12; darker as it rises
+    // contrast: the ROM's default is about 9–14; darker as it rises
     const a = Math.max(0.15, Math.min(1, (d.contrast - 2) / 12));
     const ink = LCD_INK.map((c, i) => Math.round(LCD_BG[i] + (c - LCD_BG[i]) * a));
     let key = d.on + ":" + d.contrast;
@@ -83,7 +108,14 @@
     const dt = Math.min(100, now - last); last = now;
     if (m && running && !error) {
       try {
-        if (speed > 0) {
+        if (typist) {
+          // typing runs as fast as the device allows
+          const until = performance.now() + 14;
+          let done = false;
+          while (!done && performance.now() < until) done = typist.advance(CLOCK / 200);
+          say("typeStatus", T("Typing… {p}%", { p: Math.round(typist.progress() * 100) }));
+          if (done) endTyping(true);
+        } else if (speed > 0) {
           let cycles = dt / 1000 * CLOCK * speed;
           while (cycles > 0) { const c = Math.min(cycles, CLOCK / 500); m.run(c); pad.update(); cycles -= c; }
         } else {
@@ -91,9 +123,10 @@
           while (performance.now() < until) { m.run(CLOCK / 500); pad.update(); }
         }
         const took = performance.now() - now;
-        slowFrames = took > dt && speed > 0 ? slowFrames + 1 : 0;
+        slowFrames = took > dt && speed > 0 && !typist ? slowFrames + 1 : 0;
+        if (performance.now() - lastSave > 5000) save();
       } catch (e) {
-        error = e.message; running = false; status();
+        error = e.message; running = false; typist = null; status();
       }
     }
     draw();
@@ -101,13 +134,11 @@
     requestAnimationFrame(frame);
   }
   function status() {
-    const s = $("runStatus");
-    s.classList.toggle("err", !!error);
-    if (error) s.textContent = "Stopped: " + error + ". Restart to try again.";
-    else if (!m) s.textContent = "";
-    else if (!running) s.textContent = "Paused.";
-    else if (slowFrames >= 30) s.textContent = "This device can't keep up with real speed.";
-    else s.textContent = speed === 1 ? "Running at the 48GX's speed (3.69 MHz)." : speed > 1 ? "Running at " + speed + "× speed." : "Running as fast as this device can.";
+    if (error) say("runStatus", T("Stopped: {e}. Restart to try again.", { e: error }), "err");
+    else if (!m) say("runStatus", "");
+    else if (!running) say("runStatus", T("Paused."));
+    else if (slowFrames >= 30) say("runStatus", T("This device can't keep up with real speed."));
+    else say("runStatus", speed === 1 ? T("Running at the 48GX's speed (3.69 MHz).") : speed > 1 ? T("Running at {s}× speed.", { s: speed }) : T("Running as fast as this device can."));
   }
 
   // ------------------------------------------------------------ the keyboard
@@ -122,13 +153,13 @@
         el.className = "key" + (k.id === "ENTER" ? " wide" : "");
         el.dataset.id = k.id;
         const label = k.main || "";
-        const title = [label || "menu key " + k.id, k.ls && "left shift: " + k.ls, k.rs && "right shift: " + k.rs, k.a && "alpha: " + k.a].filter(Boolean).join(" · ");
+        const title = [label || T("menu key {k}", { k: k.id }), k.ls && T("left shift: {f}", { f: k.ls }), k.rs && T("right shift: {f}", { f: k.rs }), k.a && T("alpha: {f}", { f: k.a })].filter(Boolean).join(" · ");
         el.innerHTML = '<div class="shift"><span class="ls"></span><span class="rs"></span></div><div class="capline"><button type="button"></button><span class="alpha"></span></div>';
         el.querySelector(".ls").textContent = k.ls; el.querySelector(".rs").textContent = k.rs;
         el.querySelector(".alpha").textContent = r === 0 ? "" : k.a;
         const b = el.querySelector("button");
         b.textContent = label; b.setAttribute("aria-label", title); b.title = title;
-        const down = (e) => { e.preventDefault(); if (!pad) return; b.setPointerCapture && e.pointerId !== undefined && b.setPointerCapture(e.pointerId); pad.press(k); b.classList.add("down"); };
+        const down = (e) => { e.preventDefault(); if (!pad || typist) return; if (b.setPointerCapture && e.pointerId !== undefined) b.setPointerCapture(e.pointerId); pad.press(k); b.classList.add("down"); };
         const up = () => { if (!pad) return; pad.release(k); b.classList.remove("down"); };
         b.addEventListener("pointerdown", down);
         b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
@@ -138,52 +169,116 @@
       box.appendChild(div);
     });
   }
+  // keys typed into the page's own fields stay there; the hidden file inputs keep focus after loading, so they don't count
+  const typingInField = (e) => e.target.closest && e.target.closest("select, textarea, input:not([type=file]):not([type=checkbox])");
   document.addEventListener("keydown", (e) => {
-    if (!pad || (e.target.closest && e.target.closest("select, textarea, input:not([type=file])"))) return;
+    if (!pad || typist || typingInField(e)) return;
     const k = Keys.fromEvent(e); if (!k) return;
     e.preventDefault();
     if (e.repeat) return;
     pad.press(k); keyEls[k.id].classList.add("down");
   });
   document.addEventListener("keyup", (e) => {
-    if (!pad) return;
+    if (!pad || typingInField(e)) return;
     const k = Keys.fromEvent(e); if (!k) return;
     e.preventDefault(); pad.release(k); keyEls[k.id].classList.remove("down");
   });
   window.addEventListener("blur", () => { if (pad) pad.releaseAll(); Object.values(keyEls).forEach((b) => b.classList.remove("down")); });
 
-  // ------------------------------------------------------------ controls
+  // ------------------------------------------------------------ typing programs
+  function typeText(text) {
+    if (!m || typist) return;
+    const p = Typer.plan(text, { enter: $("typeEnter").checked });
+    if (p.chars === 0) { say("typeStatus", T("Nothing to type."), "err"); return; }
+    pad.releaseAll();
+    typist = new Typer.Typist(m, pad, Keys.byId, p.keys);
+    typist.unsupported = p.unsupported;
+    if (!running) { running = true; $("btnPause").textContent = T("Pause"); status(); }
+    $("btnType").hidden = true; $("btnStopType").hidden = false;
+  }
+  function endTyping(finished) {
+    const u = typist ? typist.unsupported : [];
+    typist = null; pad.releaseAll();
+    $("btnType").hidden = false; $("btnStopType").hidden = true;
+    if (!finished) say("typeStatus", T("Stopped."));
+    else if (u.length) say("typeStatus", T("Typed, but the 48GX keyboard has no key for: {c}. Those were left out.", { c: u.join(" ") }), "err");
+    else say("typeStatus", T("Typed."), "ok");
+    save();
+  }
+  $("btnType").onclick = () => typeText($("typeText").value);
+  $("btnStopType").onclick = () => endTyping(false);
+
+  // ------------------------------------------------------------ saving and opening the calculator as a file
+  $("btnSave").onclick = () => {
+    if (!m) return;
+    const data = JSON.stringify({ snapshot: m.snapshot(), savedAt: Date.now() });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    a.download = "hp48gx-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    say("memStatus", T("Saved. The file holds the calculator's memory, not the ROM."), "ok");
+  };
+  function openState(text) {
+    let data;
+    try { data = JSON.parse(text); } catch (e) { say("memStatus", T("That file isn't a saved calculator."), "err"); return; }
+    const snap = data && data.snapshot ? data.snapshot : data;
+    try {
+      const next = new Machine(rom); next.restore(snap);
+      if (data && data.savedAt) next.elapse((Date.now() - data.savedAt) / 1000);
+      m = next; pad = new Keys.Keypad(m); typist = null; error = null; running = true;
+      $("btnPause").textContent = T("Pause");
+      save(); status();
+      say("memStatus", T("Opened. The calculator carries on from the saved file."), "ok");
+    } catch (e) {
+      say("memStatus", /different ROM/.test(e.message) ? T("That file was saved with a different ROM.") : T("That file isn't a saved calculator."), "err");
+    }
+  }
+  $("btnOpen").onclick = () => { $("stateFile").value = ""; $("stateFile").click(); };
+  $("stateFile").onchange = async (e) => { const f = e.target.files[0]; if (f) openState(await f.text()); };
+
+  // ------------------------------------------------------------ files dropped or chosen: a ROM, a saved calculator, or text
+  async function acceptFile(f) {
+    const buf = await f.arrayBuffer(), b = new Uint8Array(buf);
+    const head = new TextDecoder("latin1").decode(b.subarray(0, 16));
+    if (/^HPHP4[89]-/.test(head)) { say("typeStatus", T("That is a binary HP 48 object. Loading those needs the calculator's serial port, which isn't emulated yet; a text (ASCII) version of the program can be typed."), "err"); return; }
+    if ([262144, 524288, 1048576].indexOf(b.length) >= 0 || !rom) { acceptRom(buf, true); return; }
+    const text = new TextDecoder("utf-8").decode(b);
+    if (/"format"\s*:\s*"hp48gx-state"/.test(text.slice(0, 200)) || /^\s*\{\s*"snapshot"/.test(text)) { openState(text); return; }
+    if (b.length > 200000) { say("typeStatus", T("That file is too large to type."), "err"); return; }
+    $("typeText").value = text;
+    say("typeStatus", T("The file's text is ready: press Type it."));
+  }
   function pick() { $("romFile").value = ""; $("romFile").click(); }
   $("btnLoad").onclick = pick; $("btnLoad2").onclick = pick;
-  $("romFile").onchange = async (e) => { const f = e.target.files[0]; if (f) accept(await f.arrayBuffer(), true); };
+  $("romFile").onchange = async (e) => { const f = e.target.files[0]; if (f) acceptRom(await f.arrayBuffer(), true); };
+  const calc = $("calc"), norom = $("norom");
+  calc.addEventListener("dragover", (e) => { e.preventDefault(); norom.classList.add("drag"); });
+  calc.addEventListener("dragleave", () => norom.classList.remove("drag"));
+  calc.addEventListener("drop", (e) => { e.preventDefault(); norom.classList.remove("drag"); const f = e.dataTransfer.files[0]; if (f) acceptFile(f); });
+
+  // ------------------------------------------------------------ controls
   $("btnForget").onclick = async () => {
-    await forgetRom(); m = pad = rom = null; running = false;
-    g.fillStyle = "rgb(185,201,178)"; g.fillRect(0, 0, 131, 64); lastFrame = "";
-    $("norom").hidden = false; $("romStatus").textContent = "No ROM loaded. The stored copy was deleted from this browser.";
-    ["btnPause", "btnReset", "btnForget"].forEach((id) => { $(id).disabled = true; });
-    status();
+    await del("rom"); await del("state"); m = pad = rom = typist = null; running = false;
+    blank();
+    $("norom").hidden = false; say("romStatus", T("No ROM loaded. The ROM and the calculator's memory were deleted from this browser."));
+    ENABLE.forEach((id) => { $(id).disabled = true; });
+    say("memStatus", ""); status();
   };
-  $("btnPause").onclick = () => { running = !running; $("btnPause").textContent = running ? "Pause" : "Run"; status(); };
-  $("btnReset").onclick = () => { if (rom) start(rom); };
+  $("btnPause").onclick = () => { running = !running; $("btnPause").textContent = running ? T("Pause") : T("Run"); if (!running) save(); status(); };
+  $("btnReset").onclick = () => { if (rom) { start(rom, true).then(save); say("memStatus", T("Restarted: memory is cleared.")); } };
   $("speed").onclick = (e) => {
     const b = e.target.closest("button"); if (!b) return;
     speed = +b.dataset.v; slowFrames = 0;
     Array.from($("speed").children).forEach((x) => x.classList.toggle("on", x === b));
     status();
   };
-  const calc = $("calc"), norom = $("norom");
-  calc.addEventListener("dragover", (e) => { e.preventDefault(); norom.classList.add("drag"); });
-  calc.addEventListener("dragleave", () => norom.classList.remove("drag"));
-  calc.addEventListener("drop", async (e) => {
-    e.preventDefault(); norom.classList.remove("drag");
-    const f = e.dataTransfer.files[0]; if (f) accept(await f.arrayBuffer(), true);
-  });
 
   // ------------------------------------------------------------ go
   $("ver").textContent = "v" + VERSION;
   buildKeys();
-  g.fillStyle = "rgb(185,201,178)"; g.fillRect(0, 0, 131, 64);
-  readRom().then((b) => { if (b) accept(b, false); });
+  blank();
+  get("rom").then((b) => { if (b) acceptRom(b, false); });
   requestAnimationFrame(frame);
-  window.HP48.app = { get machine() { return m; }, get pad() { return pad; } };   // for testing from the console
+  window.HP48.app = { get machine() { return m; }, get pad() { return pad; }, get typing() { return !!typist; }, save };   // for testing from the console
 })();

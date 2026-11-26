@@ -74,3 +74,8 @@ nav a { margin-left: 18px; text-decoration: none; }
 .help td:first-child { font-family: "IBM Plex Mono", monospace; color: var(--dim); }
 .small { font-size: 13px; color: var(--dim); }
 footer { text-align: center; color: var(--dim); font-size: 13px; padding: 20px; border-top: 1px solid var(--line); margin-top: 24px; }
+.topbar nav { display: flex; align-items: center; }
+.lang { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: 500 13px Barlow, sans-serif; padding: 3px 6px; }
+textarea { width: 100%; background: #041222; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: 13px/1.4 "IBM Plex Mono", monospace; padding: 6px 8px; margin: 6px 0; resize: vertical; }
+.check { font-size: 14px; color: var(--dim); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.status.ok { color: #86efac; }

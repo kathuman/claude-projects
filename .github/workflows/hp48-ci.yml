@@ -24,7 +24,7 @@ jobs:
       - run: for f in hp48/tests/*.test.js; do echo "== $f"; node "$f" || exit 1; done
         shell: bash
       - name: Syntax-check the scripts
-        run: for f in hp48/src/*.js; do node --check "$f"; done
+        run: for f in hp48/src/*.js hp48/i18n*.js; do node --check "$f"; done
         shell: bash
       - name: No ROM in the repository
         run: test -z "$(git ls-files hp48 | grep -iE '\.rom$|gxrom|sxrom|/rom/')"

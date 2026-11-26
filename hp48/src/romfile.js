@@ -26,23 +26,28 @@
     return s;
   }
 
-  // → { bytes, revision } or { error }
+  // a refusal: the message in English, and its template and values for translation
+  function refuse(key, vars) {
+    return { error: key.replace(/\{(\w+)\}/g, function (m, k) { return vars && vars[k] != null ? vars[k] : m; }), errorKey: key, vars: vars || {} };
+  }
+
+  // → { bytes, revision } or { error, errorKey, vars }
   function load(input) {
     let b = input instanceof Uint8Array ? input : new Uint8Array(input);
     if (b.length === SIZE * 2) {
       let unpacked = true;
       for (let i = 0; i < b.length; i++) if (b[i] > 15) { unpacked = false; break; }
-      if (!unpacked) return { error: "This file is 1 MB but not one nibble per byte. It may be an HP 49G ROM; this emulator runs the 48GX." };
+      if (!unpacked) return refuse("This file is 1 MB but not one nibble per byte. It may be an HP 49G ROM; this emulator runs the 48GX.");
       const p = new Uint8Array(SIZE);
       for (let i = 0; i < SIZE; i++) p[i] = b[2 * i] | (b[2 * i + 1] << 4);
       b = p;
     } else if (b.length === SIZE / 2) {
-      return { error: "This file is 256 KB, the size of an HP 48S/SX ROM. This emulator runs the 48G/GX (512 KB)." };
+      return refuse("This file is 256 KB, the size of an HP 48S/SX ROM. This emulator runs the 48G/GX (512 KB).");
     } else if (b.length !== SIZE) {
-      return { error: "This file is " + b.length.toLocaleString("en") + " bytes. A 48GX ROM is 512 KB (524,288 bytes)." };
+      return refuse("This file is {n} bytes. A 48GX ROM is 512 KB (524,288 bytes).", { n: b.length.toLocaleString("en") });
     }
     const v = text(b, VERSION_AT, 14);
-    if (!/^Version HP48-[A-Z]$/.test(v)) return { error: "This 512 KB file doesn't identify itself as an HP 48 ROM (no \"Version HP48-x\" where the 48GX keeps it)." };
+    if (!/^Version HP48-[A-Z]$/.test(v)) return refuse("This 512 KB file doesn't identify itself as an HP 48 ROM (no \"Version HP48-x\" where the 48GX keeps it).");
     return { bytes: b, revision: v.slice(-1) };
   }
 

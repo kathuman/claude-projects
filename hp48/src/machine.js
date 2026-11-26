@@ -274,6 +274,72 @@
     return rows;
   };
 
+  // ---------------------------------------------------------------- keeping the calculator between visits
+  // A snapshot is everything that changes: the CPU, RAM, I/O, the memory map,
+  // the timers. Plain JSON (hex strings), so it can be stored or saved to a
+  // file. It names the ROM it was taken with, by checksum.
+  const hex = function (a) { let s = ""; for (let i = 0; i < a.length; i++) s += a[i].toString(16); return s; };
+  const unhex = function (s, n) { if (s.length !== n || /[^0-9a-f]/.test(s)) throw new Error("damaged snapshot"); const a = new Uint8Array(n); for (let i = 0; i < n; i++) a[i] = parseInt(s[i], 16); return a; };
+  Machine.prototype.romId = function () {
+    if (this._romId) return this._romId;
+    let h = 0x811c9dc5;                                            // FNV-1a over the ROM's nibbles
+    for (let i = 0; i < this.rom.length; i++) { h ^= this.rom[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+    return (this._romId = h.toString(16).padStart(8, "0"));
+  };
+  Machine.prototype.snapshot = function () {
+    const c = this.cpu;
+    return {
+      format: "hp48gx-state", version: 1, rom: this.romId(),
+      cpu: {
+        A: hex(c.A), B: hex(c.B), C: hex(c.C), D: hex(c.D), R: c.R.map(hex),
+        D0: c.D0, D1: c.D1, PC: c.PC, P: c.P, ST: c.ST, HST: c.HST, carry: c.carry, hex: c.hex,
+        RSTK: c.RSTK.slice(), IN: c.IN, OUT: c.OUT, intEnabled: c.intEnabled, inInterrupt: c.inInterrupt,
+        intPending: c.intPending, pendingNmi: c.pendingNmi, shutdown: c.shutdown, cycles: c.cycles
+      },
+      io: hex(this.io), ram: hex(this.ram),
+      mod: this.mod.map(function (x) { return { state: x.state, mask: x.mask, base: x.base }; }),
+      crc: this.crc, t1: this.t1, t2: this.t2, t2acc: this.t2acc, t2ticks: this.t2ticks,
+      bank: this.bank, outLines: this.outLines, time: this.time
+    };
+  };
+  // restore a snapshot (throws if it is damaged or from another ROM); every key is released
+  Machine.prototype.restore = function (s) {
+    if (!s || s.format !== "hp48gx-state" || s.version !== 1) throw new Error("not an HP 48GX state");
+    if (s.rom !== this.romId()) throw new Error("this state was saved with a different ROM");
+    const c = this.cpu, k = s.cpu, r16 = function (x) { return unhex(x, 16); };
+    const ram = unhex(s.ram, RAM_NIBBLES), io = unhex(s.io, 64), regs = [k.A, k.B, k.C, k.D].map(r16), R = k.R.map(r16);
+    if (R.length !== 5 || !Array.isArray(k.RSTK) || k.RSTK.length > 8 || !Array.isArray(s.mod) || s.mod.length !== 5) throw new Error("damaged snapshot");
+    c.A.set(regs[0]); c.B.set(regs[1]); c.C.set(regs[2]); c.D.set(regs[3]);
+    for (let i = 0; i < 5; i++) c.R[i].set(R[i]);
+    ["D0", "D1", "PC", "P", "ST", "HST", "carry", "hex", "IN", "OUT", "intEnabled", "inInterrupt", "intPending", "pendingNmi", "shutdown", "cycles"]
+      .forEach(function (f) { c[f] = k[f]; });
+    c.RSTK = k.RSTK.slice();
+    this.ram.set(ram); this.io.set(io);
+    this.mod = s.mod.map(function (x) { return { state: x.state, mask: x.mask, base: x.base }; });
+    this.crc = s.crc; this.t1 = s.t1; this.t2 = s.t2 >>> 0; this.t2acc = s.t2acc; this.t2ticks = s.t2ticks;
+    this.bank = s.bank; this.outLines = s.outLines; this.time = s.time;
+    this.keys.fill(0); this.on = false;
+    this.remap();
+  };
+  // Time passes while the page is closed: the timers count on, as they do in a
+  // calculator that is switched off, so its clock stays right. A count that
+  // passes zero raises its service request (and wakes the CPU) as it would have.
+  Machine.prototype.elapse = function (seconds) {
+    if (!(seconds > 0) || !(this.io[0x2f] & 1)) return;
+    const ticks = Math.floor(seconds * 8192);
+    const before = this.t2;
+    this.t2 = (this.t2 - ticks) >>> 0;
+    if (ticks > before) this.timerCarry(0x2f);
+    const t1ticks = Math.floor((this.t2ticks % 512 + ticks) / 512);
+    this.t2ticks += ticks;
+    if (t1ticks > 0) {
+      const b1 = this.t1;
+      this.t1 = ((this.t1 - t1ticks) % 16 + 16) % 16;
+      if (t1ticks > b1) this.timerCarry(0x2e);
+    }
+    this.time += ticks * T2_PERIOD;
+  };
+
   Machine.CLOCK = CLOCK; Machine.ON_BIT = ON_BIT;
   return Machine;
 });

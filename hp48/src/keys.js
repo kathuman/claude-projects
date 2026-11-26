@@ -70,6 +70,7 @@
       if (d.release && this.m.time - d.t >= MIN_HOLD) { this.m.key(d.k.line, d.k.bit, false); delete this.down[id]; }
     }
   };
+  Keypad.MIN_HOLD = MIN_HOLD;
   Keypad.prototype.isDown = function (k) { return !!this.down[k.id]; };
   Keypad.prototype.releaseAll = function () { for (const id in this.down) this.down[id].release = true; this.update(); };
 

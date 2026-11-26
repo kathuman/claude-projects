@@ -3,81 +3,106 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HP 48 Emulator</title>
-  <meta name="description" content="An HP 48GX emulator for the browser, built from the Saturn CPU up. It runs your own ROM, which never leaves your device." />
+  <title data-i18n="title">HP 48 Emulator</title>
+  <meta data-i18n-attr="content=meta" name="description" content="An HP 48GX emulator for the browser, built from the Saturn CPU up. It runs your own ROM, which never leaves your device." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2222%22 y=%228%22 width=%2256%22 height=%2284%22 rx=%228%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%227%22/><rect x=%2232%22 y=%2218%22 width=%2236%22 height=%2220%22 fill=%22%23ffcf4a%22/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="style.css?v=0.3.0">
+  <link rel="stylesheet" href="style.css?v=0.4.0">
 </head>
 <body>
 <header class="topbar">
-  <div class="mark">HP 48 <span>Emulator</span> <small id="ver"></small></div>
+  <div class="mark">HP 48 <span data-i18n="brand">Emulator</span> <small id="ver"></small></div>
   <nav>
-    <a href="about.html">About</a>
-    <a href="../">← All projects</a>
+    <select class="lang" id="langSel" aria-label="Language"></select>
+    <a href="about.html" data-i18n="nav.about">About</a>
+    <a href="../" data-i18n="nav.projects">← All projects</a>
   </nav>
 </header>
 
 <main class="layout">
-  <section class="calc" id="calc" aria-label="Calculator">
+  <section class="calc" id="calc" data-i18n-attr="aria-label=calc" aria-label="Calculator">
     <div class="screen-wrap">
-      <div class="annun" id="annun" aria-label="Annunciators">
-        <span data-bit="0" title="Left shift">↰</span><span data-bit="1" title="Right shift">↱</span><span data-bit="2" title="Alpha">α</span>
-        <span data-bit="3" title="Low battery">▭</span><span data-bit="4" title="Busy">⧗</span><span data-bit="5" title="Transmitting">⇄</span>
+      <div class="annun" id="annun" data-i18n-attr="aria-label=annun" aria-label="Annunciators">
+        <span data-bit="0" data-i18n-attr="title=ann.ls" title="Left shift">↰</span><span data-bit="1" data-i18n-attr="title=ann.rs" title="Right shift">↱</span><span data-bit="2" data-i18n-attr="title=ann.alpha" title="Alpha">α</span>
+        <span data-bit="3" data-i18n-attr="title=ann.bat" title="Low battery">▭</span><span data-bit="4" data-i18n-attr="title=ann.busy" title="Busy">⧗</span><span data-bit="5" data-i18n-attr="title=ann.io" title="Transmitting">⇄</span>
       </div>
-      <canvas id="lcd" width="131" height="64" aria-label="Display"></canvas>
+      <canvas id="lcd" width="131" height="64" data-i18n-attr="aria-label=lcd" aria-label="Display"></canvas>
       <div class="norom" id="norom">
-        <p><strong>Load your 48GX ROM to start.</strong></p>
-        <p>Drop the file here, or <button class="btn primary" id="btnLoad2">choose a file</button></p>
-        <p class="small">It stays in this browser and is never uploaded.</p>
+        <p><strong data-i18n="norom.h">Load your 48GX ROM to start.</strong></p>
+        <p><span data-i18n="norom.drop">Drop the file here, or</span> <button class="btn primary" id="btnLoad2" data-i18n="norom.choose">choose a file</button></p>
+        <p class="small" data-i18n="norom.private">It stays in this browser and is never uploaded.</p>
       </div>
     </div>
     <div class="keys" id="keys"></div>
   </section>
 
   <aside class="side">
-    <h2>ROM</h2>
-    <p id="romStatus" class="status">No ROM loaded.</p>
+    <h2 data-i18n="h.rom">ROM</h2>
+    <p id="romStatus" class="status" data-i18n="rom.none">No ROM loaded.</p>
     <div class="row">
-      <button class="btn" id="btnLoad">Load ROM…</button>
-      <button class="btn" id="btnForget" disabled>Forget ROM</button>
+      <button class="btn" id="btnLoad" data-i18n="rom.load">Load ROM…</button>
+      <button class="btn" id="btnForget" disabled data-i18n="rom.forget">Forget ROM</button>
       <input type="file" id="romFile" hidden />
     </div>
 
-    <h2>Run</h2>
+    <h2 data-i18n="h.run">Run</h2>
     <div class="row">
-      <button class="btn" id="btnPause" disabled>Pause</button>
-      <button class="btn" id="btnReset" disabled title="Power the machine on again from scratch: memory is lost">Restart</button>
+      <button class="btn" id="btnPause" disabled data-i18n="run.pause">Pause</button>
+      <button class="btn" id="btnReset" disabled data-i18n="run.restart" data-i18n-attr="title=run.restart.tip" title="Power the machine on again from scratch: memory is lost">Restart</button>
     </div>
-    <div class="seg" id="speed" role="group" aria-label="Speed">
-      <button data-v="1" class="on">Real speed</button><button data-v="4">4×</button><button data-v="0">As fast as possible</button>
+    <div class="seg" id="speed" role="group" data-i18n-attr="aria-label=run.speed" aria-label="Speed">
+      <button data-v="1" class="on" data-i18n="run.real">Real speed</button><button data-v="4">4×</button><button data-v="0" data-i18n="run.max">As fast as possible</button>
     </div>
     <p class="status" id="runStatus"></p>
 
-    <h2>Computer keyboard</h2>
+    <h2 data-i18n="h.memory">Memory</h2>
+    <p class="small" data-i18n="mem.text">The calculator is kept in this browser and carries on where you left it, with its clock still right. Save it to a file to keep a copy or move it to another computer.</p>
+    <div class="row">
+      <button class="btn" id="btnSave" disabled data-i18n="mem.save">Save to file</button>
+      <button class="btn" id="btnOpen" disabled data-i18n="mem.open">Open a saved file…</button>
+      <input type="file" id="stateFile" accept=".json,application/json" hidden />
+    </div>
+    <p class="status" id="memStatus"></p>
+
+    <h2 data-i18n="h.type">Type a program</h2>
+    <p class="small" data-i18n="type.text">Paste a program or any text and the calculator types it on its own keyboard, into its command line. Plain text («, », → …) and HP's ASCII transfer format (\&lt;&lt; \-&gt; …) both work. You can also drop a text file on the calculator.</p>
+    <textarea id="typeText" rows="5" spellcheck="false" placeholder="« → x 'x^2' »"></textarea>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="typeEnter" checked /> <span data-i18n="type.enter">Press ENTER after</span></label>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="btnType" disabled data-i18n="type.go">Type it</button>
+      <button class="btn" id="btnStopType" hidden data-i18n="type.stop">Stop typing</button>
+    </div>
+    <p class="status" id="typeStatus"></p>
+
+    <h2 data-i18n="h.keys">Computer keyboard</h2>
     <table class="help">
-      <tr><td>0–9 . + − * /</td><td>the same keys</td></tr>
+      <tr><td>0–9 . + − * /</td><td data-i18n="k.same">the same keys</td></tr>
       <tr><td>Enter, Backspace, Delete</td><td>ENTER, ⇦, DEL</td></tr>
-      <tr><td>Arrow keys</td><td>▲ ▼ ◀ ▶</td></tr>
-      <tr><td>F1–F6</td><td>the menu keys</td></tr>
-      <tr><td>[ and ]</td><td>left and right shift</td></tr>
-      <tr><td>Tab</td><td>α (then letters type letters)</td></tr>
+      <tr><td data-i18n="k.arrows">Arrow keys</td><td>▲ ▼ ◀ ▶</td></tr>
+      <tr><td>F1–F6</td><td data-i18n="k.menu">the menu keys</td></tr>
+      <tr><td>[ ]</td><td data-i18n="k.shifts">left and right shift</td></tr>
+      <tr><td>Tab</td><td data-i18n="k.alpha">α (then letters type letters)</td></tr>
       <tr><td>Space, '</td><td>SPC, '</td></tr>
       <tr><td>Esc</td><td>ON / CANCEL</td></tr>
       <tr><td>PageDown</td><td>NXT</td></tr>
     </table>
-    <p class="small">On a fresh start the calculator asks <em>Try To Recover Memory?</em>: there is no saved memory yet, so press
-      the NO menu key (F6). Memory kept between visits comes in the next phase.</p>
+    <p class="small" data-i18n="first">The first time, the calculator asks <em>Try To Recover Memory?</em>: there is nothing to recover yet, so press the NO menu key (F6).</p>
   </aside>
 </main>
-<footer>Part of <a href="../">AI Projects</a> · Built with Claude · Not affiliated with HP: you supply the ROM</footer>
+<footer data-i18n="footer">Part of <a href="../">AI Projects</a> · Built with Claude · Not affiliated with HP: you supply the ROM</footer>
 
-<script src="src/saturn.js?v=0.3.0"></script>
-<script src="src/machine.js?v=0.3.0"></script>
-<script src="src/keys.js?v=0.3.0"></script>
-<script src="src/romfile.js?v=0.3.0"></script>
-<script src="src/app.js?v=0.3.0"></script>
+<script src="i18n-es.js?v=0.4.0"></script>
+<script src="i18n-da.js?v=0.4.0"></script>
+<script src="i18n.js?v=0.4.0"></script>
+<script src="src/saturn.js?v=0.4.0"></script>
+<script src="src/machine.js?v=0.4.0"></script>
+<script src="src/keys.js?v=0.4.0"></script>
+<script src="src/romfile.js?v=0.4.0"></script>
+<script src="src/typer.js?v=0.4.0"></script>
+<script src="src/app.js?v=0.4.0"></script>
 </body>
 </html>

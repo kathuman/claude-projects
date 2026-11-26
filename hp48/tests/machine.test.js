@@ -183,4 +183,32 @@ function standard(m) { m.config(0x100); m.config(0xc0000); m.config(0x80000); re
   check("the line counter runs 63 → 0", (() => { z.time = 0; const a = z.linesLeft(); z.time = Machine.CLOCK / 4096 * 10; return a === 63 && z.linesLeft() === 53; })());
 }
 
+// ---------------------------------------------------------------- snapshots and time away
+{
+  const a = standard(fresh());
+  a.write(0x80010, 7); a.cpu.A[3] = 9; a.cpu.RSTK = [0x123, 0x456]; a.cpu.PC = 0x1234; a.io[0x2f] = 1; a.t2 = 1000; a.t1 = 5;
+  const s = JSON.parse(JSON.stringify(a.snapshot()));
+  const b = fresh(); b.restore(s);
+  check("a snapshot restores RAM, registers, return stack, memory map and timers",
+    b.read(0x80010) === 7 && b.cpu.A[3] === 9 && b.cpu.RSTK.join() === "291,1110" && b.cpu.PC === 0x1234 && b.ioBase === 0x100 && b.t2 === 1000 && b.t1 === 5);
+  check("…and is plain JSON naming its ROM", typeof s.ram === "string" && s.rom === a.romId() && s.format === "hp48gx-state");
+  b.key(3, 3, true);
+  const c = fresh(); c.key(2, 1, true); c.restore(s);
+  check("restoring releases every key", c.keys.every((v) => v === 0) && !c.on);
+  const bad = (f) => { const x = JSON.parse(JSON.stringify(s)); f(x); try { fresh().restore(x); return ""; } catch (e) { return e.message; } };
+  check("a damaged snapshot is refused (RAM cut short, a bad nibble, wrong format)",
+    /damaged/.test(bad((x) => { x.ram = x.ram.slice(1); })) && /damaged/.test(bad((x) => { x.io = "g" + x.io.slice(1); })) && /not an HP 48GX/.test(bad((x) => { x.format = "x"; })));
+  check("a snapshot from another ROM is refused", /different ROM/.test(bad((x) => { x.rom = "00000000"; })));
+}
+{
+  const m = standard(fresh()); m.io[0x2f] = 1; m.t2 = 100000; m.t1 = 5; m.t2ticks = 0;
+  m.elapse(10);
+  check("time away: timer 2 counts 8192 a second", m.t2 === 100000 - 81920 && (m.io[0x2f] & 8) === 0);
+  check("…and timer 1 sixteen a second, wrapping and raising its service request", m.t1 === ((5 - 160) % 16 + 16) % 16 && (m.io[0x2e] & 8) === 8);
+  m.io[0x2f] = 1 | 4; m.cpu.shutdown = true; m.elapse(100);
+  check("a timer 2 count passing zero raises its service request and wakes the CPU", (m.io[0x2f] & 8) === 8 && m.cpu.shutdown === false);
+  const n = standard(fresh()); n.io[0x2f] = 0; n.t2 = 5; n.elapse(100);
+  check("with the timers stopped, time away changes nothing", n.t2 === 5);
+}
+
 summary("machine");

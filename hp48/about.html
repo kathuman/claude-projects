@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About — HP 48 Emulator</title>
-  <meta name="description" content="An HP 48GX emulator for the browser, written from the Saturn CPU documentation. It runs your own ROM, which never leaves your device." />
+  <title data-i18n="a.title">About — HP 48 Emulator</title>
+  <meta data-i18n-attr="content=a.meta" name="description" content="An HP 48GX emulator for the browser, written from the Saturn CPU documentation. It runs your own ROM, which never leaves your device." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2222%22 y=%228%22 width=%2256%22 height=%2284%22 rx=%228%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%227%22/><rect x=%2232%22 y=%2218%22 width=%2236%22 height=%2220%22 fill=%22%23ffcf4a%22/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,41 +28,63 @@
     td:first-child { font-family: "IBM Plex Mono", monospace; color: var(--dim); width: 2.5em; }
     td:last-child { white-space: nowrap; }
     .note { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--amber); padding: 12px 16px; border-radius: 4px; }
+    .lang { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; font: 500 13px Barlow, sans-serif; padding: 3px 6px; margin-right: 12px; }
+    nav { display: flex; align-items: center; gap: 14px; }
     footer { text-align: center; color: var(--dim); font-size: 14px; padding: 24px; border-top: 1px solid var(--line); }
   </style>
 </head>
 <body>
 <header>
-  <div class="mark">HP 48 <span>Emulator</span></div>
-  <nav><a href="./">The calculator</a> &nbsp; <a href="../">← All projects</a></nav>
+  <div class="mark">HP 48 <span data-i18n="brand">Emulator</span></div>
+  <nav><select class="lang" id="langSel" aria-label="Language"></select><a href="./" data-i18n="a.calc">The calculator</a><a href="../" data-i18n="nav.projects">← All projects</a></nav>
 </header>
 <main>
-    <h1>An HP 48GX, emulated from its CPU up</h1>
-  <p>This emulator rebuilds the 48GX's hardware in JavaScript: the Saturn CPU, the memory controller, the timers,
+  <h1 data-i18n="a.h1">An HP 48GX, emulated from its CPU up</h1>
+  <p data-i18n="a.intro">This emulator rebuilds the 48GX's hardware in JavaScript: the Saturn CPU, the memory controller, the timers,
     the display and the keyboard. It then runs the calculator's own firmware. The CPU is written from the Saturn
     documentation, not copied from another emulator. It is checked against a separate disassembler and against
     the real ROM.</p>
 
-  <h2>Progress</h2>
+  <h2 data-i18n="a.h.progress">Progress</h2>
   <table>
-    <tr><td>1</td><td>Saturn CPU core and disassembler</td><td>done</td></tr>
-    <tr><td>2</td><td>Memory controller, I/O registers, timers and interrupts. The real ROM boots to the stack.</td><td>done</td></tr>
-    <tr><td>3</td><td>The calculator in your browser: 131 × 64 display, annunciators, full keyboard</td><td>done</td></tr>
-    <tr><td>4</td><td>Memory kept between visits, loading programs, translations</td><td>next</td></tr>
+    <tr><td>1</td><td data-i18n="a.p1">Saturn CPU core and disassembler</td><td data-i18n="a.done">done</td></tr>
+    <tr><td>2</td><td data-i18n="a.p2">Memory controller, I/O registers, timers and interrupts. The real ROM boots to the stack.</td><td data-i18n="a.done">done</td></tr>
+    <tr><td>3</td><td data-i18n="a.p3">The calculator in your browser: 131 × 64 display, annunciators, full keyboard</td><td data-i18n="a.done">done</td></tr>
+    <tr><td>4</td><td data-i18n="a.p4">Memory kept between visits, typing programs, saving to a file, English, Spanish and Danish</td><td data-i18n="a.done">done</td></tr>
   </table>
 
-  <h2>You bring the ROM</h2>
-  <p class="note">The ROM is HP's copyrighted firmware, so it is not included and never will be. On <a href="./">the
+  <h2 data-i18n="a.h.rom">You bring the ROM</h2>
+  <p class="note" data-i18n="a.rom">The ROM is HP's copyrighted firmware, so it is not included and never will be. On <a href="./">the
     calculator page</a> you load a ROM file you own: dumped from your own calculator or obtained at your
     own discretion. It is kept in your browser, so it is there next time, and is never uploaded. <em>Forget ROM</em> deletes it. The emulator targets the 48GX, revision R.</p>
 
-  <h2>How it is checked</h2>
-  <p>About 240 automated checks cover every instruction family and the memory controller's configuration protocol.
-    They also cover the timers, the keyboard lines, the display registers and the key map. A fuzz test decodes 20,000 random
-    instructions with both the CPU and the disassembler. Boot tests run the real ROM locally and compare screens by
-    hash, and type pairs of key sequences that must leave the same screen. The real firmware exposed two mistakes the unit tests had shared, and both are fixed. Details are in the
+  <h2 data-i18n="a.h.memory">The calculator between visits</h2>
+  <p data-i18n="a.memory">Everything the calculator holds (its memory, its registers, its timers) is saved in your browser every few
+    seconds and when you leave. Next time it carries on from exactly where it was. Its timers count the time you were away,
+    as a real one does while switched off, so its clock stays right. You can also save the calculator to a file and
+    open it again later or on another computer. The file holds the calculator's memory, never the ROM.</p>
+
+  <h2 data-i18n="a.h.typing">How programs are typed</h2>
+  <p data-i18n="a.typing">Paste a program and the calculator types it on its own keyboard, so its own command line reads it, exactly as if
+    you had typed it by hand. Each character's keys were found by the real ROM itself: every key was pressed, plain and
+    shifted, and the result compared with what the ROM's <code>CHR</code> command gives for each character code. Brackets and
+    quotes are typed as a person types them: the pair key, then stepping over its partner. The typist also waits for the
+    calculator to be ready before each key, because a key pressed while it is still busy is not always read the same way.
+    A few characters have no key on the 48GX (such as <code>&amp;</code> and <code>;</code>); you are told which were left out.
+    Binary objects (files starting <code>HPHP48-</code>) need the serial port, which isn't emulated yet.</p>
+
+  <h2 data-i18n="a.h.checked">How it is checked</h2>
+  <p data-i18n="a.checked">About 300 automated checks cover every instruction family and the memory controller's configuration protocol.
+    They also cover the timers, the keyboard lines, the display registers, the key map, saving and restoring, and the
+    typist. A fuzz test decodes 20,000 random instructions with both the CPU and the disassembler. Tests on the real ROM
+    run locally: they compare screens by hash, type pairs of key sequences that must leave the same screen, check every
+    typed character against <code>CHR</code>, and check that a restored calculator carries on exactly as the original.
+    The real firmware exposed two mistakes the unit tests had shared, and both are fixed. Details are in the
     <a href="https://github.com/kathuman/claude-projects/tree/main/hp48">README</a>.</p>
 </main>
-<footer>Part of <a href="../">AI Projects</a> · Built with Claude · Not affiliated with HP</footer>
+<footer data-i18n="a.footer">Part of <a href="../">AI Projects</a> · Built with Claude · Not affiliated with HP</footer>
+<script src="i18n-es.js?v=0.4.0"></script>
+<script src="i18n-da.js?v=0.4.0"></script>
+<script src="i18n.js?v=0.4.0"></script>
 </body>
 </html>

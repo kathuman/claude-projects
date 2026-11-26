@@ -15,7 +15,7 @@ The emulator targets the 48GX, revision R.
 | 1 | Saturn CPU core and disassembler | ✅ |
 | 2 | Memory controller, I/O registers, timers, interrupts → the ROM boots | ✅ |
 | 3 | Display (131 × 64 LCD, annunciators) and keyboard, in the browser | ✅ |
-| 4 | Memory kept between visits, loading programs, translations | next |
+| 4 | Memory kept between visits, typing programs, saving to a file, Spanish and Danish | ✅ |
 
 ## Phase 1: the Saturn CPU
 
@@ -160,11 +160,68 @@ menu labels, then idles in the main loop. YES (line 1, bit 4) starts recovering 
 - **Mutation tests:** planted mistakes are all caught — two keys on one position, SIN wired as COS, 8 wired as
   5, × wired as ÷, no minimum hold, an unpacked ROM packed high nibble first.
 
+## Phase 4: memory, programs and languages
+
+- **The calculator between visits.** `Machine.snapshot()` captures everything that changes: CPU registers, return
+  stack, RAM, I/O, the memory map and the timers. It is plain JSON and names its ROM by checksum. The page saves it to
+  IndexedDB every 5 seconds and when the page is hidden or closed. On the next visit it is restored, and
+  `elapse(seconds)` advances the timers by the time away, as they count in a calculator that is switched off, so the
+  clock stays right. *Save to file* and *Open a saved file* move a calculator between browsers. The file holds the
+  memory, never the ROM.
+- **Typing programs.** [src/typer.js](src/typer.js) turns text into key presses, so the calculator's own command line
+  parses it. It accepts plain Unicode («, », →, π …) and HP's ASCII transfer format (`%%HP:` header, `\<<`, `\->`,
+  `\171` …). `@` comments are dropped, and line breaks outside strings become spaces.
+  - **Each character's keys were found by the ROM, not from a manual.** From a snapshot, every key was pressed inside a
+    string, plain and shifted, in alpha lock. The resulting screen was matched against the one `n CHR` leaves for
+    every character code n. That gave 114 characters, plus lower case.
+  - **Pairs are typed as a person types them.** An opening bracket or quote with a partner presses the pair key,
+    which also sets the entry mode the ROM expects (algebraic after `'`), and its partner is stepped over. Unbalanced
+    halves use the pair less its other half.
+  - **The typist waits for the ROM.** It holds each key 60 ms, then waits at least 250 ms and until the CPU is asleep
+    before the next. Keys pressed sooner are not always read the same way: after yˣ in a program, α α gave one-shot
+    alpha instead of alpha lock. 150 ms was the shortest wait that passed every check.
+  - **Some characters have no key** (`&`, `;`, `@`, `\` …). The page says which were left out. Binary objects
+    (`HPHP48-` files) need the serial port, which isn't emulated yet.
+- **Languages:** English, Spanish (Latin America) and Danish, with the same i18n module as Escapement and Turbine Lab.
+  The calculator's own key labels stay as printed on it.
+
+### How phase 4 is checked
+- **[tests/machine.test.js](tests/machine.test.js)** (now 62 checks): snapshot round trips, damaged or foreign
+  snapshots refused, keys released on restore, the timers' arithmetic for time away.
+- **[tests/typer.test.js](tests/typer.test.js) (25 checks, no ROM):**
+  - decoding: Unicode, HP codes, `\nnn`, the header
+  - planning: case, pairs, nesting, comments, line breaks, `^`, unsupported characters
+  - the Typist's timing: the hold, the settle, waiting for a busy ROM, giving up after 5 s
+- **[tests/typer-rom.test.js](tests/typer-rom.test.js) (15 checks, real ROM, local only):**
+  - snapshots: a restored snapshot taken mid-entry carries on exactly as the original (screen, RAM and time). After
+    `elapse(100)` the ROM's `TICKS` reads the same as after 100 s idling, and `elapse(101)` reads differently.
+  - every character: each one typed into a string leaves the same screen as `n CHR`.
+  - whole objects: programs, lists, vectors, complex numbers and algebraics, including `^`, equal typing them by hand.
+    An HP ASCII file equals its Unicode text, and the typed program runs: `3 « → x 'x^2' » EVAL` leaves 9.
+- **[tests/i18n.test.js](tests/i18n.test.js) (9 checks):** both dictionaries cover every page key and every message,
+  with the same placeholders, and nothing left over.
+- **In Chrome:**
+  - the HP ASCII file was typed through the panel and run (9)
+  - a reload carried the calculator on with an identical screen
+  - *Save to file*, *Restart*, then *Open a saved file* brought the same screen back
+  - the Spanish and Danish pages were checked
+- **Mutation tests:** planted mistakes are all caught:
+  - a snapshot that drops the return stack
+  - time away that doesn't move timer 2, or moves it at half rate
+  - a 20 ms settle
+  - a typist that doesn't wait for the ROM to sleep, caught by the unit test only
+  - θ typed as ε
+  - closing brackets typed instead of stepped over
+  - a missing Spanish message
+
 ```bash
 node hp48/tests/saturn.test.js
 node hp48/tests/machine.test.js
 node hp48/tests/keys.test.js
+node hp48/tests/typer.test.js
+node hp48/tests/i18n.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/boot.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/rom.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/keyboard.test.js
+HP48_ROM=/path/to/gxrom-r node hp48/tests/typer-rom.test.js
 ```
