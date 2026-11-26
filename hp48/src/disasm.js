@@ -42,7 +42,11 @@
     switch (a) {
       case 0x0: {
         const b = n(1);
-        if (b === 0xe) { const f = fname(n(2)), o = n(3); if (!f || o > 7) return bad(4); return out(["A=A&B", "B=B&C", "C=C&A", "D=D&C", "A=A!B", "B=B!C", "C=C!A", "D=D!C"][o] + " " + f, 4); }
+        if (b === 0xe) {                                     // 0–7 AND, 8–F OR, over the same eight pairs
+          const f = fname(n(2)), o = n(3); if (!f) return bad(4);
+          const pair = ["A=A?B", "B=B?C", "C=C?A", "D=D?C", "B=B?A", "C=C?B", "A=A?C", "C=C?D"][o & 7];
+          return out(pair.replace("?", o < 8 ? "&" : "!") + " " + f, 4);
+        }
         return out(OP0[b], 2);
       }
       case 0x1: {

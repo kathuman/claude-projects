@@ -40,6 +40,7 @@
 
   function Saturn(bus) {
     this.bus = bus;
+    this.fetch = typeof bus.fetch === "function";
     this.A = new Uint8Array(16); this.B = new Uint8Array(16); this.C = new Uint8Array(16); this.D = new Uint8Array(16);
     this.R = [new Uint8Array(16), new Uint8Array(16), new Uint8Array(16), new Uint8Array(16), new Uint8Array(16)];
     this.reset();
@@ -50,12 +51,13 @@
     this.D0 = 0; this.D1 = 0; this.PC = 0; this.P = 0;
     this.ST = 0; this.HST = 0; this.carry = false; this.hex = true;
     this.RSTK = []; this.IN = 0; this.OUT = 0;
-    this.intEnabled = false; this.inInterrupt = false; this.intPending = false;
+    this.intEnabled = false; this.inInterrupt = false; this.intPending = false; this.pendingNmi = false;
     this.shutdown = false; this.cycles = 0;
   };
 
   // ---------------------------------------------------------------- fetch
-  Saturn.prototype.nib = function () { const n = this.bus.read(this.PC) & 15; this.PC = (this.PC + 1) & MASK; this.cyc++; return n; };
+  // instruction fetches go through bus.fetch when the bus has one (the 48's CRC hardware counts data reads only)
+  Saturn.prototype.nib = function () { const n = (this.fetch ? this.bus.fetch(this.PC) : this.bus.read(this.PC)) & 15; this.PC = (this.PC + 1) & MASK; this.cyc++; return n; };
   // n nibbles, least significant first (constants, offsets and addresses are stored that way)
   Saturn.prototype.nibs = function (n) { let v = 0; for (let i = 0; i < n; i++) v += this.nib() * Math.pow(16, i); return v; };
   function signed(v, n) { const m = Math.pow(16, n); return v >= m / 2 ? v - m : v; }
@@ -250,10 +252,13 @@
   };
 
   // ---------------------------------------------------------------- interrupts
-  Saturn.prototype.interrupt = function () {
+  // An interrupt: keyboard interrupts are maskable (INTON / INTOFF); the timers and
+  // the ON key raise a non-maskable one (nmi). Either way it wakes the CPU from
+  // SHUTDN, never nests, and one arriving during service is taken at the RTI.
+  Saturn.prototype.interrupt = function (nmi) {
     if (this.shutdown) this.shutdown = false;
-    if (!this.intEnabled || this.inInterrupt) { this.intPending = true; return false; }
-    this.inInterrupt = true; this.intPending = false;
+    if ((!nmi && !this.intEnabled) || this.inInterrupt) { this.intPending = true; this.pendingNmi = this.pendingNmi || !!nmi; return false; }
+    this.inInterrupt = true; this.intPending = false; this.pendingNmi = false;
     this.push(this.PC); this.PC = 0x0000f;
     return true;
   };
@@ -311,15 +316,16 @@
       }
       case 0xc: this.carry = this.P === 15; this.P = (this.P + 1) & 15; break;     // P=P+1
       case 0xd: this.carry = this.P === 0; this.P = (this.P - 1) & 15; break;      // P=P-1
-      case 0xe: {                                                                  // logical AND / OR
+      case 0xe: {                                                                  // logical: ops 0–7 AND, 8–F OR
         const fc = this.nib(), op = this.nib(), f = this.field(fc);
-        const pairs = [[this.A, this.B], [this.B, this.C], [this.C, this.A], [this.D, this.C]];
-        const p = pairs[op & 3];
-        if (op > 7) throw this.bad();
-        for (let i = f[0]; i <= f[1]; i++) p[0][i] = op < 4 ? (p[0][i] & p[1][i]) : (p[0][i] | p[1][i]);
+        const A = this.A, B = this.B, C = this.C, D = this.D;
+        const p = [[A, B], [B, C], [C, A], [D, C], [B, A], [C, B], [A, C], [C, D]][op & 7];
+        for (let i = f[0]; i <= f[1]; i++) p[0][i] = op < 8 ? (p[0][i] & p[1][i]) : (p[0][i] | p[1][i]);
         break;
       }
-      case 0xf: this.PC = this.pop(); this.inInterrupt = false; break;              // RTI
+      case 0xf: this.PC = this.pop(); this.inInterrupt = false;                       // RTI
+        if (this.intPending && (this.pendingNmi || this.intEnabled)) this.interrupt(this.pendingNmi);
+        break;
     }
   };
 
@@ -410,7 +416,7 @@
       case 0x8: {
         const m = this.nib();
         switch (m) {
-          case 0x0: this.intEnabled = true; if (this.intPending) this.interrupt(); break;   // INTON
+          case 0x0: this.intEnabled = true; if (this.intPending && !this.inInterrupt) this.interrupt(this.pendingNmi); break; // INTON
           case 0x1: this.nib(); break;                                                      // RSI (80810)
           case 0x2: { const k = this.nib() + 1; for (let i = 0; i < k; i++) A[(this.P + i) & 15] = this.nib(); break; } // LA
           case 0x3: break;                                                                  // BUSCB

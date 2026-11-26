@@ -13,8 +13,8 @@ The emulator targets the 48GX, revision R.
 | Phase | What | State |
 |---|---|---|
 | 1 | Saturn CPU core and disassembler | ✅ |
-| 2 | Memory controller, I/O registers, timers, interrupts → the ROM boots | next |
-| 3 | Display (131 × 64 LCD, annunciators) and keyboard | |
+| 2 | Memory controller, I/O registers, timers, interrupts → the ROM boots | ✅ |
+| 3 | Display (131 × 64 LCD, annunciators) and keyboard, in the browser | next |
 | 4 | Memory kept between visits, loading programs, speed control, translations | |
 
 ## Phase 1: the Saturn CPU
@@ -30,7 +30,7 @@ emulator's code: Emu48 and x48 are GPL):
 two can check each other.
 
 ### How it is checked
-- **[tests/saturn.test.js](tests/saturn.test.js) (116 checks):** hand-assembled programs for every instruction
+- **[tests/saturn.test.js](tests/saturn.test.js) (118 checks):** hand-assembled programs for every instruction
   family:
   - loads and the fields
   - hex and decimal arithmetic with their carry rules
@@ -56,7 +56,71 @@ two can check each other.
 - **Mutation tests:** planted mistakes are all caught — GOSUB measured from the wrong place, no decimal mode, the
   P field one nibble too wide. The ROM run catches the GOSUB mistake by itself.
 
+## Phase 2: the machine — the ROM boots
+
+[src/machine.js](src/machine.js) is the CPU's bus. It brings together:
+
+- **The memory controller:**
+  - five configurable modules in a daisy chain: I/O block, 128 KB RAM, bank switcher, port 1, port 2
+  - the ROM below them all
+  - C=ID, CONFIG and UNCNFG following the documented protocol
+  - priority where modules overlap, and mirroring when a window is larger than its memory
+  - the A19 bit for the upper half of the ROM, and the bank switcher
+- **The 64 I/O registers:**
+  - display: on, bit offset, contrast, start address, line offset, line count, menu address
+  - annunciators
+  - the CRC
+  - timer controls
+  - the keyboard service request
+- **The two timers:** timer 1 is 4 bits at 16 Hz and timer 2 is 32 bits at 8192 Hz. When one passes zero it raises
+  a service request, wakes the CPU and raises an interrupt INTOFF can't block.
+- **The keyboard lines:** OUT selects lines and IN reads rows, with ON on IN bit 15.
+- **Time while asleep:** while the CPU sleeps in SHUTDN, time still passes for the timers.
+
+The hardware facts come from public documentation and MAME's BSD-licensed HP 48 driver, read for the facts only,
+with no code taken.
+
+### What the ROM showed
+
+Two of my beliefs were wrong, and only the real firmware could show it:
+
+- **The logical opcodes.** `0E f o` has 16 operations: 0–7 are AND and 8–F are OR, over the pairs A&B, B&C, C&A,
+  D&C, B&A, C&B, A&C and C&D. I had half of them as OR and the rest as invalid, and the CPU, the disassembler
+  and a unit test all shared that belief. The ROM stopped on `0E68` (`A=A!B B`), where the surrounding code only
+  makes sense with the right table.
+- **The CRC counts data reads only.** The ROM stores its clock with a checksum, and checks it with different code.
+  If instruction fetches update the CRC, the two can never agree, so the ROM decided the clock was corrupt and
+  restarted forever, a few times a second.
+
+### The boot
+
+With both fixed, the real 48GX ROM:
+- configures its I/O at 00100 and its RAM at 80000
+- probes the ports for cards
+- switches the display on
+- shows **"Try To Recover Memory?"** with YES and NO, as a real 48GX does when memory is lost
+
+NO (the menu key at OUT line 8, IN bit 0) clears memory and shows **"Memory Clear"**, the stack (4: … 1:) and the
+menu labels, then idles in the main loop. YES (line 1, bit 4) starts recovering memory instead.
+
+### How phase 2 is checked
+- **[tests/machine.test.js](tests/machine.test.js) (53 checks, synthetic ROM):**
+  - the configuration protocol step by step
+  - priority, mirroring, RAM over ROM, UNCNFG and RESET, the A19 bit
+  - the bank switcher and port 2
+  - the CRC rule
+  - timer rates, carries, wake and interrupts
+  - the keyboard lines, ON and interrupts
+  - time passing while asleep
+  - the display registers and pixel layout
+- **[tests/boot.test.js](tests/boot.test.js) (real ROM, local only):** the cold start and the NO and YES paths.
+  Screens are compared by hash, so no picture of the firmware's output is stored.
+- **Mutation tests:** planted mistakes are all caught — instruction fetches counting in the CRC, a wrong module
+  ID, timer 1 at twice its rate. The boot test catches the CRC mistake by itself.
+
 ```bash
 node hp48/tests/saturn.test.js
+node hp48/tests/machine.test.js
+HP48_ROM=/path/to/gxrom-r node hp48/tests/boot.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/rom.test.js
 ```

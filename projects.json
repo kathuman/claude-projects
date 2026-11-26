@@ -11,6 +11,17 @@
     "demoUrl": "https://kathuman.github.io/estay-dynamics/atlas/"
   },
   {
+    "title": "HP 48 Emulator",
+    "discipline": "other",
+    "status": "early",
+    "thumb": "assets/thumbs/hp48-emulator.webp",
+    "description": "An emulator of the HP 48GX calculator for the browser, built from the CPU up. The Saturn processor (4-bit nibbles, 20-bit addresses, 16-nibble registers with nine fields, hex and decimal arithmetic) is written from its documentation, not copied from another emulator. It is checked against a separately written disassembler, including a fuzz test of 20,000 random instructions. The memory controller, I/O registers, timers, keyboard lines and display registers follow the 48GX hardware. The calculator's own firmware boots on it to the stack. Running the real ROM exposed two mistakes the unit tests had shared: half the logic opcodes, and a checksum register that must count data reads only. The ROM is HP's firmware and is never included: you load your own, and it stays on your device. In development: the calculator page with its display and keyboard comes next.",
+    "date": "2026-11-26",
+    "tags": ["javascript", "web", "emulator", "retro-computing", "calculator", "cpu"],
+    "repoUrl": "https://github.com/kathuman/claude-projects/tree/main/hp48",
+    "demoUrl": "https://kathuman.github.io/claude-projects/hp48/"
+  },
+  {
     "title": "Warehouse Compare",
     "discipline": "supply-chain",
     "thumb": "assets/thumbs/warehouse-compare.webp",

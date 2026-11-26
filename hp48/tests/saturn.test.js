@@ -84,10 +84,17 @@ const set = (r, s) => { s = s.padStart(16, "0"); for (let i = 0; i < 16; i++) r[
 {
   let m = machine("D4 DE"); set(m.cpu.A, "1"); set(m.cpu.B, "abcdef0123"); set(m.cpu.C, "77"); run(m, 2);   // A=B A; CAEX A
   check("A=B A copies 5 nibbles; CAEX A swaps", hx(m.cpu.A).slice(-5) === "00077" && hx(m.cpu.C).slice(-5) === "f0123");
-  m = machine("0E 7 0 0E 7 4"); set(m.cpu.A, "f0f0"); set(m.cpu.B, "ff00"); run(m, 1);
-  check("A=A&B W", hx(m.cpu.A).slice(-4) === "f000");
+  m = machine("0E 7 0 0E 7 8"); set(m.cpu.A, "f0f0"); set(m.cpu.B, "ff00"); run(m, 1);
+  check("A=A&B W (0E 7 0)", hx(m.cpu.A).slice(-4) === "f000");
   set(m.cpu.A, "f0f0"); run(m, 1);
-  check("A=A!B W", hx(m.cpu.A).slice(-4) === "fff0");
+  check("A=A!B W (0E 7 8: ops 8–F are OR)", hx(m.cpu.A).slice(-4) === "fff0");
+  // the second four pairs: 0E f 6 is A=A&C, 0E f E is A=A!C (as the ROM uses them)
+  m = machine("0E 6 6 0E 6 E"); set(m.cpu.A, "ff"); set(m.cpu.C, "c0"); run(m, 1);
+  check("A=A&C B (0E 6 6)", hx(m.cpu.A).slice(-2) === "c0");
+  set(m.cpu.C, "0f"); run(m, 1);
+  check("A=A!C B (0E 6 E)", hx(m.cpu.A).slice(-2) === "cf");
+  m = machine("0E F 4"); set(m.cpu.A, "0f0f0"); set(m.cpu.B, "fffff"); run(m, 1);
+  check("B=B&A A (0E F 4)", hx(m.cpu.B).slice(-5) === "0f0f0" && hx(m.cpu.A).slice(-5) === "0f0f0");
   m = machine("102 112 129 81A1 1 0"); set(m.cpu.A, "123"); set(m.cpu.C, "456"); run(m, 2);   // R2=A; A=R2
   check("R2=A then A=R2", hx(m.cpu.R[2]).slice(-3) === "123" && hx(m.cpu.A).slice(-3) === "123");
   run(m, 1); check("CR1EX", hx(m.cpu.C).slice(-3) === "000" && hx(m.cpu.R[1]).slice(-3) === "456");
@@ -242,7 +249,7 @@ const set = (r, s) => { s = s.padStart(16, "0"); for (let i = 0; i < 16; i++) r[
 
 // ---------------------------------------------------------------- unknown opcodes
 {
-  ["105", "81B0", "0E08", "81A030", "125"].forEach((p) => {
+  ["105", "81B0", "81A030", "125"].forEach((p) => {
     const m = machine(p); let threw = false; try { m.cpu.step(); } catch (e) { threw = true; }
     check("unknown opcode " + p + " is refused", threw);
   });
