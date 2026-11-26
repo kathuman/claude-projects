@@ -61,6 +61,8 @@
   // the inputs in data/scenario.json: P[key] = [label, description], C["key.option"] = choice label
   function param(k) { var p = D && D.P && D.P[k]; return p ? { label: p[0], description: p[1] } : null; }
   function choice(k, o) { var c = D && D.C && D.C[k + "." + o]; return c != null ? c : null; }
-  root.WCi18n = { lang: lang, langs: LANGS, locale: LANGS[lang].locale, T: T, fx: fx, apply: apply, withLang: withLang, hrefFor: hrefFor, param: param, choice: choice };
+  // the technology catalogue's texts: A[id] = { name, mechanism, strengths, weaknesses, best_fit }
+  function archetype(id) { return D && D.A && D.A[id] ? D.A[id] : null; }
+  root.WCi18n = { lang: lang, langs: LANGS, locale: LANGS[lang].locale, T: T, fx: fx, apply: apply, withLang: withLang, hrefFor: hrefFor, param: param, choice: choice, archetype: archetype };
   if (typeof document !== "undefined") { apply(); mountSwitch(); }
 })(typeof self !== "undefined" ? self : this);

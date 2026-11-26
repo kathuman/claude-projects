@@ -189,6 +189,51 @@
       "{v}% of SKUs don't fit a standard container; this takes at most {m}%.": "El {v} % de los SKU no cabe en un contenedor estándar; esto admite como máximo el {m} %.",
       "Needs a flat floor.": "Requiere un piso plano.",
       "No technology in the catalogue fits these constraints.": "Ninguna tecnología del catálogo cumple estas restricciones.",
+      "Your site": "Su sitio",
+      "from the comparison": "tomado de la comparación",
+      "Picking technologies: flexibility vs efficiency": "Tecnologías de picking: flexibilidad frente a eficiencia",
+      "Flexibility (F)": "Flexibilidad (F)",
+      "Efficiency (E)": "Eficiencia (E)",
+      "← stable demand · long lease · high rent": "← demanda estable · arriendo largo · arriendo caro",
+      "volatile SKUs · short lease · fast ramp-up →": "SKU volátiles · arriendo corto · arranque rápido →",
+      "not achievable with today's technology": "no alcanzable con la tecnología actual",
+      "dominated designs": "diseños dominados",
+      "volume / mix / exit flexibility": "flexibilidad de volumen / surtido / salida",
+      "recommended": "recomendada",
+      "runner-up": "segunda opción",
+      "excluded: {r}": "descartada: {r}",
+      "your site": "su sitio",
+      "excluded": "descartada",
+      "your site, on the frontier at the target flexibility": "su sitio, sobre la frontera en la flexibilidad objetivo",
+      "required flexibility → after cost pressure": "flexibilidad requerida → tras la presión de costos",
+      "Technology": "Tecnología",
+      "Volume": "Volumen",
+      "Mix": "Surtido",
+      "Exit": "Salida",
+      "Status": "Estado",
+      "Screening result": "Resultado del filtro",
+      "Runner-up: {n}": "Segunda opción: {n}",
+      "Boundary case: a shift of ±{d} in flexibility changes the pick — treat it as a choice between {a} and {b}.": "Caso límite: un cambio de ±{d} en la flexibilidad cambia la elección; trátelo como una decisión entre {a} y {b}.",
+      "See it simulated in WH-{id}": "Verla simulada en WH-{id}",
+      "This app doesn't simulate this technology; WH-A (shelf-to-person) and WH-C (manual) are the nearest it does.": "Esta aplicación no simula esta tecnología; las más cercanas que sí simula son WH-A (shelf-to-person) y WH-C (manual).",
+      "flexibility the site needs": "flexibilidad que necesita el sitio",
+      "efficiency pressure (0–1)": "presión de eficiencia (0–1)",
+      "target flexibility after cost pressure": "flexibilidad objetivo tras la presión de costos",
+      "efficiency on the frontier there": "eficiencia sobre la frontera en ese punto",
+      "What drives the flexibility need": "Qué impulsa la necesidad de flexibilidad",
+      "Points out of 100: weight × how far the input is towards its volatile end.": "Puntos sobre 100: peso × cuán cerca está el dato de su extremo volátil.",
+      "Ruled out": "Descartadas",
+      "How it works": "Cómo funciona",
+      "Strengths": "Fortalezas",
+      "Weaknesses": "Debilidades",
+      "Best fit": "Mejor encaje",
+      "Example vendors": "Proveedores de ejemplo",
+      "Indicative screening (catalogue {v}). The positions are expert judgement on 0–100 scales, not measurements, and the model leaves out capex, integration risk, labour availability and building limits such as clear height and floor load. A starting point, not an investment decision.": "Filtro orientativo (catálogo {v}). Las posiciones son juicio experto en escalas de 0 a 100, no mediciones, y el modelo no considera la inversión, el riesgo de integración, la disponibilidad de mano de obra ni límites del edificio como la altura libre o la carga del piso. Un punto de partida, no una decisión de inversión.",
+      "catalogue {v} · costs in €": "catálogo {v} · costos en €",
+      "years": "años",
+      "×": "×",
+      "€/m² a year": "€/m² al año",
+      "€/h": "€/h",
       "Locations per m²": "Ubicaciones por m²",
       "Picker travel per order": "Recorrido del operario por pedido",
       "Picker travel per line": "Recorrido del operario por línea",
@@ -244,6 +289,10 @@
       "ix.headroom.none": "ninguno (la flota dimensionada)",
       "ix.beforeafter": "Antes y después",
       "ix.results": "Resultados",
+      "ix.tab.tech": "Tecnología",
+      "tx.example": "Ejemplo resuelto",
+      "tx.fromapp": "Tomar volumen y costo de mano de obra de la comparación",
+      "tx.intro": "¿Qué tecnología de picking requiere el contexto de este sitio? Toda tecnología cambia flexibilidad por eficiencia; las mejores de hoy forman una frontera. Describa el sitio y el filtro calcula la flexibilidad que necesita, la ajusta por la presión de costos, descarta lo que no puede funcionar y elige la tecnología más cercana sobre la frontera.",
       "ab.title": "Acerca de Warehouse Compare",
       "ab.meta": "Warehouse Compare compara tres almacenes de preparación de pedidos en igualdad de condiciones: estanterías móviles, un semicírculo y un rectángulo. Diseñado y desarrollado por Daniel Alberto Sepulveda Estay, PhD.",
       "ab.sub": "acerca de la aplicación",
@@ -486,6 +535,46 @@
       "radial_aisle_width": [
         "Ancho de los pasillos radiales",
         "Concéntrica: ancho de los pasillos radiales."
+      ],
+      "site.demand_cv_weekly": [
+        "Variabilidad semanal de la demanda",
+        "Coeficiente de variación de las líneas de pedido semanales (desviación estándar ÷ media). 0,1 es estable; 0,6 es muy volátil."
+      ],
+      "site.annual_sku_churn": [
+        "Rotación anual de SKU",
+        "Parte del surtido de SKU que se reemplaza en un año."
+      ],
+      "site.lease_horizon_years": [
+        "Horizonte del arriendo",
+        "Por cuánto tiempo está comprometido el sitio: arriendo restante o cuánto se planea mantener la operación."
+      ],
+      "site.peak_to_average_ratio": [
+        "Relación punta/promedio",
+        "La semana (o temporada) de más trabajo como múltiplo de una semana media. No es el factor de hora punta de la comparación."
+      ],
+      "site.growth_uncertainty": [
+        "Incertidumbre de crecimiento",
+        "Qué tan inciertos son los volúmenes dentro de unos años."
+      ],
+      "site.share_skus_outside_container": [
+        "SKU fuera de contenedor",
+        "Parte de los SKU que no caben en una caja o cubeta de 600 × 400 × 300 mm de hasta unos 30 kg."
+      ],
+      "site.flat_floor": [
+        "Piso",
+        "Los robots de estanterías móviles necesitan una losa nivelada y lisa."
+      ],
+      "site.rent_eur_per_m2_year": [
+        "Arriendo",
+        "Arriendo o costo de ocupación equivalente por m² de planta al año."
+      ],
+      "site.labour_cost_eur_per_hour": [
+        "Costo de mano de obra",
+        "Costo total de una hora de operario."
+      ],
+      "site.order_lines_per_day": [
+        "Líneas de pedido por día",
+        "Líneas de pedido preparadas en un día medio."
       ]
     },
     "C": {
@@ -501,7 +590,56 @@
       "pod_fill.by_popularity": "Popularidad similar juntos",
       "pod_fill.random": "Repartidos al azar",
       "arrangement.radial": "Filas radiales",
-      "arrangement.concentric": "Filas concéntricas"
+      "arrangement.concentric": "Filas concéntricas",
+      "site.growth_uncertainty.low": "Baja",
+      "site.growth_uncertainty.medium": "Media",
+      "site.growth_uncertainty.high": "Alta",
+      "site.flat_floor.flat": "Lo bastante plano para robots",
+      "site.flat_floor.not_flat": "No lo bastante plano para robots"
+    },
+    "A": {
+      "fixed_asrs": {
+        "name": "Lanzaderas AS/RS fijas",
+        "mechanism": "Lanzaderas y elevadores en pasillos fijos llevan cajas a estaciones fijas",
+        "strengths": "El mayor rendimiento, muy denso",
+        "weaknesses": "Plazo largo, gran inversión irrecuperable, difícil de trasladar o redimensionar",
+        "best_fit": "Estable, alto volumen, sitio propio, horizonte de 10+ años"
+      },
+      "cube_storage": {
+        "name": "Almacenamiento en cubo",
+        "mechanism": "Robots sobre una rejilla de cubetas apiladas extraen cubetas y las llevan a los puertos",
+        "strengths": "La mayor densidad por m², rejilla modular",
+        "weaknesses": "Límite de tamaño de cubeta, extracciones profundas más lentas, rejilla atada al edificio",
+        "best_fit": "Arriendo alto, artículos pequeños a medianos, surtido estable"
+      },
+      "climbing_robots": {
+        "name": "Robots trepadores",
+        "mechanism": "Robots trepan por las estanterías para tomar cajas y llevarlas a las estaciones",
+        "strengths": "Buena densidad, los robots escalan con la punta",
+        "weaknesses": "Límite de tamaño de caja, instalación de estanterías",
+        "best_fit": "Comercio electrónico y retail de volumen medio, volatilidad moderada"
+      },
+      "shelf_to_person": {
+        "name": "Shelf-to-person (tipo Kiva)",
+        "mechanism": "Robots levantan estanterías móviles y las llevan a estaciones de picking",
+        "strengths": "Instalación rápida, tamaños de artículo flexibles, rediseño por software",
+        "weaknesses": "Los pasillos restan densidad, necesita piso plano",
+        "best_fit": "Surtido de SKU volátil, 3PL, horizonte de arriendo medio"
+      },
+      "collaborative_amr": {
+        "name": "AMR colaborativos",
+        "mechanism": "Los robots llevan las cajas; los operarios caminan a estanterías fijas",
+        "strengths": "Inversión mínima, funciona en estanterías existentes, pago por suscripción",
+        "weaknesses": "Se sigue caminando, menor rendimiento por operario",
+        "best_fit": "Contratos cortos, sitios existentes, crecimiento incierto"
+      },
+      "manual": {
+        "name": "Picking manual",
+        "mechanism": "Los operarios caminan con carros hasta estanterías estáticas",
+        "strengths": "Máxima flexibilidad, sin inversión",
+        "weaknesses": "Intensivo en mano de obra, baja densidad",
+        "best_fit": "Bajo volumen, muy volátil, mano de obra barata"
+      }
     }
   };
 })(typeof self !== "undefined" ? self : this);

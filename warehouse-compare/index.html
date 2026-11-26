@@ -40,6 +40,7 @@
         <button data-i18n="ix.tab.side" class="tab view-tab" data-view="side" role="tab">Side by side</button>
         <button data-i18n="ix.tab.sens" class="tab view-tab" data-view="sens" role="tab">Sensitivity</button>
         <button data-i18n="ix.tab.shock" class="tab view-tab" data-view="shock" role="tab">Demand shock</button>
+        <button data-i18n="ix.tab.tech" class="tab view-tab" data-view="tech" role="tab">Technology</button>
       </div>
       <div id="planView" class="plan-view">
       <div class="toolbar">
@@ -95,6 +96,21 @@
           <table class="kpi shock-table" id="shockTable"></table>
         </div>
       </div>
+      <div id="viewTech" class="view" hidden>
+        <div class="toolbar">
+          <button data-i18n="tx.example" class="btn" id="techExample">Worked example</button>
+          <button data-i18n="tx.fromapp" class="btn" id="techFromApp">Take volume and labour cost from the comparison</button>
+          <span class="note" id="techVersion"></span>
+        </div>
+        <div class="tech-body">
+          <div class="tech-form" id="techForm"></div>
+          <div class="tech-main">
+            <p data-i18n="tx.intro" class="note-block">Which picking technology does this site's context call for? Every technology trades flexibility for efficiency; the best of today's sit on a frontier. Describe the site, and the screen finds the flexibility it needs, shifts it for cost pressure, rules out what can't work and picks the nearest technology on the frontier.</p>
+            <div id="techMap"></div>
+            <div id="techResult"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <aside class="side">
@@ -132,6 +148,8 @@
 <script src="src/experiments.js"></script>
 <script src="src/plan.js"></script>
 <script src="src/scene3d.js"></script>
+<script src="src/frontier.js"></script>
+<script src="src/techview.js"></script>
 <script src="src/charts.js"></script>
 <script src="src/views.js"></script>
 <script src="src/app.js"></script>

@@ -134,5 +134,28 @@
     };
   }
 
-  return { fsum: fsum, lin: lin, validate: validate, frontierE: frontierE, exclusions: exclusions, recommend: recommend };
+  // ---------------------------------------------------------------- the map, as numbers
+  // What the positioning map draws, in F/E units: the frontier line, each
+  // archetype with its status, the site point, and (when there is a result)
+  // the shift from required to target flexibility and the ± boundary band.
+  // status: "recommended" | "runner_up" | "excluded" | "feasible"
+  function mapModel(result, catalogue) {
+    const cfg = catalogue.config;
+    const line = catalogue.archetypes.slice().sort(function (a, b) { return a.F - b.F; }).map(function (a) { return [a.F, a.E]; });
+    const ex = {};
+    (result && result.excluded || []).forEach(function (e) { ex[e.id] = e; });
+    const points = catalogue.archetypes.map(function (a) {
+      const status = !result || !result.ok ? "feasible" : a.id === result.recommended ? "recommended" : a.id === result.runner_up ? "runner_up" : ex[a.id] ? "excluded" : "feasible";
+      return { id: a.id, F: a.F, E: a.E, status: status, excluded: ex[a.id] || null, simulated_as: a.simulated_as || null };
+    });
+    if (!result || !result.ok) return { line: line, points: points, site: null };
+    return {
+      line: line, points: points,
+      site: { F: result.exact.F_target, E: frontierE(catalogue.archetypes, result.exact.F_target) },
+      required: result.exact.F_required,
+      band: result.boundary_case ? [Math.max(0, result.exact.F_target - cfg.boundary), Math.min(100, result.exact.F_target + cfg.boundary)] : null
+    };
+  }
+
+  return { fsum: fsum, lin: lin, validate: validate, mapModel: mapModel, frontierE: frontierE, exclusions: exclusions, recommend: recommend };
 });

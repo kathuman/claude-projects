@@ -18,8 +18,9 @@
   "use strict";
   // WH-C's values are the Warehouse Model's, with no ranges or options here and
   // no controls on the page, so links carry the shared inputs, WH-A and WH-B only
-  const GROUPS = ["sc", "A", "B"];
-  const get = function (inputs, g) { return g === "sc" ? inputs.sc : inputs.layouts[g]; };
+  // (S: the technology screen's site inputs, defined in data/archetypes.json)
+  const GROUPS = ["sc", "A", "B", "S"];
+  const get = function (inputs, g) { return g === "sc" ? inputs.sc : g === "S" ? inputs.site : inputs.layouts[g]; };
 
   function b64(s) {
     const bytes = typeof TextEncoder !== "undefined" ? new TextEncoder().encode(s) : Buffer.from(s, "utf8");
@@ -38,20 +39,21 @@
     const diff = {}; let n = 0;
     GROUPS.forEach(function (g) {
       const cur = get(inputs, g), def = get(defaults, g), d = {};
-      for (const k in cur) if (cur[k] !== def[k] && (typeof cur[k] === "number" || typeof cur[k] === "string")) { d[k] = cur[k]; n++; }
+      if (!cur || !def) return;
+      for (const k in cur) if (cur[k] !== def[k] && (typeof cur[k] === "number" || typeof cur[k] === "string" || typeof cur[k] === "boolean")) { d[k] = cur[k]; n++; }
       if (Object.keys(d).length) diff[g] = d;
     });
     return n ? "s=" + b64(JSON.stringify(diff)) : "";
   }
 
   // the input's definition in scenario.json
-  function defOf(scJson, g, k) {
-    const src = g === "sc" ? scJson.shared : scJson.layouts[g];
+  function defOf(scJson, g, k, siteDefs) {
+    const src = g === "sc" ? scJson.shared : g === "S" ? siteDefs : scJson.layouts[g];
     const d = src && src[k];
     return d && typeof d === "object" ? d : null;
   }
 
-  function decode(hash, inputs, scJson) {
+  function decode(hash, inputs, scJson, siteDefs) {
     const m = /(?:^|[#&])s=([A-Za-z0-9_-]+)/.exec(hash || "");
     if (!m) return 0;
     let diff;
@@ -60,14 +62,15 @@
     let applied = 0;
     GROUPS.forEach(function (g) {
       const src = diff[g], tgt = get(inputs, g);
-      if (!src || typeof src !== "object") return;
+      if (!src || typeof src !== "object" || !tgt) return;
       Object.keys(src).forEach(function (k) {
         if (!Object.prototype.hasOwnProperty.call(tgt, k)) return;
         let v = src[k];
         if (typeof v !== typeof tgt[k]) return;
-        const d = defOf(scJson, g, k);
+        const d = defOf(scJson, g, k, siteDefs);
         if (!d) return;                                  // only inputs the scenario defines (with a range or options)
-        if (typeof v === "number") {
+        if (typeof v === "boolean") { /* a yes/no input: the type check is the whole check */ }
+        else if (typeof v === "number") {
           if (!isFinite(v)) return;
           if (d.minimum === undefined) return;
           v = Math.max(d.minimum, Math.min(d.maximum, v));

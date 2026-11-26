@@ -122,6 +122,27 @@ site's context:
   - It behaves sensibly: more volatility never asks for less flexibility, and more cost pressure never moves the
     target towards flexibility.
 
+**The Technology view** ([src/techview.js](src/techview.js)) has three parts:
+- **The form:** the ten site inputs, defined with their ranges in the catalogue.
+- **The flexibility vs efficiency map:**
+  - the frontier as a line through the six technologies
+  - every technology in one neutral colour with a direct label; colour marks status only (recommended,
+    runner-up, excluded)
+  - your site on the frontier at the target flexibility, with an arrow from the required flexibility to the
+    target after cost pressure
+  - a ±10 band when the pick is a boundary case
+  - a tooltip per technology and a table view
+- **The result:** the recommendation and runner-up, the drivers, what was ruled out and why, and the
+  technology's description and example vendors.
+
+Two buttons help fill the form:
+- "Take volume and labour cost from the comparison" copies only lines per day and pay per hour, and marks them.
+  The spec's peak and rent mean different things from the comparison's peak-hour factor and building cost.
+- "See it simulated" opens WH-A for shelf-to-person, or WH-C for manual.
+
+The site inputs travel in share links, checked against their definitions like every other input. Everything
+is in Spanish and Danish, including the six technologies' descriptions.
+
 The result is a screening recommendation, dated with the catalogue version, not an investment decision. The
 coordinates are expert judgement and uncalibrated, and costs are in EUR, as in the spec.
 
@@ -291,7 +312,7 @@ order data, at its own volume of 4,547 lines a day, it is $361 against $392–39
 5. ✅ Cost of ownership, order-data import, share links, 3D, Spanish and Danish, About page, AI Projects entry
 6. Technology screening (integration spec, 2026-11-25)
    - 6.0 ✅ Catalogue and screening engine: the spec's worked example, and parity with the spec's Python
-   - 6.1 A "Technology screen" view: site inputs, the frontier map, the recommendation with its drivers,
+   - 6.1 ✅ The Technology view: site inputs, the frontier map, the recommendation with its drivers,
      exclusions and boundary flag; "See it simulated" for shelf-to-person (WH-A) and manual (WH-C)
    - 6.2 Evidence from the simulation: measured efficiency and flexibility indicators for WH-A and WH-C beside
      the spec's expert points

@@ -153,6 +153,7 @@
   let current = null, dirty = { side: true, sens: true, shock: true };
   function show(view) {
     current = view;
+    if (!dirty.hasOwnProperty(view)) return;
     if (view !== "side" && side.playing) sidePlay(false);
     if (!dirty[view]) return;
     dirty[view] = false;

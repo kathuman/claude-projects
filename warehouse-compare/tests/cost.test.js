@@ -66,6 +66,15 @@ const inputs = scenario.resolve(J, WM), sc = inputs.sc;
   const e = fresh();
   share.decode(enc({ B: { bay_width: 500, rack_depth: 0.6 } }), e, J);
   check("WH-B's inherited rack sizes can't be set by a link", e.layouts.B.bay_width === defaults.layouts.B.bay_width);
+  // the technology screen's site travels in the link too (group S), checked against data/archetypes.json
+  const CAT = JSON.parse(fs.readFileSync(path.join(__dirname, "../data/archetypes.json"), "utf8"));
+  const withSite = () => { const i = fresh(); i.site = Object.assign({}, CAT.example_site); delete i.site.site_name; return i; };
+  const sd = withSite(), sa = withSite(); sa.site.lease_horizon_years = 12; sa.site.flat_floor = false; sa.site.growth_uncertainty = "high";
+  const sl = share.encode(sa, sd), sb = withSite(), sn = share.decode("#" + sl, sb, J, CAT.site_inputs);
+  check("a link carries the technology screen's site, yes/no floor included (" + sn + ")", sn === 3 && JSON.stringify(sa.site) === JSON.stringify(sb.site));
+  const sx = withSite();
+  share.decode(enc({ S: { lease_horizon_years: 999, growth_uncertainty: "extreme", flat_floor: "no", rent_eur_per_m2_year: 1 } }), sx, J, CAT.site_inputs);
+  check("site values from a link are clamped and checked like the rest", sx.site.lease_horizon_years === CAT.site_inputs.lease_horizon_years.maximum && sx.site.growth_uncertainty === "medium" && sx.site.flat_floor === true && sx.site.rent_eur_per_m2_year === CAT.site_inputs.rent_eur_per_m2_year.minimum);
   check("a broken link applies nothing", share.decode("#s=!!!", fresh(), J) === 0 && share.decode("#s=bm90IGpzb24", fresh(), J) === 0 && share.decode("", fresh(), J) === 0);
 }
 

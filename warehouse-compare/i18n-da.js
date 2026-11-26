@@ -189,6 +189,51 @@
       "{v}% of SKUs don't fit a standard container; this takes at most {m}%.": "{v} % af SKU'erne passer ikke i en standardkasse; dette tåler højst {m} %.",
       "Needs a flat floor.": "Kræver et plant gulv.",
       "No technology in the catalogue fits these constraints.": "Ingen teknologi i kataloget passer til disse krav.",
+      "Your site": "Dit lager",
+      "from the comparison": "fra sammenligningen",
+      "Picking technologies: flexibility vs efficiency": "Plukketeknologier: fleksibilitet mod effektivitet",
+      "Flexibility (F)": "Fleksibilitet (F)",
+      "Efficiency (E)": "Effektivitet (E)",
+      "← stable demand · long lease · high rent": "← stabil efterspørgsel · lang lejeperiode · høj leje",
+      "volatile SKUs · short lease · fast ramp-up →": "omskiftelige SKU'er · kort lejeperiode · hurtig opstart →",
+      "not achievable with today's technology": "ikke muligt med nutidens teknologi",
+      "dominated designs": "dominerede løsninger",
+      "volume / mix / exit flexibility": "fleksibilitet i volumen / sortiment / exit",
+      "recommended": "anbefalet",
+      "runner-up": "næstbedst",
+      "excluded: {r}": "udelukket: {r}",
+      "your site": "dit lager",
+      "excluded": "udelukket",
+      "your site, on the frontier at the target flexibility": "dit lager på fronten ved målfleksibiliteten",
+      "required flexibility → after cost pressure": "krævet fleksibilitet → efter omkostningspres",
+      "Technology": "Teknologi",
+      "Volume": "Volumen",
+      "Mix": "Sortiment",
+      "Exit": "Exit",
+      "Status": "Status",
+      "Screening result": "Screeningsresultat",
+      "Runner-up: {n}": "Næstbedst: {n}",
+      "Boundary case: a shift of ±{d} in flexibility changes the pick — treat it as a choice between {a} and {b}.": "Grænsetilfælde: en ændring på ±{d} i fleksibilitet ændrer valget — se det som et valg mellem {a} og {b}.",
+      "See it simulated in WH-{id}": "Se den simuleret i WH-{id}",
+      "This app doesn't simulate this technology; WH-A (shelf-to-person) and WH-C (manual) are the nearest it does.": "Appen simulerer ikke denne teknologi; de nærmeste, den simulerer, er WH-A (hylde-til-person) og WH-C (manuel).",
+      "flexibility the site needs": "den fleksibilitet, lageret har brug for",
+      "efficiency pressure (0–1)": "effektivitetspres (0–1)",
+      "target flexibility after cost pressure": "målfleksibilitet efter omkostningspres",
+      "efficiency on the frontier there": "effektivitet på fronten dér",
+      "What drives the flexibility need": "Hvad driver behovet for fleksibilitet",
+      "Points out of 100: weight × how far the input is towards its volatile end.": "Point ud af 100: vægt × hvor tæt værdien er på sin omskiftelige ende.",
+      "Ruled out": "Udelukket",
+      "How it works": "Sådan virker den",
+      "Strengths": "Styrker",
+      "Weaknesses": "Svagheder",
+      "Best fit": "Passer bedst til",
+      "Example vendors": "Eksempler på leverandører",
+      "Indicative screening (catalogue {v}). The positions are expert judgement on 0–100 scales, not measurements, and the model leaves out capex, integration risk, labour availability and building limits such as clear height and floor load. A starting point, not an investment decision.": "Vejledende screening (katalog {v}). Placeringerne er ekspertvurderinger på skalaer fra 0 til 100, ikke målinger, og modellen ser bort fra investering, integrationsrisiko, adgang til arbejdskraft og bygningens begrænsninger som frihøjde og gulvbelastning. Et udgangspunkt, ikke en investeringsbeslutning.",
+      "catalogue {v} · costs in €": "katalog {v} · omkostninger i €",
+      "years": "år",
+      "×": "×",
+      "€/m² a year": "€/m² om året",
+      "€/h": "€/t",
       "Locations per m²": "Pladser pr. m²",
       "Picker travel per order": "Plukkerens rejse pr. ordre",
       "Picker travel per line": "Plukkerens rejse pr. linje",
@@ -244,6 +289,10 @@
       "ix.headroom.none": "ingen (den dimensionerede flåde)",
       "ix.beforeafter": "Før og efter",
       "ix.results": "Resultater",
+      "ix.tab.tech": "Teknologi",
+      "tx.example": "Gennemregnet eksempel",
+      "tx.fromapp": "Hent volumen og lønomkostning fra sammenligningen",
+      "tx.intro": "Hvilken plukketeknologi kalder dette lagers forhold på? Enhver teknologi bytter fleksibilitet for effektivitet; nutidens bedste ligger på en front. Beskriv lageret, så finder screeningen den fleksibilitet, det har brug for, justerer den for omkostningspres, udelukker det, der ikke kan fungere, og vælger den nærmeste teknologi på fronten.",
       "ab.title": "Om Warehouse Compare",
       "ab.meta": "Warehouse Compare sammenligner tre plukkelagre på lige vilkår: mobile reoler, en halvcirkel og et rektangel. Udviklet af Daniel Alberto Sepulveda Estay, PhD.",
       "ab.sub": "om appen",
@@ -486,6 +535,46 @@
       "radial_aisle_width": [
         "De radiale gangs bredde",
         "Koncentrisk: bredden af de radiale gange."
+      ],
+      "site.demand_cv_weekly": [
+        "Ugentlig variation i efterspørgslen",
+        "Variationskoefficient for ugentlige ordrelinjer (standardafvigelse ÷ gennemsnit). 0,1 er stabilt; 0,6 er meget omskifteligt."
+      ],
+      "site.annual_sku_churn": [
+        "Årlig udskiftning af SKU'er",
+        "Andelen af SKU-sortimentet, der udskiftes på et år."
+      ],
+      "site.lease_horizon_years": [
+        "Lejeperiode",
+        "Hvor længe lageret er bundet: resterende lejeperiode, eller hvor længe driften er planlagt."
+      ],
+      "site.peak_to_average_ratio": [
+        "Forhold mellem spids og gennemsnit",
+        "Den travleste uge (eller sæson) som et multiplum af en gennemsnitlig uge. Ikke det samme som sammenligningens spidstimefaktor."
+      ],
+      "site.growth_uncertainty": [
+        "Vækstusikkerhed",
+        "Hvor usikre mængderne er om nogle år."
+      ],
+      "site.share_skus_outside_container": [
+        "SKU'er uden for kasse",
+        "Andelen af SKU'er, der ikke passer i en kasse på 600 × 400 × 300 mm op til ca. 30 kg."
+      ],
+      "site.flat_floor": [
+        "Gulv",
+        "Robotter til mobile hylder skal have et plant og glat gulv."
+      ],
+      "site.rent_eur_per_m2_year": [
+        "Leje",
+        "Leje eller tilsvarende omkostning pr. m² gulv om året."
+      ],
+      "site.labour_cost_eur_per_hour": [
+        "Lønomkostning",
+        "Den samlede omkostning for en plukkertime."
+      ],
+      "site.order_lines_per_day": [
+        "Ordrelinjer pr. dag",
+        "Ordrelinjer plukket på en gennemsnitlig dag."
       ]
     },
     "C": {
@@ -501,7 +590,56 @@
       "pod_fill.by_popularity": "Samme popularitet samlet",
       "pod_fill.random": "Spredt tilfældigt",
       "arrangement.radial": "Radiale rækker",
-      "arrangement.concentric": "Koncentriske rækker"
+      "arrangement.concentric": "Koncentriske rækker",
+      "site.growth_uncertainty.low": "Lav",
+      "site.growth_uncertainty.medium": "Middel",
+      "site.growth_uncertainty.high": "Høj",
+      "site.flat_floor.flat": "Plant nok til robotter",
+      "site.flat_floor.not_flat": "Ikke plant nok til robotter"
+    },
+    "A": {
+      "fixed_asrs": {
+        "name": "Faste AS/RS-shuttles",
+        "mechanism": "Gangbundne shuttles og lifte fører kasser til faste stationer",
+        "strengths": "Højeste kapacitet, meget tæt",
+        "weaknesses": "Lang leveringstid, stor bunden investering, svær at flytte eller ændre",
+        "best_fit": "Stabil, høj volumen, ejet lager, 10+ års horisont"
+      },
+      "cube_storage": {
+        "name": "Kubelager",
+        "mechanism": "Robotter oven på et gitter af stablede kasser graver kasser frem og bringer dem til porte",
+        "strengths": "Højeste tæthed pr. m², modulært gitter",
+        "weaknesses": "Grænse for kassestørrelse, langsommere dybe udgravninger, gitteret er bundet til bygningen",
+        "best_fit": "Høj leje, små til mellemstore varer, stabilt sortiment"
+      },
+      "climbing_robots": {
+        "name": "Klatrerobotter",
+        "mechanism": "Robotter klatrer op ad reolerne efter kasser og kører dem til stationerne",
+        "strengths": "God tæthed, robotterne skalerer med spidsen",
+        "weaknesses": "Grænse for kassestørrelse, reolinstallation",
+        "best_fit": "E-handel og detail med mellemstor volumen, moderat omskiftelighed"
+      },
+      "shelf_to_person": {
+        "name": "Hylde-til-person (Kiva-type)",
+        "mechanism": "Robotter løfter mobile hylder og bringer dem til plukstationer",
+        "strengths": "Hurtig installation, fleksible varestørrelser, omlægning i software",
+        "weaknesses": "Gangene koster tæthed, kræver plant gulv",
+        "best_fit": "Omskifteligt SKU-sortiment, 3PL, mellemlang lejeperiode"
+      },
+      "collaborative_amr": {
+        "name": "Samarbejdende AMR'er",
+        "mechanism": "Robotter bærer kasserne; plukkerne går til faste reoler",
+        "strengths": "Minimal investering, virker i eksisterende reoler, abonnementspris",
+        "weaknesses": "Der skal stadig gås, lavere kapacitet pr. plukker",
+        "best_fit": "Korte kontrakter, eksisterende lagre, usikker vækst"
+      },
+      "manual": {
+        "name": "Manuel plukning",
+        "mechanism": "Plukkerne går med vogne til faste reoler",
+        "strengths": "Maksimal fleksibilitet, ingen investering",
+        "weaknesses": "Arbejdskrævende, lav tæthed",
+        "best_fit": "Lav volumen, meget omskifteligt, billig arbejdskraft"
+      }
     }
   };
 })(typeof self !== "undefined" ? self : this);

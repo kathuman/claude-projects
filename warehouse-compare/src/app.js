@@ -6,7 +6,7 @@
  */
 (function () {
   "use strict";
-  const APP_VERSION = "0.5.0";
+  const APP_VERSION = "0.6.0";
   const IDS = ["A", "B", "C"];
   const SHARED = ["target_locations", "skus", "demand_skew", "demand_curve", "lines_per_order", "slotting", "lines_per_day", "picker_speed", "pick_time_per_line"];
   const COST = ["labour_cost_per_hour", "building_cost_per_sqm", "robot_cost", "gtp_station_cost", "discount_rate"];
@@ -138,9 +138,7 @@
       which = IDS;
     }
     result = WC.scenario.run(inputs, null, which, result);
-    // the URL always carries the inputs that differ from the defaults
-    const link = WC.share.encode(inputs, defaults);
-    history.replaceState(null, "", location.pathname + location.search + (link ? "#" + link : ""));
+    saveLink();
     if (order) routeOrder();
     render();
     WC.views.invalidate();
@@ -161,8 +159,8 @@
     document.querySelectorAll(".tab[data-id]").forEach(function (t) { const on = mode === "plan" && t.dataset.id === tab; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); });
     document.querySelectorAll(".tab[data-view]").forEach(function (t) { const on = t.dataset.view === mode; t.classList.toggle("on", on); t.setAttribute("aria-selected", on); });
     $("planView").hidden = mode !== "plan";
-    $("viewSide").hidden = mode !== "side"; $("viewSens").hidden = mode !== "sens"; $("viewShock").hidden = mode !== "shock";
-    if (mode === "plan") render(); else WC.views.show(mode);
+    $("viewSide").hidden = mode !== "side"; $("viewSens").hidden = mode !== "sens"; $("viewShock").hidden = mode !== "shock"; $("viewTech").hidden = mode !== "tech";
+    if (mode === "plan") render(); else if (mode === "tech") WC.techview.show(); else WC.views.show(mode);
   }
 
   function render() {
@@ -273,10 +271,19 @@
   window.addEventListener("resize", function () { if (result.C && mode === "plan") render(); });
 
   $("ver").textContent = "v" + APP_VERSION;
-  Promise.all([fetch("data/scenario.json").then(function (r) { return r.json(); }), fetch("../warehouse-model/data/parameters.json").then(function (r) { return r.json(); })])
+  // the address bar carries the inputs that differ from the defaults (comparison and technology screen)
+  function saveLink() {
+    const link = WC.share.encode(inputs, defaults);
+    history.replaceState(null, "", location.pathname + location.search + (link ? "#" + link : ""));
+  }
+  Promise.all(["data/scenario.json", "../warehouse-model/data/parameters.json", "data/archetypes.json"].map(function (u) { return fetch(u).then(function (r) { return r.json(); }); }))
     .then(function (j) {
       scJson = j[0]; inputs = WC.scenario.resolve(j[0], j[1]); defaults = WC.scenario.resolve(j[0], j[1]);
-      WC.share.decode(location.hash, inputs, scJson);
+      // the technology screen's site, starting from the spec's worked example
+      const site0 = Object.assign({}, j[2].example_site); delete site0.site_name;
+      inputs.site = Object.assign({}, site0); defaults.site = Object.assign({}, site0);
+      WC.share.decode(location.hash, inputs, scJson, j[2].site_inputs);
+      WC.techview.init({ catalogue: j[2], inputs: function () { return inputs; }, changed: saveLink, goto: function (id) { tab = id; mode = "plan"; showPanel(); } });
       WC.scenario.syncB(inputs);
       WC.views.init({ inputs: function () { return inputs; }, results: function () { return result; }, span: span });
       buildControls(); recompute(IDS); $("busy").hidden = true;

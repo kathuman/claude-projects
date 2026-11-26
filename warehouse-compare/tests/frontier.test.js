@@ -134,4 +134,36 @@ sites.push(site0);
   check("the two archetypes this app simulates are linked to their layouts", byId("shelf_to_person").simulated_as === "A" && byId("manual").simulated_as === "C");
 }
 
+// ---------------------------------------------------------------- the map, as numbers (what the view draws)
+{
+  const r = fr.recommend(site0, cat), mm = fr.mapModel(r, cat);
+  const st = Object.fromEntries(mm.points.map((p) => [p.id, p.status]));
+  check("map: statuses — recommended, runner-up, excluded, the rest feasible",
+    st.shelf_to_person === "recommended" && st.climbing_robots === "runner_up" && st.fixed_asrs === "excluded" && st.cube_storage === "excluded" && st.collaborative_amr === "feasible" && st.manual === "feasible");
+  check("map: the frontier line runs through the six archetypes in order of F", mm.line.length === 6 && mm.line.every((p, i) => i === 0 || p[0] > mm.line[i - 1][0]));
+  check("map: the site point sits on the frontier at F_target", near(mm.site.F, r.exact.F_target) && near(mm.site.E, fr.frontierE(cat.archetypes, r.exact.F_target)));
+  check("map: required flexibility is kept for the shift arrow", near(mm.required, r.exact.F_required));
+  check("map: a boundary case gets a band of ± the boundary around the target", mm.band && near(mm.band[0], r.exact.F_target - 10) && near(mm.band[1], r.exact.F_target + 10));
+  const calm = fr.recommend(Object.assign({}, site0, { lease_horizon_years: 25, demand_cv_weekly: 0.05, annual_sku_churn: 0.02, peak_to_average_ratio: 1.1, growth_uncertainty: "low", rent_eur_per_m2_year: 250, labour_cost_eur_per_hour: 45, order_lines_per_day: 120000 }), cat);
+  check("map: a clear case has no band (" + calm.recommended + ")", calm.ok && !calm.boundary_case && fr.mapModel(calm, cat).band === null && calm.recommended === "fixed_asrs");
+  const bad = fr.mapModel(fr.recommend(Object.assign({}, site0, { lease_horizon_years: -1 }), cat), cat);
+  check("map: an invalid site still draws the frontier, with no site point", bad.site === null && bad.points.every((p) => p.status === "feasible"));
+}
+
+// ---------------------------------------------------------------- the form's inputs agree with the engine
+{
+  const defs = cat.site_inputs, keys = Object.keys(defs).filter((k) => k[0] !== "$");
+  check("the form covers every site input the engine reads", ["demand_cv_weekly", "annual_sku_churn", "lease_horizon_years", "peak_to_average_ratio", "growth_uncertainty", "share_skus_outside_container", "flat_floor", "rent_eur_per_m2_year", "labour_cost_eur_per_hour", "order_lines_per_day"].every((k) => keys.indexOf(k) >= 0));
+  let ok = true;
+  keys.forEach((k) => {
+    const d = defs[k];
+    if (d.type === "choice") return;
+    // both ends of every slider are valid inputs, and the worked example sits inside the range
+    [d.minimum, d.maximum].forEach((v) => { const s2 = Object.assign({}, site0); s2[k] = v; if (fr.validate(s2).length) ok = false; });
+    if (site0[k] < d.minimum || site0[k] > d.maximum) ok = false;
+  });
+  check("every slider's range is valid for the engine and holds the worked example", ok);
+  check("growth choices are the engine's levels", JSON.stringify(defs.growth_uncertainty.options) === JSON.stringify(Object.keys(cat.config.flexibility.find((f) => f.levels).levels)));
+}
+
 summary("frontier");
