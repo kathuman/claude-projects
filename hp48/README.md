@@ -215,6 +215,27 @@ menu labels, then idles in the main loop. YES (line 1, bit 4) starts recovering 
   - closing brackets typed instead of stepped over
   - a missing Spanish message
 
+## How it works: the Learn page
+
+[learn.html](learn.html) explains the calculator from the chip up, for someone of about 18 with no electronics
+background, in English, Spanish and Danish. It covers:
+- nibbles, the registers and their fields
+- fetch, decode, execute
+- the memory controller and the bus
+- the keyboard matrix and the screen
+- sleep, timers and interrupts
+- what the ROM holds, and how RPL runs as threaded code on three Saturn instructions
+- how a real number is stored, and one key press from start to finish
+
+It has two live parts:
+- a small program you can step through, on the emulator's own `saturn.js` with a 256-nibble memory
+- a box that shows how any number you type is stored, nibble by nibble
+
+Its figures were measured or checked here rather than quoted:
+- 90,000 instructions for one + press, counted in the emulator
+- the RPL inner loop (`142 164 808C`), which appears 272 times in the revision R ROM
+- every instruction encoding, taken from the disassembler
+
 ## 0.5: the supply chain toolkit and the stack reader
 
 - **The keyboard** now uses compact legends: each key's shifted functions sit in its top corners and its alpha

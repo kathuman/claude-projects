@@ -9,13 +9,13 @@ for (const f of ["i18n-es.js", "i18n-da.js"]) new Function("self", fs.readFileSy
 const read = (f) => fs.readFileSync(path.join(dir, f), "utf8");
 
 const pageKeys = new Set();
-for (const f of ["index.html", "about.html"]) {
+for (const f of ["index.html", "about.html", "learn.html"]) {
   const html = read(f);
   for (const m of html.matchAll(/data-i18n="([^"]+)"/g)) pageKeys.add(m[1]);
   for (const m of html.matchAll(/data-i18n-attr="([^"]+)"/g)) m[1].split(",").forEach((p) => pageKeys.add(p.split("=")[1]));
 }
 const messages = new Set();
-for (const m of read("src/app.js").matchAll(/\bT\("((?:[^"\\]|\\.)*)"/g)) messages.add(JSON.parse('"' + m[1] + '"'));
+for (const m of (read("src/app.js") + read("learn.html")).matchAll(/\bT\("((?:[^"\\]|\\.)*)"/g)) messages.add(JSON.parse('"' + m[1] + '"'));
 for (const m of read("src/romfile.js").matchAll(/refuse\("((?:[^"\\]|\\.)*)"/g)) messages.add(JSON.parse('"' + m[1] + '"'));
 // the supply chain programs' titles, inputs and outputs are shown through T() too
 for (const p of require("../src/scm.js").PROGRAMS) [p.title].concat(p.inputs, p.outputs).forEach((s) => messages.add(s));
