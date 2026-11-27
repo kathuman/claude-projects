@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Tech University Atlas</title>
-  <meta name="description" content="The technical universities in the QS World University Rankings 2027 on a 3D globe and a 2D map: filter by rank tier, by why each counts as technical, by country or by name." />
+  <meta name="description" content="The technical universities in the QS World University Rankings 2027, and the other universities in the QS Engineering &amp; Technology top 100, on a 3D globe and a 2D map: filter by rank tier, by why each is included, by country or by name." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 34 34%22><circle cx=%2217%22 cy=%2217%22 r=%2215%22 fill=%22%230a2f52%22 stroke=%22%237dd3fc%22 stroke-width=%222%22/><ellipse cx=%2217%22 cy=%2217%22 rx=%226.5%22 ry=%2215%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%221.4%22/><circle cx=%2222%22 cy=%2212%22 r=%223%22 fill=%22%23c98500%22/></svg>" />
   <script>try { var t = localStorage.getItem("tua-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="style.css?v=1.0.1" />
+  <link rel="stylesheet" href="style.css?v=1.1.0" />
 </head>
 <body>
 <div id="app">
@@ -24,7 +24,7 @@
       </svg>
       <div style="min-width:0">
         <h1>Tech University <span class="acc">Atlas</span> <span class="ver" id="ver"></span></h1>
-        <p class="subtitle">Technical universities in the QS World University Rankings 2027</p>
+        <p class="subtitle">Technical and engineering universities in the QS World University Rankings 2027</p>
       </div>
     </div>
     <div class="top-actions">
@@ -64,16 +64,18 @@
         <div class="row">
           <label class="f" for="f-match">Inclusion basis
             <select id="f-match">
-              <option value="all">All technical universities</option>
+              <option value="all">All universities</option>
               <option value="tech">Name contains “tech”</option>
               <option value="tec">Name contains “tec”</option>
               <option value="status">Technical status, no tech/tec in name</option>
+              <option value="eng">Engineering top 100, not technical</option>
             </select>
           </label>
           <label class="f" for="f-country">Country
             <select id="f-country"><option value="">All countries</option></select>
           </label>
         </div>
+        <label class="check" for="f-eng"><input type="checkbox" id="f-eng"> Only the QS engineering top 100</label>
         <label class="f" for="f-q">Search
           <input id="f-q" type="search" placeholder="e.g. Delft, Monterrey, ETH, IIT">
         </label>
@@ -81,8 +83,9 @@
 
       <section class="panel">
         <h2>Legend</h2>
-        <p class="legend-note">Colour shows the QS rank tier. <span class="ring-sw"></span>A ring marks a “tec” name match (Tecnológico, Politécnico). <span class="sq-sw"></span>A square marks a technical university without tech/tec in its name, such as ETH Zurich, TU Wien or RWTH Aachen. On the globe, column height rises with rank.</p>
+        <p class="legend-note">Colour shows the QS rank tier. <span class="ring-sw"></span>A ring marks a “tec” name match (Tecnológico, Politécnico). <span class="sq-sw"></span>A square marks a technical university without tech/tec in its name, such as ETH Zurich, TU Wien or RWTH Aachen. <span class="dia-sw"></span>A diamond marks a university that is not technical but is in the top 100 for engineering, such as Stanford, Cambridge or Tsinghua. On the globe, column height rises with rank.</p>
         <p class="legend-note">Technical status means the native name designates a technical university or polytechnic, the institution belongs to a national technical-university network (TU9, TU Austria, 4TU, Nordic Five Tech, Malaysian Technical University Network), or it is a single-field engineering, mining, petroleum, aerospace or telecom university.</p>
+        <p class="legend-note">Strong in engineering means a place in the top 100 of the QS World University Rankings by Subject 2026, Engineering &amp; Technology. Every university in that top 100 shows its subject rank, technical or not.</p>
         <p class="legend-note">Points sit on the main campus. Rows marked “city-level” in the list are placed at city precision.</p>
       </section>
 
@@ -91,7 +94,7 @@
         <ul id="list"></ul>
       </section>
 
-      <p class="legend-note" style="padding: 0 4px 8px">Source: QS World University Rankings 2027 (published 18 June 2026), 1,504 institutions. Coordinates compiled by Claude, not by a geocoding service. Country outlines: Natural Earth.</p>
+      <p class="legend-note" style="padding: 0 4px 8px">Sources: QS World University Rankings 2027 (published 18 June 2026), 1,504 institutions; QS World University Rankings by Subject 2026, Engineering &amp; Technology (published 25 March 2026). Coordinates compiled by Claude, not by a geocoding service. Country outlines: Natural Earth.</p>
     </aside>
 
     <section id="stage" aria-label="Map">
@@ -109,8 +112,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.45.3/dist/globe.gl.min.js"></script>
-<script src="data/countries.js?v=1.0.1"></script>
-<script src="data/universities.js?v=1.0.1"></script>
-<script src="app.js?v=1.0.1"></script>
+<script src="data/countries.js?v=1.1.0"></script>
+<script src="data/universities.js?v=1.1.0"></script>
+<script src="app.js?v=1.1.0"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About Tech University Atlas</title>
-  <meta name="description" content="What the Tech University Atlas shows, which universities count as technical, where the data comes from and how exact it is." />
+  <meta name="description" content="What the Tech University Atlas shows, which universities count as technical or strong in engineering, where the data comes from and how exact it is." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 34 34%22><circle cx=%2217%22 cy=%2217%22 r=%2215%22 fill=%22%230a2f52%22 stroke=%22%237dd3fc%22 stroke-width=%222%22/><ellipse cx=%2217%22 cy=%2217%22 rx=%226.5%22 ry=%2215%22 fill=%22none%22 stroke=%22%237dd3fc%22 stroke-width=%221.4%22/><circle cx=%2222%22 cy=%2212%22 r=%223%22 fill=%22%23c98500%22/></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -89,7 +89,7 @@ a{color:var(--accent);}
 <main>
   <div class="eyebrow">About the app</div>
   <h1>Tech University Atlas</h1>
-  <p class="lede">Where are the world's technical universities, and how do they rank? This atlas puts the 242 technical universities in the QS World University Rankings 2027 on a spinning globe and a flat map, coloured by rank, so you can see at a glance where engineering education is strongest and how it spreads across 68 countries.</p>
+  <p class="lede">Where are the world's technical universities, and how do they rank? This atlas puts 304 universities in the QS World University Rankings 2027 on a spinning globe and a flat map, coloured by rank: the 242 technical universities, and 62 more that are not technical but rank in the world's top 100 for engineering, such as Stanford, Cambridge and Tsinghua. You can see at a glance where engineering education is strongest and how it spreads across 72 countries.</p>
   <p><a class="open" href="./">Open the atlas →</a></p>
 
   <div class="cols">
@@ -97,8 +97,8 @@ a{color:var(--accent);}
       <h2>What it does</h2>
       <ul>
         <li><b>Shows them on a globe or a map</b>The 3D globe spins and raises a column at each university, taller for a better rank. The flat map uses the Equal Earth projection, which keeps every country at its true size. Drag, scroll to zoom, and click any point.</li>
-        <li><b>Filters them</b>By rank tier, by why a university counts as technical, by country, or by typing part of a name, such as Delft, Monterrey, ETH or IIT. The counts and the list follow every filter.</li>
-        <li><b>Tells you about each one</b>Click a point or a row in the list: its name, country, QS 2027 rank, where it sits, whether that spot is the main campus or only the city, and why it is on the list.</li>
+        <li><b>Filters them</b>By rank tier, by why a university is included, to the QS Engineering &amp; Technology top 100 only, by country, or by typing part of a name, such as Delft, Monterrey, ETH or IIT. The counts and the list follow every filter.</li>
+        <li><b>Tells you about each one</b>Click a point or a row in the list: its name, country, QS 2027 rank, its engineering rank if it is in the top 100, where it sits, whether that spot is the main campus or only the city, and why it is on the list.</li>
         <li><b>Light or dark</b>Dark by default, like the rest of the AI Projects site; the sun button switches to a light map and remembers your choice.</li>
       </ul>
     </section>
@@ -107,8 +107,8 @@ a{color:var(--accent);}
       <h2>Colours: the rank tiers</h2>
       <p>Each point is coloured by its QS 2027 rank. A rank published as a band, such as 601–610, is placed by its first number.</p>
       <ul class="tiers">
-        <li><span class="sw" style="background:#3987e5"></span>Top 100<span class="n">16</span></li>
-        <li><span class="sw" style="background:#d95926"></span>101–300<span class="n">33</span></li>
+        <li><span class="sw" style="background:#3987e5"></span>Top 100<span class="n">71</span></li>
+        <li><span class="sw" style="background:#d95926"></span>101–300<span class="n">40</span></li>
         <li><span class="sw" style="background:#199e70"></span>301–600<span class="n">56</span></li>
         <li><span class="sw" style="background:#c98500"></span>601–1000<span class="n">60</span></li>
         <li><span class="sw" style="background:#d55181"></span>1001 and below<span class="n">77</span></li>
@@ -118,20 +118,21 @@ a{color:var(--accent);}
   </div>
 
   <section class="card wide">
-    <h2>Which universities count as technical?</h2>
-    <p>The rankings do not label universities as technical, so the atlas uses three simple tests. A university is included if it passes any of them; the shape of its point shows which one.</p>
+    <h2>Which universities are included?</h2>
+    <p>The rankings do not label universities as technical, so the atlas uses three simple tests for that, and a fourth for universities that are strong in engineering without being technical. A university is included if it passes any of them; the shape of its point shows which one.</p>
     <div class="basis">
       <div><b>Its English name contains “tech” <span class="n">186</span></b>Massachusetts Institute of Technology, Delft University of Technology, Georgia Tech. Shown as a plain dot.</div>
       <div><b>Its name contains “tec”, accents ignored <span class="n">14</span></b>Names in Spanish, Portuguese or Italian, such as Tecnológico de Monterrey or Politecnico di Milano. Shown with a ring.</div>
       <div><b>It is technical without saying so in English <span class="n">42</span></b>Its name in its own language means technical university or polytechnic (ETH Zurich, TU Wien, RWTH Aachen); it belongs to a national network of technical universities (TU9, TU Austria, 4TU, Nordic Five Tech, the Malaysian Technical University Network); or it teaches only one engineering field, such as mining, petroleum, aerospace or telecoms. Shown as a square.</div>
+      <div><b>It is not technical, but it is strong in engineering <span class="n">62</span></b>It is in the top 100 of the QS World University Rankings by Subject 2026 for Engineering &amp; Technology, which ranks universities on academic and employer reputation and research citations in engineering. Stanford, Cambridge, Tsinghua, Toronto, the University of Tokyo. Shown as a diamond. The other 37 universities in that top 100 are technical and are already on the map; every one of the 99 shows its engineering rank. Two places in the subject top 100 are missing: KAUST, which is not in the QS 2027 overall ranking, and one university tied at 20th, which the copy of the table used here leaves out.</div>
     </div>
   </section>
 
   <div class="cols">
     <section class="card">
       <h2>Where the data comes from</h2>
-      <p><b>Ranks:</b> the QS World University Rankings 2027, published on 18 June 2026, which rank 1,504 institutions. The atlas keeps each rank exactly as published. It is not affiliated with or endorsed by QS.</p>
-      <p><b>Locations:</b> the coordinates were compiled by Claude, an AI model, not looked up by a mapping service. 210 points sit on the main campus; for 32 only the city was certain, and those are marked “city-level” in the list. A point can be off by a few streets, so check a precise location before relying on it.</p>
+      <p><b>Ranks:</b> the QS World University Rankings 2027, published on 18 June 2026, which rank 1,504 institutions, and for engineering the QS World University Rankings by Subject 2026, Engineering &amp; Technology, published on 25 March 2026. The atlas keeps each rank exactly as published. It is not affiliated with or endorsed by QS.</p>
+      <p><b>Locations:</b> the coordinates were compiled by Claude, an AI model, not looked up by a mapping service. 270 points sit on the main campus; for 34 only the city was certain, and those are marked “city-level” in the list. A point can be off by a few streets, so check a precise location before relying on it.</p>
       <p><b>Country outlines:</b> Natural Earth, simplified to about 50 metres. The globe is drawn with globe.gl.</p>
     </section>
 
@@ -139,14 +140,14 @@ a{color:var(--accent);}
       <h2>Author</h2>
       <p>Tech University Atlas was designed and built by <b>Daniel Alberto Sepulveda Estay, PhD</b>, founder of <a href="https://kathuman.github.io/estay-dynamics/" target="_blank" rel="noopener">Estay Dynamics</a>. He works on system dynamics and network optimisation for supply chain resilience. He holds a PhD from the Technical University of Denmark and an MSc from the Massachusetts Institute of Technology, and is a council member of the System Dynamics Society.</p>
       <p><a href="https://kathuman.github.io/estay-dynamics/about.html" target="_blank" rel="noopener">More about Daniel →</a></p>
-      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Tech University Atlas: technical universities in the QS World University Rankings 2027</em> (version 1.0.1) [Software]. https://kathuman.github.io/claude-projects/tech-uni-atlas/</p>
+      <p class="cite"><b>To cite:</b> Sepulveda Estay, D. A. (2026). <em>Tech University Atlas: technical and engineering universities in the QS World University Rankings 2027</em> (version 1.1.0) [Software]. https://kathuman.github.io/claude-projects/tech-uni-atlas/</p>
     </section>
   </div>
 </main>
 
 <footer class="foot">
-  <span class="consult">Tech University Atlas v1.0.1 · <a href="./">Open the atlas</a></span>
-  <span>The technical universities in the QS World University Rankings 2027 on a globe and a map. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
+  <span class="consult">Tech University Atlas v1.1.0 · <a href="./">Open the atlas</a></span>
+  <span>The technical universities in the QS World University Rankings 2027, and the others strong in engineering, on a globe and a map. Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.</span>
 </footer>
 </body>
 </html>

@@ -1,7 +1,8 @@
-// Tech University Atlas — the technical universities in the QS World University Rankings 2027 on a 3D globe and a 2D
-// Equal Earth map, filtered by rank tier, inclusion basis, country and name. Data in data/; theme tokens in style.css.
+// Tech University Atlas — the technical universities in the QS World University Rankings 2027, and the other universities
+// strong in engineering, on a 3D globe and a 2D Equal Earth map, filtered by rank tier, inclusion basis, the QS
+// Engineering & Technology top 100, country and name. Data in data/; theme tokens in style.css.
 (function () {
-  const VERSION = "1.0.1";   // also the ?v= on every local file in index.html and about.html (tests/release.test.js)
+  const VERSION = "1.1.0";   // also the ?v= on every local file in index.html and about.html (tests/release.test.js)
   const $ = id => document.getElementById(id);
   $("ver").textContent = "v" + VERSION;
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -20,7 +21,7 @@
     u.tier = TIERS.find(t => u.r <= t.max).id;
   });
   const color = u => css(TIERS[u.tier - 1].tok);
-  const state = { view: "3d", tiers: new Set([1, 2, 3, 4, 5]), match: "all", country: "", q: "", sel: null };
+  const state = { view: "3d", tiers: new Set([1, 2, 3, 4, 5]), match: "all", engOnly: false, country: "", q: "", sel: null };
   try { const v = localStorage.getItem("tua-view"); if (v === "2d" || v === "3d") state.view = v; } catch (e) {}
 
   // ---------- sidebar ----------
@@ -34,27 +35,25 @@
     lab.querySelector("input").addEventListener("change", e => { e.target.checked ? state.tiers.add(t.id) : state.tiers.delete(t.id); update(); });
   });
   $("f-match").addEventListener("change", e => { state.match = e.target.value; update(); });
+  $("f-eng").addEventListener("change", e => { state.engOnly = e.target.checked; update(); });
   $("f-country").addEventListener("change", e => { state.country = e.target.value; update(); if (state.country) focusCountry(); });
   $("f-q").addEventListener("input", e => { state.q = e.target.value.trim().toLowerCase(); update(); });
 
   const fold = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  function filtered() {
-    return UNIS.filter(u => state.tiers.has(u.tier)
-      && (state.match === "all" || u.match === state.match)
-      && (!state.country || u.country === state.country)
-      && (!state.q || fold(u.name + " " + u.country).includes(fold(state.q))));
-  }
-  function preTier() {
-    return UNIS.filter(u => (state.match === "all" || u.match === state.match) && (!state.country || u.country === state.country)
-      && (!state.q || fold(u.name + " " + u.country).includes(fold(state.q))));
-  }
+  const engText = u => u.eng ? `QS Engineering & Technology 2026: ${u.eng.startsWith("=") ? "joint " + u.eng.slice(1) : u.eng}` : "";
+  // every filter but the tier, so the tier counts show what ticking a tier would add
+  const passes = u => (state.match === "all" || u.match === state.match) && (!state.engOnly || u.eng)
+    && (!state.country || u.country === state.country)
+    && (!state.q || fold(u.name + " " + u.country).includes(fold(state.q)));
+  function filtered() { return UNIS.filter(u => state.tiers.has(u.tier) && passes(u)); }
+  function preTier() { return UNIS.filter(passes); }
 
   function renderList(rows) {
     const ul = $("list"); ul.innerHTML = "";
     rows.forEach(u => {
       const li = document.createElement("li"); li.tabIndex = 0; if (state.sel === u) li.className = "sel";
       li.innerHTML = `<span class="rk"><span class="dot ${u.match}" style="background:${color(u)}"></span>${u.rank}</span>
-        <span class="nm">${u.name}<span class="ct">${u.country}${u.prec === "City" ? " · city-level" : ""}</span></span>`;
+        <span class="nm">${u.name}<span class="ct">${u.country}${u.prec === "City" ? " · city-level" : ""}${u.eng ? " · Engineering " + u.eng : ""}</span></span>`;
       const go = () => select(u, true);
       li.addEventListener("click", go); li.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
       ul.appendChild(li);
@@ -150,7 +149,10 @@
     rows.forEach(u => {
       const [x, y] = P(u.lng, u.lat); pts2d.push({ u, x, y });
       const r = u === state.sel ? rad * 1.7 : rad;
-      ctx.beginPath(); if (u.match === "status") ctx.rect(x - r * 0.9, y - r * 0.9, r * 1.8, r * 1.8); else ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = color(u); ctx.globalAlpha = 0.92; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath();
+      if (u.match === "status") ctx.rect(x - r * 0.9, y - r * 0.9, r * 1.8, r * 1.8);
+      else if (u.match === "eng") { const d = r * 1.25; ctx.moveTo(x, y - d); ctx.lineTo(x + d, y); ctx.lineTo(x, y + d); ctx.lineTo(x - d, y); ctx.closePath(); }
+      else ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fillStyle = color(u); ctx.globalAlpha = 0.92; ctx.fill(); ctx.globalAlpha = 1;
       ctx.lineWidth = (u.match === "tec" ? 2 : 0.8) * dpr; ctx.strokeStyle = u.match === "tec" ? css("--tec-ring") : css("--dot-edge"); ctx.stroke();
     });
     if (state.sel && rows.includes(state.sel)) {
@@ -196,11 +198,11 @@
     return `<div style="font-family:${css("--font")};font-size:12px;background:${css("--float-bg")};color:${css("--text")};border:1px solid ${css("--panel-border")};border-radius:8px;padding:8px 10px;max-width:280px">
       <div style="font-weight:600;margin-bottom:3px">${u.name}</div>
       <div style="color:${css("--text-dim")}">${u.country} · QS 2027 rank ${u.rank}</div>
-      <div style="color:${css("--text-dim")};font-family:${css("--mono")};font-size:11px">${u.lat.toFixed(4)}, ${u.lng.toFixed(4)} · ${u.prec === "City" ? "city-level" : "campus"} · ${u.basis}</div></div>`;
+      <div style="color:${css("--text-dim")};font-family:${css("--mono")};font-size:11px">${u.lat.toFixed(4)}, ${u.lng.toFixed(4)} · ${u.prec === "City" ? "city-level" : "campus"} · ${u.basis}</div>${u.eng ? `<div style="color:${css("--text-dim")};margin-top:2px">${engText(u)}</div>` : ""}</div>`;
   }
   function showTip(u, e) {
     const t = $("tip"), r = $("stage").getBoundingClientRect();
-    t.innerHTML = `<div class="t">${u.name}</div><div>${u.country} · QS 2027 rank ${u.rank}</div><div class="m">${u.lat.toFixed(4)}, ${u.lng.toFixed(4)} · ${u.prec === "City" ? "city-level" : "campus"} · ${u.basis}</div>`;
+    t.innerHTML = `<div class="t">${u.name}</div><div>${u.country} · QS 2027 rank ${u.rank}</div><div class="m">${u.lat.toFixed(4)}, ${u.lng.toFixed(4)} · ${u.prec === "City" ? "city-level" : "campus"} · ${u.basis}</div>${u.eng ? `<div>${engText(u)}</div>` : ""}`;
     t.hidden = false;
     let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
     if (x + 290 > r.width) x = e.clientX - r.left - 290; if (y + 90 > r.height) y = e.clientY - r.top - 90;
