@@ -44,6 +44,14 @@ const names = new Set(GEO.features.map((f) => f.properties.name));
 const missing = [...new Set(UNIS.map((u) => u.country))].filter((c) => !names.has(c) && !names.has(ALIAS[c] || ""));
 check("the map has an outline for every country except the four too small for it", missing.every((c) => TOO_SMALL.includes(c)), missing.join(", ") || "all");
 
+// every outline runs clockwise (holes the other way), as the globe expects: on a sphere a ring the wrong way round
+// encloses the rest of the world, so one reversed island (Bermuda, once) paints the whole globe the land colour
+const area = (r) => { let s = 0; for (let i = 0; i < r.length - 1; i++) s += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1]; return s / 2; };
+const wrong = [];
+GEO.features.forEach((f) => (f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates)
+  .forEach((p) => { if (area(p[0]) > 0 || p.slice(1).some((h) => area(h) < 0)) wrong.push(f.properties.name); }));
+check("every country outline is wound the way the globe draws it", !wrong.length, wrong.join(", ") || "all");
+
 // the about page's numbers
 const r = (u) => +(String(u.rank).match(/\d+/) || [1500])[0];
 const tier = (u) => (r(u) <= 100 ? 1 : r(u) <= 300 ? 2 : r(u) <= 600 ? 3 : r(u) <= 1000 ? 4 : 5);

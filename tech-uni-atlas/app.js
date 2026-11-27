@@ -2,7 +2,7 @@
 // strong in engineering, on a 3D globe and a 2D Equal Earth map, filtered by rank tier, inclusion basis, the QS
 // Engineering & Technology top 100, country and name. Data in data/; theme tokens in style.css.
 (function () {
-  const VERSION = "1.1.0";   // also the ?v= on every local file in index.html and about.html (tests/release.test.js)
+  const VERSION = "1.1.1";   // also the ?v= on every local file in index.html and about.html (tests/release.test.js)
   const $ = id => document.getElementById(id);
   $("ver").textContent = "v" + VERSION;
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -63,41 +63,44 @@
 
   // ---------- 3D globe ----------
   let world = null;
-  function landTexture() {
-    const W = 2048, H = 1024, c = document.createElement("canvas"); c.width = W; c.height = H;
-    const g = c.getContext("2d");
-    g.fillStyle = css("--ocean"); g.fillRect(0, 0, W, H);
-    g.strokeStyle = css("--grat"); g.lineWidth = 1;
-    for (let lo = -180; lo <= 180; lo += 30) { const x = (lo + 180) / 360 * W; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
-    for (let la = -60; la <= 60; la += 30) { const y = (90 - la) / 180 * H; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
-    g.fillStyle = css("--land"); g.strokeStyle = css("--land-edge"); g.lineWidth = 1.1;
-    FEATURES.forEach(f => {
-      const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
-      polys.forEach(poly => {
-        g.beginPath();
-        poly.forEach(ring => { let prevX = null; ring.forEach(([lo, la], i) => { const x = (lo + 180) / 360 * W, y = (90 - la) / 180 * H; if (i === 0 || (prevX !== null && Math.abs(x - prevX) > W / 2)) g.moveTo(x, y); else g.lineTo(x, y); prevX = x; }); g.closePath(); });
-        g.fill("evenodd"); g.stroke();
-      });
-    });
-    return c.toDataURL("image/png");
+  // columns get slimmer as you zoom in, so close up one campus does not cover its whole country
+  let ptScale = 1, rescale = 0;
+  // The globe is drawn as geometry, not as a picture wrapped round a sphere: the ocean is the sphere's own colour, and
+  // the countries and the grid are polygons and lines, so they stay sharp however far you zoom in (a 2048 px texture
+  // turned blurry at close zoom).
+  const GRID = [];
+  for (let lo = -180; lo < 180; lo += 30) { const p = []; for (let la = -90; la <= 90; la += 2) p.push([la, lo]); GRID.push(p); }
+  for (let la = -60; la <= 60; la += 30) { const p = []; for (let lo = -180; lo <= 180; lo += 2) p.push([la, lo]); GRID.push(p); }
+  function paintGlobe() {
+    // flat colours, unlit, like the 2D map: the land polygons are unlit, so a lit ocean came out nearly the same blue
+    const m = world.globeMaterial(); m.color.set("#000000"); m.specular.set("#000000"); m.shininess = 0; m.emissive.set(css("--ocean"));
+    world.polygonCapColor(() => css("--land")).polygonStrokeColor(() => css("--land-edge")).pathColor(() => css("--grat"));
   }
   function initGlobe() {
     if (typeof Globe === "undefined") { $("loading").textContent = "3D view unavailable: the globe library did not load. Use the 2D map."; return; }
     const el = $("globe");
     world = Globe()(el)
       .backgroundColor("rgba(0,0,0,0)")
-      .globeImageUrl(landTexture())
+      .polygonsData(FEATURES).polygonAltitude(0.003).polygonSideColor(() => "rgba(0,0,0,0)").polygonCapCurvatureResolution(2)
+      .polygonsTransitionDuration(0)
+      .pathsData(GRID).pathPointLat(p => p[0]).pathPointLng(p => p[1]).pathPointAlt(0.001).pathStroke(null)
+      .pathTransitionDuration(0)
       .showAtmosphere(true).atmosphereColor(css("--accent")).atmosphereAltitude(0.16)
       .pointLat("lat").pointLng("lng")
       .pointColor(u => color(u))
       .pointAltitude(u => 0.012 + 0.16 * Math.pow(1 - Math.min(u.r, 1500) / 1500, 2.2))
-      .pointRadius(u => u === state.sel ? 0.55 : 0.32)
+      .pointRadius(u => (u === state.sel ? 0.55 : 0.32) * ptScale)
+      .pointsTransitionDuration(0)
+      .onZoom(pov => { const k = Math.max(0.12, Math.min(1, pov.altitude / 1.6)); if (Math.abs(k - ptScale) / ptScale > 0.08) { ptScale = k; if (!rescale) rescale = requestAnimationFrame(() => { rescale = 0; world.pointRadius(world.pointRadius()); }); } })
       .pointResolution(10)
       .pointLabel(u => tipHTML(u))
       .onPointClick(u => select(u, false))
       .ringsData([]).ringLat("lat").ringLng("lng").ringColor(() => t => `rgba(${hexRgb(css("--tec-ring"))},${1 - t})`)
       .ringMaxRadius(1.1).ringPropagationSpeed(0.9).ringRepeatPeriod(1600)
       .width(el.clientWidth).height(el.clientHeight);
+    paintGlobe();
+    world.renderer().setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    world.controls().minDistance = 104;   // the globe's radius is 100: close enough to tell neighbouring campuses apart
     world.controls().autoRotate = true; world.controls().autoRotateSpeed = 0.35;
     world.pointOfView({ lat: 30, lng: 15, altitude: 2.3 });
     $("loading").hidden = true;
@@ -268,7 +271,7 @@
   window.addEventListener("resize", resize);
   // theme: dark blueprint by default, like the AI Projects page; the button switches to blueprint paper and back,
   // and the change rebuilds the globe texture and every colour
-  const retheme = () => { if (world) world.globeImageUrl(landTexture()).atmosphereColor(css("--accent")).pointColor(u => color(u)); landCache = null; update(); };
+  const retheme = () => { if (world) { paintGlobe(); world.atmosphereColor(css("--accent")).pointColor(u => color(u)); } landCache = null; update(); };
   new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   $("b-theme").addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
