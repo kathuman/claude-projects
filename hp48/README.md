@@ -16,6 +16,7 @@ The emulator targets the 48GX, revision R.
 | 2 | Memory controller, I/O registers, timers, interrupts → the ROM boots | ✅ |
 | 3 | Display (131 × 64 LCD, annunciators) and keyboard, in the browser | ✅ |
 | 4 | Memory kept between visits, typing programs, saving to a file, Spanish and Danish | ✅ |
+| 0.5 | Compact keyboard, the stack reader, a supply chain toolkit | ✅ |
 
 ## Phase 1: the Saturn CPU
 
@@ -214,14 +215,84 @@ menu labels, then idles in the main loop. YES (line 1, bit 4) starts recovering 
   - closing brackets typed instead of stepped over
   - a missing Spanish message
 
+## 0.5: the supply chain toolkit and the stack reader
+
+- **The keyboard** now uses compact legends: each key's shifted functions sit in its top corners and its alpha
+  letter in its bottom corner, so keys are taller and easier to tap. On narrow screens the right-shift label drops
+  to a second line.
+- **The stack reader.** [src/stack.js](src/stack.js) reads the stack from the calculator's memory, so results can
+  be shown as text, copied, exported as CSV and checked.
+  - **Where the stack is:** the address of stack level 1 is kept at 806F8. I found it on the real ROM by putting
+    known numbers on the stack and searching RAM for the pointer that leads to them; it was the only one. From
+    there each level is a 5-nibble pointer, until a pointer of 0. Small numbers often point into ROM, where the
+    firmware keeps constants such as 7, 8 and 9.
+  - **Objects:**
+    - each starts with its prolog's address, and every prolog's code starts with 028FC (also checked on the ROM)
+    - reals are BCD: exponent, 12-digit mantissa, sign
+    - strings, binary integers, names, complex numbers, tagged objects and lists are decoded
+    - programs and algebraics are recognised
+- **The supply chain toolkit.** [src/scm.js](src/scm.js) holds seven RPL programs and a JavaScript reference for
+  each. *Install the programs* types them into a directory `SCM` and puts them on the menu keys:
+  - EOQ, safety stock and reorder point
+  - newsvendor: the inverse normal is found by Newton's method on the ROM's own `UTPN`
+  - fill rate, with the normal loss function
+  - Little's law
+  - the bullwhip ratio, from two lists
+
+  Each program has a form with its inputs in stack order. *Run on the calculator* types them, runs the program,
+  reads the stack and compares each result with the reference to 12 digits. The programs are written for what
+  the 48GX keyboard can type: `^.5` for √, and `« + » STREAM` for Σ.
+- **Two typing fixes found on the ROM:**
+  - In alpha mode the quote key types one `"`, not a pair. The earlier tests passed only because ENTER closes an
+    unterminated string; inside a list the string swallowed the closing brace.
+  - α α does not always lock alpha: after some commands it gives one-shot alpha. The Typist now resolves two plan
+    words by watching the α annunciator. `@LOCK` presses α α when alpha is off, and again before any later
+    character if alpha has dropped; a character typed with one-shot alpha is still right. `@FREE` presses α until
+    the annunciator goes out.
+
+### How 0.5 is checked
+- **[tests/stack.test.js](tests/stack.test.js) (11 checks, no ROM):** objects encoded by hand on a synthetic memory
+  (reals of every kind, strings, complex, binary, names, tagged results, nested lists with pointers), the empty
+  stack, CSV.
+- **[tests/scm.test.js](tests/scm.test.js) (16 checks, no ROM):**
+  - the normal distribution and its inverse against known values
+  - every reference formula
+  - the install text, which must type every character
+  - the checker
+- **[tests/scm-rom.test.js](tests/scm-rom.test.js) (18 checks, real ROM):**
+  - the reader on 15 kinds of objects the ROM itself put on the stack
+  - installing the pack leaves the stack clean
+  - every program's example, and a second set of inputs, agree with the reference to 12 digits, with nothing else
+    left on the stack. The second set includes a newsvendor below 50% (a negative z) and the other cases of
+    Little's law.
+- **[tests/typer.test.js](tests/typer.test.js)** (now 31 checks) adds a simulated calculator whose α α sometimes
+  gives one-shot alpha.
+- **Mutation tests:** planted mistakes are all caught:
+  - a wrong stack address, caught by the ROM test
+  - the sign or the negative exponents of reals ignored
+  - the wrong rule for recognising objects
+  - EOQ without its factor 2, caught by the ROM test
+  - a checker loose to 1e-3
+  - the quote typed as a pair again
+  - no relock when alpha drops, and @FREE without its retry: these two are caught by the unit tests only, because
+    the real ROM runs no longer hit those cases
+- **In Chrome:**
+  - the pack installed with the button, in about 3 seconds
+  - EOQ, NEWS and BULL run from their forms, each shown as agreeing with the reference
+  - the stack panel shows the result
+  - the page fits a 390 px phone
+
 ```bash
 node hp48/tests/saturn.test.js
 node hp48/tests/machine.test.js
 node hp48/tests/keys.test.js
 node hp48/tests/typer.test.js
+node hp48/tests/stack.test.js
+node hp48/tests/scm.test.js
 node hp48/tests/i18n.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/boot.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/rom.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/keyboard.test.js
 HP48_ROM=/path/to/gxrom-r node hp48/tests/typer-rom.test.js
+HP48_ROM=/path/to/gxrom-r node hp48/tests/scm-rom.test.js
 ```

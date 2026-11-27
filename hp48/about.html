@@ -51,6 +51,7 @@
     <tr><td>2</td><td data-i18n="a.p2">Memory controller, I/O registers, timers and interrupts. The real ROM boots to the stack.</td><td data-i18n="a.done">done</td></tr>
     <tr><td>3</td><td data-i18n="a.p3">The calculator in your browser: 131 × 64 display, annunciators, full keyboard</td><td data-i18n="a.done">done</td></tr>
     <tr><td>4</td><td data-i18n="a.p4">Memory kept between visits, typing programs, saving to a file, English, Spanish and Danish</td><td data-i18n="a.done">done</td></tr>
+    <tr><td>0.5</td><td data-i18n="a.p5">A compact keyboard, the stack read from the calculator's memory, and a supply chain toolkit: EOQ, safety stock, reorder point, newsvendor, fill rate, Little's law and the bullwhip ratio, each checked against a reference</td><td data-i18n="a.done">done</td></tr>
   </table>
 
   <h2 data-i18n="a.h.rom">You bring the ROM</h2>
@@ -74,9 +75,9 @@
     Binary objects (files starting <code>HPHP48-</code>) need the serial port, which isn't emulated yet.</p>
 
   <h2 data-i18n="a.h.checked">How it is checked</h2>
-  <p data-i18n="a.checked">About 300 automated checks cover every instruction family and the memory controller's configuration protocol.
-    They also cover the timers, the keyboard lines, the display registers, the key map, saving and restoring, and the
-    typist. A fuzz test decodes 20,000 random instructions with both the CPU and the disassembler. Tests on the real ROM
+  <p data-i18n="a.checked">About 350 automated checks cover every instruction family and the memory controller's configuration protocol.
+    They also cover the timers, the keyboard lines, the display registers, the key map, saving and restoring, the
+    typist, the stack reader and the supply chain programs. A fuzz test decodes 20,000 random instructions with both the CPU and the disassembler. Tests on the real ROM
     run locally: they compare screens by hash, type pairs of key sequences that must leave the same screen, check every
     typed character against <code>CHR</code>, and check that a restored calculator carries on exactly as the original.
     The real firmware exposed two mistakes the unit tests had shared, and both are fixed. Details are in the

@@ -39,7 +39,7 @@
   // lower case: left shift and the letter's key
   for (let c = 97; c <= 122; c++) KEYS[c] = "LS " + KEYS[c - 32];
   // ^ : out of alpha for the yˣ key, which types ^ in a program or an algebraic
-  KEYS[94] = "ALPHA POW ALPHA ALPHA";
+  KEYS[94] = "@FREE POW @LOCK";
 
   // Keys that type a pair, with the cursor inside, as a person types them: the
   // opening character presses the pair key (which also sets the entry mode the
@@ -47,8 +47,8 @@
   // A character without a partner is the pair less its other half: the opening
   // one deletes the closing half (DEL); the closing one deletes the opening
   // half (⇦) and steps over what is left.
-  const STEP_OVER = "ALPHA RIGHT ALPHA ALPHA";
-  const PAIRS = { 40: [41, "LS DIV"], 91: [93, "LS MUL"], 123: [125, "LS ADD"], 171: [187, "LS SUB"], 34: [34, "RS SUB"], 39: [39, "ALPHA QUOTE ALPHA ALPHA"] };
+  const STEP_OVER = "@FREE RIGHT @LOCK";
+  const PAIRS = { 40: [41, "LS DIV"], 91: [93, "LS MUL"], 123: [125, "LS ADD"], 171: [187, "LS SUB"], 39: [39, "@FREE QUOTE @LOCK"] };
   const CLOSERS = {}; Object.keys(PAIRS).forEach(function (o) { CLOSERS[PAIRS[o][0]] = +o; });
   const ALONE_OPEN = {}, ALONE_CLOSE = {};
   Object.keys(PAIRS).forEach(function (o) {
@@ -57,7 +57,9 @@
     ALONE_CLOSE[PAIRS[o][0]] = k + " BKSP " + STEP_OVER;
   });
   ALONE_OPEN[39] = KEYS[39]; ALONE_CLOSE[39] = KEYS[39];        // a lone ' is just the character
-  [40, 41, 91, 93, 123, 125, 171, 187, 34].forEach(function (c) { KEYS[c] = ALONE_OPEN[c] || ALONE_CLOSE[c]; });
+  [40, 41, 91, 93, 123, 125, 171, 187].forEach(function (c) { KEYS[c] = ALONE_OPEN[c] || ALONE_CLOSE[c]; });
+  // " in alpha mode types the one character, not a pair (checked on the ROM inside { }, « » and at the top level)
+  KEYS[34] = "RS SUB";
 
   // Unicode → the 48's character set (128–159 are its own; 160–255 are Latin-1)
   const UNI = { "∠": 128, "x̄": 129, "∇": 130, "√": 131, "∫": 132, "Σ": 133, "▶": 134, "π": 135, "∂": 136, "≤": 137, "≥": 138,
@@ -123,12 +125,13 @@
   function plan(text, opts) {
     opts = opts || {};
     const chars = tidy(decode(text)), partner = match(chars);
-    const keys = ["ALPHA", "ALPHA"], unsupported = [];
+    const keys = ["@LOCK"], unsupported = [];
     let depthPrg = 0, inString = false;
     chars.forEach(function (c, i) {
       let seq;
       const paired = partner[i] !== undefined, opening = paired && partner[i] > i;
-      if (paired && opening) seq = PAIRS[c.code][1];
+      if (c.code === 34) seq = KEYS[34];
+      else if (paired && opening) seq = PAIRS[c.code][1];
       else if (paired) seq = STEP_OVER;
       else seq = KEYS[c.code];
       // ^ types itself only in a program or an algebraic; at the top level of a string it would run
@@ -142,35 +145,66 @@
     return { keys: keys, unsupported: unsupported, chars: chars.length };
   }
 
-  // Presses a list of keys on a machine, each held for the Keypad's minimum,
-  // and waits until the ROM is idle again (asleep, waiting for a key) before
-  // the next: keys pressed while it is still busy are not always read the same
-  // way (α α after yˣ in a program, for one). advance(cycles) runs the machine
-  // for about that long and returns true when every key has been typed.
-  const SETTLE = 3686400 * 0.25;                 // 20 ms after the release, at least
+  // Presses the planned keys on a machine. Each key is held for the Keypad's
+  // minimum, and the next waits until the ROM is idle again (asleep, waiting
+  // for a key): keys pressed while it is still busy are not always read the
+  // same way. Two plan words are modes, not keys, resolved by watching the α
+  // annunciator, because α α does not always lock alpha (after some commands
+  // it gives one-shot alpha):
+  //   @LOCK  alpha lock from here on: α α now if alpha is off, and again before
+  //          any later character if alpha has dropped (a character typed with
+  //          one-shot alpha is still right)
+  //   @FREE  alpha off: press α until the annunciator goes out
+  // advance(cycles) runs the machine for about that long and returns true when
+  // everything has been typed.
+  const SETTLE = 3686400 * 0.25;                 // 250 ms after the release, at least
   const PATIENCE = 3686400 * 5;                  // give up waiting for idle after 5 s
+  const ALPHA_ON = function (m) { return !!(m.display().annunciators & 4); };
   function Typist(machine, pad, keysById, keys) {
-    this.m = machine; this.pad = pad; this.byId = keysById; this.keys = keys.slice();
-    this.i = 0; this.phase = "press"; this.t = 0; this.total = keys.length;
+    this.m = machine; this.pad = pad; this.byId = keysById; this.plan = keys.slice();
+    this.i = 0; this.queue = []; this.phase = "next"; this.t = 0; this.total = keys.length;
+    this.lock = false; this.afterShift = false; this.tries = 0;
   }
+  // turn the next plan word into keys to press, looking at the calculator as it is now
+  Typist.prototype.fill = function () {
+    while (!this.queue.length && this.i < this.plan.length) {
+      const w = this.plan[this.i++];
+      if (w === "@LOCK") { this.lock = true; if (!ALPHA_ON(this.m)) this.queue.push("ALPHA", "ALPHA"); continue; }
+      if (w === "@FREE") { this.lock = false; this.tries = 0; if (ALPHA_ON(this.m)) this.queue.push("ALPHA", "?FREE"); continue; }
+      if (w === "ENTER") this.lock = false;
+      // before a character (not between a shift and its key), relock alpha if it has dropped
+      if (this.lock && !this.afterShift && !ALPHA_ON(this.m)) this.queue.push("ALPHA", "ALPHA");
+      this.afterShift = w === "LS" || w === "RS";
+      this.queue.push(w);
+    }
+  };
   Typist.prototype.advance = function (cycles) {
     const m = this.m, end = m.time + cycles;
-    while (m.time < end && this.i < this.keys.length) {
-      const k = this.byId[this.keys[this.i]];
-      if (this.phase === "press") { this.pad.press(k); this.t = m.time; this.phase = "hold"; }
+    while (m.time < end) {
+      if (this.phase === "next") {
+        this.fill();
+        if (!this.queue.length) break;
+        const w = this.queue.shift();
+        if (w === "?FREE") {                       // still alpha? (one-shot became lock) press α again, at most twice
+          if (ALPHA_ON(m) && this.tries++ < 2) this.queue.unshift("ALPHA", "?FREE");
+          continue;
+        }
+        this.k = this.byId[w]; this.pad.press(this.k); this.t = m.time; this.phase = "hold";
+      }
       if (this.phase === "hold") {
         const left = this.t + this.pad.constructor.MIN_HOLD - m.time;
         if (left > 0) { m.run(Math.min(left, end - m.time)); continue; }
-        this.pad.release(k); this.t = m.time; this.phase = "settle";
+        this.pad.release(this.k); this.t = m.time; this.phase = "settle";
       }
       if (this.phase === "settle") {
         const waited = m.time - this.t;
-        if (waited >= SETTLE && (m.cpu.shutdown || waited >= PATIENCE)) { this.i++; this.phase = "press"; continue; }
+        if (waited >= SETTLE && (m.cpu.shutdown || waited >= PATIENCE)) { this.phase = "next"; continue; }
         m.run(Math.min(waited < SETTLE ? SETTLE - waited : 3686400 / 1000, end - m.time));
       }
     }
-    if (m.time < end && this.i >= this.keys.length) m.run(end - m.time);
-    return this.i >= this.keys.length;
+    const done = this.phase === "next" && !this.queue.length && this.i >= this.plan.length;
+    if (m.time < end && done) m.run(end - m.time);
+    return done;
   };
   Typist.prototype.progress = function () { return this.total ? this.i / this.total : 1; };
 

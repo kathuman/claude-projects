@@ -259,10 +259,17 @@
       annunciators: io[0x0b] | (io[0x0c] << 4)
     };
   };
+  // read a nibble with no side effects (no CRC, no bank switching): for the screen and the stack reader
+  Machine.prototype.peek = function (a) {
+    a &= MASK;
+    if (this.ioBase >= 0 && a >= this.ioBase && a < this.ioBase + 64) return this.io[a - this.ioBase];
+    const p = this.page[a >> 12];
+    return p === 5 ? this.rom[a] : p === NCE2 ? this.ram[(a - this.mod[NCE2].base) & (RAM_NIBBLES - 1)] : 0;
+  };
   // the 131 × 64 screen as rows of 0/1 pixels (the top area from start, then the menu)
   Machine.prototype.pixels = function () {
     const d = this.display(), rows = [], self = this;
-    const peek = function (a) { a &= MASK; if (self.ioBase >= 0 && a >= self.ioBase && a < self.ioBase + 64) return self.io[a - self.ioBase]; const p = self.page[a >> 12]; return p === 5 ? self.rom[a] : p === NCE2 ? self.ram[(a - self.mod[NCE2].base) & (RAM_NIBBLES - 1)] : 0; };
+    const peek = function (a) { return self.peek(a); };
     let addr = d.start;
     for (let y = 0; y < 64; y++) {
       if (y === d.lines + 1) addr = d.menu;

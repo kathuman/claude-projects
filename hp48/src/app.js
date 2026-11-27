@@ -6,10 +6,10 @@
  */
 (function () {
   "use strict";
-  const { Machine, Keys, RomFile, Typer } = window.HP48;
+  const { Machine, Keys, RomFile, Typer, Stack, SCM } = window.HP48;
   const I = window.ESi18n || { T: (s, v) => String(s).replace(/\{(\w+)\}/g, (m, k) => (v && v[k] != null ? v[k] : m)), locale: "en-US" };
   const T = I.T;
-  const VERSION = "0.4.0";
+  const VERSION = "0.5.0";
   const CLOCK = Machine.CLOCK;
   const $ = (id) => document.getElementById(id);
   const say = (id, text, kind) => { const el = $(id); el.textContent = text; el.classList.toggle("err", kind === "err"); el.classList.toggle("ok", kind === "ok"); };
@@ -36,11 +36,11 @@
 
   // ------------------------------------------------------------ state
   let rom = null, m = null, pad = null, running = false, speed = 1, error = null, typist = null;
-  const ENABLE = ["btnPause", "btnReset", "btnForget", "btnSave", "btnOpen", "btnType"];
+  const ENABLE = ["btnPause", "btnReset", "btnForget", "btnSave", "btnOpen", "btnType", "btnInstall", "btnCopy", "btnCsv"];
 
   // a machine for this ROM: carried on from the snapshot kept in this browser, if there is one
   async function start(bytes, fresh) {
-    rom = bytes; m = new Machine(bytes); pad = new Keys.Keypad(m); error = null; running = true; typist = null;
+    rom = bytes; m = new Machine(bytes); pad = new Keys.Keypad(m); error = null; running = true; typist = null; job = null;
     let resumed = false;
     if (!fresh) {
       const kept = await get("state");
@@ -97,6 +97,7 @@
         p[i] = c[0]; p[i + 1] = c[1]; p[i + 2] = c[2]; p[i + 3] = 255;
       }
       g.putImageData(img, 0, 0);
+      if (!job) showStack();
     }
     const ann = d.annunciators, enabled = !!(ann & 0x80);
     annun.forEach((s) => s.classList.toggle("on", enabled && !!(ann & (1 << +s.dataset.bit))));
@@ -108,13 +109,14 @@
     const dt = Math.min(100, now - last); last = now;
     if (m && running && !error) {
       try {
-        if (typist) {
+        if (job) {
           // typing runs as fast as the device allows
           const until = performance.now() + 14;
-          let done = false;
-          while (!done && performance.now() < until) done = typist.advance(CLOCK / 200);
-          say("typeStatus", T("Typing… {p}%", { p: Math.round(typist.progress() * 100) }));
-          if (done) endTyping(true);
+          while (job && performance.now() < until) {
+            if (typist) { if (typist.advance(CLOCK / 200)) nextLine(); }
+            else { m.run(CLOCK / 200); if (m.time >= job.waitUntil && m.cpu.shutdown) { endTyping(true); break; } }
+          }
+          if (job) say(job.opts.status, T("Typing… {p}%", { p: progress() }));
         } else if (speed > 0) {
           let cycles = dt / 1000 * CLOCK * speed;
           while (cycles > 0) { const c = Math.min(cycles, CLOCK / 500); m.run(c); pad.update(); cycles -= c; }
@@ -123,10 +125,10 @@
           while (performance.now() < until) { m.run(CLOCK / 500); pad.update(); }
         }
         const took = performance.now() - now;
-        slowFrames = took > dt && speed > 0 && !typist ? slowFrames + 1 : 0;
+        slowFrames = took > dt && speed > 0 && !job ? slowFrames + 1 : 0;
         if (performance.now() - lastSave > 5000) save();
       } catch (e) {
-        error = e.message; running = false; typist = null; status();
+        error = e.message; running = false; typist = null; job = null; status();
       }
     }
     draw();
@@ -154,12 +156,13 @@
         el.dataset.id = k.id;
         const label = k.main || "";
         const title = [label || T("menu key {k}", { k: k.id }), k.ls && T("left shift: {f}", { f: k.ls }), k.rs && T("right shift: {f}", { f: k.rs }), k.a && T("alpha: {f}", { f: k.a })].filter(Boolean).join(" · ");
-        el.innerHTML = '<div class="shift"><span class="ls"></span><span class="rs"></span></div><div class="capline"><button type="button"></button><span class="alpha"></span></div>';
-        el.querySelector(".ls").textContent = k.ls; el.querySelector(".rs").textContent = k.rs;
-        el.querySelector(".alpha").textContent = r === 0 ? "" : k.a;
+        // compact legends: shifted functions in the key's top corners, the alpha letter in its bottom corner
+        el.innerHTML = '<button type="button"><span class="il"></span><span class="ir"></span><span class="main"></span><span class="al"></span></button>';
         const b = el.querySelector("button");
-        b.textContent = label; b.setAttribute("aria-label", title); b.title = title;
-        const down = (e) => { e.preventDefault(); if (!pad || typist) return; if (b.setPointerCapture && e.pointerId !== undefined) b.setPointerCapture(e.pointerId); pad.press(k); b.classList.add("down"); };
+        b.querySelector(".il").textContent = k.ls; b.querySelector(".ir").textContent = k.rs;
+        b.querySelector(".main").textContent = label; b.querySelector(".al").textContent = r === 0 ? "" : k.a;
+        b.setAttribute("aria-label", title); b.title = title;
+        const down = (e) => { e.preventDefault(); if (!pad || job) return; if (b.setPointerCapture && e.pointerId !== undefined) b.setPointerCapture(e.pointerId); pad.press(k); b.classList.add("down"); };
         const up = () => { if (!pad) return; pad.release(k); b.classList.remove("down"); };
         b.addEventListener("pointerdown", down);
         b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up); b.addEventListener("lostpointercapture", up);
@@ -172,7 +175,7 @@
   // keys typed into the page's own fields stay there; the hidden file inputs keep focus after loading, so they don't count
   const typingInField = (e) => e.target.closest && e.target.closest("select, textarea, input:not([type=file]):not([type=checkbox])");
   document.addEventListener("keydown", (e) => {
-    if (!pad || typist || typingInField(e)) return;
+    if (!pad || job || typingInField(e)) return;
     const k = Keys.fromEvent(e); if (!k) return;
     e.preventDefault();
     if (e.repeat) return;
@@ -185,28 +188,150 @@
   });
   window.addEventListener("blur", () => { if (pad) pad.releaseAll(); Object.values(keyEls).forEach((b) => b.classList.remove("down")); });
 
-  // ------------------------------------------------------------ typing programs
-  function typeText(text) {
-    if (!m || typist) return;
-    const p = Typer.plan(text, { enter: $("typeEnter").checked });
-    if (p.chars === 0) { say("typeStatus", T("Nothing to type."), "err"); return; }
+  // ------------------------------------------------------------ typing: one or more lines, then (optionally) a callback once the calculator is idle
+  let job = null;
+  function typeLines(lines, opts) {
+    if (!m || job) return false;
+    const plans = lines.map((t) => Typer.plan(t, { enter: opts.enter }));
+    if (plans.every((p) => p.chars === 0)) { say(opts.status, T("Nothing to type."), "err"); return false; }
     pad.releaseAll();
-    typist = new Typer.Typist(m, pad, Keys.byId, p.keys);
-    typist.unsupported = p.unsupported;
+    job = { plans: plans, n: 0, opts: opts, unsupported: [].concat(...plans.map((p) => p.unsupported)).filter((c, i, a) => a.indexOf(c) === i), waitUntil: 0 };
+    nextLine();
     if (!running) { running = true; $("btnPause").textContent = T("Pause"); status(); }
-    $("btnType").hidden = true; $("btnStopType").hidden = false;
+    document.querySelectorAll(".while-typing").forEach((el) => { el.hidden = false; });
+    document.querySelectorAll(".not-while-typing").forEach((el) => { el.disabled = true; });
+    return true;
   }
+  function nextLine() {
+    if (job.n < job.plans.length) { typist = new Typer.Typist(m, pad, Keys.byId, job.plans[job.n++].keys); return; }
+    typist = null; job.waitUntil = m.time + CLOCK * 0.3;          // let the last line run before reading the result
+  }
+  function progress() { return job ? Math.round(((job.n - 1) + (typist ? typist.progress() : 1)) / job.plans.length * 100) : 100; }
   function endTyping(finished) {
-    const u = typist ? typist.unsupported : [];
-    typist = null; pad.releaseAll();
-    $("btnType").hidden = false; $("btnStopType").hidden = true;
-    if (!finished) say("typeStatus", T("Stopped."));
-    else if (u.length) say("typeStatus", T("Typed, but the 48GX keyboard has no key for: {c}. Those were left out.", { c: u.join(" ") }), "err");
-    else say("typeStatus", T("Typed."), "ok");
-    save();
+    const j = job; typist = null; job = null; pad.releaseAll();
+    document.querySelectorAll(".while-typing").forEach((el) => { el.hidden = true; });
+    document.querySelectorAll(".not-while-typing").forEach((el) => { el.disabled = !m; });
+    if (!j) return;
+    if (!finished) say(j.opts.status, T("Stopped."));
+    else if (j.unsupported.length) say(j.opts.status, T("Typed, but the 48GX keyboard has no key for: {c}. Those were left out.", { c: j.unsupported.join(" ") }), "err");
+    else say(j.opts.status, j.opts.done || T("Typed."), "ok");
+    if (finished && j.opts.then) j.opts.then();
+    save(); showStack(true);
   }
+  function typeText(text) { typeLines([text], { enter: $("typeEnter").checked, status: "typeStatus" }); }
   $("btnType").onclick = () => typeText($("typeText").value);
-  $("btnStopType").onclick = () => endTyping(false);
+  document.querySelectorAll(".stop-typing").forEach((b) => { b.onclick = () => endTyping(false); });
+
+
+  // ------------------------------------------------------------ the stack, read from the calculator's memory
+  let levels = [];
+  function showStack(force) {
+    if (!m) return;
+    let lv;
+    try { lv = Stack.read(m, 50); } catch (e) { lv = []; }
+    const key = lv.map((o) => o.text).join("\n");
+    if (!force && key === levels.map((o) => o.text).join("\n")) return;
+    levels = lv;
+    const ol = $("stackList"); ol.innerHTML = "";
+    if (!lv.length) { const li = document.createElement("li"); li.className = "empty"; li.textContent = T("The stack is empty."); ol.appendChild(li); return; }
+    lv.slice(0, 12).forEach((o, i) => {
+      const li = document.createElement("li");
+      const n = document.createElement("span"); n.className = "lvl"; n.textContent = (i + 1) + ":";
+      const v = document.createElement("span"); v.className = "val"; v.textContent = o.text;
+      li.append(n, v); ol.appendChild(li);
+    });
+    if (lv.length > 12) { const li = document.createElement("li"); li.className = "empty"; li.textContent = T("…and {n} more levels (all are copied).", { n: lv.length - 12 }); ol.appendChild(li); }
+  }
+  function copy(text, btn) {
+    const done = () => { const t = btn.textContent; btn.textContent = T("Copied"); setTimeout(() => { btn.textContent = t; }, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallback(text, done));
+    else fallback(text, done);
+  }
+  function fallback(text, done) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { /* the text stays selected for the viewer to copy */ }
+    ta.remove();
+  }
+  $("btnCopy").onclick = () => copy(levels.map((o, i) => (i + 1) + ": " + o.text).join("\n"), $("btnCopy"));
+  $("btnCsv").onclick = () => copy(Stack.csv(levels), $("btnCsv"));
+
+  // ------------------------------------------------------------ the supply chain toolkit
+  const num = (v) => (Number.isFinite(v) ? String(parseFloat(v.toPrecision(12))) : "—");
+  function buildScm() {
+    const box = $("scmList");
+    SCM.PROGRAMS.forEach((p) => {
+      const d = document.createElement("details"); d.className = "prog";
+      const sum = document.createElement("summary");
+      sum.innerHTML = "<b></b> <span></span>";
+      sum.querySelector("b").textContent = p.name; sum.querySelector("span").textContent = T(p.title);
+      d.appendChild(sum);
+      const form = document.createElement("form"); form.className = "inputs";
+      p.inputs.forEach((label, i) => {
+        const id = "in-" + p.name + "-" + i;
+        const row = document.createElement("label"); row.htmlFor = id;
+        const lv = document.createElement("span"); lv.className = "lvl"; lv.textContent = (p.inputs.length - i) + ":";
+        const t = document.createElement("span"); t.className = "lab"; t.textContent = T(label);
+        const inp = document.createElement("input"); inp.id = id; inp.type = "text"; inp.inputMode = Array.isArray(p.example[i]) ? "text" : "decimal";
+        inp.value = Array.isArray(p.example[i]) ? p.example[i].join(" ") : String(p.example[i]);
+        row.append(lv, t, inp); form.appendChild(row);
+      });
+      const outs = document.createElement("p"); outs.className = "small";
+      outs.textContent = T("Gives") + " " + p.outputs.map((o) => T(o)).join("; ") + ".";
+      const btn = document.createElement("button"); btn.type = "submit"; btn.className = "btn not-while-typing"; btn.textContent = T("Run on the calculator");
+      const res = document.createElement("div"); res.className = "result";
+      form.append(outs, btn, res);
+      form.addEventListener("submit", (e) => { e.preventDefault(); runProgram(p, form, res); });
+      d.appendChild(form); box.appendChild(d);
+    });
+  }
+  function readInputs(p, form) {
+    const vals = [];
+    for (let i = 0; i < p.inputs.length; i++) {
+      const raw = form.querySelector("#in-" + p.name + "-" + i).value.trim();
+      if (Array.isArray(p.example[i])) {
+        const xs = raw.split(/[\s,;]+/).filter(Boolean).map(Number);
+        if (xs.length < 2 || xs.some((x) => !Number.isFinite(x))) return { error: T("{f} needs at least two numbers, separated by spaces.", { f: T(p.inputs[i]) }) };
+        vals.push(xs);
+      } else {
+        const x = Number(raw.replace(",", "."));
+        if (raw === "" || !Number.isFinite(x)) return { error: T("{f} needs a number.", { f: T(p.inputs[i]) }) };
+        vals.push(x);
+      }
+    }
+    return { vals: vals };
+  }
+  const literal = (v) => (Array.isArray(v) ? "{ " + v.join(" ") + " }" : String(v));
+  function runProgram(p, form, res) {
+    const r = readInputs(p, form);
+    res.innerHTML = "";
+    if (r.error) { res.textContent = r.error; res.className = "result err"; return; }
+    res.className = "result";
+    typeLines(["CLEAR « SCM » EVAL " + r.vals.map(literal).join(" ") + " " + p.name], { enter: true, status: "scmStatus", done: T("Ran {p}.", { p: p.name }),
+      then: () => showResult(p, r.vals, res) });
+  }
+  function showResult(p, vals, res) {
+    const lv = Stack.read(m, 50);
+    if (!lv.length || lv.every((o) => typeof o.value !== "number")) {
+      res.className = "result err";
+      res.textContent = T("No result on the stack. If the calculator shows Undefined Name, install the programs first.");
+      return;
+    }
+    const c = SCM.check(p, lv, vals);
+    const tb = document.createElement("table");
+    tb.innerHTML = "<tr><th></th><th></th><th></th><th></th></tr>";
+    const ths = tb.querySelectorAll("th"); ths[1].textContent = T("Calculator"); ths[2].textContent = T("Reference");
+    c.rows.forEach((row) => {
+      const tr = document.createElement("tr");
+      [row.tag || T(row.label).split(":")[0], num(row.got), num(row.want), row.ok ? "✓" : "✗"].forEach((t, i) => { const td = document.createElement("td"); td.textContent = t; if (i === 3) td.className = row.ok ? "ok" : "bad"; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+    const note = document.createElement("p"); note.className = "small";
+    note.textContent = c.ok ? T("The calculator agrees with the reference calculation to 12 digits.") : T("The calculator's answer differs from the reference.");
+    res.append(tb, note); res.className = "result " + (c.ok ? "ok" : "err");
+  }
+  $("btnInstall").onclick = () => {
+    typeLines(SCM.installText().split("\n"), { enter: true, status: "scmStatus", done: T("Installed: the programs are on the menu keys, in the directory SCM.") });
+  };
 
   // ------------------------------------------------------------ saving and opening the calculator as a file
   $("btnSave").onclick = () => {
@@ -226,7 +351,7 @@
     try {
       const next = new Machine(rom); next.restore(snap);
       if (data && data.savedAt) next.elapse((Date.now() - data.savedAt) / 1000);
-      m = next; pad = new Keys.Keypad(m); typist = null; error = null; running = true;
+      m = next; pad = new Keys.Keypad(m); typist = null; job = null; error = null; running = true;
       $("btnPause").textContent = T("Pause");
       save(); status();
       say("memStatus", T("Opened. The calculator carries on from the saved file."), "ok");
@@ -259,7 +384,7 @@
 
   // ------------------------------------------------------------ controls
   $("btnForget").onclick = async () => {
-    await del("rom"); await del("state"); m = pad = rom = typist = null; running = false;
+    await del("rom"); await del("state"); m = pad = rom = typist = job = null; running = false;
     blank();
     $("norom").hidden = false; say("romStatus", T("No ROM loaded. The ROM and the calculator's memory were deleted from this browser."));
     ENABLE.forEach((id) => { $(id).disabled = true; });
@@ -277,8 +402,9 @@
   // ------------------------------------------------------------ go
   $("ver").textContent = "v" + VERSION;
   buildKeys();
+  buildScm();
   blank();
   get("rom").then((b) => { if (b) acceptRom(b, false); });
   requestAnimationFrame(frame);
-  window.HP48.app = { get machine() { return m; }, get pad() { return pad; }, get typing() { return !!typist; }, save };   // for testing from the console
+  window.HP48.app = { get machine() { return m; }, get pad() { return pad; }, get typing() { return !!job; }, save };   // for testing from the console
 })();

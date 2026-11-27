@@ -17,6 +17,8 @@ for (const f of ["index.html", "about.html"]) {
 const messages = new Set();
 for (const m of read("src/app.js").matchAll(/\bT\("((?:[^"\\]|\\.)*)"/g)) messages.add(JSON.parse('"' + m[1] + '"'));
 for (const m of read("src/romfile.js").matchAll(/refuse\("((?:[^"\\]|\\.)*)"/g)) messages.add(JSON.parse('"' + m[1] + '"'));
+// the supply chain programs' titles, inputs and outputs are shown through T() too
+for (const p of require("../src/scm.js").PROGRAMS) [p.title].concat(p.inputs, p.outputs).forEach((s) => messages.add(s));
 const holes = (s) => (String(s).match(/\{\w+\}/g) || []).sort().join();
 
 check("the pages have text to translate (" + pageKeys.size + " keys) and the scripts messages (" + messages.size + ")", pageKeys.size > 50 && messages.size > 25);

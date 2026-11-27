@@ -69,6 +69,7 @@ const same = [
   ["{ 1 2 }", "LS ADD 1 SPC 2 ENTER", "a list"],
   ["[ 1 2 ]", "LS MUL 1 SPC 2 ENTER", "a vector"],
   ["(1,2)", "LS DIV 1 LS DOT 2 ENTER", "a complex number"],
+  ['{ 1 "A" }', "LS ADD 1 SPC RS SUB ALPHA A ENTER", "a string in a list (the quote key types one character in alpha)"],
 ];
 for (const [text, hand, what] of same) check(what + ": " + text + " typed equals typing it by hand", typed(text) === from(hand));
 check("a string with case and punctuation: \"Hi!\" equals 72 CHR 105 CHR + 33 CHR +",
