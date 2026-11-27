@@ -9,7 +9,7 @@
   const { Machine, Keys, RomFile, Typer, Stack, SCM } = window.HP48;
   const I = window.ESi18n || { T: (s, v) => String(s).replace(/\{(\w+)\}/g, (m, k) => (v && v[k] != null ? v[k] : m)), locale: "en-US" };
   const T = I.T;
-  const VERSION = "0.5.0";
+  const VERSION = "0.5.1";
   const CLOCK = Machine.CLOCK;
   const $ = (id) => document.getElementById(id);
   const say = (id, text, kind) => { const el = $(id); el.textContent = text; el.classList.toggle("err", kind === "err"); el.classList.toggle("ok", kind === "ok"); };

@@ -17,24 +17,28 @@
   "use strict";
 
   // [id, line, bit, main, ls, rs, alpha, computer keys]
+  // The twelve application keys (CHARS, MODES, MEMORY, STACK, SOLVE, PLOT, SYMBOLIC, TIME, STAT, I/O, LIBRARY,
+  // EQ LIB) are right-shift: "Keys that have only labels printed in green represent applications" (HP 48G Series
+  // User's Guide; green = right shift). Checked on the ROM: right shift opens each application, left shift only its
+  // companion command menu, which has no printed label. UNITS is not one of them and stays left-shift.
   const K = (id, line, bit, main, ls, rs, a, pc) => ({ id, line, bit, main, ls: ls || "", rs: rs || "", a: a || "", pc: pc || [] });
   const ROWS = [
     [K("A", 1, 4, "", "", "", "A", ["F1"]), K("B", 8, 4, "", "", "", "B", ["F2"]), K("C", 8, 3, "", "", "", "C", ["F3"]),
      K("D", 8, 2, "", "", "", "D", ["F4"]), K("E", 8, 1, "", "", "", "E", ["F5"]), K("F", 8, 0, "", "", "", "F", ["F6"])],
-    [K("MTH", 2, 4, "MTH", "RAD", "POLAR", "G"), K("PRG", 7, 4, "PRG", "CHARS", "", "H"), K("CST", 7, 3, "CST", "MODES", "", "I"),
-     K("VAR", 7, 2, "VAR", "MEMORY", "", "J"), K("UP", 7, 1, "▲", "STACK", "", "K", ["ArrowUp"]), K("NXT", 7, 0, "NXT", "PREV", "MENU", "L", ["PageDown"])],
+    [K("MTH", 2, 4, "MTH", "RAD", "POLAR", "G"), K("PRG", 7, 4, "PRG", "", "CHARS", "H"), K("CST", 7, 3, "CST", "", "MODES", "I"),
+     K("VAR", 7, 2, "VAR", "", "MEMORY", "J"), K("UP", 7, 1, "▲", "", "STACK", "K", ["ArrowUp"]), K("NXT", 7, 0, "NXT", "PREV", "MENU", "L", ["PageDown"])],
     [K("QUOTE", 0, 4, "'", "UP", "HOME", "M", ["'"]), K("STO", 6, 4, "STO", "DEF", "RCL", "N"), K("EVAL", 6, 3, "EVAL", "→NUM", "UNDO", "O"),
      K("LEFT", 6, 2, "◀", "PICTURE", "", "P", ["ArrowLeft"]), K("DOWN", 6, 1, "▼", "VIEW", "", "Q", ["ArrowDown"]), K("RIGHT", 6, 0, "▶", "SWAP", "", "R", ["ArrowRight"])],
     [K("SIN", 3, 4, "SIN", "ASIN", "∂", "S"), K("COS", 5, 4, "COS", "ACOS", "∫", "T"), K("TAN", 5, 3, "TAN", "ATAN", "Σ", "U"),
      K("SQRT", 5, 2, "√x", "x²", "ˣ√y", "V"), K("POW", 5, 1, "yˣ", "10ˣ", "LOG", "W", ["^"]), K("INV", 5, 0, "1/x", "eˣ", "LN", "X")],
     [K("ENTER", 4, 4, "ENTER", "EQUATION", "MATRIX", "", ["Enter"]), K("NEG", 4, 3, "+/-", "EDIT", "CMD", "Y"), K("EEX", 4, 2, "EEX", "PURG", "ARG", "Z"),
      K("DEL", 4, 1, "DEL", "CLEAR", "", "", ["Delete"]), K("BKSP", 4, 0, "⇦", "DROP", "", "", ["Backspace"])],
-    [K("ALPHA", 3, 5, "α", "USER", "ENTRY", "", ["Tab"]), K("7", 3, 3, "7", "SOLVE", "", "", ["7"]), K("8", 3, 2, "8", "PLOT", "", "", ["8"]),
-     K("9", 3, 1, "9", "SYMBOLIC", "", "", ["9"]), K("DIV", 3, 0, "÷", "( )", "#", "", ["/"])],
-    [K("LS", 2, 5, "↰", "", "", "", ["["]), K("4", 2, 3, "4", "TIME", "", "", ["4"]), K("5", 2, 2, "5", "STAT", "", "", ["5"]),
+    [K("ALPHA", 3, 5, "α", "USER", "ENTRY", "", ["Tab"]), K("7", 3, 3, "7", "", "SOLVE", "", ["7"]), K("8", 3, 2, "8", "", "PLOT", "", ["8"]),
+     K("9", 3, 1, "9", "", "SYMBOLIC", "", ["9"]), K("DIV", 3, 0, "÷", "( )", "#", "", ["/"])],
+    [K("LS", 2, 5, "↰", "", "", "", ["["]), K("4", 2, 3, "4", "", "TIME", "", ["4"]), K("5", 2, 2, "5", "", "STAT", "", ["5"]),
      K("6", 2, 1, "6", "UNITS", "", "", ["6"]), K("MUL", 2, 0, "×", "[ ]", "_", "", ["*"])],
-    [K("RS", 1, 5, "↱", "", "", "", ["]"]), K("1", 1, 3, "1", "I/O", "", "", ["1"]), K("2", 1, 2, "2", "LIBRARY", "", "", ["2"]),
-     K("3", 1, 1, "3", "EQ LIB", "", "", ["3"]), K("SUB", 1, 0, "−", "« »", "\" \"", "", ["-"])],
+    [K("RS", 1, 5, "↱", "", "", "", ["]"]), K("1", 1, 3, "1", "", "I/O", "", ["1"]), K("2", 1, 2, "2", "", "LIBRARY", "", ["2"]),
+     K("3", 1, 1, "3", "", "EQ LIB", "", ["3"]), K("SUB", 1, 0, "−", "« »", "\" \"", "", ["-"])],
     [K("ON", "on", 15, "ON", "CONT", "OFF", "", ["Escape"]), K("0", 0, 3, "0", "=", "→", "", ["0"]), K("DOT", 0, 2, ".", ",", "↵", "", [".", ","]),
      K("SPC", 0, 1, "SPC", "π", "∠", "", [" "]), K("ADD", 0, 0, "+", "{ }", ": :", "", ["+"])]
   ];

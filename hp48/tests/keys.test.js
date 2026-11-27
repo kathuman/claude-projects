@@ -78,4 +78,14 @@ function image(rev) {
   check("512 KB without the version text is refused", /doesn't identify/.test(RomFile.load(new Uint8Array(524288)).error));
 }
 
+// the twelve application keys are printed in the right-shift colour (HP 48G Series User's Guide: "Keys that have
+// only labels printed in green represent applications"); their left shift is an unlabelled companion menu
+{
+  const APPS = { PRG: "CHARS", CST: "MODES", VAR: "MEMORY", UP: "STACK", 7: "SOLVE", 8: "PLOT", 9: "SYMBOLIC",
+    4: "TIME", 5: "STAT", 1: "I/O", 2: "LIBRARY", 3: "EQ LIB" };
+  const wrong = Object.keys(APPS).filter((id) => Keys.byId[id].rs !== APPS[id] || Keys.byId[id].ls !== "");
+  check("the twelve applications are right-shift labels, with no left-shift label", !wrong.length, wrong.join(", "));
+  check("…and UNITS, not an application key, stays left-shift", Keys.byId["6"].ls === "UNITS" && Keys.byId["6"].rs === "");
+}
+
 summary("keys");
